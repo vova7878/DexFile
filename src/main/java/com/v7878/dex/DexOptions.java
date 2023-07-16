@@ -42,7 +42,12 @@ public class DexOptions {
     }
 
     public static DexOptions defaultOptions() {
-        return new DexOptions(CORRECT_SDK_INT, true, false);
+        try {
+            return new DexOptions(CORRECT_SDK_INT, true, true);
+        } catch (Throwable ignored) {
+            // non-android host
+            return new DexOptions(26, true, false);
+        }
     }
 
     public void requireMinApi(int minApi) {
