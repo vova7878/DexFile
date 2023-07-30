@@ -33,6 +33,7 @@ import com.v7878.dex.bytecode.Format.Format10x;
 import com.v7878.dex.bytecode.Format.Format11n;
 import com.v7878.dex.bytecode.Format.Format11x;
 import com.v7878.dex.bytecode.Format.Format12x;
+import com.v7878.dex.bytecode.Format.Format20t;
 import com.v7878.dex.bytecode.Format.Format21c;
 import com.v7878.dex.bytecode.Format.Format21t21s;
 import com.v7878.dex.bytecode.Format.Format22c;
@@ -305,6 +306,12 @@ public final class CodeBuilder {
         return this;
     }
 
+    public CodeBuilder throw_(int ex_reg) {
+        add(Opcode.THROW.<Format11x>format().make(
+                check_reg(ex_reg, 8)));
+        return this;
+    }
+
     private CodeBuilder goto_(Object label) {
         int start_unit = current_unit;
         add(Opcode.GOTO.<Format10t>format(), format -> {
@@ -317,6 +324,20 @@ public final class CodeBuilder {
 
     public CodeBuilder goto_(String label) {
         return goto_((Object) label);
+    }
+
+    private CodeBuilder goto_16(Object label) {
+        int start_unit = current_unit;
+        add(Opcode.GOTO_16.<Format20t>format(), format -> {
+            int branch_offset = getLabelBranchOffset(label, start_unit);
+            InstructionWriter.check_signed(branch_offset, 16);
+            return format.make(branch_offset);
+        });
+        return this;
+    }
+
+    public CodeBuilder goto_16(String label) {
+        return goto_16((Object) label);
     }
 
     private CodeBuilder goto_32(Object label) {
