@@ -147,7 +147,8 @@ public final class CodeBuilder {
     private int check_reg_range(int first_reg, int reg_width, int count, int count_width) {
         Checks.checkRange(count, 0, 1 << count_width);
         if (count > 0) {
-            Checks.checkRange(first_reg + count - 1, count, registers_size - count);
+            count--;
+            Checks.checkRange(first_reg + count, count, registers_size - count);
         }
         return check_reg(first_reg, reg_width);
     }
