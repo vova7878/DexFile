@@ -57,7 +57,7 @@ public enum ReferenceType {
         }
 
         @Override
-        public String clone(Object ref) {
+        public String mutate(Object ref) {
             //no need to clone the string
             return verify(ref);
         }
@@ -83,8 +83,8 @@ public enum ReferenceType {
         }
 
         @Override
-        public TypeId clone(Object ref) {
-            return verify(ref).clone();
+        public TypeId mutate(Object ref) {
+            return verify(ref).mutate();
         }
     }, FIELD {
         @Override
@@ -108,8 +108,8 @@ public enum ReferenceType {
         }
 
         @Override
-        public FieldId clone(Object ref) {
-            return verify(ref).clone();
+        public FieldId mutate(Object ref) {
+            return verify(ref).mutate();
         }
     }, METHOD {
         @Override
@@ -133,8 +133,8 @@ public enum ReferenceType {
         }
 
         @Override
-        public MethodId clone(Object ref) {
-            return verify(ref).clone();
+        public MethodId mutate(Object ref) {
+            return verify(ref).mutate();
         }
     }, PROTO {
         @Override
@@ -158,8 +158,8 @@ public enum ReferenceType {
         }
 
         @Override
-        public ProtoId clone(Object ref) {
-            return verify(ref).clone();
+        public ProtoId mutate(Object ref) {
+            return verify(ref).mutate();
         }
     }, CALLSITE {
         @Override
@@ -183,8 +183,8 @@ public enum ReferenceType {
         }
 
         @Override
-        public CallSiteId clone(Object ref) {
-            return verify(ref).clone();
+        public CallSiteId mutate(Object ref) {
+            return verify(ref).mutate();
         }
     }, METHOD_HANDLE {
         @Override
@@ -208,8 +208,8 @@ public enum ReferenceType {
         }
 
         @Override
-        public MethodHandleItem clone(Object ref) {
-            return verify(ref).clone();
+        public MethodHandleItem mutate(Object ref) {
+            return verify(ref).mutate();
         }
     }, RAW {
         @Override
@@ -233,7 +233,7 @@ public enum ReferenceType {
         }
 
         @Override
-        public Integer clone(Object ref) {
+        public Integer mutate(Object ref) {
             return verify(ref);
         }
     };
@@ -246,5 +246,5 @@ public enum ReferenceType {
 
     public abstract int refToIndex(WriteContext context, Object ref);
 
-    public abstract Object clone(Object ref);
+    public abstract Object mutate(Object ref);
 }

@@ -24,12 +24,26 @@ package com.v7878.dex;
 
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 
-public class AnnotationSetList extends PCList<AnnotationSet> {
+import java.util.Collection;
+
+public final class AnnotationSetList extends MutableList<AnnotationSet> {
+
+    public AnnotationSetList(int initialCapacity) {
+        super(initialCapacity);
+    }
 
     public AnnotationSetList(AnnotationSet... annotation_sets) {
         super(annotation_sets);
+    }
+
+    public AnnotationSetList(Collection<AnnotationSet> annotation_sets) {
+        super(annotation_sets);
+    }
+
+    public static AnnotationSetList empty() {
+        return new AnnotationSetList();
     }
 
     public static AnnotationSetList read(RandomInput in, ReadContext context) {
@@ -45,10 +59,6 @@ public class AnnotationSetList extends PCList<AnnotationSet> {
             }
         }
         return out;
-    }
-
-    public static AnnotationSetList empty() {
-        return new AnnotationSetList();
     }
 
     public void collectData(DataCollector data) {
@@ -102,9 +112,7 @@ public class AnnotationSetList extends PCList<AnnotationSet> {
     }
 
     @Override
-    public AnnotationSetList clone() {
-        AnnotationSetList out = new AnnotationSetList();
-        out.addAll(this);
-        return out;
+    public AnnotationSetList mutate() {
+        return new AnnotationSetList(this);
     }
 }

@@ -27,7 +27,10 @@ import com.v7878.dex.io.RandomOutput;
 
 import java.util.Comparator;
 
-public class StringId {
+public final class StringId {
+
+    private StringId() {
+    }
 
     public static final int SIZE = 0x04;
 

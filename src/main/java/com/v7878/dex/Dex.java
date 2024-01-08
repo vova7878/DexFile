@@ -29,15 +29,24 @@ import com.v7878.dex.io.ByteArrayIO;
 import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 import com.v7878.misc.Checks;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 
-public class Dex extends PCList<ClassDef> {
+public final class Dex extends MutableList<ClassDef> {
+
+    public Dex(int initialCapacity) {
+        super(initialCapacity);
+    }
 
     public Dex(ClassDef... class_defs) {
+        super(class_defs);
+    }
+
+    public Dex(Collection<ClassDef> class_defs) {
         super(class_defs);
     }
 
@@ -76,6 +85,7 @@ public class Dex extends PCList<ClassDef> {
         }
 
         ReadContextImpl context = new ReadContextImpl(options);
+
         String[] strings = new String[map.string_ids_size];
         if (map.string_ids_size != 0) {
             RandomInput in2 = in.duplicate(map.string_ids_off);
@@ -84,6 +94,7 @@ public class Dex extends PCList<ClassDef> {
             }
         }
         context.setStrings(strings);
+
         TypeId[] types = new TypeId[map.type_ids_size];
         if (map.type_ids_size != 0) {
             RandomInput in2 = in.duplicate(map.type_ids_off);
@@ -92,6 +103,7 @@ public class Dex extends PCList<ClassDef> {
             }
         }
         context.setTypes(types);
+
         ProtoId[] protos = new ProtoId[map.proto_ids_size];
         if (map.proto_ids_size != 0) {
             RandomInput in2 = in.duplicate(map.proto_ids_off);
@@ -100,6 +112,7 @@ public class Dex extends PCList<ClassDef> {
             }
         }
         context.setProtos(protos);
+
         FieldId[] fields = new FieldId[map.field_ids_size];
         if (map.field_ids_size != 0) {
             RandomInput in2 = in.duplicate(map.field_ids_off);
@@ -108,6 +121,7 @@ public class Dex extends PCList<ClassDef> {
             }
         }
         context.setFields(fields);
+
         MethodId[] methods = new MethodId[map.method_ids_size];
         if (map.method_ids_size != 0) {
             RandomInput in2 = in.duplicate(map.method_ids_off);
@@ -116,6 +130,7 @@ public class Dex extends PCList<ClassDef> {
             }
         }
         context.setMethods(methods);
+
         MethodHandleItem[] method_handles = new MethodHandleItem[map.method_handles_size];
         if (map.method_handles_size != 0) {
             RandomInput in2 = in.duplicate(map.method_handles_off);
@@ -124,6 +139,7 @@ public class Dex extends PCList<ClassDef> {
             }
         }
         context.setMethodHandles(method_handles);
+
         CallSiteId[] call_sites = new CallSiteId[map.call_site_ids_size];
         if (map.call_site_ids_size != 0) {
             RandomInput in2 = in.duplicate(map.call_site_ids_off);
@@ -132,6 +148,7 @@ public class Dex extends PCList<ClassDef> {
             }
         }
         context.setCallSites(call_sites);
+
         ClassDef[] class_defs = new ClassDef[class_def_ids.length];
         for (int i = 0; i < class_def_ids.length; i++) {
             int offset = map.class_defs_off + ClassDef.SIZE * class_def_ids[i];
@@ -382,9 +399,7 @@ public class Dex extends PCList<ClassDef> {
     }
 
     @Override
-    public Dex clone() {
-        Dex out = new Dex();
-        out.addAll(this);
-        return out;
+    public Dex mutate() {
+        return new Dex(this);
     }
 }

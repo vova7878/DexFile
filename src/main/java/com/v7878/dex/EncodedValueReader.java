@@ -42,9 +42,13 @@ import com.v7878.dex.EncodedValue.ShortValue;
 import com.v7878.dex.EncodedValue.StringValue;
 import com.v7878.dex.EncodedValue.TypeValue;
 import com.v7878.dex.io.RandomInput;
+import com.v7878.dex.io.ValueCoder;
 
 //TODO: move to EncodedValue
-public class EncodedValueReader {
+public final class EncodedValueReader {
+
+    private EncodedValueReader() {
+    }
 
     public static int peek(RandomInput in, EncodedValueType type) {
         if (type == null) {

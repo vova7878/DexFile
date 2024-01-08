@@ -24,7 +24,7 @@ package com.v7878.dex;
 
 import com.v7878.dex.bytecode.Instruction;
 
-public class DataFilter implements DataCollector {
+public abstract class DataFilter implements DataCollector {
 
     @Override
     public void add(String value) {

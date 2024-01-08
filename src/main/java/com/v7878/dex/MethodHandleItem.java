@@ -28,7 +28,7 @@ import com.v7878.dex.io.RandomOutput;
 import java.util.Comparator;
 import java.util.Objects;
 
-public class MethodHandleItem implements PublicCloneable {
+public final class MethodHandleItem implements Mutable {
 
     public static final int SIZE = 0x08;
 
@@ -48,6 +48,7 @@ public class MethodHandleItem implements PublicCloneable {
         }
     };
 
+    //TODO: move values to DexConstants
     public enum MethodHandleType {
         STATIC_PUT(0x00, false),
         STATIC_GET(0x01, false),
@@ -103,7 +104,7 @@ public class MethodHandleItem implements PublicCloneable {
 
     public final void setFieldOrMethod(FieldOrMethodId field_or_method) {
         this.field_or_method = Objects.requireNonNull(field_or_method,
-                "field_or_method can`t be null").clone();
+                "field_or_method can`t be null").mutate();
     }
 
     public final FieldOrMethodId getFieldOrMethod() {
@@ -159,7 +160,7 @@ public class MethodHandleItem implements PublicCloneable {
     }
 
     @Override
-    public MethodHandleItem clone() {
+    public MethodHandleItem mutate() {
         return new MethodHandleItem(type, field_or_method);
     }
 }

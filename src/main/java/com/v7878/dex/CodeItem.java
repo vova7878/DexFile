@@ -27,25 +27,26 @@ import static com.v7878.misc.Math.roundUpL;
 import com.v7878.dex.bytecode.Instruction;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 import com.v7878.dex.util.SparseArray;
 import com.v7878.misc.Checks;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Objects;
 
-public class CodeItem implements PublicCloneable {
+public final class CodeItem implements Mutable {
 
     public static final int ALIGNMENT = 4;
 
     private int registers_size;
     private int ins_size;
     private int outs_size;
-    private PCList<Instruction> insns;
-    private PCList<TryItem> tries;
+    private MutableList<Instruction> insns;
+    private MutableList<TryItem> tries;
 
     public CodeItem(int registers_size, int ins_size, int outs_size,
-                    PCList<Instruction> insns, PCList<TryItem> tries) {
+                    Collection<Instruction> insns, Collection<TryItem> tries) {
         setRegistersSize(registers_size);
         setInputsSize(ins_size);
         setOutputsSize(outs_size);
@@ -80,21 +81,21 @@ public class CodeItem implements PublicCloneable {
         return outs_size;
     }
 
-    public final void setInstructions(PCList<Instruction> insns) {
+    public final void setInstructions(Collection<Instruction> insns) {
         this.insns = insns == null
-                ? PCList.empty() : insns.clone();
+                ? MutableList.empty() : new MutableList<>(insns);
     }
 
-    public final PCList<Instruction> getInstructions() {
+    public final MutableList<Instruction> getInstructions() {
         return insns;
     }
 
-    public final void setTries(PCList<TryItem> tries) {
+    public final void setTries(Collection<TryItem> tries) {
         this.tries = tries == null
-                ? PCList.empty() : tries.clone();
+                ? MutableList.empty() : new MutableList<>(tries);
     }
 
-    public final PCList<TryItem> getTries() {
+    public final MutableList<TryItem> getTries() {
         return tries;
     }
 
@@ -211,7 +212,7 @@ public class CodeItem implements PublicCloneable {
     }
 
     @Override
-    public CodeItem clone() {
+    public CodeItem mutate() {
         return new CodeItem(registers_size, ins_size, outs_size, insns, tries);
     }
 }

@@ -23,7 +23,8 @@
 package com.v7878.dex;
 
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.io.ValueCoder;
+import com.v7878.dex.util.MutableList;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
@@ -32,7 +33,8 @@ import java.lang.reflect.Field;
 import java.util.Comparator;
 import java.util.Objects;
 
-public interface EncodedValue extends PublicCloneable {
+//TODO: cleanup code
+public interface EncodedValue extends Mutable {
 
     Comparator<EncodedValue> COMPARATOR = (a, b) -> {
         EncodedValueType type;
@@ -44,6 +46,7 @@ public interface EncodedValue extends PublicCloneable {
         return ((Comparator<EncodedValue>) type.comparator).compare(a, b);
     };
 
+    //TODO: move values to DexConstants
     enum EncodedValueType {
         BYTE(0x00, ByteValue.COMPARATOR),
         SHORT(0x02, ShortValue.COMPARATOR),
@@ -94,7 +97,7 @@ public interface EncodedValue extends PublicCloneable {
     Object value();
 
     @Override
-    EncodedValue clone();
+    EncodedValue mutate();
 
     static EncodedValue defaultValue(TypeId type) {
         switch (type.getShorty()) {
@@ -117,6 +120,7 @@ public interface EncodedValue extends PublicCloneable {
             case 'L':
                 return new NullValue();
             default:
+                // V - void
                 throw new IllegalArgumentException();
         }
     }
@@ -311,7 +315,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public abstract SimpleValue clone();
+        public abstract SimpleValue mutate();
 
         @Override
         public int hashCode() {
@@ -366,7 +370,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public BooleanValue clone() {
+        public BooleanValue mutate() {
             return new BooleanValue(value);
         }
     }
@@ -403,7 +407,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public ByteValue clone() {
+        public ByteValue mutate() {
             return new ByteValue(value);
         }
     }
@@ -440,7 +444,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public ShortValue clone() {
+        public ShortValue mutate() {
             return new ShortValue(value);
         }
     }
@@ -477,7 +481,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public CharValue clone() {
+        public CharValue mutate() {
             return new CharValue(value);
         }
     }
@@ -514,7 +518,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public IntValue clone() {
+        public IntValue mutate() {
             return new IntValue(value);
         }
     }
@@ -551,7 +555,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public LongValue clone() {
+        public LongValue mutate() {
             return new LongValue(value);
         }
     }
@@ -589,7 +593,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public FloatValue clone() {
+        public FloatValue mutate() {
             return new FloatValue(value);
         }
     }
@@ -628,7 +632,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public DoubleValue clone() {
+        public DoubleValue mutate() {
             return new DoubleValue(value);
         }
     }
@@ -662,7 +666,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public NullValue clone() {
+        public NullValue mutate() {
             return new NullValue();
         }
     }
@@ -693,7 +697,7 @@ public interface EncodedValue extends PublicCloneable {
 
         public final void setValue(ProtoId value) {
             this.value = Objects.requireNonNull(value,
-                    "value can`t be null").clone();
+                    "value can`t be null").mutate();
         }
 
         @Override
@@ -702,7 +706,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public MethodTypeValue clone() {
+        public MethodTypeValue mutate() {
             return new MethodTypeValue(value);
         }
     }
@@ -732,7 +736,7 @@ public interface EncodedValue extends PublicCloneable {
 
         public final void setValue(MethodHandleItem value) {
             this.value = Objects.requireNonNull(value,
-                    "value can`t be null").clone();
+                    "value can`t be null").mutate();
         }
 
         @Override
@@ -741,7 +745,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public MethodHandleValue clone() {
+        public MethodHandleValue mutate() {
             return new MethodHandleValue(value);
         }
     }
@@ -780,7 +784,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public StringValue clone() {
+        public StringValue mutate() {
             return new StringValue(value);
         }
     }
@@ -810,7 +814,7 @@ public interface EncodedValue extends PublicCloneable {
 
         public final void setValue(TypeId value) {
             this.value = Objects.requireNonNull(value,
-                    "value can`t be null").clone();
+                    "value can`t be null").mutate();
         }
 
         @Override
@@ -819,7 +823,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public TypeValue clone() {
+        public TypeValue mutate() {
             return new TypeValue(value);
         }
     }
@@ -849,7 +853,7 @@ public interface EncodedValue extends PublicCloneable {
 
         public final void setValue(FieldId value) {
             this.value = Objects.requireNonNull(value,
-                    "value can`t be null").clone();
+                    "value can`t be null").mutate();
         }
 
         @Override
@@ -858,7 +862,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public FieldValue clone() {
+        public FieldValue mutate() {
             return new FieldValue(value);
         }
     }
@@ -888,7 +892,7 @@ public interface EncodedValue extends PublicCloneable {
 
         public final void setValue(MethodId value) {
             this.value = Objects.requireNonNull(value,
-                    "value can`t be null").clone();
+                    "value can`t be null").mutate();
         }
 
         @Override
@@ -897,7 +901,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public MethodValue clone() {
+        public MethodValue mutate() {
             return new MethodValue(value);
         }
     }
@@ -927,7 +931,7 @@ public interface EncodedValue extends PublicCloneable {
 
         public final void setValue(FieldId value) {
             this.value = Objects.requireNonNull(value,
-                    "value can`t be null").clone();
+                    "value can`t be null").mutate();
         }
 
         @Override
@@ -936,12 +940,12 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public EnumValue clone() {
+        public EnumValue mutate() {
             return new EnumValue(value);
         }
     }
 
-    class ArrayValue extends PCList<EncodedValue> implements EncodedValue {
+    class ArrayValue extends MutableList<EncodedValue> implements EncodedValue {
 
         public static final Comparator<ArrayValue> COMPARATOR
                 = getComparator(EncodedValue.COMPARATOR);
@@ -1003,7 +1007,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public ArrayValue clone() {
+        public ArrayValue mutate() {
             ArrayValue out = new ArrayValue();
             out.addAll(this);
             return out;
@@ -1035,7 +1039,7 @@ public interface EncodedValue extends PublicCloneable {
 
         public final void setValue(EncodedAnnotation value) {
             this.value = Objects.requireNonNull(value,
-                    "value can`t be null").clone();
+                    "value can`t be null").mutate();
         }
 
         @Override
@@ -1044,7 +1048,7 @@ public interface EncodedValue extends PublicCloneable {
         }
 
         @Override
-        public AnnotationValue clone() {
+        public AnnotationValue mutate() {
             return new AnnotationValue(value);
         }
     }

@@ -29,7 +29,7 @@ import java.lang.reflect.Field;
 import java.util.Comparator;
 import java.util.Objects;
 
-public class FieldId extends FieldOrMethodId {
+public final class FieldId extends FieldOrMethodId {
 
     public static final int SIZE = 0x08;
 
@@ -68,7 +68,7 @@ public class FieldId extends FieldOrMethodId {
 
     public final void setType(TypeId type) {
         this.type = Objects.requireNonNull(type,
-                "type can`t be null").clone();
+                "type can`t be null").mutate();
     }
 
     public final TypeId getType() {
@@ -118,7 +118,7 @@ public class FieldId extends FieldOrMethodId {
     }
 
     @Override
-    public FieldId clone() {
+    public FieldId mutate() {
         return new FieldId(getDeclaringClass(), type, getName());
     }
 }

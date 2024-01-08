@@ -9,7 +9,7 @@ import java.lang.reflect.Modifier;
 import java.util.Comparator;
 import java.util.Objects;
 
-public class MethodId extends FieldOrMethodId {
+public final class MethodId extends FieldOrMethodId {
 
     public static final int SIZE = 0x08;
 
@@ -55,7 +55,7 @@ public class MethodId extends FieldOrMethodId {
 
     public final void setProto(ProtoId proto) {
         this.proto = Objects.requireNonNull(proto,
-                "proto can`t be null").clone();
+                "proto can`t be null").mutate();
     }
 
     public final ProtoId getProto() {
@@ -105,7 +105,7 @@ public class MethodId extends FieldOrMethodId {
     }
 
     @Override
-    public MethodId clone() {
+    public MethodId mutate() {
         return new MethodId(getDeclaringClass(), proto, getName());
     }
 }

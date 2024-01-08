@@ -24,28 +24,29 @@ package com.v7878.dex;
 
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 
+import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class CatchHandler implements PublicCloneable {
+public final class CatchHandler implements Mutable {
 
-    private PCList<CatchHandlerElement> handlers;
+    private MutableList<CatchHandlerElement> handlers;
     private Integer catch_all_addr;
 
-    public CatchHandler(PCList<CatchHandlerElement> handlers,
+    public CatchHandler(Collection<CatchHandlerElement> handlers,
                         Integer catch_all_addr) {
         setHandlers(handlers);
         setCatchAllAddress(catch_all_addr);
     }
 
-    public final void setHandlers(PCList<CatchHandlerElement> handlers) {
+    public final void setHandlers(Collection<CatchHandlerElement> handlers) {
         this.handlers = handlers == null
-                ? PCList.empty() : handlers.clone();
+                ? MutableList.empty() : new MutableList<>(handlers);
     }
 
-    public final PCList<CatchHandlerElement> getHandlers() {
+    public final MutableList<CatchHandlerElement> getHandlers() {
         return handlers;
     }
 
@@ -63,7 +64,7 @@ public class CatchHandler implements PublicCloneable {
     public static CatchHandler read(RandomInput in, ReadContext context) {
         int size = in.readSLeb128();
         int handlersCount = Math.abs(size);
-        PCList<CatchHandlerElement> handlers = PCList.empty();
+        MutableList<CatchHandlerElement> handlers = MutableList.empty();
         for (int i = 0; i < handlersCount; i++) {
             handlers.add(CatchHandlerElement.read(in, context));
         }
@@ -116,7 +117,7 @@ public class CatchHandler implements PublicCloneable {
     }
 
     @Override
-    public CatchHandler clone() {
+    public CatchHandler mutate() {
         return new CatchHandler(handlers, catch_all_addr);
     }
 }

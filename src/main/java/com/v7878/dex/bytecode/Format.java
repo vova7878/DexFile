@@ -72,9 +72,9 @@ public abstract class Format {
         return (value << shift) >> shift;
     }
 
-    public static class Format10x extends Format {
+    public static final class Format10x extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             Instance() {
             }
@@ -109,7 +109,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance();
             }
         }
@@ -128,9 +128,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format12x extends Format {
+    public static final class Format12x extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int A, B;
 
@@ -170,7 +170,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(A, B);
             }
         }
@@ -189,9 +189,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format11n extends Format {
+    public static final class Format11n extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int A, sB;
 
@@ -231,7 +231,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(A, sB);
             }
         }
@@ -250,9 +250,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format11x extends Format {
+    public static final class Format11x extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA;
 
@@ -291,7 +291,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA);
             }
         }
@@ -310,9 +310,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format10t extends Format {
+    public static final class Format10t extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int sAA;
 
@@ -351,7 +351,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(sAA);
             }
         }
@@ -370,9 +370,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format20t extends Format {
+    public static final class Format20t extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int sAAAA;
 
@@ -412,7 +412,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(sAAAA);
             }
         }
@@ -432,9 +432,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format22x extends Format {
+    public static final class Format22x extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA, BBBB;
 
@@ -475,7 +475,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, BBBB);
             }
         }
@@ -495,9 +495,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format21t21s extends Format {
+    public static final class Format21t21s extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA, sBBBB;
 
@@ -538,7 +538,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, sBBBB);
             }
         }
@@ -558,9 +558,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format21ih extends Format {
+    public static final class Format21ih extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA, sBBBB0000;
 
@@ -601,7 +601,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, sBBBB0000);
             }
         }
@@ -621,9 +621,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format21lh extends Format {
+    public static final class Format21lh extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA;
             public final long sBBBB000000000000;
@@ -665,7 +665,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, sBBBB000000000000);
             }
         }
@@ -685,17 +685,17 @@ public abstract class Format {
         }
     }
 
-    public static class Format21c extends Format {
+    public static final class Format21c extends Format {
         public final ReferenceType referenceType;
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA;
             public final Object cBBBB;
 
             Instance(int AA, Object cBBBB) {
                 this.AA = AA;
-                this.cBBBB = referenceType.clone(cBBBB);
+                this.cBBBB = referenceType.mutate(cBBBB);
             }
 
             @Override
@@ -736,8 +736,8 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
-                return new Instance(AA, referenceType.clone(cBBBB));
+            public Instruction mutate() {
+                return new Instance(AA, referenceType.mutate(cBBBB));
             }
         }
 
@@ -757,11 +757,11 @@ public abstract class Format {
         }
     }
 
-    public static class Format22c extends Format {
+    public static final class Format22c extends Format {
 
         public final ReferenceType referenceType;
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int A, B;
             public final Object cCCCC;
@@ -769,7 +769,7 @@ public abstract class Format {
             Instance(int A, int B, Object cCCCC) {
                 this.A = A;
                 this.B = B;
-                this.cCCCC = referenceType.clone(cCCCC);
+                this.cCCCC = referenceType.mutate(cCCCC);
             }
 
             @Override
@@ -811,7 +811,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(A, B, cCCCC);
             }
         }
@@ -832,9 +832,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format23x extends Format {
+    public static final class Format23x extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA, BB, CC;
 
@@ -876,7 +876,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, BB, CC);
             }
         }
@@ -896,9 +896,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format22b extends Format {
+    public static final class Format22b extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA, BB, sCC;
 
@@ -940,7 +940,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, BB, sCC);
             }
         }
@@ -960,9 +960,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format22t22s extends Format {
+    public static final class Format22t22s extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int A, B, sCCCC;
 
@@ -1004,7 +1004,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(A, B, sCCCC);
             }
         }
@@ -1024,9 +1024,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format30t extends Format {
+    public static final class Format30t extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int sAAAAAAAA;
 
@@ -1066,7 +1066,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(sAAAAAAAA);
             }
         }
@@ -1087,9 +1087,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format32x extends Format {
+    public static final class Format32x extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AAAA, BBBB;
 
@@ -1130,7 +1130,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AAAA, BBBB);
             }
         }
@@ -1151,9 +1151,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format31i31t extends Format {
+    public static final class Format31i31t extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA, sBBBBBBBB;
 
@@ -1194,7 +1194,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, sBBBBBBBB);
             }
         }
@@ -1215,18 +1215,18 @@ public abstract class Format {
         }
     }
 
-    public static class Format31c extends Format {
+    public static final class Format31c extends Format {
 
         public final ReferenceType referenceType;
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA;
             public final Object cBBBBBBBB;
 
             Instance(int AA, Object cBBBBBBBB) {
                 this.AA = AA;
-                this.cBBBBBBBB = referenceType.clone(cBBBBBBBB);
+                this.cBBBBBBBB = referenceType.mutate(cBBBBBBBB);
             }
 
             @Override
@@ -1267,7 +1267,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, cBBBBBBBB);
             }
         }
@@ -1291,18 +1291,18 @@ public abstract class Format {
         }
     }
 
-    public static class Format35c extends Format {
+    public static final class Format35c extends Format {
 
         public final ReferenceType referenceType;
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int A, C, D, E, F, G;
             public final Object cBBBB;
 
             Instance(int A, Object cBBBB, int C, int D, int E, int F, int G) {
                 this.A = A;
-                this.cBBBB = referenceType.clone(cBBBB);
+                this.cBBBB = referenceType.mutate(cBBBB);
                 this.C = C;
                 this.D = D;
                 this.E = E;
@@ -1351,7 +1351,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(A, cBBBB, C, D, E, F, G);
             }
         }
@@ -1379,11 +1379,11 @@ public abstract class Format {
         }
     }
 
-    public static class Format3rc extends Format {
+    public static final class Format3rc extends Format {
 
         public final ReferenceType referenceType;
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA;
             public final Object cBBBB;
@@ -1391,7 +1391,7 @@ public abstract class Format {
 
             Instance(int AA, Object cBBBB, int CCCC) {
                 this.AA = AA;
-                this.cBBBB = referenceType.clone(cBBBB);
+                this.cBBBB = referenceType.mutate(cBBBB);
                 this.CCCC = CCCC;
             }
 
@@ -1433,7 +1433,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, cBBBB, CCCC);
             }
         }
@@ -1455,25 +1455,25 @@ public abstract class Format {
         }
     }
 
-    public static class Format45cc extends Format {
+    public static final class Format45cc extends Format {
 
         public final ReferenceType referenceType;
         public final ReferenceType referenceType2;
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int A, C, D, E, F, G;
             public final Object cBBBB, cHHHH;
 
             Instance(int A, Object cBBBB, int C, int D, int E, int F, int G, Object cHHHH) {
                 this.A = A;
-                this.cBBBB = referenceType.clone(cBBBB);
+                this.cBBBB = referenceType.mutate(cBBBB);
                 this.C = C;
                 this.D = D;
                 this.E = E;
                 this.F = F;
                 this.G = G;
-                this.cHHHH = referenceType2.clone(cHHHH);
+                this.cHHHH = referenceType2.mutate(cHHHH);
             }
 
             @Override
@@ -1519,7 +1519,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(A, cBBBB, C, D, E, F, G, cHHHH);
             }
         }
@@ -1550,12 +1550,12 @@ public abstract class Format {
         }
     }
 
-    public static class Format4rcc extends Format {
+    public static final class Format4rcc extends Format {
 
         public final ReferenceType referenceType;
         public final ReferenceType referenceType2;
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA;
             public final Object cBBBB;
@@ -1564,9 +1564,9 @@ public abstract class Format {
 
             Instance(int AA, Object cBBBB, int CCCC, Object cHHHH) {
                 this.AA = AA;
-                this.cBBBB = referenceType.clone(cBBBB);
+                this.cBBBB = referenceType.mutate(cBBBB);
                 this.CCCC = CCCC;
-                this.cHHHH = referenceType2.clone(cHHHH);
+                this.cHHHH = referenceType2.mutate(cHHHH);
             }
 
             @Override
@@ -1610,7 +1610,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, cBBBB, CCCC, cHHHH);
             }
         }
@@ -1635,9 +1635,9 @@ public abstract class Format {
         }
     }
 
-    public static class Format51l extends Format {
+    public static final class Format51l extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int AA;
             public final long sBBBBBBBBBBBBBBBB;
@@ -1679,7 +1679,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(AA, sBBBBBBBBBBBBBBBB);
             }
         }
@@ -1703,9 +1703,9 @@ public abstract class Format {
         }
     }
 
-    public static class PackedSwitchPayload extends Format {
+    public static final class PackedSwitchPayload extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int first_key;
             public final int[] targets;
@@ -1754,7 +1754,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(first_key, targets);
             }
         }
@@ -1780,9 +1780,9 @@ public abstract class Format {
         }
     }
 
-    public static class SparseSwitchPayload extends Format {
+    public static final class SparseSwitchPayload extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int[] keys;
             public final int[] targets;
@@ -1831,7 +1831,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(keys, targets);
             }
         }
@@ -1857,9 +1857,9 @@ public abstract class Format {
         }
     }
 
-    public static class ArrayPayload extends Format {
+    public static final class ArrayPayload extends Format {
 
-        public class Instance extends Instruction {
+        public final class Instance extends Instruction {
 
             public final int element_width;
             public final byte[] data;
@@ -1908,7 +1908,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction clone() {
+            public Instruction mutate() {
                 return new Instance(element_width, data);
             }
         }

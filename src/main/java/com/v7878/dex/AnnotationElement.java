@@ -28,7 +28,7 @@ import com.v7878.dex.io.RandomOutput;
 import java.util.Comparator;
 import java.util.Objects;
 
-public class AnnotationElement implements PublicCloneable {
+public final class AnnotationElement implements Mutable {
 
     public static final Comparator<AnnotationElement> COMPARATOR = (a, b) -> {
         int out = StringId.COMPARATOR.compare(a.name, b.name);
@@ -60,7 +60,7 @@ public class AnnotationElement implements PublicCloneable {
 
     public final void setValue(EncodedValue value) {
         this.value = Objects.requireNonNull(value,
-                "value can`t be null").clone();
+                "value can`t be null").mutate();
     }
 
     public final EncodedValue getValue() {
@@ -104,7 +104,7 @@ public class AnnotationElement implements PublicCloneable {
     }
 
     @Override
-    public AnnotationElement clone() {
+    public AnnotationElement mutate() {
         return new AnnotationElement(name, value);
     }
 }

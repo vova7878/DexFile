@@ -20,15 +20,17 @@
  * SOFTWARE.
  */
 
-package com.v7878.dex;
+package com.v7878.dex.io;
 
-import com.v7878.dex.io.RandomInput;
-import com.v7878.dex.io.RandomOutput;
+import com.v7878.dex.EncodedValue.EncodedValueType;
 
-public class ValueCoder {
+public final class ValueCoder {
+
+    private ValueCoder() {
+    }
 
     public static void writeSignedIntegralValue(
-            RandomOutput out, EncodedValue.EncodedValueType type, long value) {
+            RandomOutput out, EncodedValueType type, long value) {
         /*
          * Figure out how many bits are needed to represent the value,
          * including a sign bit: The bit count is subtracted from 65
@@ -58,7 +60,7 @@ public class ValueCoder {
     }
 
     public static void writeUnsignedIntegralValue(
-            RandomOutput out, EncodedValue.EncodedValueType type, long value) {
+            RandomOutput out, EncodedValueType type, long value) {
         // Figure out how many bits are needed to represent the value.
         int requiredBits = 64 - Long.numberOfLeadingZeros(value);
         if (requiredBits == 0) {
@@ -83,7 +85,7 @@ public class ValueCoder {
     }
 
     public static void writeRightZeroExtendedValue(
-            RandomOutput out, EncodedValue.EncodedValueType type, long value) {
+            RandomOutput out, EncodedValueType type, long value) {
         // Figure out how many bits are needed to represent the value.
         int requiredBits = 64 - Long.numberOfTrailingZeros(value);
         if (requiredBits == 0) {

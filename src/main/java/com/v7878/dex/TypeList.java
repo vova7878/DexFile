@@ -24,21 +24,34 @@ package com.v7878.dex;
 
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class TypeList extends PCList<TypeId> {
+public final class TypeList extends MutableList<TypeId> {
 
     public static final int ALIGNMENT = 4;
 
     public static final Comparator<TypeList> COMPARATOR
-            = PCList.getComparator(TypeId.COMPARATOR);
+            = MutableList.getComparator(TypeId.COMPARATOR);
+
+    public TypeList(int initialCapacity) {
+        super(initialCapacity);
+    }
 
     public TypeList(TypeId... types) {
         super(types);
+    }
+
+    public TypeList(Collection<TypeId> types) {
+        super(types);
+    }
+
+    public static TypeList empty() {
+        return new TypeList();
     }
 
     @Override
@@ -54,10 +67,6 @@ public class TypeList extends PCList<TypeId> {
             out.add(context.type(in.readUnsignedShort()));
         }
         return out;
-    }
-
-    public static TypeList empty() {
-        return new TypeList();
     }
 
     public void collectData(DataCollector data) {
@@ -88,9 +97,7 @@ public class TypeList extends PCList<TypeId> {
     }
 
     @Override
-    public TypeList clone() {
-        TypeList out = new TypeList();
-        out.addAll(this);
-        return out;
+    public TypeList mutate() {
+        return new TypeList(this);
     }
 }

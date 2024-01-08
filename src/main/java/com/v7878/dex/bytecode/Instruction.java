@@ -23,14 +23,16 @@
 package com.v7878.dex.bytecode;
 
 import com.v7878.dex.DataCollector;
-import com.v7878.dex.PublicCloneable;
+import com.v7878.dex.Mutable;
 import com.v7878.dex.ReadContext;
 import com.v7878.dex.WriteContext;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 
-public abstract class Instruction implements PublicCloneable {
+public abstract class Instruction implements Mutable {
+    Instruction() {
+    }
 
     public static Instruction read(RandomInput in, ReadContext context) {
         int unit = in.readUnsignedShort();
@@ -46,8 +48,8 @@ public abstract class Instruction implements PublicCloneable {
         return context.opcode(opcode).format().read(in, context, arg);
     }
 
-    public static PCList<Instruction> readArray(RandomInput in, ReadContext context) {
-        PCList<Instruction> insns = PCList.empty();
+    public static MutableList<Instruction> readArray(RandomInput in, ReadContext context) {
+        MutableList<Instruction> insns = MutableList.empty();
 
         int insns_size = in.readInt(); // in 2-byte code units
         insns.ensureCapacity(insns_size);
@@ -91,5 +93,5 @@ public abstract class Instruction implements PublicCloneable {
     public abstract int hashCode();
 
     @Override
-    public abstract Instruction clone();
+    public abstract Instruction mutate();
 }

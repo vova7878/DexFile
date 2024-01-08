@@ -22,18 +22,19 @@
 
 package com.v7878.dex.util;
 
-import com.v7878.dex.PublicCloneable;
+import com.v7878.dex.Mutable;
 import com.v7878.misc.Checks;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Objects;
 
-public class PCList<T extends PublicCloneable>
-        extends AbstractList<T> implements PublicCloneable {
+public class MutableList<T extends Mutable>
+        extends AbstractList<T> implements Mutable {
 
-    public static <E extends PublicCloneable, L extends PCList<E>>
+    public static <E extends Mutable, L extends MutableList<E>>
     Comparator<L> getComparator(Comparator<E> cmp) {
         Objects.requireNonNull(cmp);
         return (a, b) -> {
@@ -52,8 +53,12 @@ public class PCList<T extends PublicCloneable>
 
     private final ArrayList<T> elements;
 
+    public MutableList(int initialCapacity) {
+        this.elements = new ArrayList<>(initialCapacity);
+    }
+
     @SafeVarargs
-    public PCList(T... elements) {
+    public MutableList(T... elements) {
         int length = 0;
         if (elements != null) {
             length = elements.length;
@@ -64,31 +69,39 @@ public class PCList<T extends PublicCloneable>
         }
     }
 
-    public static <E extends PublicCloneable> PCList<E> empty() {
-        return new PCList<>();
+    public MutableList(Collection<? extends T> c) {
+        int length = c.size();
+        this.elements = new ArrayList<>(length);
+        if (length != 0) {
+            addAll(c);
+        }
+    }
+
+    public static <E extends Mutable> MutableList<E> empty() {
+        return new MutableList<>();
     }
 
     protected T check(T element) {
         return Objects.requireNonNull(element,
-                "PCList can`t contain null element");
+                "MutableList can`t contain null element");
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public final boolean add(T element) {
-        return elements.add((T) check(element).clone());
+        return elements.add((T) check(element).mutate());
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public final void add(int index, T element) {
-        elements.add(index, (T) check(element).clone());
+        elements.add(index, (T) check(element).mutate());
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public final T set(int index, T element) {
-        return elements.set(index, (T) check(element).clone());
+        return elements.set(index, (T) check(element).mutate());
     }
 
     @Override
@@ -150,8 +163,8 @@ public class PCList<T extends PublicCloneable>
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof PCList) {
-            PCList<?> tlobj = (PCList<?>) obj;
+        if (obj instanceof MutableList) {
+            MutableList<?> tlobj = (MutableList<?>) obj;
             return Objects.equals(elements, tlobj.elements);
         }
         return false;
@@ -163,9 +176,7 @@ public class PCList<T extends PublicCloneable>
     }
 
     @Override
-    public PCList<T> clone() {
-        PCList<T> out = new PCList<>();
-        out.addAll(elements);
-        return out;
+    public MutableList<T> mutate() {
+        return new MutableList<>(this);
     }
 }

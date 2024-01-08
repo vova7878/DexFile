@@ -22,7 +22,9 @@
 
 package com.v7878.dex;
 
-public class DexConstants {
+public final class DexConstants {
+    private DexConstants() {
+    }
 
     public static final int ENDIAN_CONSTANT = 0x12345678;
     public static final int NO_INDEX = -1;
@@ -52,6 +54,7 @@ public class DexConstants {
     //TODO?
     public static final int TYPE_HIDDENAPI_CLASS_DATA_ITEM = 0xF000;
 
+    //TODO: cleanup code
     public enum DexVersion {
         V035(1, (byte) '0', (byte) '3', (byte) '5'),
         V037(24, (byte) '0', (byte) '3', (byte) '7'),

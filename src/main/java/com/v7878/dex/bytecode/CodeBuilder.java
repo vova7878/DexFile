@@ -45,7 +45,7 @@ import com.v7878.dex.bytecode.Format.Format35c;
 import com.v7878.dex.bytecode.Format.Format3rc;
 import com.v7878.dex.bytecode.Format.Format45cc;
 import com.v7878.dex.bytecode.Format.Format4rcc;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 import com.v7878.misc.Checks;
 
 import java.util.ArrayList;
@@ -83,7 +83,7 @@ public final class CodeBuilder {
     }
 
     private CodeItem end() {
-        PCList<Instruction> out = PCList.empty();
+        MutableList<Instruction> out = MutableList.empty();
         out.addAll(instructions.stream().map(Supplier::get).collect(Collectors.toList()));
         return new CodeItem(registers_size, ins_size, max_outs, out, null);
     }

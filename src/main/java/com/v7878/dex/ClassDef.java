@@ -26,6 +26,7 @@ import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,7 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class ClassDef implements PublicCloneable {
+public final class ClassDef implements Mutable {
 
     public static final int SIZE = 0x20;
 
@@ -97,8 +98,8 @@ public class ClassDef implements PublicCloneable {
     }
 
     public ClassDef(TypeId clazz, int access_flags, TypeId superclass,
-                    TypeList interfaces, String source_file,
-                    AnnotationSet annotations, ClassData class_data) {
+                    Collection<TypeId> interfaces, String source_file,
+                    Collection<AnnotationItem> annotations, ClassData class_data) {
         setType(clazz);
         setAccessFlags(access_flags);
         setSuperClass(superclass);
@@ -110,7 +111,7 @@ public class ClassDef implements PublicCloneable {
 
     public final void setType(TypeId clazz) {
         this.clazz = Objects.requireNonNull(clazz,
-                "type can`n be null").clone();
+                "type can`n be null").mutate();
     }
 
     public final TypeId getType() {
@@ -126,16 +127,16 @@ public class ClassDef implements PublicCloneable {
     }
 
     public final void setSuperClass(TypeId superclass) {
-        this.superclass = superclass == null ? null : superclass.clone();
+        this.superclass = superclass == null ? null : superclass.mutate();
     }
 
     public final TypeId getSuperClass() {
         return superclass;
     }
 
-    public final void setInterfaces(TypeList interfaces) {
+    public final void setInterfaces(Collection<TypeId> interfaces) {
         this.interfaces = interfaces == null
-                ? TypeList.empty() : interfaces.clone();
+                ? TypeList.empty() : new TypeList(interfaces);
     }
 
     public final TypeList getInterfaces() {
@@ -150,9 +151,9 @@ public class ClassDef implements PublicCloneable {
         return source_file;
     }
 
-    public final void setAnnotations(AnnotationSet annotations) {
+    public final void setAnnotations(Collection<AnnotationItem> annotations) {
         this.annotations = annotations == null
-                ? AnnotationSet.empty() : annotations.clone();
+                ? AnnotationSet.empty() : new AnnotationSet(annotations);
     }
 
     public final AnnotationSet getAnnotations() {
@@ -161,7 +162,7 @@ public class ClassDef implements PublicCloneable {
 
     public final void setClassData(ClassData class_data) {
         this.class_data = class_data == null
-                ? ClassData.empty() : class_data.clone();
+                ? ClassData.empty() : class_data.mutate();
     }
 
     public final ClassData getClassData() {
@@ -268,7 +269,7 @@ public class ClassDef implements PublicCloneable {
     }
 
     @Override
-    public ClassDef clone() {
+    public ClassDef mutate() {
         return new ClassDef(clazz, access_flags, superclass, interfaces,
                 source_file, annotations, class_data);
     }

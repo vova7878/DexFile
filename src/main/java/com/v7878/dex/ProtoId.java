@@ -7,10 +7,11 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Objects;
 
-public class ProtoId implements PublicCloneable {
+public final class ProtoId implements Mutable {
 
     public static final int SIZE = 0x0c;
 
@@ -42,7 +43,7 @@ public class ProtoId implements PublicCloneable {
     private TypeId return_type;
     private TypeList parameters;
 
-    public ProtoId(TypeId return_type, TypeList parameters) {
+    public ProtoId(TypeId return_type, Collection<TypeId> parameters) {
         setReturnType(return_type);
         setParameters(parameters);
     }
@@ -53,16 +54,16 @@ public class ProtoId implements PublicCloneable {
 
     public final void setReturnType(TypeId return_type) {
         this.return_type = Objects.requireNonNull(return_type,
-                "return_type can`t be null").clone();
+                "return_type can`t be null").mutate();
     }
 
     public final TypeId getReturnType() {
         return return_type;
     }
 
-    public final void setParameters(TypeList parameters) {
+    public final void setParameters(Collection<TypeId> parameters) {
         this.parameters = parameters == null
-                ? TypeList.empty() : parameters.clone();
+                ? TypeList.empty() : new TypeList(parameters);
     }
 
     public final TypeList getParameters() {
@@ -133,7 +134,7 @@ public class ProtoId implements PublicCloneable {
     }
 
     @Override
-    public ProtoId clone() {
+    public ProtoId mutate() {
         return new ProtoId(return_type, parameters);
     }
 }

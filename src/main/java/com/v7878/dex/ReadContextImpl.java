@@ -26,7 +26,7 @@ import com.v7878.dex.bytecode.Opcode;
 import com.v7878.dex.util.SparseArray;
 
 // Temporary object. Needed to read dex
-class ReadContextImpl implements ReadContext {
+final class ReadContextImpl implements ReadContext {
 
     private String[] strings;
     private TypeId[] types;

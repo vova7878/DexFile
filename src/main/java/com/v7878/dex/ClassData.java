@@ -24,60 +24,61 @@ package com.v7878.dex;
 
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 
+import java.util.Collection;
 import java.util.function.Consumer;
 
-public class ClassData implements PublicCloneable {
+public final class ClassData implements Mutable {
 
-    private PCList<EncodedField> static_fields;
-    private PCList<EncodedField> instance_fields;
-    private PCList<EncodedMethod> direct_methods;
-    private PCList<EncodedMethod> virtual_methods;
+    private MutableList<EncodedField> static_fields;
+    private MutableList<EncodedField> instance_fields;
+    private MutableList<EncodedMethod> direct_methods;
+    private MutableList<EncodedMethod> virtual_methods;
 
-    public ClassData(PCList<EncodedField> static_fields,
-                     PCList<EncodedField> instance_fields,
-                     PCList<EncodedMethod> direct_methods,
-                     PCList<EncodedMethod> virtual_methods) {
+    public ClassData(Collection<EncodedField> static_fields,
+                     Collection<EncodedField> instance_fields,
+                     Collection<EncodedMethod> direct_methods,
+                     Collection<EncodedMethod> virtual_methods) {
         setStaticFields(static_fields);
         setInstanceFields(instance_fields);
         setDirectMethods(direct_methods);
         setVirtualMethods(virtual_methods);
     }
 
-    public final void setStaticFields(PCList<EncodedField> static_fields) {
+    public final void setStaticFields(Collection<EncodedField> static_fields) {
         this.static_fields = static_fields == null
-                ? PCList.empty() : static_fields.clone();
+                ? MutableList.empty() : new MutableList<>(static_fields);
     }
 
-    public final PCList<EncodedField> getStaticFields() {
+    public final MutableList<EncodedField> getStaticFields() {
         return static_fields;
     }
 
-    public final void setInstanceFields(PCList<EncodedField> instance_fields) {
+    public final void setInstanceFields(Collection<EncodedField> instance_fields) {
         this.instance_fields = instance_fields == null
-                ? PCList.empty() : instance_fields.clone();
+                ? MutableList.empty() : new MutableList<>(instance_fields);
     }
 
-    public final PCList<EncodedField> getInstanceFields() {
+    public final MutableList<EncodedField> getInstanceFields() {
         return instance_fields;
     }
 
-    public final void setDirectMethods(PCList<EncodedMethod> direct_methods) {
+    public final void setDirectMethods(Collection<EncodedMethod> direct_methods) {
         this.direct_methods = direct_methods == null
-                ? PCList.empty() : direct_methods.clone();
+                ? MutableList.empty() : new MutableList<>(direct_methods);
     }
 
-    public final PCList<EncodedMethod> getDirectMethods() {
+    public final MutableList<EncodedMethod> getDirectMethods() {
         return direct_methods;
     }
 
-    public final void setVirtualMethods(PCList<EncodedMethod> virtual_methods) {
+    public final void setVirtualMethods(Collection<EncodedMethod> virtual_methods) {
         this.virtual_methods = virtual_methods == null
-                ? PCList.empty() : virtual_methods.clone();
+                ? MutableList.empty() : new MutableList<>(virtual_methods);
     }
 
-    public final PCList<EncodedMethod> getVirtualMethods() {
+    public final MutableList<EncodedMethod> getVirtualMethods() {
         return virtual_methods;
     }
 
@@ -143,7 +144,7 @@ public class ClassData implements PublicCloneable {
     }
 
     @Override
-    public ClassData clone() {
+    public ClassData mutate() {
         return new ClassData(static_fields, instance_fields,
                 direct_methods, virtual_methods);
     }

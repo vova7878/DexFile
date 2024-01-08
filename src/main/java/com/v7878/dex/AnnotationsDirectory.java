@@ -30,7 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 //TODO: clean up code
-public class AnnotationsDirectory {
+public final class AnnotationsDirectory {
 
     public static final int ALIGNMENT = 4;
 

@@ -30,6 +30,9 @@ import java.util.Objects;
 
 class InstructionWriter {
 
+    private InstructionWriter() {
+    }
+
     public static int check_unsigned(int value, int width) {
         if ((value >>> width) != 0) {
             throw new IllegalStateException("illegal instruction unsigned value "

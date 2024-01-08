@@ -30,7 +30,7 @@ import com.v7878.misc.Checks;
 import java.util.Map;
 import java.util.Objects;
 
-public class TryItem implements PublicCloneable {
+public final class TryItem implements Mutable {
 
     public static final int SIZE = 8;
     public static final int ALIGNMENT = 4;
@@ -67,7 +67,7 @@ public class TryItem implements PublicCloneable {
 
     public final void setHandler(CatchHandler handler) {
         this.handler = Objects.requireNonNull(handler,
-                "catch handler can`t be null").clone();
+                "catch handler can`t be null").mutate();
     }
 
     public final CatchHandler getHandler() {
@@ -124,7 +124,7 @@ public class TryItem implements PublicCloneable {
     }
 
     @Override
-    public TryItem clone() {
+    public TryItem mutate() {
         return new TryItem(start_addr, insn_count, handler);
     }
 }

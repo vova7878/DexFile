@@ -24,15 +24,16 @@ package com.v7878.dex;
 
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 
-public class EncodedField implements PublicCloneable {
+public final class EncodedField implements Mutable {
 
     public static final Comparator<EncodedField> COMPARATOR = (a, b) -> {
         int out = FieldId.COMPARATOR.compare(a.field, b.field);
@@ -52,7 +53,7 @@ public class EncodedField implements PublicCloneable {
     private EncodedValue value;
 
     public EncodedField(FieldId field, int access_flags,
-                        AnnotationSet annotations, EncodedValue value) {
+                        Collection<AnnotationItem> annotations, EncodedValue value) {
         setField(field);
         setAccessFlags(access_flags);
         setAnnotations(annotations);
@@ -66,7 +67,7 @@ public class EncodedField implements PublicCloneable {
 
     public final void setField(FieldId field) {
         this.field = Objects.requireNonNull(field,
-                "field can`t be null").clone();
+                "field can`t be null").mutate();
     }
 
     public final FieldId getField() {
@@ -81,9 +82,9 @@ public class EncodedField implements PublicCloneable {
         return access_flags;
     }
 
-    public final void setAnnotations(AnnotationSet annotations) {
+    public final void setAnnotations(Collection<AnnotationItem> annotations) {
         this.annotations = annotations == null
-                ? AnnotationSet.empty() : annotations.clone();
+                ? AnnotationSet.empty() : new AnnotationSet(annotations);
     }
 
     public final AnnotationSet getAnnotations() {
@@ -91,7 +92,7 @@ public class EncodedField implements PublicCloneable {
     }
 
     public final void setValue(EncodedValue value) {
-        this.value = value == null ? null : value.clone();
+        this.value = value == null ? null : value.mutate();
     }
 
     public final EncodedValue getValue() {
@@ -108,10 +109,10 @@ public class EncodedField implements PublicCloneable {
                 annotated_fields.get(field));
     }
 
-    public static PCList<EncodedField> readArray(RandomInput in,
-                                                 ReadContext context, int size,
-                                                 Map<FieldId, AnnotationSet> annotated_fields) {
-        PCList<EncodedField> out = PCList.empty();
+    public static MutableList<EncodedField> readArray(RandomInput in,
+                                                      ReadContext context, int size,
+                                                      Map<FieldId, AnnotationSet> annotated_fields) {
+        MutableList<EncodedField> out = MutableList.empty();
         int index = 0;
         for (int i = 0; i < size; i++) {
             index += in.readULeb128();
@@ -167,7 +168,7 @@ public class EncodedField implements PublicCloneable {
 
     public static void writeArray(boolean static_fields,
                                   WriteContext context, RandomOutput out,
-                                  PCList<EncodedField> encoded_fields) {
+                                  MutableList<EncodedField> encoded_fields) {
         writeArray(static_fields, context, out, encoded_fields.toArray(new EncodedField[0]));
     }
 
@@ -182,7 +183,7 @@ public class EncodedField implements PublicCloneable {
     }
 
     @Override
-    public PublicCloneable clone() {
+    public Mutable mutate() {
         return new EncodedField(field, access_flags, annotations, value);
     }
 }

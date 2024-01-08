@@ -24,17 +24,18 @@ package com.v7878.dex;
 
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
-import com.v7878.dex.util.PCList;
+import com.v7878.dex.util.MutableList;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class EncodedAnnotation implements PublicCloneable {
+public final class EncodedAnnotation implements Mutable {
 
-    private static final Comparator<PCList<AnnotationElement>> AE_LIST_COMPARATOR
-            = PCList.getComparator(AnnotationElement.COMPARATOR);
+    private static final Comparator<MutableList<AnnotationElement>> AE_LIST_COMPARATOR
+            = MutableList.getComparator(AnnotationElement.COMPARATOR);
 
     public static final Comparator<EncodedAnnotation> COMPARATOR = (a, b) -> {
         int out = TypeId.COMPARATOR.compare(a.type, b.type);
@@ -47,39 +48,39 @@ public class EncodedAnnotation implements PublicCloneable {
 
     private TypeId type;
 
-    private PCList<AnnotationElement> elements;
+    private MutableList<AnnotationElement> elements;
 
-    public EncodedAnnotation(TypeId type, PCList<AnnotationElement> elements) {
+    public EncodedAnnotation(TypeId type, Collection<AnnotationElement> elements) {
         setType(type);
         setElements(elements);
     }
 
     public EncodedAnnotation(TypeId type, AnnotationElement... elements) {
-        this(type, new PCList<>(elements));
+        this(type, new MutableList<>(elements));
     }
 
     public final void setType(TypeId type) {
         this.type = Objects.requireNonNull(type,
-                "type can`t be null").clone();
+                "type can`t be null").mutate();
     }
 
     public final TypeId getType() {
         return type;
     }
 
-    public final void setElements(PCList<AnnotationElement> elements) {
+    public final void setElements(Collection<AnnotationElement> elements) {
         this.elements = elements == null
-                ? PCList.empty() : elements.clone();
+                ? MutableList.empty() : new MutableList<>(elements);
     }
 
-    public final PCList<AnnotationElement> getElements() {
+    public final MutableList<AnnotationElement> getElements() {
         return elements;
     }
 
     public static EncodedAnnotation read(RandomInput in, ReadContext context) {
         TypeId type = context.type(in.readULeb128());
         int size = in.readULeb128();
-        PCList<AnnotationElement> elements = PCList.empty();
+        MutableList<AnnotationElement> elements = MutableList.empty();
         for (int i = 0; i < size; i++) {
             elements.add(AnnotationElement.read(in, context));
         }
@@ -127,7 +128,7 @@ public class EncodedAnnotation implements PublicCloneable {
     }
 
     @Override
-    public EncodedAnnotation clone() {
+    public EncodedAnnotation mutate() {
         return new EncodedAnnotation(type, elements);
     }
 }

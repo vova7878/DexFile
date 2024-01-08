@@ -24,19 +24,19 @@ package com.v7878.dex;
 
 import java.util.Objects;
 
-public abstract class FieldOrMethodId implements PublicCloneable {
+public abstract class FieldOrMethodId implements Mutable {
 
     private TypeId declaring_class;
     private String name;
 
-    public FieldOrMethodId(TypeId declaring_class, String name) {
+    FieldOrMethodId(TypeId declaring_class, String name) {
         setDeclaringClass(declaring_class);
         setName(name);
     }
 
     public final void setDeclaringClass(TypeId declaring_class) {
         this.declaring_class = Objects.requireNonNull(declaring_class,
-                "declaring_class can`t be null").clone();
+                "declaring_class can`t be null").mutate();
     }
 
     public final TypeId getDeclaringClass() {
@@ -72,5 +72,5 @@ public abstract class FieldOrMethodId implements PublicCloneable {
     }
 
     @Override
-    public abstract FieldOrMethodId clone();
+    public abstract FieldOrMethodId mutate();
 }

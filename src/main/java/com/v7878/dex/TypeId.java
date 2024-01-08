@@ -28,7 +28,7 @@ import com.v7878.dex.io.RandomOutput;
 import java.util.Comparator;
 import java.util.Objects;
 
-public class TypeId implements PublicCloneable {
+public final class TypeId implements Mutable {
 
     public static final TypeId V = new TypeId("V");
     public static final TypeId Z = new TypeId("Z");
@@ -52,43 +52,44 @@ public class TypeId implements PublicCloneable {
             array_depth++;
             class_name = class_name.substring(0, class_name.length() - 2);
         }
-        switch (class_name) {
-            case "void":
-                class_name = "V";
-                break;
-            case "boolean":
-                class_name = "Z";
-                break;
-            case "byte":
-                class_name = "B";
-                break;
-            case "short":
-                class_name = "S";
-                break;
-            case "char":
-                class_name = "C";
-                break;
-            case "int":
-                class_name = "I";
-                break;
-            case "float":
-                class_name = "F";
-                break;
-            case "long":
-                class_name = "J";
-                break;
-            case "double":
-                class_name = "D";
-                break;
-            default:
-                class_name = "L" + class_name.replace('.', '/') + ";";
-                break;
-        }
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < array_depth; i++) {
             out.append('[');
         }
-        out.append(class_name);
+        switch (class_name) {
+            case "void":
+                out.append("V");
+                break;
+            case "boolean":
+                out.append("Z");
+                break;
+            case "byte":
+                out.append("B");
+                break;
+            case "short":
+                out.append("S");
+                break;
+            case "char":
+                out.append("C");
+                break;
+            case "int":
+                out.append("I");
+                break;
+            case "float":
+                out.append("F");
+                break;
+            case "long":
+                out.append("J");
+                break;
+            case "double":
+                out.append("D");
+                break;
+            default:
+                out.append("L");
+                out.append(class_name.replace('.', '/'));
+                out.append(";");
+                break;
+        }
         return new TypeId(out.toString());
     }
 
@@ -156,7 +157,7 @@ public class TypeId implements PublicCloneable {
     }
 
     @Override
-    public TypeId clone() {
+    public TypeId mutate() {
         return new TypeId(descriptor);
     }
 }

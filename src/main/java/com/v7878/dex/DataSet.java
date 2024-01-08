@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.Set;
 
 // Temporary object. Needed to read or write
-public class DataSet extends DataFilter {
+final class DataSet extends DataFilter {
 
     private final Set<String> strings;
     private final Set<TypeId> types;

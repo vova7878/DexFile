@@ -27,24 +27,44 @@ import com.v7878.dex.io.RandomOutput;
 
 import java.util.AbstractSet;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
 
-public class AnnotationSet extends AbstractSet<AnnotationItem>
-        implements PublicCloneable {
+//TODO: maybe make MutableSet?
+public final class AnnotationSet extends AbstractSet<AnnotationItem> implements Mutable {
 
     public static final int ALIGNMENT = 4;
 
     private final Set<AnnotationItem> annotations;
 
+    public AnnotationSet(int initialCapacity) {
+        this.annotations = new HashSet<>(initialCapacity);
+    }
+
     public AnnotationSet(AnnotationItem... annotations) {
-        if (annotations == null) {
-            annotations = new AnnotationItem[0];
+        int length = 0;
+        if (annotations != null) {
+            length = annotations.length;
         }
-        this.annotations = new HashSet<>(annotations.length);
-        addAll(Arrays.asList(annotations));
+        this.annotations = new HashSet<>(length);
+        if (length != 0) {
+            addAll(Arrays.asList(annotations));
+        }
+    }
+
+    public AnnotationSet(Collection<AnnotationItem> annotations) {
+        int length = annotations.size();
+        this.annotations = new HashSet<>(length);
+        if (length != 0) {
+            addAll(annotations);
+        }
+    }
+
+    public static AnnotationSet empty() {
+        return new AnnotationSet();
     }
 
     public static AnnotationSet read(RandomInput in, ReadContext context) {
@@ -54,10 +74,6 @@ public class AnnotationSet extends AbstractSet<AnnotationItem>
             out[i] = AnnotationItem.read(in.duplicate(in.readInt()), context);
         }
         return new AnnotationSet(out);
-    }
-
-    public static AnnotationSet empty() {
-        return new AnnotationSet();
     }
 
     public void collectData(DataCollector data) {
@@ -97,7 +113,7 @@ public class AnnotationSet extends AbstractSet<AnnotationItem>
 
     @Override
     public boolean add(AnnotationItem annotation) {
-        return annotations.add(check(annotation).clone());
+        return annotations.add(check(annotation).mutate());
     }
 
     @Override
@@ -130,9 +146,7 @@ public class AnnotationSet extends AbstractSet<AnnotationItem>
     }
 
     @Override
-    public AnnotationSet clone() {
-        AnnotationSet out = new AnnotationSet();
-        out.addAll(annotations);
-        return out;
+    public AnnotationSet mutate() {
+        return new AnnotationSet(this);
     }
 }

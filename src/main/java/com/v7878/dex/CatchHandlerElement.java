@@ -27,7 +27,7 @@ import com.v7878.dex.io.RandomOutput;
 
 import java.util.Objects;
 
-public class CatchHandlerElement implements PublicCloneable {
+public final class CatchHandlerElement implements Mutable {
 
     private TypeId type;
     private int address;
@@ -39,7 +39,7 @@ public class CatchHandlerElement implements PublicCloneable {
 
     public final void setType(TypeId type) {
         this.type = Objects.requireNonNull(type,
-                "catch handler type can`t be null").clone();
+                "catch handler type can`t be null").mutate();
     }
 
     public final TypeId getType() {
@@ -91,7 +91,7 @@ public class CatchHandlerElement implements PublicCloneable {
     }
 
     @Override
-    public CatchHandlerElement clone() {
+    public CatchHandlerElement mutate() {
         return new CatchHandlerElement(type, address);
     }
 }
