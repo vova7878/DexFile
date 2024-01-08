@@ -69,43 +69,43 @@ public final class EncodedMethod implements Mutable {
         this(method, access_flags, null, null, null);
     }
 
-    public final void setMethod(MethodId method) {
+    public void setMethod(MethodId method) {
         this.method = Objects.requireNonNull(method,
                 "method can`t be null").mutate();
     }
 
-    public final MethodId getMethod() {
+    public MethodId getMethod() {
         return method;
     }
 
-    public final void setAccessFlags(int access_flags) {
+    public void setAccessFlags(int access_flags) {
         this.access_flags = access_flags;
     }
 
-    public final int getAccessFlags() {
+    public int getAccessFlags() {
         return access_flags;
     }
 
-    public final void setAnnotations(AnnotationSet annotations) {
+    public void setAnnotations(AnnotationSet annotations) {
         this.annotations = annotations == null
                 ? AnnotationSet.empty() : annotations.mutate();
     }
 
-    public final AnnotationSet getAnnotations() {
+    public AnnotationSet getAnnotations() {
         return annotations;
     }
 
-    public final void setParameterAnnotations(
+    public void setParameterAnnotations(
             Collection<AnnotationSet> parameter_annotations) {
         this.parameter_annotations = parameter_annotations == null
                 ? AnnotationSetList.empty() : new AnnotationSetList(parameter_annotations);
     }
 
-    public final AnnotationSetList getParameterAnnotations() {
+    public AnnotationSetList getParameterAnnotations() {
         return parameter_annotations;
     }
 
-    public final void setCode(CodeItem code) {
+    public void setCode(CodeItem code) {
         this.code = code == null ? null : code.mutate();
     }
 
@@ -116,7 +116,7 @@ public final class EncodedMethod implements Mutable {
         return this;
     }
 
-    public final CodeItem getCode() {
+    public CodeItem getCode() {
         return code;
     }
 

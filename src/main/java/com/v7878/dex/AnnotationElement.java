@@ -50,20 +50,20 @@ public final class AnnotationElement implements Mutable {
         setValue(value);
     }
 
-    public final void setName(String name) {
+    public void setName(String name) {
         this.name = Objects.requireNonNull(name, "name can`t be null");
     }
 
-    public final String getName() {
+    public String getName() {
         return name;
     }
 
-    public final void setValue(EncodedValue value) {
+    public void setValue(EncodedValue value) {
         this.value = Objects.requireNonNull(value,
                 "value can`t be null").mutate();
     }
 
-    public final EncodedValue getValue() {
+    public EncodedValue getValue() {
         return value;
     }
 

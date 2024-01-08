@@ -52,21 +52,21 @@ public final class ProtoId implements Mutable {
         this(return_type, new TypeList(parameters));
     }
 
-    public final void setReturnType(TypeId return_type) {
+    public void setReturnType(TypeId return_type) {
         this.return_type = Objects.requireNonNull(return_type,
                 "return_type can`t be null").mutate();
     }
 
-    public final TypeId getReturnType() {
+    public TypeId getReturnType() {
         return return_type;
     }
 
-    public final void setParameters(Collection<TypeId> parameters) {
+    public void setParameters(Collection<TypeId> parameters) {
         this.parameters = parameters == null
                 ? TypeList.empty() : new TypeList(parameters);
     }
 
-    public final TypeList getParameters() {
+    public TypeList getParameters() {
         return parameters;
     }
 

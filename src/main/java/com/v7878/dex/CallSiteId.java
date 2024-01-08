@@ -42,12 +42,12 @@ public final class CallSiteId implements Mutable {
         setValue(value);
     }
 
-    public final void setValue(ArrayValue value) {
+    public void setValue(ArrayValue value) {
         this.value = Objects.requireNonNull(value,
                 "call site value can`t be null").mutate();
     }
 
-    public final ArrayValue getValue() {
+    public ArrayValue getValue() {
         return value;
     }
 

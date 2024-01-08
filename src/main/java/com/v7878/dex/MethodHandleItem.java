@@ -94,20 +94,20 @@ public final class MethodHandleItem implements Mutable {
         setFieldOrMethod(field_or_method);
     }
 
-    public final void setType(MethodHandleType type) {
+    public void setType(MethodHandleType type) {
         this.type = Objects.requireNonNull(type, "method handle type can`n be null");
     }
 
-    public final MethodHandleType getType() {
+    public MethodHandleType getType() {
         return type;
     }
 
-    public final void setFieldOrMethod(FieldOrMethodId field_or_method) {
+    public void setFieldOrMethod(FieldOrMethodId field_or_method) {
         this.field_or_method = Objects.requireNonNull(field_or_method,
                 "field_or_method can`t be null").mutate();
     }
 
-    public final FieldOrMethodId getFieldOrMethod() {
+    public FieldOrMethodId getFieldOrMethod() {
         return field_or_method;
     }
 

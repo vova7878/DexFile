@@ -54,48 +54,48 @@ public final class CodeItem implements Mutable {
         setTries(tries);
     }
 
-    public final void setRegistersSize(int registers_size) {
+    public void setRegistersSize(int registers_size) {
         Checks.checkRange(registers_size, 0, 1 << 16);
         this.registers_size = registers_size;
     }
 
-    public final int getRegistersSize() {
+    public int getRegistersSize() {
         return registers_size;
     }
 
-    public final void setInputsSize(int ins_size) {
+    public void setInputsSize(int ins_size) {
         Checks.checkRange(ins_size, 0, 1 << 16);
         this.ins_size = ins_size;
     }
 
-    public final int getInputsSize() {
+    public int getInputsSize() {
         return ins_size;
     }
 
-    public final void setOutputsSize(int outs_size) {
+    public void setOutputsSize(int outs_size) {
         Checks.checkRange(ins_size, 0, 1 << 8);
         this.outs_size = outs_size;
     }
 
-    public final int getOutputsSize() {
+    public int getOutputsSize() {
         return outs_size;
     }
 
-    public final void setInstructions(Collection<Instruction> insns) {
+    public void setInstructions(Collection<Instruction> insns) {
         this.insns = insns == null
                 ? MutableList.empty() : new MutableList<>(insns);
     }
 
-    public final MutableList<Instruction> getInstructions() {
+    public MutableList<Instruction> getInstructions() {
         return insns;
     }
 
-    public final void setTries(Collection<TryItem> tries) {
+    public void setTries(Collection<TryItem> tries) {
         this.tries = tries == null
                 ? MutableList.empty() : new MutableList<>(tries);
     }
 
-    public final MutableList<TryItem> getTries() {
+    public MutableList<TryItem> getTries() {
         return tries;
     }
 

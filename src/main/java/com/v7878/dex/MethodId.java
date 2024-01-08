@@ -53,12 +53,12 @@ public final class MethodId extends FieldOrMethodId {
         setProto(proto);
     }
 
-    public final void setProto(ProtoId proto) {
+    public void setProto(ProtoId proto) {
         this.proto = Objects.requireNonNull(proto,
                 "proto can`t be null").mutate();
     }
 
-    public final ProtoId getProto() {
+    public ProtoId getProto() {
         return proto;
     }
 

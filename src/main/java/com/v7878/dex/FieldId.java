@@ -66,12 +66,12 @@ public final class FieldId extends FieldOrMethodId {
         setType(type);
     }
 
-    public final void setType(TypeId type) {
+    public void setType(TypeId type) {
         this.type = Objects.requireNonNull(type,
                 "type can`t be null").mutate();
     }
 
-    public final TypeId getType() {
+    public TypeId getType() {
         return type;
     }
 

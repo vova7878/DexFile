@@ -46,39 +46,39 @@ public final class ClassData implements Mutable {
         setVirtualMethods(virtual_methods);
     }
 
-    public final void setStaticFields(Collection<EncodedField> static_fields) {
+    public void setStaticFields(Collection<EncodedField> static_fields) {
         this.static_fields = static_fields == null
                 ? MutableList.empty() : new MutableList<>(static_fields);
     }
 
-    public final MutableList<EncodedField> getStaticFields() {
+    public MutableList<EncodedField> getStaticFields() {
         return static_fields;
     }
 
-    public final void setInstanceFields(Collection<EncodedField> instance_fields) {
+    public void setInstanceFields(Collection<EncodedField> instance_fields) {
         this.instance_fields = instance_fields == null
                 ? MutableList.empty() : new MutableList<>(instance_fields);
     }
 
-    public final MutableList<EncodedField> getInstanceFields() {
+    public MutableList<EncodedField> getInstanceFields() {
         return instance_fields;
     }
 
-    public final void setDirectMethods(Collection<EncodedMethod> direct_methods) {
+    public void setDirectMethods(Collection<EncodedMethod> direct_methods) {
         this.direct_methods = direct_methods == null
                 ? MutableList.empty() : new MutableList<>(direct_methods);
     }
 
-    public final MutableList<EncodedMethod> getDirectMethods() {
+    public MutableList<EncodedMethod> getDirectMethods() {
         return direct_methods;
     }
 
-    public final void setVirtualMethods(Collection<EncodedMethod> virtual_methods) {
+    public void setVirtualMethods(Collection<EncodedMethod> virtual_methods) {
         this.virtual_methods = virtual_methods == null
                 ? MutableList.empty() : new MutableList<>(virtual_methods);
     }
 
-    public final MutableList<EncodedMethod> getVirtualMethods() {
+    public MutableList<EncodedMethod> getVirtualMethods() {
         return virtual_methods;
     }
 

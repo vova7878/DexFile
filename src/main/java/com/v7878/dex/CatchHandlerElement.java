@@ -37,23 +37,23 @@ public final class CatchHandlerElement implements Mutable {
         setAddress(address);
     }
 
-    public final void setType(TypeId type) {
+    public void setType(TypeId type) {
         this.type = Objects.requireNonNull(type,
                 "catch handler type can`t be null").mutate();
     }
 
-    public final TypeId getType() {
+    public TypeId getType() {
         return type;
     }
 
-    public final void setAddress(int address) {
+    public void setAddress(int address) {
         if (address < 0) {
             throw new IllegalArgumentException("instruction address can`t be negative");
         }
         this.address = address;
     }
 
-    public final int getAddress() {
+    public int getAddress() {
         return address;
     }
 

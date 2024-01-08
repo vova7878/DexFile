@@ -41,23 +41,23 @@ public final class CatchHandler implements Mutable {
         setCatchAllAddress(catch_all_addr);
     }
 
-    public final void setHandlers(Collection<CatchHandlerElement> handlers) {
+    public void setHandlers(Collection<CatchHandlerElement> handlers) {
         this.handlers = handlers == null
                 ? MutableList.empty() : new MutableList<>(handlers);
     }
 
-    public final MutableList<CatchHandlerElement> getHandlers() {
+    public MutableList<CatchHandlerElement> getHandlers() {
         return handlers;
     }
 
-    public final void setCatchAllAddress(Integer catch_all_addr) {
+    public void setCatchAllAddress(Integer catch_all_addr) {
         if (catch_all_addr != null && catch_all_addr < 0) {
             throw new IllegalArgumentException("instruction address can`t be negative");
         }
         this.catch_all_addr = catch_all_addr;
     }
 
-    public final Integer getCatchAllAddress() {
+    public Integer getCatchAllAddress() {
         return catch_all_addr;
     }
 

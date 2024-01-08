@@ -45,32 +45,32 @@ public final class TryItem implements Mutable {
         setHandler(handler);
     }
 
-    public final void setStartAddress(int start_addr) {
+    public void setStartAddress(int start_addr) {
         if (start_addr < 0) {
             throw new IllegalArgumentException("start address can`t be negative");
         }
         this.start_addr = start_addr;
     }
 
-    public final int getStartAddress() {
+    public int getStartAddress() {
         return start_addr;
     }
 
-    public final void setInstructionCount(int insn_count) {
+    public void setInstructionCount(int insn_count) {
         Checks.checkRange(insn_count, 0, 1 << 16);
         this.insn_count = insn_count;
     }
 
-    public final int getInstructionCount() {
+    public int getInstructionCount() {
         return insn_count;
     }
 
-    public final void setHandler(CatchHandler handler) {
+    public void setHandler(CatchHandler handler) {
         this.handler = Objects.requireNonNull(handler,
                 "catch handler can`t be null").mutate();
     }
 
-    public final CatchHandler getHandler() {
+    public CatchHandler getHandler() {
         return handler;
     }
 

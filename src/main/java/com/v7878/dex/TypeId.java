@@ -107,21 +107,21 @@ public final class TypeId implements Mutable {
         setDescriptor(descriptor);
     }
 
-    public final void setDescriptor(String descriptor) {
+    public void setDescriptor(String descriptor) {
         this.descriptor = Objects.requireNonNull(
                 descriptor, "type descriptor can`t be null");
     }
 
-    public final String getDescriptor() {
+    public String getDescriptor() {
         return descriptor;
     }
 
-    public final char getShorty() {
+    public char getShorty() {
         char c = descriptor.charAt(0);
         return c == '[' ? 'L' : c;
     }
 
-    public final int getRegistersCount() {
+    public int getRegistersCount() {
         return equals(V) ? 0 : equals(D) || equals(J) ? 2 : 1;
     }
 

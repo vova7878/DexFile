@@ -59,21 +59,21 @@ public final class EncodedAnnotation implements Mutable {
         this(type, new MutableList<>(elements));
     }
 
-    public final void setType(TypeId type) {
+    public void setType(TypeId type) {
         this.type = Objects.requireNonNull(type,
                 "type can`t be null").mutate();
     }
 
-    public final TypeId getType() {
+    public TypeId getType() {
         return type;
     }
 
-    public final void setElements(Collection<AnnotationElement> elements) {
+    public void setElements(Collection<AnnotationElement> elements) {
         this.elements = elements == null
                 ? MutableList.empty() : new MutableList<>(elements);
     }
 
-    public final MutableList<AnnotationElement> getElements() {
+    public MutableList<AnnotationElement> getElements() {
         return elements;
     }
 

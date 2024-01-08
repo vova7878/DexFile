@@ -109,63 +109,63 @@ public final class ClassDef implements Mutable {
         setClassData(class_data);
     }
 
-    public final void setType(TypeId clazz) {
+    public void setType(TypeId clazz) {
         this.clazz = Objects.requireNonNull(clazz,
                 "type can`n be null").mutate();
     }
 
-    public final TypeId getType() {
+    public TypeId getType() {
         return clazz;
     }
 
-    public final void setAccessFlags(int access_flags) {
+    public void setAccessFlags(int access_flags) {
         this.access_flags = access_flags;
     }
 
-    public final int getAccessFlags() {
+    public int getAccessFlags() {
         return access_flags;
     }
 
-    public final void setSuperClass(TypeId superclass) {
+    public void setSuperClass(TypeId superclass) {
         this.superclass = superclass == null ? null : superclass.mutate();
     }
 
-    public final TypeId getSuperClass() {
+    public TypeId getSuperClass() {
         return superclass;
     }
 
-    public final void setInterfaces(Collection<TypeId> interfaces) {
+    public void setInterfaces(Collection<TypeId> interfaces) {
         this.interfaces = interfaces == null
                 ? TypeList.empty() : new TypeList(interfaces);
     }
 
-    public final TypeList getInterfaces() {
+    public TypeList getInterfaces() {
         return interfaces;
     }
 
-    public final void setSourceFile(String source_file) {
+    public void setSourceFile(String source_file) {
         this.source_file = source_file;
     }
 
-    public final String getSourceFile() {
+    public String getSourceFile() {
         return source_file;
     }
 
-    public final void setAnnotations(Collection<AnnotationItem> annotations) {
+    public void setAnnotations(Collection<AnnotationItem> annotations) {
         this.annotations = annotations == null
                 ? AnnotationSet.empty() : new AnnotationSet(annotations);
     }
 
-    public final AnnotationSet getAnnotations() {
+    public AnnotationSet getAnnotations() {
         return annotations;
     }
 
-    public final void setClassData(ClassData class_data) {
+    public void setClassData(ClassData class_data) {
         this.class_data = class_data == null
                 ? ClassData.empty() : class_data.mutate();
     }
 
-    public final ClassData getClassData() {
+    public ClassData getClassData() {
         return class_data;
     }
 

@@ -65,41 +65,41 @@ public final class EncodedField implements Mutable {
         this(field, access_flags, annotations, null);
     }
 
-    public final void setField(FieldId field) {
+    public void setField(FieldId field) {
         this.field = Objects.requireNonNull(field,
                 "field can`t be null").mutate();
     }
 
-    public final FieldId getField() {
+    public FieldId getField() {
         return field;
     }
 
-    public final void setAccessFlags(int access_flags) {
+    public void setAccessFlags(int access_flags) {
         this.access_flags = access_flags;
     }
 
-    public final int getAccessFlags() {
+    public int getAccessFlags() {
         return access_flags;
     }
 
-    public final void setAnnotations(Collection<AnnotationItem> annotations) {
+    public void setAnnotations(Collection<AnnotationItem> annotations) {
         this.annotations = annotations == null
                 ? AnnotationSet.empty() : new AnnotationSet(annotations);
     }
 
-    public final AnnotationSet getAnnotations() {
+    public AnnotationSet getAnnotations() {
         return annotations;
     }
 
-    public final void setValue(EncodedValue value) {
+    public void setValue(EncodedValue value) {
         this.value = value == null ? null : value.mutate();
     }
 
-    public final EncodedValue getValue() {
+    public EncodedValue getValue() {
         return value == null ? EncodedValue.defaultValue(field.getType()) : value;
     }
 
-    public final boolean hasValue() {
+    public boolean hasValue() {
         return value != null;
     }
 
