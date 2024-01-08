@@ -53,7 +53,7 @@ public final class CallSiteId implements Mutable {
 
     public static CallSiteId read(RandomInput in, ReadContext context) {
         RandomInput in2 = in.duplicate(in.readInt());
-        ArrayValue value = (ArrayValue) EncodedValueReader
+        ArrayValue value = (ArrayValue) EncodedValue
                 .readValue(in2, context, EncodedValue.EncodedValueType.ARRAY);
         return new CallSiteId(value);
     }

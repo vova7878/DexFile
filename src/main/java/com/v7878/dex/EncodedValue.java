@@ -41,6 +41,7 @@ import static com.v7878.dex.DexConstants.VALUE_SHORT;
 import static com.v7878.dex.DexConstants.VALUE_STRING;
 import static com.v7878.dex.DexConstants.VALUE_TYPE;
 
+import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.util.MutableList;
@@ -309,6 +310,177 @@ public interface EncodedValue extends Mutable {
         }
 
         throw new IllegalArgumentException("unable to convert " + obj + " to EncodedValue");
+    }
+
+    static int peek(RandomInput in, EncodedValueType type) {
+        if (type == null) {
+            return in.readUnsignedByte();
+        }
+        return type.value;
+    }
+
+    static BooleanValue readBoolean(int arg) {
+        return new BooleanValue(arg != 0);
+    }
+
+    static ByteValue readByte(RandomInput in, int arg) {
+        ByteValue out = new ByteValue();
+        out.value = (byte) ValueCoder.readSignedInt(in, arg);
+        return out;
+    }
+
+    static ShortValue readShort(RandomInput in, int arg) {
+        ShortValue out = new ShortValue();
+        out.value = (short) ValueCoder.readSignedInt(in, arg);
+        return out;
+    }
+
+    static CharValue readChar(RandomInput in, int arg) {
+        CharValue out = new CharValue();
+        out.value = (char) ValueCoder.readUnsignedInt(in, arg, false);
+        return out;
+    }
+
+    static IntValue readInt(RandomInput in, int arg) {
+        IntValue out = new IntValue();
+        out.value = ValueCoder.readSignedInt(in, arg);
+        return out;
+    }
+
+    static LongValue readLong(RandomInput in, int arg) {
+        LongValue out = new LongValue();
+        out.value = ValueCoder.readSignedLong(in, arg);
+        return out;
+    }
+
+    static FloatValue readFloat(RandomInput in, int arg) {
+        FloatValue out = new FloatValue();
+        out.value = Float.intBitsToFloat(
+                ValueCoder.readUnsignedInt(in, arg, true));
+        return out;
+    }
+
+    static DoubleValue readDouble(RandomInput in, int arg) {
+        DoubleValue out = new DoubleValue();
+        out.value = Double.longBitsToDouble(
+                ValueCoder.readUnsignedLong(in, arg, true));
+        return out;
+    }
+
+    static MethodTypeValue readMethodType(RandomInput in,
+                                          int arg, ReadContext context) {
+        ProtoId value = context.proto(
+                ValueCoder.readUnsignedInt(in, arg, false));
+        return new MethodTypeValue(value);
+    }
+
+    static MethodHandleValue readMethodHandle(RandomInput in,
+                                              int arg, ReadContext context) {
+        MethodHandleItem value = context.method_handle(
+                ValueCoder.readUnsignedInt(in, arg, false));
+        return new MethodHandleValue(value);
+    }
+
+    static StringValue readString(RandomInput in,
+                                  int arg, ReadContext context) {
+        String value = context.string(
+                ValueCoder.readUnsignedInt(in, arg, false));
+        return new StringValue(value);
+    }
+
+    static TypeValue readType(RandomInput in,
+                              int arg, ReadContext context) {
+        TypeId value = context.type(
+                ValueCoder.readUnsignedInt(in, arg, false));
+        return new TypeValue(value);
+    }
+
+    static FieldValue readField(RandomInput in,
+                                int arg, ReadContext context) {
+        FieldId value = context.field(
+                ValueCoder.readUnsignedInt(in, arg, false));
+        return new FieldValue(value);
+    }
+
+    static EnumValue readEnum(RandomInput in,
+                              int arg, ReadContext context) {
+        FieldId value = context.field(
+                ValueCoder.readUnsignedInt(in, arg, false));
+        return new EnumValue(value);
+    }
+
+    static MethodValue readMethod(RandomInput in,
+                                  int arg, ReadContext context) {
+        MethodId value = context.method(
+                ValueCoder.readUnsignedInt(in, arg, false));
+        return new MethodValue(value);
+    }
+
+    static ArrayValue readArray(RandomInput in,
+                                ReadContext context) {
+        int size = in.readULeb128();
+        EncodedValue[] value = new EncodedValue[size];
+        for (int i = 0; i < size; i++) {
+            value[i] = readValue(in, context);
+        }
+        return new ArrayValue(value);
+    }
+
+    static AnnotationValue readAnnotation(RandomInput in,
+                                          ReadContext context) {
+        EncodedAnnotation value = EncodedAnnotation.read(in, context);
+        return new AnnotationValue(value);
+    }
+
+    static EncodedValue readValue(RandomInput in, ReadContext context) {
+        return readValue(in, context, null);
+    }
+
+    static EncodedValue readValue(
+            RandomInput in, ReadContext context, EncodedValueType type) {
+        int type_and_arg = peek(in, type);
+        int arg = (type_and_arg & 0xe0) >> 5;
+        int int_type = type_and_arg & 0x1f;
+        switch (EncodedValueType.of(int_type)) {
+            case BOOLEAN:
+                return readBoolean(arg);
+            case BYTE:
+                return readByte(in, arg);
+            case SHORT:
+                return readShort(in, arg);
+            case CHAR:
+                return readChar(in, arg);
+            case INT:
+                return readInt(in, arg);
+            case LONG:
+                return readLong(in, arg);
+            case FLOAT:
+                return readFloat(in, arg);
+            case DOUBLE:
+                return readDouble(in, arg);
+            case METHOD_TYPE:
+                return readMethodType(in, arg, context);
+            case METHOD_HANDLE:
+                return readMethodHandle(in, arg, context);
+            case STRING:
+                return readString(in, arg, context);
+            case TYPE:
+                return readType(in, arg, context);
+            case FIELD:
+                return readField(in, arg, context);
+            case ENUM:
+                return readEnum(in, arg, context);
+            case METHOD:
+                return readMethod(in, arg, context);
+            case ARRAY:
+                return readArray(in, context);
+            case ANNOTATION:
+                return readAnnotation(in, context);
+            case NULL:
+                return new NullValue();
+            default:
+                throw new RuntimeException("Unexpected type: " + Integer.toHexString(int_type));
+        }
     }
 
     abstract class SimpleValue implements EncodedValue {

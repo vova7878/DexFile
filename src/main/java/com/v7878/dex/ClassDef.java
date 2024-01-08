@@ -199,7 +199,7 @@ public final class ClassDef implements Mutable {
         int static_values_off = in.readInt();
         if (static_values_off != 0) {
             RandomInput in2 = in.duplicate(static_values_off);
-            static_values = (EncodedValue.ArrayValue) EncodedValueReader
+            static_values = (EncodedValue.ArrayValue) EncodedValue
                     .readValue(in2, context, EncodedValue.EncodedValueType.ARRAY);
         }
         ClassData class_data = null;

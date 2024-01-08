@@ -69,7 +69,7 @@ public final class AnnotationElement implements Mutable {
 
     public static AnnotationElement read(RandomInput in, ReadContext context) {
         String name = context.string(in.readULeb128());
-        EncodedValue value = EncodedValueReader.readValue(in, context);
+        EncodedValue value = EncodedValue.readValue(in, context);
         return new AnnotationElement(name, value);
     }
 
