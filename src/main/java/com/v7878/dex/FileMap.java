@@ -22,6 +22,7 @@
 
 package com.v7878.dex;
 
+import com.v7878.dex.DexConstants.DexVersion;
 import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
@@ -142,7 +143,7 @@ class FileMap {
         } else {
             throw new IllegalStateException("invalid magic: " + Arrays.toString(magic));
         }
-        DexConstants.DexVersion version = DexConstants.DexVersion.fromBytes(magic[4], magic[5], magic[6]);
+        DexVersion version = DexVersion.fromBytes(magic[4], magic[5], magic[6]);
         options.requireMinApi(version.getMinApi());
         in.addPosition(4); //checksum
         in.addPosition(20); //signature
@@ -332,7 +333,7 @@ class FileMap {
     public void writeHeader(RandomIO out, DexOptions options, int file_size) {
         out.position(0);
         out.writeByteArray(new byte[]{'d', 'e', 'x', '\n'});
-        DexConstants.DexVersion version = DexConstants.DexVersion.fromApi(options.getTargetApi());
+        DexVersion version = DexVersion.fromApi(options.getTargetApi());
         out.writeByteArray(new byte[]{version.firstByte(),
                 version.secondByte(), version.thirdByte(), '\0'});
         out.addPosition(4); //checksum

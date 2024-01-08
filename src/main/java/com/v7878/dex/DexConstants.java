@@ -29,7 +29,28 @@ public final class DexConstants {
     public static final int ENDIAN_CONSTANT = 0x12345678;
     public static final int NO_INDEX = -1;
 
-    //map_list
+    //access_flags definitions
+    public static final int ACC_PUBLIC = 0x1;
+    public static final int ACC_PRIVATE = 0x2;
+    public static final int ACC_PROTECTED = 0x4;
+    public static final int ACC_STATIC = 0x8;
+    public static final int ACC_FINAL = 0x10;
+    public static final int ACC_SYNCHRONIZED = 0x20;
+    public static final int ACC_VOLATILE = 0x40;
+    public static final int ACC_BRIDGE = 0x40;
+    public static final int ACC_TRANSIENT = 0x80;
+    public static final int ACC_VARARGS = 0x80;
+    public static final int ACC_NATIVE = 0x100;
+    public static final int ACC_INTERFACE = 0x200;
+    public static final int ACC_ABSTRACT = 0x400;
+    public static final int ACC_STRICT = 0x800;
+    public static final int ACC_SYNTHETIC = 0x1000;
+    public static final int ACC_ANNOTATION = 0x2000;
+    public static final int ACC_ENUM = 0x4000;
+    public static final int ACC_CONSTRUCTOR = 0x10000;
+    public static final int ACC_DECLARED_SYNCHRONIZED = 0x20000;
+
+    //Type Codes
     public static final int TYPE_HEADER_ITEM = 0x0000;
     public static final int TYPE_STRING_ID_ITEM = 0x0001;
     public static final int TYPE_TYPE_ID_ITEM = 0x0002;
@@ -54,24 +75,54 @@ public final class DexConstants {
     //TODO?
     public static final int TYPE_HIDDENAPI_CLASS_DATA_ITEM = 0xF000;
 
-    //TODO: cleanup code
+    //Value formats
+    public static final int VALUE_BYTE = 0x00;
+    public static final int VALUE_SHORT = 0x02;
+    public static final int VALUE_CHAR = 0x03;
+    public static final int VALUE_INT = 0x04;
+    public static final int VALUE_LONG = 0x06;
+    public static final int VALUE_FLOAT = 0x10;
+    public static final int VALUE_DOUBLE = 0x11;
+    public static final int VALUE_METHOD_TYPE = 0x15;
+    public static final int VALUE_METHOD_HANDLE = 0x16;
+    public static final int VALUE_STRING = 0x17;
+    public static final int VALUE_TYPE = 0x18;
+    public static final int VALUE_FIELD = 0x19;
+    public static final int VALUE_METHOD = 0x1a;
+    public static final int VALUE_ENUM = 0x1b;
+    public static final int VALUE_ARRAY = 0x1c;
+    public static final int VALUE_ANNOTATION = 0x1d;
+    public static final int VALUE_NULL = 0x1e;
+    public static final int VALUE_BOOLEAN = 0x1f;
+
+    //Method Handle Type Codes
+    public static final int METHOD_HANDLE_TYPE_STATIC_PUT = 0x00;
+    public static final int METHOD_HANDLE_TYPE_STATIC_GET = 0x01;
+    public static final int METHOD_HANDLE_TYPE_INSTANCE_PUT = 0x02;
+    public static final int METHOD_HANDLE_TYPE_INSTANCE_GET = 0x03;
+    public static final int METHOD_HANDLE_TYPE_INVOKE_STATIC = 0x04;
+    public static final int METHOD_HANDLE_TYPE_INVOKE_INSTANCE = 0x05;
+    public static final int METHOD_HANDLE_TYPE_INVOKE_CONSTRUCTOR = 0x06;
+    public static final int METHOD_HANDLE_TYPE_INVOKE_DIRECT = 0x07;
+    public static final int METHOD_HANDLE_TYPE_INVOKE_INTERFACE = 0x08;
+
     public enum DexVersion {
-        V035(1, (byte) '0', (byte) '3', (byte) '5'),
-        V037(24, (byte) '0', (byte) '3', (byte) '7'),
-        V038(26, (byte) '0', (byte) '3', (byte) '8'),
-        V039(28, (byte) '0', (byte) '3', (byte) '9'),
-        V040(34, (byte) '0', (byte) '4', (byte) '0');
+        V035(1, '0', '3', '5'),
+        V037(24, '0', '3', '7'),
+        V038(26, '0', '3', '8'),
+        V039(28, '0', '3', '9'),
+        V040(34, '0', '4', '0');
+
         private final int minApi;
+        private final int value;
 
-        private final byte first;
-        private final byte second;
-        private final byte third;
+        private static int getValue(int first, int second, int third) {
+            return first << 16 | second << 8 | third;
+        }
 
-        DexVersion(int minApi, byte first, byte second, byte third) {
+        DexVersion(int minApi, int first, int second, int third) {
             this.minApi = minApi;
-            this.first = first;
-            this.second = second;
-            this.third = third;
+            this.value = getValue(first, second, third);
         }
 
         public int getMinApi() {
@@ -79,15 +130,15 @@ public final class DexConstants {
         }
 
         public byte firstByte() {
-            return first;
+            return (byte) ((value >> 16) & 0xff);
         }
 
         public byte secondByte() {
-            return second;
+            return (byte) ((value >> 8) & 0xff);
         }
 
         public byte thirdByte() {
-            return third;
+            return (byte) (value & 0xff);
         }
 
         public static DexVersion fromApi(int api) {
@@ -107,21 +158,14 @@ public final class DexConstants {
         }
 
         public static DexVersion fromBytes(byte first, byte second, byte third) {
-            if (first == V035.first && second == V035.second && third == V035.third) {
-                return V035;
+            int value = getValue(first, second, third);
+
+            for (DexVersion version : values()) {
+                if (value == version.value) {
+                    return version;
+                }
             }
-            if (first == V037.first && second == V037.second && third == V037.third) {
-                return V037;
-            }
-            if (first == V038.first && second == V038.second && third == V038.third) {
-                return V038;
-            }
-            if (first == V039.first && second == V039.second && third == V039.third) {
-                return V039;
-            }
-            if (first == V040.first && second == V040.second && third == V040.third) {
-                return V040;
-            }
+
             throw new IllegalArgumentException("unknown dex version: \""
                     + (char) (first & 0xff) + (char) (second & 0xff) + (char) (third & 0xff) + "\"");
         }

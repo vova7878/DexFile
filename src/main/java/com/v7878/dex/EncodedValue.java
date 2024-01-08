@@ -22,6 +22,25 @@
 
 package com.v7878.dex;
 
+import static com.v7878.dex.DexConstants.VALUE_ANNOTATION;
+import static com.v7878.dex.DexConstants.VALUE_ARRAY;
+import static com.v7878.dex.DexConstants.VALUE_BOOLEAN;
+import static com.v7878.dex.DexConstants.VALUE_BYTE;
+import static com.v7878.dex.DexConstants.VALUE_CHAR;
+import static com.v7878.dex.DexConstants.VALUE_DOUBLE;
+import static com.v7878.dex.DexConstants.VALUE_ENUM;
+import static com.v7878.dex.DexConstants.VALUE_FIELD;
+import static com.v7878.dex.DexConstants.VALUE_FLOAT;
+import static com.v7878.dex.DexConstants.VALUE_INT;
+import static com.v7878.dex.DexConstants.VALUE_LONG;
+import static com.v7878.dex.DexConstants.VALUE_METHOD;
+import static com.v7878.dex.DexConstants.VALUE_METHOD_HANDLE;
+import static com.v7878.dex.DexConstants.VALUE_METHOD_TYPE;
+import static com.v7878.dex.DexConstants.VALUE_NULL;
+import static com.v7878.dex.DexConstants.VALUE_SHORT;
+import static com.v7878.dex.DexConstants.VALUE_STRING;
+import static com.v7878.dex.DexConstants.VALUE_TYPE;
+
 import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.util.MutableList;
@@ -46,26 +65,25 @@ public interface EncodedValue extends Mutable {
         return ((Comparator<EncodedValue>) type.comparator).compare(a, b);
     };
 
-    //TODO: move values to DexConstants
     enum EncodedValueType {
-        BYTE(0x00, ByteValue.COMPARATOR),
-        SHORT(0x02, ShortValue.COMPARATOR),
-        CHAR(0x03, CharValue.COMPARATOR),
-        INT(0x04, IntValue.COMPARATOR),
-        LONG(0x06, LongValue.COMPARATOR),
-        FLOAT(0x10, FloatValue.COMPARATOR),
-        DOUBLE(0x11, DoubleValue.COMPARATOR),
-        METHOD_TYPE(0x15, MethodTypeValue.COMPARATOR),
-        METHOD_HANDLE(0x16, MethodHandleValue.COMPARATOR),
-        STRING(0x17, StringValue.COMPARATOR),
-        TYPE(0x18, TypeValue.COMPARATOR),
-        FIELD(0x19, FieldValue.COMPARATOR),
-        METHOD(0x1a, MethodValue.COMPARATOR),
-        ENUM(0x1b, EnumValue.COMPARATOR),
-        ARRAY(0x1c, ArrayValue.COMPARATOR),
-        ANNOTATION(0x1d, AnnotationValue.COMPARATOR),
-        NULL(0x1e, NullValue.COMPARATOR),
-        BOOLEAN(0x1f, BooleanValue.COMPARATOR);
+        BYTE(VALUE_BYTE, ByteValue.COMPARATOR),
+        SHORT(VALUE_SHORT, ShortValue.COMPARATOR),
+        CHAR(VALUE_CHAR, CharValue.COMPARATOR),
+        INT(VALUE_INT, IntValue.COMPARATOR),
+        LONG(VALUE_LONG, LongValue.COMPARATOR),
+        FLOAT(VALUE_FLOAT, FloatValue.COMPARATOR),
+        DOUBLE(VALUE_DOUBLE, DoubleValue.COMPARATOR),
+        METHOD_TYPE(VALUE_METHOD_TYPE, MethodTypeValue.COMPARATOR),
+        METHOD_HANDLE(VALUE_METHOD_HANDLE, MethodHandleValue.COMPARATOR),
+        STRING(VALUE_STRING, StringValue.COMPARATOR),
+        TYPE(VALUE_TYPE, TypeValue.COMPARATOR),
+        FIELD(VALUE_FIELD, FieldValue.COMPARATOR),
+        METHOD(VALUE_METHOD, MethodValue.COMPARATOR),
+        ENUM(VALUE_ENUM, EnumValue.COMPARATOR),
+        ARRAY(VALUE_ARRAY, ArrayValue.COMPARATOR),
+        ANNOTATION(VALUE_ANNOTATION, AnnotationValue.COMPARATOR),
+        NULL(VALUE_NULL, NullValue.COMPARATOR),
+        BOOLEAN(VALUE_BOOLEAN, BooleanValue.COMPARATOR);
 
         public final int value;
         public final Comparator<?> comparator;
