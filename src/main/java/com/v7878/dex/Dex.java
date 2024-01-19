@@ -56,17 +56,18 @@ public final class Dex extends MutableList<ClassDef> {
                 "Dex can`t contain null class def");
     }
 
-    public static Dex read(RandomInput in) {
-        return read(in, null);
+    public static Dex read(RandomInput src) {
+        return read(src, null);
     }
 
 
-    public static Dex read(RandomInput in, int[] class_def_ids) {
-        return read(in, DexOptions.defaultOptions(), class_def_ids);
+    public static Dex read(RandomInput src, int[] class_def_ids) {
+        return read(src, DexOptions.defaultOptions(), class_def_ids);
     }
 
-    public static Dex read(RandomInput in, DexOptions options, int[] class_def_ids) {
-        //TODO: substream
+    public static Dex read(RandomInput src, DexOptions options, int[] class_def_ids) {
+        RandomInput in = src.position() == 0 ? src : src.slice();
+
         FileMap map = FileMap.read(in, options);
 
         if (class_def_ids == null) {
@@ -165,15 +166,12 @@ public final class Dex extends MutableList<ClassDef> {
         }
     }
 
-    public void write(RandomIO out) {
-        write(out, DexOptions.defaultOptions());
+    public void write(RandomIO dst) {
+        write(dst, DexOptions.defaultOptions());
     }
 
-    public void write(RandomIO out, DexOptions options) {
-        //TODO: substream
-        if (out.position() != 0) {
-            throw new IllegalArgumentException("out.position() != 0");
-        }
+    public void write(RandomIO dst, DexOptions options) {
+        RandomIO out = dst.position() == 0 ? dst : dst.slice();
 
         DataSet data = new DataSet();
         collectData(data);
