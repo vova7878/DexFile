@@ -22,7 +22,7 @@
 
 package com.v7878.dex.io;
 
-public class Leb128 {
+public final class Leb128 {
 
     private Leb128() {
     }

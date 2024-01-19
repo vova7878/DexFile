@@ -22,7 +22,7 @@
 
 package com.v7878.dex.io;
 
-public class MUTF8 {
+public final class MUTF8 {
 
     private MUTF8() {
     }
