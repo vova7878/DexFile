@@ -217,7 +217,6 @@ public final class Dex extends MutableList<ClassDef> {
         offset += map.method_handles_size * MethodHandleItem.SIZE;
 
         // writing
-        //TODO: move code to specific classes
         //TODO: all sections
         map.data_off = offset;
 
@@ -230,7 +229,6 @@ public final class Dex extends MutableList<ClassDef> {
         context.stringsStream().forEachOrdered(value -> StringId.write(value, context, out, data_out));
         offset = (int) data_out.position();
 
-        //TODO: use align methods?
         TypeList[] lists = data.getTypeLists();
         if (lists.length != 0) {
             offset = roundUp(offset, TypeList.ALIGNMENT);
@@ -251,17 +249,17 @@ public final class Dex extends MutableList<ClassDef> {
         for (AnnotationItem tmp : annotations) {
             tmp.write(context, data_out);
             context.addAnnotation(tmp, offset);
+            offset = (int) data_out.position();
         }
-        offset = (int) data_out.position();
 
         AnnotationSet[] annotation_sets = data.getAnnotationSets();
         if (annotation_sets.length != 0) {
             offset = roundUp(offset, AnnotationSet.ALIGNMENT);
             map.annotation_sets_off = offset;
             map.annotation_sets_size = annotation_sets.length;
+            data_out.position(offset);
+
             for (AnnotationSet tmp : annotation_sets) {
-                offset = roundUp(offset, AnnotationSet.ALIGNMENT);
-                data_out.position(offset);
                 tmp.write(context, data_out);
                 context.addAnnotationSet(tmp, offset);
                 offset = (int) data_out.position();
@@ -273,9 +271,9 @@ public final class Dex extends MutableList<ClassDef> {
             offset = roundUp(offset, AnnotationSet.ALIGNMENT);
             map.annotation_set_refs_off = offset;
             map.annotation_set_refs_size = annotation_set_lists.length;
+            data_out.position(offset);
+
             for (AnnotationSetList tmp : annotation_set_lists) {
-                offset = roundUp(offset, AnnotationSet.ALIGNMENT);
-                data_out.position(offset);
                 tmp.write(context, data_out);
                 context.addAnnotationSetList(tmp, offset);
                 offset = (int) data_out.position();
@@ -302,8 +300,8 @@ public final class Dex extends MutableList<ClassDef> {
         for (ClassData tmp : class_data_items) {
             tmp.write(context, data_out);
             context.addClassData(tmp, offset);
+            offset = (int) data_out.position();
         }
-        offset = (int) data_out.position();
 
         //TODO: delete duplicates
         Map<ClassDef, AnnotationsDirectory> annotations_directories
@@ -334,8 +332,8 @@ public final class Dex extends MutableList<ClassDef> {
         for (ArrayValue tmp : array_values) {
             tmp.writeData(context, data_out);
             context.addArrayValue(tmp, offset);
+            offset = (int) data_out.position();
         }
-        offset = (int) data_out.position();
 
         offset = roundUp(offset, FileMap.MAP_ALIGNMENT);
         data_out.position(offset);
