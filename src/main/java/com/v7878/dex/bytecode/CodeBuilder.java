@@ -38,9 +38,11 @@ import com.v7878.dex.bytecode.Format.Format21c;
 import com.v7878.dex.bytecode.Format.Format21t21s;
 import com.v7878.dex.bytecode.Format.Format22c;
 import com.v7878.dex.bytecode.Format.Format22t22s;
+import com.v7878.dex.bytecode.Format.Format22x;
 import com.v7878.dex.bytecode.Format.Format23x;
 import com.v7878.dex.bytecode.Format.Format30t;
 import com.v7878.dex.bytecode.Format.Format31i31t;
+import com.v7878.dex.bytecode.Format.Format32x;
 import com.v7878.dex.bytecode.Format.Format35c;
 import com.v7878.dex.bytecode.Format.Format3rc;
 import com.v7878.dex.bytecode.Format.Format45cc;
@@ -217,56 +219,145 @@ public final class CodeBuilder {
         return this;
     }
 
-    public CodeBuilder nop() {
-        add(Opcode.NOP.<Format10x>format().make());
+    private CodeBuilder f10x(Opcode op) {
+        add(op.<Format10x>format().make());
         return this;
+    }
+
+    private CodeBuilder f12x(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide) {
+        add(op.<Format12x>format().make(
+                check_reg_or_pair(reg_or_pair1, 4, is_reg1_wide),
+                check_reg_or_pair(reg_or_pair2, 4, is_reg2_wide)));
+        return this;
+    }
+
+    //TODO: 11n
+
+    private CodeBuilder f11x(Opcode op, int reg_or_pair, boolean is_reg_wide) {
+        add(op.<Format11x>format().make(check_reg_or_pair(reg_or_pair, 8, is_reg_wide)));
+        return this;
+    }
+
+    //TODO: 10t
+    //TODO: 20t
+
+    private CodeBuilder f22x(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide) {
+        add(op.<Format22x>format().make(
+                check_reg_or_pair(reg_or_pair1, 8, is_reg1_wide),
+                check_reg_or_pair(reg_or_pair2, 16, is_reg2_wide)));
+        return this;
+    }
+
+    //TODO: 21t
+    //TODO: 21s
+    //TODO: 21ih
+    //TODO: 21lh
+    //TODO: 21c
+    //TODO: 22c
+
+    public CodeBuilder f23x(Opcode op, int reg_or_pair1, boolean is_reg1_wide, int reg_or_pair2,
+                            boolean is_reg2_wide, int reg_or_pair3, boolean is_reg3_wide) {
+        add(op.<Format23x>format().make(
+                check_reg_or_pair(reg_or_pair1, 8, is_reg1_wide),
+                check_reg_or_pair(reg_or_pair2, 8, is_reg2_wide),
+                check_reg_or_pair(reg_or_pair3, 8, is_reg3_wide)));
+        return this;
+    }
+
+    //TODO: 22b
+    //TODO: 22t
+    //TODO: 22s
+    //TODO: 30t
+
+    private CodeBuilder f32x(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide) {
+        add(op.<Format32x>format().make(
+                check_reg_or_pair(reg_or_pair1, 16, is_reg1_wide),
+                check_reg_or_pair(reg_or_pair2, 16, is_reg2_wide)));
+        return this;
+    }
+
+    //TODO: 31i
+    //TODO: 31t
+    //TODO: 31c
+    //TODO: 35c
+    //TODO: 3rc
+    //TODO: 45cc
+    //TODO: 4rcc
+    //TODO: 51l
+
+    public CodeBuilder nop() {
+        return f10x(Opcode.NOP);
+    }
+
+    public CodeBuilder move(int dsr_reg, int src_reg) {
+        return f12x(Opcode.MOVE, dsr_reg, false, src_reg, false);
+    }
+
+    public CodeBuilder move_from16(int dsr_reg, int src_reg) {
+        return f22x(Opcode.MOVE_FROM16, dsr_reg, false, src_reg, false);
+    }
+
+    public CodeBuilder move_16(int dsr_reg, int src_reg) {
+        return f32x(Opcode.MOVE_16, dsr_reg, false, src_reg, false);
+    }
+
+    public CodeBuilder move_wide(int dsr_regr_pair, int src_regr_pair) {
+        return f12x(Opcode.MOVE_WIDE, dsr_regr_pair, true, src_regr_pair, true);
+    }
+
+    public CodeBuilder move_wide_from16(int dsr_regr_pair, int src_regr_pair) {
+        return f22x(Opcode.MOVE_WIDE_FROM16, dsr_regr_pair, true, src_regr_pair, true);
+    }
+
+    public CodeBuilder move_wide_16(int dsr_regr_pair, int src_regr_pair) {
+        return f32x(Opcode.MOVE_WIDE_16, dsr_regr_pair, true, src_regr_pair, true);
+    }
+
+    public CodeBuilder move_object(int dsr_reg, int src_reg) {
+        return f12x(Opcode.MOVE_OBJECT, dsr_reg, false, src_reg, false);
+    }
+
+    public CodeBuilder move_object_from16(int dsr_reg, int src_reg) {
+        return f22x(Opcode.MOVE_OBJECT_FROM16, dsr_reg, false, src_reg, false);
+    }
+
+    public CodeBuilder move_object_16(int dsr_reg, int src_reg) {
+        return f32x(Opcode.MOVE_OBJECT_16, dsr_reg, false, src_reg, false);
     }
 
     public CodeBuilder move_result(int dst_reg) {
-        add(Opcode.MOVE_RESULT.<Format11x>format().make(
-                check_reg(dst_reg, 8)));
-        return this;
+        return f11x(Opcode.MOVE_RESULT, dst_reg, false);
     }
 
     public CodeBuilder move_result_wide(int dst_reg_peir) {
-        add(Opcode.MOVE_RESULT_WIDE.<Format11x>format().make(
-                check_reg_pair(dst_reg_peir, 8)));
-        return this;
+        return f11x(Opcode.MOVE_RESULT_WIDE, dst_reg_peir, true);
     }
 
     public CodeBuilder move_result_object(int dst_reg) {
-        add(Opcode.MOVE_RESULT_OBJECT.<Format11x>format().make(
-                check_reg(dst_reg, 8)));
-        return this;
+        return f11x(Opcode.MOVE_RESULT_OBJECT, dst_reg, false);
     }
 
     public CodeBuilder move_exception(int dst_reg) {
-        add(Opcode.MOVE_EXCEPTION.<Format11x>format().make(
-                check_reg(dst_reg, 8)));
-        return this;
+        return f11x(Opcode.MOVE_EXCEPTION, dst_reg, false);
     }
 
     public CodeBuilder return_void() {
-        add(Opcode.RETURN_VOID.<Format10x>format().make());
-        return this;
+        return f10x(Opcode.RETURN_VOID);
     }
 
     public CodeBuilder return_(int return_value_reg) {
-        add(Opcode.RETURN.<Format11x>format().make(
-                check_reg(return_value_reg, 8)));
-        return this;
+        return f11x(Opcode.RETURN, return_value_reg, false);
     }
 
     public CodeBuilder return_wide(int return_value_reg_peir) {
-        add(Opcode.RETURN_WIDE.<Format11x>format().make(
-                check_reg_pair(return_value_reg_peir, 8)));
-        return this;
+        return f11x(Opcode.RETURN_WIDE, return_value_reg_peir, true);
     }
 
     public CodeBuilder return_object(int return_value_reg) {
-        add(Opcode.RETURN_OBJECT.<Format11x>format().make(
-                check_reg(return_value_reg, 8)));
-        return this;
+        return f11x(Opcode.RETURN_OBJECT, return_value_reg, false);
     }
 
     public CodeBuilder const_4(int dst_reg, int value) {
@@ -301,6 +392,14 @@ public final class CodeBuilder {
         return this;
     }
 
+    public CodeBuilder monitor_enter(int ref_reg) {
+        return f11x(Opcode.MONITOR_ENTER, ref_reg, false);
+    }
+
+    public CodeBuilder monitor_exit(int ref_reg) {
+        return f11x(Opcode.MONITOR_EXIT, ref_reg, false);
+    }
+
     public CodeBuilder check_cast(int ref_reg, TypeId value) {
         add(Opcode.CHECK_CAST.<Format21c>format().make(
                 check_reg(ref_reg, 8), value));
@@ -308,9 +407,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder throw_(int ex_reg) {
-        add(Opcode.THROW.<Format11x>format().make(
-                check_reg(ex_reg, 8)));
-        return this;
+        return f11x(Opcode.THROW, ex_reg, false);
     }
 
     private CodeBuilder goto_(Object label) {
@@ -353,6 +450,28 @@ public final class CodeBuilder {
 
     public CodeBuilder goto_32(String label) {
         return goto_32((Object) label);
+    }
+
+    public enum Cmp {
+        CMPL_FLOAT(Opcode.CMPL_FLOAT, false),
+        CMPG_FLOAT(Opcode.CMPG_FLOAT, false),
+        CMPL_DOUBLE(Opcode.CMPL_DOUBLE, true),
+        CMPG_DOUBLE(Opcode.CMPG_DOUBLE, true),
+        CMP_LONG(Opcode.CMP_LONG, true);
+
+        private final Opcode opcode;
+        private final boolean isWide;
+
+        Cmp(Opcode opcode, boolean isWide) {
+            this.opcode = opcode;
+            this.isWide = isWide;
+        }
+    }
+
+    public CodeBuilder cmp_kind(Cmp kind, int dst_reg, int first_src_reg_or_pair,
+                                int second_src_reg_or_pair) {
+        return f23x(kind.opcode, dst_reg, false,
+                first_src_reg_or_pair, kind.isWide, second_src_reg_or_pair, kind.isWide);
     }
 
     public enum Test {
@@ -458,10 +577,8 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder aop(Op op, int value_reg_or_pair, int array_reg, int index_reg) {
-        add(op.aop.<Format23x>format().make(
-                check_reg_or_pair(value_reg_or_pair, 8, op.isWide),
-                check_reg(array_reg, 8), check_reg(index_reg, 8)));
-        return this;
+        return f23x(op.aop, value_reg_or_pair, op.isWide,
+                array_reg, false, index_reg, false);
     }
 
     public CodeBuilder iop(Op op, int value_reg_or_pair, int object_reg, FieldId instance_field) {
@@ -603,10 +720,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder raw_unop(RawUnOp op, int dsr_reg_or_pair, int src_reg_or_pair) {
-        add(op.opcode.<Format12x>format().make(
-                check_reg_or_pair(dsr_reg_or_pair, 4, op.isDstWide),
-                check_reg_or_pair(src_reg_or_pair, 4, op.isSrcWide)));
-        return this;
+        return f12x(op.opcode, dsr_reg_or_pair, op.isDstWide, src_reg_or_pair, op.isSrcWide);
     }
 
     public enum RawBinOp {
@@ -659,19 +773,15 @@ public final class CodeBuilder {
 
     public CodeBuilder raw_binop(RawBinOp op, int dsr_reg_or_pair,
                                  int first_src_reg_or_pair, int second_src_reg_or_pair) {
-        add(op.regular.<Format23x>format().make(
-                check_reg_or_pair(dsr_reg_or_pair, 8, op.isDstAndSrc1Wide),
-                check_reg_or_pair(first_src_reg_or_pair, 8, op.isDstAndSrc1Wide),
-                check_reg_or_pair(second_src_reg_or_pair, 8, op.isSrc2Wide)));
-        return this;
+        return f23x(op.regular, dsr_reg_or_pair, op.isDstAndSrc1Wide,
+                first_src_reg_or_pair, op.isDstAndSrc1Wide,
+                second_src_reg_or_pair, op.isSrc2Wide);
     }
 
     public CodeBuilder raw_binop_2addr(RawBinOp op, int dst_and_first_src_reg_or_pair,
                                        int second_src_reg_or_pair) {
-        add(op._2addr.<Format12x>format().make(
-                check_reg_or_pair(dst_and_first_src_reg_or_pair, 4, op.isDstAndSrc1Wide),
-                check_reg_or_pair(second_src_reg_or_pair, 4, op.isDstAndSrc1Wide)));
-        return this;
+        return f12x(op._2addr, dst_and_first_src_reg_or_pair,
+                op.isDstAndSrc1Wide, second_src_reg_or_pair, op.isSrc2Wide);
     }
 
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_count, int arg_reg1,
