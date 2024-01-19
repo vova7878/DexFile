@@ -36,8 +36,7 @@ public final class AnnotationItem implements Mutable {
             return out;
         }
 
-        // a.type == b.type
-        //TODO?
+        // a.type == b.type, but a != b
         throw new IllegalStateException(
                 "can`t compare annotations of the same type: " + a + " " + b);
     };

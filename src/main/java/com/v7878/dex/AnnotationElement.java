@@ -36,8 +36,7 @@ public final class AnnotationElement implements Mutable {
             return out;
         }
 
-        // a.name == b.name
-        //TODO?
+        // a.name == b.name, but a != b
         throw new IllegalStateException(
                 "can`t compare annotation elements with same name: " + a + " " + b);
     };

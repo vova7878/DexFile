@@ -66,6 +66,7 @@ public final class Dex extends MutableList<ClassDef> {
     }
 
     public static Dex read(RandomInput in, DexOptions options, int[] class_def_ids) {
+        //TODO: substream
         FileMap map = FileMap.read(in, options);
 
         if (class_def_ids == null) {
@@ -230,7 +231,6 @@ public final class Dex extends MutableList<ClassDef> {
         offset = (int) data_out.position();
 
         //TODO: use align methods?
-
         TypeList[] lists = data.getTypeLists();
         if (lists.length != 0) {
             offset = roundUp(offset, TypeList.ALIGNMENT);
@@ -246,16 +246,13 @@ public final class Dex extends MutableList<ClassDef> {
         }
 
         AnnotationItem[] annotations = data.getAnnotations();
-        if (annotations.length != 0) {
-            map.annotations_off = offset;
-            map.annotations_size = annotations.length;
-            for (AnnotationItem tmp : annotations) {
-                data_out.position(offset);
-                tmp.write(context, data_out);
-                context.addAnnotation(tmp, offset);
-                offset = (int) data_out.position();
-            }
+        map.annotations_off = offset;
+        map.annotations_size = annotations.length;
+        for (AnnotationItem tmp : annotations) {
+            tmp.write(context, data_out);
+            context.addAnnotation(tmp, offset);
         }
+        offset = (int) data_out.position();
 
         AnnotationSet[] annotation_sets = data.getAnnotationSets();
         if (annotation_sets.length != 0) {
@@ -300,16 +297,13 @@ public final class Dex extends MutableList<ClassDef> {
         }
 
         ClassData[] class_data_items = data.getClassDataItems();
-        if (class_data_items.length != 0) {
-            map.class_data_items_off = offset;
-            map.class_data_items_size = class_data_items.length;
-            for (ClassData tmp : class_data_items) {
-                data_out.position(offset);
-                tmp.write(context, data_out);
-                context.addClassData(tmp, offset);
-                offset = (int) data_out.position();
-            }
+        map.class_data_items_off = offset;
+        map.class_data_items_size = class_data_items.length;
+        for (ClassData tmp : class_data_items) {
+            tmp.write(context, data_out);
+            context.addClassData(tmp, offset);
         }
+        offset = (int) data_out.position();
 
         //TODO: delete duplicates
         Map<ClassDef, AnnotationsDirectory> annotations_directories
@@ -335,16 +329,13 @@ public final class Dex extends MutableList<ClassDef> {
         }
 
         ArrayValue[] array_values = data.getArrayValues();
-        if (array_values.length != 0) {
-            map.encoded_arrays_off = offset;
-            map.encoded_arrays_size = array_values.length;
-            for (ArrayValue tmp : array_values) {
-                data_out.position(offset);
-                tmp.writeData(context, data_out);
-                context.addArrayValue(tmp, offset);
-                offset = (int) data_out.position();
-            }
+        map.encoded_arrays_off = offset;
+        map.encoded_arrays_size = array_values.length;
+        for (ArrayValue tmp : array_values) {
+            tmp.writeData(context, data_out);
+            context.addArrayValue(tmp, offset);
         }
+        offset = (int) data_out.position();
 
         offset = roundUp(offset, FileMap.MAP_ALIGNMENT);
         data_out.position(offset);

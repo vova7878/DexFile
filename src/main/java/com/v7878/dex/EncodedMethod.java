@@ -43,8 +43,7 @@ public final class EncodedMethod implements Mutable {
             return out;
         }
 
-        // a.method == b.method
-        //TODO?
+        // a.method == b.method, but a != b
         throw new IllegalStateException(
                 "can`t compare encoded methods with same method id" + a + " " + b);
     };
@@ -181,7 +180,7 @@ public final class EncodedMethod implements Mutable {
     }
 
     public static void writeArray(WriteContext context, RandomOutput out,
-                                  MutableList<EncodedMethod> encoded_methods) {
+                                  Collection<EncodedMethod> encoded_methods) {
         writeArray(context, out, encoded_methods.toArray(new EncodedMethod[0]));
     }
 
@@ -195,7 +194,7 @@ public final class EncodedMethod implements Mutable {
     }
 
     @Override
-    public Mutable mutate() {
+    public EncodedMethod mutate() {
         return new EncodedMethod(method, access_flags, annotations,
                 parameter_annotations, code);
     }

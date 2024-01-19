@@ -41,8 +41,7 @@ public final class EncodedField implements Mutable {
             return out;
         }
 
-        // a.field == b.field
-        //TODO?
+        // a.field == b.field, but a != b
         throw new IllegalStateException(
                 "can`t compare encoded fields with same field id" + a + " " + b);
     };
@@ -168,7 +167,7 @@ public final class EncodedField implements Mutable {
 
     public static void writeArray(boolean static_fields,
                                   WriteContext context, RandomOutput out,
-                                  MutableList<EncodedField> encoded_fields) {
+                                  Collection<EncodedField> encoded_fields) {
         writeArray(static_fields, context, out, encoded_fields.toArray(new EncodedField[0]));
     }
 
@@ -183,7 +182,7 @@ public final class EncodedField implements Mutable {
     }
 
     @Override
-    public Mutable mutate() {
+    public EncodedField mutate() {
         return new EncodedField(field, access_flags, annotations, value);
     }
 }
