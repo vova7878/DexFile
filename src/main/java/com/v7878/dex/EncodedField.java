@@ -22,6 +22,8 @@
 
 package com.v7878.dex;
 
+import static com.v7878.dex.DexConstants.ACC_STATIC;
+
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.util.MutableList;
@@ -81,6 +83,10 @@ public final class EncodedField implements Mutable {
         return access_flags;
     }
 
+    public boolean isStatic() {
+        return (access_flags & ACC_STATIC) != 0;
+    }
+
     public void setAnnotations(Collection<AnnotationItem> annotations) {
         this.annotations = annotations == null
                 ? AnnotationSet.empty() : new AnnotationSet(annotations);
@@ -134,14 +140,14 @@ public final class EncodedField implements Mutable {
         out.writeULeb128(access_flags);
     }
 
-    private static void check(boolean static_fields, EncodedField encoded_field) {
+    private static void check(boolean is_static_list, EncodedField encoded_field) {
         //TODO: improve messages
-        if (static_fields) {
-            if ((encoded_field.access_flags & Modifier.STATIC) == 0) {
+        if (is_static_list) {
+            if (!encoded_field.isStatic()) {
                 throw new IllegalStateException("field must be static");
             }
         } else {
-            if ((encoded_field.access_flags & Modifier.STATIC) != 0) {
+            if (encoded_field.isStatic()) {
                 throw new IllegalStateException("field must not be static");
             }
             EncodedValue tmp = encoded_field.getValue();
@@ -151,13 +157,13 @@ public final class EncodedField implements Mutable {
         }
     }
 
-    public static void writeArray(boolean static_fields,
+    public static void writeArray(boolean is_static_list,
                                   WriteContext context, RandomOutput out,
                                   EncodedField[] encoded_fields) {
         Arrays.sort(encoded_fields, COMPARATOR);
         int fieldIndex = 0;
         for (EncodedField tmp : encoded_fields) {
-            check(static_fields, tmp);
+            check(is_static_list, tmp);
             int diff = context.getFieldIndex(tmp.field) - fieldIndex;
             fieldIndex += diff;
             out.writeULeb128(diff);
@@ -165,10 +171,10 @@ public final class EncodedField implements Mutable {
         }
     }
 
-    public static void writeArray(boolean static_fields,
+    public static void writeArray(boolean is_static_list,
                                   WriteContext context, RandomOutput out,
                                   Collection<EncodedField> encoded_fields) {
-        writeArray(static_fields, context, out, encoded_fields.toArray(new EncodedField[0]));
+        writeArray(is_static_list, context, out, encoded_fields.toArray(new EncodedField[0]));
     }
 
     @Override

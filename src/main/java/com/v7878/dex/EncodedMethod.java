@@ -22,6 +22,10 @@
 
 package com.v7878.dex;
 
+import static com.v7878.dex.DexConstants.ACC_CONSTRUCTOR;
+import static com.v7878.dex.DexConstants.ACC_PRIVATE;
+import static com.v7878.dex.DexConstants.ACC_STATIC;
+
 import com.v7878.dex.bytecode.CodeBuilder;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
@@ -83,6 +87,10 @@ public final class EncodedMethod implements Mutable {
 
     public int getAccessFlags() {
         return access_flags;
+    }
+
+    public boolean isDirect() {
+        return (access_flags & (ACC_PRIVATE | ACC_STATIC | ACC_CONSTRUCTOR)) != 0;
     }
 
     public void setAnnotations(AnnotationSet annotations) {
@@ -167,11 +175,25 @@ public final class EncodedMethod implements Mutable {
         out.writeULeb128(code == null ? 0 : context.getCodeItemOffset(code));
     }
 
-    public static void writeArray(WriteContext context, RandomOutput out,
+    private static void check(boolean is_direct_list, EncodedMethod encoded_method) {
+        //TODO: improve messages
+        if (is_direct_list) {
+            if (!encoded_method.isDirect()) {
+                throw new IllegalStateException("method must be direct");
+            }
+        } else {
+            if (encoded_method.isDirect()) {
+                throw new IllegalStateException("method must not be direct");
+            }
+        }
+    }
+
+    public static void writeArray(boolean is_direct_list, WriteContext context, RandomOutput out,
                                   EncodedMethod[] encoded_methods) {
         Arrays.sort(encoded_methods, COMPARATOR);
         int index = 0;
         for (EncodedMethod tmp : encoded_methods) {
+            check(is_direct_list, tmp);
             int diff = context.getMethodIndex(tmp.method) - index;
             index += diff;
             out.writeULeb128(diff);
@@ -179,9 +201,9 @@ public final class EncodedMethod implements Mutable {
         }
     }
 
-    public static void writeArray(WriteContext context, RandomOutput out,
+    public static void writeArray(boolean is_direct_list, WriteContext context, RandomOutput out,
                                   Collection<EncodedMethod> encoded_methods) {
-        writeArray(context, out, encoded_methods.toArray(new EncodedMethod[0]));
+        writeArray(is_direct_list, context, out, encoded_methods.toArray(new EncodedMethod[0]));
     }
 
     @Override
