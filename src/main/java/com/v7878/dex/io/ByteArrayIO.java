@@ -24,7 +24,9 @@ package com.v7878.dex.io;
 
 import com.v7878.misc.Checks;
 
+import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.Objects;
 
 class ModifiableArray {
 
@@ -80,11 +82,13 @@ class ModifiableArray {
 public class ByteArrayIO implements RandomIO {
 
     private final ModifiableArray arr;
+    private ByteOrder order;
     private int offset;
 
     private ByteArrayIO(ModifiableArray arr) {
         this.arr = arr;
         this.offset = 0;
+        this.order = ByteOrder.LITTLE_ENDIAN;
     }
 
     public ByteArrayIO(byte[] data) {
@@ -97,6 +101,14 @@ public class ByteArrayIO implements RandomIO {
 
     public ByteArrayIO() {
         this(0);
+    }
+
+    public ByteOrder getByteOrder() {
+        return order;
+    }
+
+    public void setByteOrder(ByteOrder order) {
+        order = Objects.requireNonNull(order);
     }
 
     public void setGrowFactor(int new_grow_factor) {

@@ -27,10 +27,65 @@ import static com.v7878.misc.Math.roundUpL;
 
 import com.v7878.misc.Checks;
 
+import java.nio.ByteOrder;
 import java.util.Objects;
 
-//TODO: byte order
+class OffsetInput implements RandomInput {
+
+    private final RandomInput delegate;
+    private final long offset;
+
+    OffsetInput(RandomInput delegate, long offset) {
+        this.delegate = delegate.duplicate();
+        this.offset = offset;
+        this.delegate.position(offset);
+    }
+
+    @Override
+    public ByteOrder getByteOrder() {
+        return delegate.getByteOrder();
+    }
+
+    @Override
+    public void setByteOrder(ByteOrder order) {
+        delegate.setByteOrder(order);
+    }
+
+    @Override
+    public byte readByte() {
+        return delegate.readByte();
+    }
+
+    @Override
+    public long size() {
+        return delegate.size() - offset;
+    }
+
+    @Override
+    public long position() {
+        return delegate.position() - offset;
+    }
+
+    @Override
+    public long position(long new_position) {
+        return delegate.position(Math.addExact(new_position, offset)) - offset;
+    }
+
+    @Override
+    public RandomInput duplicate() {
+        return new OffsetInput(delegate, offset);
+    }
+}
+
 public interface RandomInput extends AutoCloseable {
+
+    ByteOrder getByteOrder();
+
+    default boolean isBigEndian() {
+        return getByteOrder() == ByteOrder.BIG_ENDIAN;
+    }
+
+    void setByteOrder(ByteOrder order);
 
     default void readFully(byte[] arr) {
         readFully(arr, 0, arr.length);
@@ -84,8 +139,8 @@ public interface RandomInput extends AutoCloseable {
     }
 
     default int readUnsignedShort() {
-        // little-endian
-        return readUnsignedByte() | (readUnsignedByte() << 8);
+        int shift = isBigEndian() ? 8 : 0;
+        return readUnsignedByte() << shift | readUnsignedByte() << (8 - shift);
     }
 
     default char readChar() {
@@ -93,13 +148,13 @@ public interface RandomInput extends AutoCloseable {
     }
 
     default int readInt() {
-        // little-endian
-        return readUnsignedShort() | (readUnsignedShort() << 16);
+        int shift = isBigEndian() ? 16 : 0;
+        return readUnsignedShort() << shift | readUnsignedShort() << (16 - shift);
     }
 
     default long readLong() {
-        // little-endian
-        return (readInt() & 0xffffffffL) | ((readInt() & 0xffffffffL) << 32);
+        int shift = isBigEndian() ? 32 : 0;
+        return (readInt() & 0xffffffffL) << shift | (readInt() & 0xffffffffL) << (32 - shift);
     }
 
     default float readFloat() {
@@ -129,7 +184,7 @@ public interface RandomInput extends AutoCloseable {
     long position(long new_position);
 
     default long addPosition(long delta) {
-        return position(position() + delta);
+        return position(Math.addExact(position(), delta));
     }
 
     default long alignPosition(long alignment) {
@@ -149,6 +204,14 @@ public interface RandomInput extends AutoCloseable {
         RandomInput out = duplicate();
         out.addPosition(offset);
         return out;
+    }
+
+    default RandomInput slice() {
+        return slice(position());
+    }
+
+    default RandomInput slice(long offset) {
+        return new OffsetInput(this, offset);
     }
 
     @Override

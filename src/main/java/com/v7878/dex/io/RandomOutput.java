@@ -27,10 +27,66 @@ import static com.v7878.misc.Math.roundUpL;
 
 import com.v7878.misc.Checks;
 
+import java.nio.ByteOrder;
 import java.util.Objects;
 
-//TODO: byte order
+
+class OffsetOutput implements RandomOutput {
+
+    private final RandomOutput delegate;
+    private final long offset;
+
+    OffsetOutput(RandomOutput delegate, long offset) {
+        this.delegate = delegate.duplicate();
+        this.offset = offset;
+        this.delegate.position(offset);
+    }
+
+    @Override
+    public ByteOrder getByteOrder() {
+        return delegate.getByteOrder();
+    }
+
+    @Override
+    public void setByteOrder(ByteOrder order) {
+        delegate.setByteOrder(order);
+    }
+
+    @Override
+    public void writeByte(int value) {
+        delegate.writeByte(value);
+    }
+
+    @Override
+    public long size() {
+        return delegate.size() - offset;
+    }
+
+    @Override
+    public long position() {
+        return delegate.position() - offset;
+    }
+
+    @Override
+    public long position(long new_position) {
+        return delegate.position(Math.addExact(new_position, offset)) - offset;
+    }
+
+    @Override
+    public RandomOutput duplicate() {
+        return new OffsetOutput(delegate, offset);
+    }
+}
+
 public interface RandomOutput extends AutoCloseable {
+
+    ByteOrder getByteOrder();
+
+    default boolean isBigEndian() {
+        return getByteOrder() == ByteOrder.BIG_ENDIAN;
+    }
+
+    void setByteOrder(ByteOrder order);
 
     default void writeByteArray(byte[] arr) {
         writeByteArray(arr, 0, arr.length);
@@ -66,9 +122,9 @@ public interface RandomOutput extends AutoCloseable {
     void writeByte(int value);
 
     default void writeShort(int value) {
-        // little-endian
-        writeByte(value);
-        writeByte(value >> 8);
+        int shift = isBigEndian() ? 8 : 0;
+        writeByte(value >> shift);
+        writeByte(value >> (8 - shift));
     }
 
     default void writeChar(int value) {
@@ -76,15 +132,15 @@ public interface RandomOutput extends AutoCloseable {
     }
 
     default void writeInt(int value) {
-        // little-endian
-        writeShort(value);
-        writeShort(value >> 16);
+        int shift = isBigEndian() ? 16 : 0;
+        writeShort(value >> shift);
+        writeShort(value >> (16 - shift));
     }
 
     default void writeLong(long value) {
-        // little-endian
-        writeInt((int) value);
-        writeInt((int) (value >> 32));
+        int shift = isBigEndian() ? 32 : 0;
+        writeInt((int) (value >> shift));
+        writeInt((int) (value >> (32 - shift)));
     }
 
     default void writeFloat(float value) {
@@ -114,7 +170,7 @@ public interface RandomOutput extends AutoCloseable {
     long position(long new_position);
 
     default long addPosition(long delta) {
-        return position(position() + delta);
+        return position(Math.addExact(position(), delta));
     }
 
     default long alignPosition(long alignment) {
@@ -143,6 +199,14 @@ public interface RandomOutput extends AutoCloseable {
         RandomOutput out = duplicate();
         out.addPosition(offset);
         return out;
+    }
+
+    default RandomOutput slice() {
+        return slice(position());
+    }
+
+    default RandomOutput slice(long offset) {
+        return new OffsetOutput(this, offset);
     }
 
     @Override

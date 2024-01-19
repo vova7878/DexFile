@@ -25,10 +25,68 @@ package com.v7878.dex.io;
 import static com.v7878.misc.Math.isAlignedL;
 import static com.v7878.misc.Math.roundUpL;
 
+import java.nio.ByteOrder;
+
+class OffsetIO implements RandomIO {
+
+    private final RandomIO delegate;
+    private final long offset;
+
+    OffsetIO(RandomIO delegate, long offset) {
+        this.delegate = delegate.duplicate();
+        this.offset = offset;
+        this.delegate.position(offset);
+    }
+
+    @Override
+    public ByteOrder getByteOrder() {
+        return delegate.getByteOrder();
+    }
+
+    @Override
+    public void setByteOrder(ByteOrder order) {
+        delegate.setByteOrder(order);
+    }
+
+    @Override
+    public byte readByte() {
+        return delegate.readByte();
+    }
+
+    @Override
+    public void writeByte(int value) {
+        delegate.writeByte(value);
+    }
+
+    @Override
+    public long size() {
+        return delegate.size() - offset;
+    }
+
+    @Override
+    public long position() {
+        return delegate.position() - offset;
+    }
+
+    @Override
+    public long position(long new_position) {
+        return delegate.position(Math.addExact(new_position, offset)) - offset;
+    }
+
+    @Override
+    public RandomIO duplicate() {
+        return new OffsetIO(delegate, offset);
+    }
+}
+
 public interface RandomIO extends RandomInput, RandomOutput {
 
+    default boolean isBigEndian() {
+        return getByteOrder() == ByteOrder.BIG_ENDIAN;
+    }
+
     default long addPosition(long delta) {
-        return position(position() + delta);
+        return position(Math.addExact(position(), delta));
     }
 
     default long alignPosition(long alignment) {
@@ -50,6 +108,14 @@ public interface RandomIO extends RandomInput, RandomOutput {
         RandomIO out = duplicate();
         out.addPosition(offset);
         return out;
+    }
+
+    default RandomIO slice() {
+        return slice(position());
+    }
+
+    default RandomIO slice(long offset) {
+        return new OffsetIO(this, offset);
     }
 
     @Override
