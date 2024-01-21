@@ -22,6 +22,7 @@
 
 package com.v7878.dex.bytecode;
 
+import com.v7878.dex.CallSiteId;
 import com.v7878.dex.CodeItem;
 import com.v7878.dex.FieldId;
 import com.v7878.dex.MethodHandleItem;
@@ -214,6 +215,30 @@ public final class CodeBuilder {
         return this;
     }
 
+    private void format_35c_checks(int arg_count, int arg_reg1, int arg_reg2,
+                                   int arg_reg3, int arg_reg4, int arg_reg5) {
+        Checks.checkRange(arg_count, 0, 6);
+        if (arg_count == 5) check_reg(arg_reg5, 4);
+        else if (arg_reg5 != 0) throw new IllegalArgumentException(
+                "arg_count < 5, but arg_reg5 != 0");
+
+        if (arg_count >= 4) check_reg(arg_reg4, 4);
+        else if (arg_reg4 != 0) throw new IllegalArgumentException(
+                "arg_count < 4, but arg_reg4 != 0");
+
+        if (arg_count >= 3) check_reg(arg_reg3, 4);
+        else if (arg_reg3 != 0) throw new IllegalArgumentException(
+                "arg_count < 3, but arg_reg3 != 0");
+
+        if (arg_count >= 2) check_reg(arg_reg2, 4);
+        else if (arg_reg2 != 0) throw new IllegalArgumentException(
+                "arg_count < 2, but arg_reg2 != 0");
+
+        if (arg_count >= 1) check_reg(arg_reg1, 4);
+        else if (arg_reg1 != 0) throw new IllegalArgumentException(
+                "arg_count == 0, but arg_reg1 != 0");
+    }
+
     public CodeBuilder add_raw(Instruction instruction) {
         add(instruction);
         return this;
@@ -254,11 +279,23 @@ public final class CodeBuilder {
     //TODO: 21s
     //TODO: 21ih
     //TODO: 21lh
-    //TODO: 21c
-    //TODO: 22c
 
-    public CodeBuilder f23x(Opcode op, int reg_or_pair1, boolean is_reg1_wide, int reg_or_pair2,
-                            boolean is_reg2_wide, int reg_or_pair3, boolean is_reg3_wide) {
+    private CodeBuilder f21c(Opcode op, int reg_or_pair, boolean is_reg_wide, Object constant) {
+        add(op.<Format21c>format().make(
+                check_reg_or_pair(reg_or_pair, 8, is_reg_wide), constant));
+        return this;
+    }
+
+    private CodeBuilder f22c(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide, Object constant) {
+        add(op.<Format22c>format().make(
+                check_reg_or_pair(reg_or_pair1, 4, is_reg1_wide),
+                check_reg_or_pair(reg_or_pair2, 4, is_reg2_wide), constant));
+        return this;
+    }
+
+    private CodeBuilder f23x(Opcode op, int reg_or_pair1, boolean is_reg1_wide, int reg_or_pair2,
+                             boolean is_reg2_wide, int reg_or_pair3, boolean is_reg3_wide) {
         add(op.<Format23x>format().make(
                 check_reg_or_pair(reg_or_pair1, 8, is_reg1_wide),
                 check_reg_or_pair(reg_or_pair2, 8, is_reg2_wide),
@@ -282,10 +319,40 @@ public final class CodeBuilder {
     //TODO: 31i
     //TODO: 31t
     //TODO: 31c
-    //TODO: 35c
-    //TODO: 3rc
-    //TODO: 45cc
-    //TODO: 4rcc
+
+    @SuppressWarnings("UnusedReturnValue")
+    private CodeBuilder f35c(Opcode op, Object constant, int arg_count, int arg_reg1,
+                             int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
+        format_35c_checks(arg_count, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
+        add(op.<Format35c>format().make(arg_count,
+                constant, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5));
+        return this;
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    private CodeBuilder f3rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
+        check_reg_range(first_arg_reg, 16, arg_count, 8);
+        add(op.<Format3rc>format().make(arg_count, constant, first_arg_reg));
+        return this;
+    }
+
+    @SuppressWarnings({"SameParameterValue", "UnusedReturnValue"})
+    private CodeBuilder f45cc(Opcode op, Object constant1, Object constant2, int arg_count,
+                              int arg_reg1, int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
+        format_35c_checks(arg_count, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
+        add(op.<Format45cc>format().make(arg_count, constant1,
+                arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5, constant2));
+        return this;
+    }
+
+    @SuppressWarnings({"SameParameterValue", "UnusedReturnValue"})
+    private CodeBuilder f4rcc(Opcode op, Object constant1,
+                              Object constant2, int arg_count, int first_arg_reg) {
+        check_reg_range(first_arg_reg, 16, arg_count, 8);
+        add(op.<Format4rcc>format().make(arg_count, constant1, first_arg_reg, constant2));
+        return this;
+    }
+
     //TODO: 51l
 
     public CodeBuilder nop() {
@@ -381,15 +448,11 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder const_string(int dst_reg, String value) {
-        add(Opcode.CONST_STRING.<Format21c>format().make(
-                check_reg(dst_reg, 8), value));
-        return this;
+        return f21c(Opcode.CONST_STRING, dst_reg, false, value);
     }
 
     public CodeBuilder const_class(int dst_reg, TypeId value) {
-        add(Opcode.CONST_CLASS.<Format21c>format().make(
-                check_reg(dst_reg, 8), value));
-        return this;
+        return f21c(Opcode.CONST_CLASS, dst_reg, false, value);
     }
 
     public CodeBuilder monitor_enter(int ref_reg) {
@@ -401,9 +464,19 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder check_cast(int ref_reg, TypeId value) {
-        add(Opcode.CHECK_CAST.<Format21c>format().make(
-                check_reg(ref_reg, 8), value));
-        return this;
+        return f21c(Opcode.CHECK_CAST, ref_reg, false, value);
+    }
+
+    public CodeBuilder instance_of(int dst_reg, int ref_reg, TypeId value) {
+        return f22c(Opcode.INSTANCE_OF, dst_reg, false, ref_reg, false, value);
+    }
+
+    public CodeBuilder new_instance(int dst_reg, TypeId value) {
+        return f21c(Opcode.NEW_INSTANCE, dst_reg, false, value);
+    }
+
+    public CodeBuilder new_array(int dst_reg, int size_reg, TypeId value) {
+        return f22c(Opcode.NEW_ARRAY, dst_reg, false, size_reg, false, value);
     }
 
     public CodeBuilder throw_(int ex_reg) {
@@ -582,40 +655,11 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder iop(Op op, int value_reg_or_pair, int object_reg, FieldId instance_field) {
-        add(op.iop.<Format22c>format().make(
-                check_reg_or_pair(value_reg_or_pair, 4, op.isWide),
-                check_reg(object_reg, 4), instance_field));
-        return this;
+        return f22c(op.iop, value_reg_or_pair, op.isWide, object_reg, false, instance_field);
     }
 
     public CodeBuilder sop(Op op, int value_reg_or_pair, FieldId static_field) {
-        add(op.sop.<Format21c>format().make(
-                check_reg_or_pair(value_reg_or_pair, 8, op.isWide), static_field));
-        return this;
-    }
-
-    private void format_35c_checks(int arg_count, int arg_reg1, int arg_reg2,
-                                   int arg_reg3, int arg_reg4, int arg_reg5) {
-        Checks.checkRange(arg_count, 0, 6);
-        if (arg_count == 5) check_reg(arg_reg5, 4);
-        else if (arg_reg5 != 0) throw new IllegalArgumentException(
-                "arg_count < 5, but arg_reg5 != 0");
-
-        if (arg_count >= 4) check_reg(arg_reg4, 4);
-        else if (arg_reg4 != 0) throw new IllegalArgumentException(
-                "arg_count < 4, but arg_reg4 != 0");
-
-        if (arg_count >= 3) check_reg(arg_reg3, 4);
-        else if (arg_reg3 != 0) throw new IllegalArgumentException(
-                "arg_count < 3, but arg_reg3 != 0");
-
-        if (arg_count >= 2) check_reg(arg_reg2, 4);
-        else if (arg_reg2 != 0) throw new IllegalArgumentException(
-                "arg_count < 2, but arg_reg2 != 0");
-
-        if (arg_count >= 1) check_reg(arg_reg1, 4);
-        else if (arg_reg1 != 0) throw new IllegalArgumentException(
-                "arg_count == 0, but arg_reg1 != 0");
+        return f21c(op.sop, value_reg_or_pair, op.isWide, static_field);
     }
 
     private void add_outs(int outs_count) {
@@ -640,9 +684,8 @@ public final class CodeBuilder {
 
     public CodeBuilder invoke(InvokeKind kind, MethodId method, int arg_count, int arg_reg1,
                               int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
-        format_35c_checks(arg_count, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
-        add(kind.regular.<Format35c>format().make(arg_count,
-                method, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5));
+        f35c(kind.regular, method, arg_count,
+                arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
         add_outs(arg_count);
         return this;
     }
@@ -674,9 +717,9 @@ public final class CodeBuilder {
         return invoke(kind, method, 0, 0, 0, 0, 0, 0);
     }
 
-    public CodeBuilder invoke_range(InvokeKind kind, MethodId method, int arg_count, int first_arg_reg) {
-        check_reg_range(first_arg_reg, 16, arg_count, 8);
-        add(kind.range.<Format3rc>format().make(arg_count, method, first_arg_reg));
+    public CodeBuilder invoke_range(InvokeKind kind, MethodId method,
+                                    int arg_count, int first_arg_reg) {
+        f3rc(kind.range, method, arg_count, first_arg_reg);
         add_outs(arg_count);
         return this;
     }
@@ -786,9 +829,8 @@ public final class CodeBuilder {
 
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_count, int arg_reg1,
                                           int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
-        format_35c_checks(arg_count, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
-        add(Opcode.INVOKE_POLYMORPHIC.<Format45cc>format().make(arg_count,
-                method, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5, proto));
+        f45cc(Opcode.INVOKE_POLYMORPHIC, method, proto, arg_count,
+                arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
         add_outs(arg_count);
         return this;
     }
@@ -829,22 +871,63 @@ public final class CodeBuilder {
 
     public CodeBuilder invoke_polymorphic_range(
             MethodId method, ProtoId proto, int arg_count, int first_arg_reg) {
-        check_reg_range(first_arg_reg, 16, arg_count, 8);
-        add(Opcode.INVOKE_POLYMORPHIC_RANGE.<Format4rcc>format()
-                .make(arg_count, method, first_arg_reg, proto));
+        f4rcc(Opcode.INVOKE_POLYMORPHIC_RANGE, method, proto, arg_count, first_arg_reg);
+        add_outs(arg_count);
+        return this;
+    }
+
+    public CodeBuilder invoke_custom(CallSiteId callsite, int arg_count, int arg_reg1,
+                                     int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
+        f35c(Opcode.INVOKE_CUSTOM, callsite, arg_count,
+                arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
+        add_outs(arg_count);
+        return this;
+    }
+
+    public CodeBuilder invoke_custom(CallSiteId callsite, int arg_reg1, int arg_reg2,
+                                     int arg_reg3, int arg_reg4, int arg_reg5) {
+        return invoke_custom(callsite, 5,
+                arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
+    }
+
+    public CodeBuilder invoke_custom(CallSiteId callsite, int arg_reg1,
+                                     int arg_reg2, int arg_reg3, int arg_reg4) {
+        return invoke_custom(callsite, 4,
+                arg_reg1, arg_reg2, arg_reg3, arg_reg4, 0);
+    }
+
+    public CodeBuilder invoke_custom(
+            CallSiteId callsite, int arg_reg1, int arg_reg2, int arg_reg3) {
+        return invoke_custom(callsite, 3,
+                arg_reg1, arg_reg2, arg_reg3, 0, 0);
+    }
+
+    public CodeBuilder invoke_custom(CallSiteId callsite, int arg_reg1, int arg_reg2) {
+        return invoke_custom(callsite, 2,
+                arg_reg1, arg_reg2, 0, 0, 0);
+    }
+
+    public CodeBuilder invoke_custom(CallSiteId callsite, int arg_reg1) {
+        return invoke_custom(callsite, 1,
+                arg_reg1, 0, 0, 0, 0);
+    }
+
+    public CodeBuilder invoke_custom(CallSiteId callsite) {
+        return invoke_custom(callsite, 0,
+                0, 0, 0, 0, 0);
+    }
+
+    public CodeBuilder invoke_custom_range(CallSiteId callsite, int arg_count, int first_arg_reg) {
+        f3rc(Opcode.INVOKE_POLYMORPHIC_RANGE, callsite, arg_count, first_arg_reg);
         add_outs(arg_count);
         return this;
     }
 
     public CodeBuilder const_method_handle(int dst_reg, MethodHandleItem value) {
-        add(Opcode.CONST_METHOD_HANDLE.<Format21c>format().make(
-                check_reg(dst_reg, 8), value));
-        return this;
+        return f21c(Opcode.CONST_METHOD_HANDLE, dst_reg, false, value);
     }
 
     public CodeBuilder const_method_type(int dst_reg, ProtoId value) {
-        add(Opcode.CONST_METHOD_TYPE.<Format21c>format().make(
-                check_reg(dst_reg, 8), value));
-        return this;
+        return f21c(Opcode.CONST_METHOD_TYPE, dst_reg, false, value);
     }
 }
