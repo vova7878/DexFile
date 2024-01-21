@@ -293,8 +293,7 @@ class InstructionWriter {
         out.writeIntArray(targets);
     }
 
-    public static void write_array_payload(RandomOutput out, int opcode,
-                                           int element_width, byte[] data) {
+    public static void check_array_payload(int element_width, byte[] data) {
         Objects.requireNonNull(data);
         if (!(element_width == 1 || element_width == 2 || element_width == 4 || element_width == 8)) {
             throw new IllegalStateException("unsupported element_width: " + element_width);
@@ -302,6 +301,11 @@ class InstructionWriter {
         if (data.length % element_width != 0) {
             throw new IllegalStateException("data.length is not multiple of element_width: " + data.length);
         }
+    }
+
+    public static void write_array_payload(RandomOutput out, int opcode,
+                                           int element_width, byte[] data) {
+        check_array_payload(element_width, data);
         out.requireAlignment(PAYLOAD_ALIGNMENT);
         write_base(out, opcode);
         out.writeShort(element_width);

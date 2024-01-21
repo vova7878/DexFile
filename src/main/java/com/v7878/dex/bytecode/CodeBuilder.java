@@ -29,6 +29,7 @@ import com.v7878.dex.MethodHandleItem;
 import com.v7878.dex.MethodId;
 import com.v7878.dex.ProtoId;
 import com.v7878.dex.TypeId;
+import com.v7878.dex.bytecode.Format.ArrayPayload;
 import com.v7878.dex.bytecode.Format.Format10t;
 import com.v7878.dex.bytecode.Format.Format10x;
 import com.v7878.dex.bytecode.Format.Format11n;
@@ -441,7 +442,6 @@ public final class CodeBuilder {
     }
 
     // <AA|op BBBBlo BBBBhi> op vAA, +BBBBBBBB
-    //TODO: all payload formats
     @SuppressWarnings("SameParameterValue")
     private CodeBuilder f31t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntSupplier value) {
         add(op.<Format31i31t>format(), format -> {
@@ -505,11 +505,15 @@ public final class CodeBuilder {
         return this;
     }
 
+    private void check_current_unit_alignment2() {
+        if ((current_unit & 1) != 0) {
+            throw new IllegalStateException("current position is not aligned by 2 code units");
+        }
+    }
+
     @SuppressWarnings("UnusedReturnValue")
     private CodeBuilder packed_switch_payload(int first_key, int[] branch_offsets) {
-        if ((current_unit & 1) != 0) {
-            throw new IllegalStateException("packed_switch_payload is not aligned by 2 code units");
-        }
+        check_current_unit_alignment2();
         add(Opcode.PACKED_SWITCH_PAYLOAD.<PackedSwitchPayload>format()
                 .make(first_key, branch_offsets));
         return this;
@@ -517,11 +521,16 @@ public final class CodeBuilder {
 
     @SuppressWarnings("UnusedReturnValue")
     private CodeBuilder sparse_switch_payload(int[] keys, int[] branch_offsets) {
-        if ((current_unit & 1) != 0) {
-            throw new IllegalStateException("sparse_switch_payload is not aligned by 2 code units");
-        }
+        check_current_unit_alignment2();
         add(Opcode.SPARSE_SWITCH_PAYLOAD.<SparseSwitchPayload>format()
                 .make(keys, branch_offsets));
+        return this;
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    private CodeBuilder fill_array_data_payload(int element_width, byte[] data) {
+        check_current_unit_alignment2();
+        add(Opcode.ARRAY_PAYLOAD.<ArrayPayload>format().make(element_width, data));
         return this;
     }
 
@@ -663,6 +672,22 @@ public final class CodeBuilder {
 
     public CodeBuilder new_array(int dst_reg, int size_reg, TypeId value) {
         return f22c(Opcode.NEW_ARRAY, dst_reg, false, size_reg, false, value);
+    }
+
+    //TODO: add variants for int[], char[], etc...
+    public CodeBuilder fill_array_data(int arr_ref_reg, int element_width, byte[] data) {
+        InstructionWriter.check_array_payload(element_width, data);
+        int start_unit = current_unit;
+        InternalLabel payload = new InternalLabel();
+        addPayloadAction(() -> {
+            if ((current_unit & 1) != 0) {
+                nop();
+            }
+            putLabel(payload);
+            fill_array_data_payload(element_width, data);
+        });
+        return f31t(Opcode.FILL_ARRAY_DATA, arr_ref_reg, false,
+                () -> getLabelBranchOffset(payload, start_unit));
     }
 
     public CodeBuilder throw_(int ex_reg) {
