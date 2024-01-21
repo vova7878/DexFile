@@ -53,6 +53,7 @@ import com.v7878.dex.bytecode.Format.Format45cc;
 import com.v7878.dex.bytecode.Format.Format4rcc;
 import com.v7878.dex.bytecode.Format.Format51l;
 import com.v7878.dex.bytecode.Format.PackedSwitchPayload;
+import com.v7878.dex.bytecode.Format.SparseSwitchPayload;
 import com.v7878.dex.util.MutableList;
 import com.v7878.misc.Checks;
 
@@ -514,6 +515,16 @@ public final class CodeBuilder {
         return this;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
+    private CodeBuilder sparse_switch_payload(int[] keys, int[] branch_offsets) {
+        if ((current_unit & 1) != 0) {
+            throw new IllegalStateException("sparse_switch_payload is not aligned by 2 code units");
+        }
+        add(Opcode.SPARSE_SWITCH_PAYLOAD.<SparseSwitchPayload>format()
+                .make(keys, branch_offsets));
+        return this;
+    }
+
     public CodeBuilder nop() {
         return f10x(Opcode.NOP);
     }
@@ -706,6 +717,31 @@ public final class CodeBuilder {
 
     public CodeBuilder packed_switch(int reg_to_test, int first_key, String... labels) {
         return packed_switch(reg_to_test, first_key, (Object[]) labels);
+    }
+
+    private CodeBuilder sparse_switch(int reg_to_test, int[] keys, Object... labels) {
+        if (keys.length != labels.length) {
+            throw new IllegalArgumentException("sparse_switch: keys.length != labels.length");
+        }
+        int start_unit = current_unit;
+        InternalLabel payload = new InternalLabel();
+        addPayloadAction(() -> {
+            int[] offsets = new int[labels.length];
+            for (int i = 0; i < offsets.length; i++) {
+                offsets[i] = getLabelBranchOffset(labels[i], start_unit, true);
+            }
+            if ((current_unit & 1) != 0) {
+                nop();
+            }
+            putLabel(payload);
+            sparse_switch_payload(keys, offsets);
+        });
+        return f31t(Opcode.SPARSE_SWITCH, reg_to_test, false,
+                () -> getLabelBranchOffset(payload, start_unit));
+    }
+
+    public CodeBuilder sparse_switch(int reg_to_test, int[] keys, String... labels) {
+        return sparse_switch(reg_to_test, keys, (Object[]) labels);
     }
 
     public enum Cmp {
