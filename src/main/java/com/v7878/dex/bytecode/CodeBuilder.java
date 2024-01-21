@@ -505,6 +505,12 @@ public final class CodeBuilder {
         return this;
     }
 
+    private void align_current_unit2() {
+        if ((current_unit & 1) != 0) {
+            nop();
+        }
+    }
+
     private void check_current_unit_alignment2() {
         if ((current_unit & 1) != 0) {
             throw new IllegalStateException("current position is not aligned by 2 code units");
@@ -680,9 +686,7 @@ public final class CodeBuilder {
         int start_unit = current_unit;
         InternalLabel payload = new InternalLabel();
         addPayloadAction(() -> {
-            if ((current_unit & 1) != 0) {
-                nop();
-            }
+            align_current_unit2();
             putLabel(payload);
             fill_array_data_payload(element_width, data);
         });
@@ -730,9 +734,7 @@ public final class CodeBuilder {
             for (int i = 0; i < offsets.length; i++) {
                 offsets[i] = getLabelBranchOffset(labels[i], start_unit, true);
             }
-            if ((current_unit & 1) != 0) {
-                nop();
-            }
+            align_current_unit2();
             putLabel(payload);
             packed_switch_payload(first_key, offsets);
         });
@@ -755,9 +757,7 @@ public final class CodeBuilder {
             for (int i = 0; i < offsets.length; i++) {
                 offsets[i] = getLabelBranchOffset(labels[i], start_unit, true);
             }
-            if ((current_unit & 1) != 0) {
-                nop();
-            }
+            align_current_unit2();
             putLabel(payload);
             sparse_switch_payload(keys, offsets);
         });
