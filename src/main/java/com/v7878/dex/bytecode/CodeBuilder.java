@@ -657,7 +657,7 @@ public final class CodeBuilder {
 
     private CodeBuilder goto_32(Object label) {
         int start_unit = current_unit;
-        return f30t(Opcode.GOTO, () -> getLabelBranchOffset(label, start_unit, true));
+        return f30t(Opcode.GOTO_32, () -> getLabelBranchOffset(label, start_unit, true));
     }
 
     public CodeBuilder goto_32(String label) {
