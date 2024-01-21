@@ -36,12 +36,15 @@ import com.v7878.dex.bytecode.Format.Format11x;
 import com.v7878.dex.bytecode.Format.Format12x;
 import com.v7878.dex.bytecode.Format.Format20t;
 import com.v7878.dex.bytecode.Format.Format21c;
+import com.v7878.dex.bytecode.Format.Format21ih;
+import com.v7878.dex.bytecode.Format.Format21lh;
 import com.v7878.dex.bytecode.Format.Format21t21s;
 import com.v7878.dex.bytecode.Format.Format22c;
 import com.v7878.dex.bytecode.Format.Format22t22s;
 import com.v7878.dex.bytecode.Format.Format22x;
 import com.v7878.dex.bytecode.Format.Format23x;
 import com.v7878.dex.bytecode.Format.Format30t;
+import com.v7878.dex.bytecode.Format.Format31c;
 import com.v7878.dex.bytecode.Format.Format31i31t;
 import com.v7878.dex.bytecode.Format.Format32x;
 import com.v7878.dex.bytecode.Format.Format35c;
@@ -58,6 +61,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -147,6 +151,7 @@ public final class CodeBuilder {
         return isPair ? check_reg_pair(reg_or_pair, width) : check_reg(reg_or_pair, width);
     }
 
+    @SuppressWarnings({"SameParameterValue", "UnusedReturnValue"})
     private int check_reg_range(int first_reg, int reg_width, int count, int count_width) {
         Checks.checkRange(count, 0, 1 << count_width);
         if (count > 0) {
@@ -244,11 +249,13 @@ public final class CodeBuilder {
         return this;
     }
 
+    // <ØØ|op> op
     private CodeBuilder f10x(Opcode op) {
         add(op.<Format10x>format().make());
         return this;
     }
 
+    // <B|A|op> op vA, vB
     private CodeBuilder f12x(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
                              int reg_or_pair2, boolean is_reg2_wide) {
         add(op.<Format12x>format().make(
@@ -257,16 +264,47 @@ public final class CodeBuilder {
         return this;
     }
 
-    //TODO: 11n
+    // <B|A|op> op vA, #+B
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f11n(Opcode op, int reg_or_pair, boolean is_reg_wide, int value) {
+        InstructionWriter.check_signed(value, 4);
+        add(op.<Format11n>format().make(
+                check_reg_or_pair(reg_or_pair, 4, is_reg_wide), value));
+        return this;
+    }
 
+    // <AA|op> op vAA
     private CodeBuilder f11x(Opcode op, int reg_or_pair, boolean is_reg_wide) {
         add(op.<Format11x>format().make(check_reg_or_pair(reg_or_pair, 8, is_reg_wide)));
         return this;
     }
 
-    //TODO: 10t
-    //TODO: 20t
+    // <AA|op> op +AA
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f10t(Opcode op, IntSupplier value) {
+        add(op.<Format10t>format(), format -> {
+            int branch_offset = value.getAsInt();
+            InstructionWriter.check_signed(branch_offset, 8);
+            return format.make(branch_offset);
+        });
+        return this;
+    }
 
+    // <ØØ|op AAAA> op +AAAA
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f20t(Opcode op, IntSupplier value) {
+        add(op.<Format20t>format(), format -> {
+            int branch_offset = value.getAsInt();
+            InstructionWriter.check_signed(branch_offset, 16);
+            return format.make(branch_offset);
+        });
+        return this;
+    }
+
+    // <AA|op BBBB> op AA, @BBBB
+    //TODO: 20bc
+
+    // <AA|op BBBB> op vAA, vBBBB
     private CodeBuilder f22x(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
                              int reg_or_pair2, boolean is_reg2_wide) {
         add(op.<Format22x>format().make(
@@ -275,25 +313,49 @@ public final class CodeBuilder {
         return this;
     }
 
-    //TODO: 21t
-    //TODO: 21s
-    //TODO: 21ih
-    //TODO: 21lh
+    // <AA|op BBBB> op vAA, +BBBB
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f21t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntSupplier value) {
+        add(op.<Format21t21s>format(), format -> {
+            int branch_offset = value.getAsInt();
+            InstructionWriter.check_signed(branch_offset, 16);
+            return format.make(check_reg_or_pair(reg_or_pair, 8, is_reg_wide), branch_offset);
+        });
+        return this;
+    }
 
+    // <AA|op BBBB> op vAA, #+BBBB
+    private CodeBuilder f21s(Opcode op, int reg_or_pair, boolean is_reg_wide, int value) {
+        InstructionWriter.check_signed(value, 16);
+        add(op.<Format21t21s>format().make(
+                check_reg_or_pair(reg_or_pair, 8, is_reg_wide), value));
+        return this;
+    }
+
+    // <AA|op BBBB> op vAA, #+BBBB0000
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f21ih(Opcode op, int reg, int value) {
+        InstructionWriter.check_hat32(value, 16);
+        add(op.<Format21ih>format().make(check_reg(reg, 8), value));
+        return this;
+    }
+
+    // <AA|op BBBB> op vAA, #+BBBB000000000000
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f21lh(Opcode op, int reg_pair, long value) {
+        InstructionWriter.check_hat64(value, 16);
+        add(op.<Format21lh>format().make(check_reg_pair(reg_pair, 8), value));
+        return this;
+    }
+
+    // <AA|op BBBB> op vAA, @BBBB
     private CodeBuilder f21c(Opcode op, int reg_or_pair, boolean is_reg_wide, Object constant) {
         add(op.<Format21c>format().make(
                 check_reg_or_pair(reg_or_pair, 8, is_reg_wide), constant));
         return this;
     }
 
-    private CodeBuilder f22c(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
-                             int reg_or_pair2, boolean is_reg2_wide, Object constant) {
-        add(op.<Format22c>format().make(
-                check_reg_or_pair(reg_or_pair1, 4, is_reg1_wide),
-                check_reg_or_pair(reg_or_pair2, 4, is_reg2_wide), constant));
-        return this;
-    }
-
+    // <AA|op CC|BB> op vAA, vBB, vCC
     private CodeBuilder f23x(Opcode op, int reg_or_pair1, boolean is_reg1_wide, int reg_or_pair2,
                              boolean is_reg2_wide, int reg_or_pair3, boolean is_reg3_wide) {
         add(op.<Format23x>format().make(
@@ -303,11 +365,55 @@ public final class CodeBuilder {
         return this;
     }
 
+    // <AA|op CC|BB> op vAA, vBB, #+CC
+    //TODO: op-int/lit8
     //TODO: 22b
-    //TODO: 22t
-    //TODO: 22s
-    //TODO: 30t
 
+    // <B|A|op CCCC> op vA, vB, +CCCC
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f22t(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide, IntSupplier value) {
+        add(op.<Format22t22s>format(), format -> {
+            int branch_offset = value.getAsInt();
+            InstructionWriter.check_signed(branch_offset, 16);
+            return format.make(check_reg_or_pair(reg_or_pair1, 4, is_reg1_wide),
+                    check_reg_or_pair(reg_or_pair2, 4, is_reg2_wide), branch_offset);
+        });
+        return this;
+    }
+
+    // <B|A|op CCCC> op vA, vB, #+CCCC
+    //TODO: op-int/lit16
+    private CodeBuilder f22s(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide, int value) {
+        InstructionWriter.check_signed(value, 16);
+        add(op.<Format22t22s>format().make(
+                check_reg_or_pair(reg_or_pair1, 4, is_reg1_wide),
+                check_reg_or_pair(reg_or_pair2, 4, is_reg2_wide), value));
+        return this;
+    }
+
+    // <B|A|op CCCC> op vA, vB, @CCCC
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f22c(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide, Object constant) {
+        add(op.<Format22c>format().make(
+                check_reg_or_pair(reg_or_pair1, 4, is_reg1_wide),
+                check_reg_or_pair(reg_or_pair2, 4, is_reg2_wide), constant));
+        return this;
+    }
+
+    // <ØØ|op AAAAlo AAAAhi> op +AAAAAAAA
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f30t(Opcode op, IntSupplier value) {
+        add(op.<Format30t>format(), format -> {
+            int branch_offset = value.getAsInt();
+            return format.make(branch_offset);
+        });
+        return this;
+    }
+
+    // <ØØ|op AAAA BBBB> op vAAAA, vBBBB
     private CodeBuilder f32x(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
                              int reg_or_pair2, boolean is_reg2_wide) {
         add(op.<Format32x>format().make(
@@ -316,10 +422,33 @@ public final class CodeBuilder {
         return this;
     }
 
-    //TODO: 31i
-    //TODO: 31t
-    //TODO: 31c
+    // <AA|op BBBBlo BBBBhi> op vAA, #+BBBBBBBB
+    private CodeBuilder f31i(Opcode op, int reg_or_pair, boolean is_reg_wide, int value) {
+        add(op.<Format31i31t>format().make(
+                check_reg_or_pair(reg_or_pair, 8, is_reg_wide), value));
+        return this;
+    }
 
+    // <AA|op BBBBlo BBBBhi> op vAA, +BBBBBBBB
+    //TODO: payload formats
+    private CodeBuilder f31t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntSupplier value) {
+        add(op.<Format31i31t>format(), format -> {
+            int branch_offset = value.getAsInt();
+            return format.make(check_reg_or_pair(reg_or_pair, 8, is_reg_wide), branch_offset);
+        });
+        return this;
+    }
+
+    // <AA|op BBBBlo BBBBhi> op vAA, @BBBBBBBB
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f31c(Opcode op, int reg_or_pair, boolean is_reg_wide, Object constant) {
+        add(op.<Format31c>format().make(
+                check_reg_or_pair(reg_or_pair, 8, is_reg_wide), constant));
+        return this;
+    }
+
+    // <A|G|op BBBB F|E|D|C> [A] op {vC, vD, vE, vF, vG}, @BBBB
+    //TODO: filled-new-array
     @SuppressWarnings("UnusedReturnValue")
     private CodeBuilder f35c(Opcode op, Object constant, int arg_count, int arg_reg1,
                              int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
@@ -329,6 +458,8 @@ public final class CodeBuilder {
         return this;
     }
 
+    // <AA|op BBBB CCCC> op {vCCCC .. vNNNN}, @BBBB (where NNNN = CCCC+AA-1)
+    //TODO: filled-new-array/range
     @SuppressWarnings("UnusedReturnValue")
     private CodeBuilder f3rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, 16, arg_count, 8);
@@ -336,6 +467,7 @@ public final class CodeBuilder {
         return this;
     }
 
+    // <A|G|op BBBB F|E|D|C HHHH> [A] op {vC, vD, vE, vF, vG}, @BBBB
     @SuppressWarnings({"SameParameterValue", "UnusedReturnValue"})
     private CodeBuilder f45cc(Opcode op, Object constant1, Object constant2, int arg_count,
                               int arg_reg1, int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
@@ -345,6 +477,7 @@ public final class CodeBuilder {
         return this;
     }
 
+    // <AA|op BBBB CCCC HHHH> op {vCCCC .. vNNNN}, @BBBB, @HHHH (where NNNN = CCCC+AA-1)
     @SuppressWarnings({"SameParameterValue", "UnusedReturnValue"})
     private CodeBuilder f4rcc(Opcode op, Object constant1,
                               Object constant2, int arg_count, int first_arg_reg) {
@@ -353,7 +486,12 @@ public final class CodeBuilder {
         return this;
     }
 
-    //TODO: 51l
+    // <AA|op BBBBlolo BBBBlohi BBBBhilo BBBBhihi> op vAA, #+BBBBBBBBBBBBBBBB
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f51l(Opcode op, int reg_pair, long value) {
+        add(op.<Format.Format51l>format().make(check_reg_pair(reg_pair, 8), value));
+        return this;
+    }
 
     public CodeBuilder nop() {
         return f10x(Opcode.NOP);
@@ -428,27 +566,43 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder const_4(int dst_reg, int value) {
-        InstructionWriter.check_signed(value, 4);
-        add(Opcode.CONST_4.<Format11n>format().make(
-                check_reg(dst_reg, 4), value));
-        return this;
+        return f11n(Opcode.CONST_4, dst_reg, false, value);
     }
 
     public CodeBuilder const_16(int dst_reg, int value) {
-        InstructionWriter.check_signed(value, 16);
-        add(Opcode.CONST_16.<Format21t21s>format().make(
-                check_reg(dst_reg, 8), value));
-        return this;
+        return f21s(Opcode.CONST_16, dst_reg, false, value);
     }
 
     public CodeBuilder const_(int dst_reg, int value) {
-        add(Opcode.CONST.<Format31i31t>format().make(
-                check_reg(dst_reg, 8), value));
-        return this;
+        return f31i(Opcode.CONST, dst_reg, false, value);
+    }
+
+    public CodeBuilder const_high16(int dst_reg, int value) {
+        return f21ih(Opcode.CONST_HIGH16, dst_reg, value);
+    }
+
+    public CodeBuilder const_wide_16(int dst_reg_pair, int value) {
+        return f21s(Opcode.CONST_WIDE_16, dst_reg_pair, true, value);
+    }
+
+    public CodeBuilder const_wide_32(int dst_reg_pair, int value) {
+        return f31i(Opcode.CONST_WIDE_32, dst_reg_pair, true, value);
+    }
+
+    public CodeBuilder const_wide(int dst_reg_pair, long value) {
+        return f51l(Opcode.CONST_WIDE, dst_reg_pair, value);
+    }
+
+    public CodeBuilder const_wide_high16(int dst_reg_pair, long value) {
+        return f21lh(Opcode.CONST_WIDE_HIGH16, dst_reg_pair, value);
     }
 
     public CodeBuilder const_string(int dst_reg, String value) {
         return f21c(Opcode.CONST_STRING, dst_reg, false, value);
+    }
+
+    public CodeBuilder const_string_jumbo(int dst_reg, String value) {
+        return f31c(Opcode.CONST_STRING_JUMBO, dst_reg, false, value);
     }
 
     public CodeBuilder const_class(int dst_reg, TypeId value) {
@@ -485,12 +639,7 @@ public final class CodeBuilder {
 
     private CodeBuilder goto_(Object label) {
         int start_unit = current_unit;
-        add(Opcode.GOTO.<Format10t>format(), format -> {
-            int branch_offset = getLabelBranchOffset(label, start_unit);
-            InstructionWriter.check_signed(branch_offset, 8);
-            return format.make(branch_offset);
-        });
-        return this;
+        return f10t(Opcode.GOTO, () -> getLabelBranchOffset(label, start_unit));
     }
 
     public CodeBuilder goto_(String label) {
@@ -499,12 +648,7 @@ public final class CodeBuilder {
 
     private CodeBuilder goto_16(Object label) {
         int start_unit = current_unit;
-        add(Opcode.GOTO_16.<Format20t>format(), format -> {
-            int branch_offset = getLabelBranchOffset(label, start_unit);
-            InstructionWriter.check_signed(branch_offset, 16);
-            return format.make(branch_offset);
-        });
-        return this;
+        return f20t(Opcode.GOTO_16, () -> getLabelBranchOffset(label, start_unit));
     }
 
     public CodeBuilder goto_16(String label) {
@@ -513,12 +657,7 @@ public final class CodeBuilder {
 
     private CodeBuilder goto_32(Object label) {
         int start_unit = current_unit;
-        add(Opcode.GOTO_32.<Format30t>format(), format -> {
-            int branch_offset = getLabelBranchOffset(label, start_unit, true);
-            InstructionWriter.check_signed(branch_offset, 32);
-            return format.make(branch_offset);
-        });
-        return this;
+        return f30t(Opcode.GOTO, () -> getLabelBranchOffset(label, start_unit, true));
     }
 
     public CodeBuilder goto_32(String label) {
@@ -565,13 +704,9 @@ public final class CodeBuilder {
 
     private CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
         int start_unit = current_unit;
-        add(test.test.<Format22t22s>format(), format -> {
-            int branch_offset = getLabelBranchOffset(label, start_unit);
-            InstructionWriter.check_signed(branch_offset, 16);
-            return format.make(check_reg(first_reg_to_test, 4),
-                    check_reg(second_reg_to_test, 4), branch_offset);
-        });
-        return this;
+        return f22t(test.test, first_reg_to_test, false,
+                second_reg_to_test, false,
+                () -> getLabelBranchOffset(label, start_unit));
     }
 
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test, String label) {
@@ -595,12 +730,8 @@ public final class CodeBuilder {
 
     private CodeBuilder if_testz(Test test, int reg_to_test, Object label) {
         int start_unit = current_unit;
-        add(test.testz.<Format21t21s>format(), format -> {
-            int branch_offset = getLabelBranchOffset(label, start_unit);
-            InstructionWriter.check_signed(branch_offset, 16);
-            return format.make(check_reg(reg_to_test, 8), branch_offset);
-        });
-        return this;
+        return f21t(test.testz, reg_to_test, false,
+                () -> getLabelBranchOffset(label, start_unit));
     }
 
     public CodeBuilder if_testz(Test test, int reg_to_test, String label) {
