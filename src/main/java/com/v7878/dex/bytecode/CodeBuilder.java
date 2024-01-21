@@ -51,6 +51,8 @@ import com.v7878.dex.bytecode.Format.Format35c;
 import com.v7878.dex.bytecode.Format.Format3rc;
 import com.v7878.dex.bytecode.Format.Format45cc;
 import com.v7878.dex.bytecode.Format.Format4rcc;
+import com.v7878.dex.bytecode.Format.Format51l;
+import com.v7878.dex.bytecode.Format.PackedSwitchPayload;
 import com.v7878.dex.util.MutableList;
 import com.v7878.misc.Checks;
 
@@ -72,6 +74,7 @@ public final class CodeBuilder {
 
     private final int registers_size, ins_size;
     private final List<Supplier<Instruction>> instructions;
+    private final List<Runnable> payload_actions;
     private final Map<Object, Integer> labels;
     private final boolean has_this;
 
@@ -84,12 +87,15 @@ public final class CodeBuilder {
         this.ins_size = Checks.checkRange(ins_size, 0,
                 registers_size + 1) + (has_this ? 1 : 0);
         instructions = new ArrayList<>();
+        payload_actions = new ArrayList<>();
         labels = new HashMap<>();
         current_instruction = 0;
         current_unit = 0;
     }
 
     private CodeItem end() {
+        payload_actions.forEach(Runnable::run);
+
         MutableList<Instruction> out = MutableList.empty();
         out.addAll(instructions.stream().map(Supplier::get).collect(Collectors.toList()));
         return new CodeItem(registers_size, ins_size, max_outs, out, null);
@@ -174,6 +180,10 @@ public final class CodeBuilder {
         instructions.add(() -> factory.apply(format));
         current_instruction++;
         current_unit += format.units();
+    }
+
+    private void addPayloadAction(Runnable action) {
+        payload_actions.add(action);
     }
 
     private void putLabel(Object label) {
@@ -430,7 +440,8 @@ public final class CodeBuilder {
     }
 
     // <AA|op BBBBlo BBBBhi> op vAA, +BBBBBBBB
-    //TODO: payload formats
+    //TODO: all payload formats
+    @SuppressWarnings("SameParameterValue")
     private CodeBuilder f31t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntSupplier value) {
         add(op.<Format31i31t>format(), format -> {
             int branch_offset = value.getAsInt();
@@ -489,7 +500,17 @@ public final class CodeBuilder {
     // <AA|op BBBBlolo BBBBlohi BBBBhilo BBBBhihi> op vAA, #+BBBBBBBBBBBBBBBB
     @SuppressWarnings("SameParameterValue")
     private CodeBuilder f51l(Opcode op, int reg_pair, long value) {
-        add(op.<Format.Format51l>format().make(check_reg_pair(reg_pair, 8), value));
+        add(op.<Format51l>format().make(check_reg_pair(reg_pair, 8), value));
+        return this;
+    }
+
+    @SuppressWarnings("UnusedReturnValue")
+    private CodeBuilder packed_switch_payload(int first_key, int[] branch_offsets) {
+        if ((current_unit & 1) != 0) {
+            throw new IllegalStateException("packed_switch_payload is not aligned by 2 code units");
+        }
+        add(Opcode.PACKED_SWITCH_PAYLOAD.<PackedSwitchPayload>format()
+                .make(first_key, branch_offsets));
         return this;
     }
 
@@ -662,6 +683,29 @@ public final class CodeBuilder {
 
     public CodeBuilder goto_32(String label) {
         return goto_32((Object) label);
+    }
+
+    private CodeBuilder packed_switch(int reg_to_test, int first_key, Object... labels) {
+        Objects.requireNonNull(labels);
+        int start_unit = current_unit;
+        InternalLabel payload = new InternalLabel();
+        addPayloadAction(() -> {
+            int[] offsets = new int[labels.length];
+            for (int i = 0; i < offsets.length; i++) {
+                offsets[i] = getLabelBranchOffset(labels[i], start_unit, true);
+            }
+            if ((current_unit & 1) != 0) {
+                nop();
+            }
+            putLabel(payload);
+            packed_switch_payload(first_key, offsets);
+        });
+        return f31t(Opcode.PACKED_SWITCH, reg_to_test, false,
+                () -> getLabelBranchOffset(payload, start_unit));
+    }
+
+    public CodeBuilder packed_switch(int reg_to_test, int first_key, String... labels) {
+        return packed_switch(reg_to_test, first_key, (Object[]) labels);
     }
 
     public enum Cmp {
