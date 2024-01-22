@@ -22,8 +22,6 @@
 
 package com.v7878.dex;
 
-import static com.v7878.misc.Math.roundUpL;
-
 import com.v7878.dex.bytecode.Instruction;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
@@ -111,7 +109,7 @@ public final class CodeItem implements Mutable {
         out.insns = Instruction.readArray(in, context);
 
         if (tries_size > 0) {
-            in.position(roundUpL(in.position(), 4));
+            in.alignPosition(TryItem.ALIGNMENT);
             long tries_pos = in.position();
             in.addPosition((long) tries_size * TryItem.SIZE);
 
