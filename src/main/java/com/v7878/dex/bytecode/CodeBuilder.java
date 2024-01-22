@@ -40,6 +40,7 @@ import com.v7878.dex.bytecode.Format.Format21c;
 import com.v7878.dex.bytecode.Format.Format21ih;
 import com.v7878.dex.bytecode.Format.Format21lh;
 import com.v7878.dex.bytecode.Format.Format21t21s;
+import com.v7878.dex.bytecode.Format.Format22b;
 import com.v7878.dex.bytecode.Format.Format22c;
 import com.v7878.dex.bytecode.Format.Format22t22s;
 import com.v7878.dex.bytecode.Format.Format22x;
@@ -378,8 +379,15 @@ public final class CodeBuilder {
     }
 
     // <AA|op CC|BB> op vAA, vBB, #+CC
-    //TODO: op-int/lit8
-    //TODO: 22b
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f22b(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide, int value) {
+        InstructionWriter.check_signed(value, 8);
+        add(op.<Format22b>format().make(
+                check_reg_or_pair(reg_or_pair1, 8, is_reg1_wide),
+                check_reg_or_pair(reg_or_pair2, 8, is_reg2_wide), value));
+        return this;
+    }
 
     // <B|A|op CCCC> op vA, vB, +CCCC
     @SuppressWarnings("SameParameterValue")
@@ -395,7 +403,7 @@ public final class CodeBuilder {
     }
 
     // <B|A|op CCCC> op vA, vB, #+CCCC
-    //TODO: op-int/lit16
+    @SuppressWarnings("SameParameterValue")
     private CodeBuilder f22s(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
                              int reg_or_pair2, boolean is_reg2_wide, int value) {
         InstructionWriter.check_signed(value, 16);
@@ -960,7 +968,7 @@ public final class CodeBuilder {
         return this;
     }
 
-    public enum RawUnOp {
+    public enum UnOp {
         NEG_INT(Opcode.NEG_INT, false, false),
         NOT_INT(Opcode.NOT_INT, false, false),
         NEG_LONG(Opcode.NEG_LONG, true, true),
@@ -991,29 +999,30 @@ public final class CodeBuilder {
         private final Opcode opcode;
         private final boolean isDstWide, isSrcWide;
 
-        RawUnOp(Opcode opcode, boolean isDstWide, boolean isSrcWide) {
+        UnOp(Opcode opcode, boolean isDstWide, boolean isSrcWide) {
             this.opcode = opcode;
             this.isDstWide = isDstWide;
             this.isSrcWide = isSrcWide;
         }
     }
 
-    public CodeBuilder raw_unop(RawUnOp op, int dsr_reg_or_pair, int src_reg_or_pair) {
+    public CodeBuilder unop(UnOp op, int dsr_reg_or_pair, int src_reg_or_pair) {
         return f12x(op.opcode, dsr_reg_or_pair, op.isDstWide, src_reg_or_pair, op.isSrcWide);
     }
 
-    public enum RawBinOp {
-        ADD_INT(Opcode.ADD_INT, Opcode.ADD_INT_2ADDR, false, false),
-        SUB_INT(Opcode.SUB_INT, Opcode.SUB_INT_2ADDR, false, false),
-        MUL_INT(Opcode.MUL_INT, Opcode.MUL_INT_2ADDR, false, false),
-        DIV_INT(Opcode.DIV_INT, Opcode.DIV_INT_2ADDR, false, false),
-        REM_INT(Opcode.REM_INT, Opcode.REM_INT_2ADDR, false, false),
-        AND_INT(Opcode.AND_INT, Opcode.AND_INT_2ADDR, false, false),
-        OR_INT(Opcode.OR_INT, Opcode.OR_INT_2ADDR, false, false),
-        XOR_INT(Opcode.XOR_INT, Opcode.XOR_INT_2ADDR, false, false),
-        SHL_INT(Opcode.SHL_INT, Opcode.SHL_INT_2ADDR, false, false),
-        SHR_INT(Opcode.SHR_INT, Opcode.SHR_INT_2ADDR, false, false),
-        USHR_INT(Opcode.USHR_INT, Opcode.USHR_INT_2ADDR, false, false),
+    public enum BinOp {
+        ADD_INT(Opcode.ADD_INT, Opcode.ADD_INT_2ADDR, Opcode.ADD_INT_LIT16, Opcode.ADD_INT_LIT8, false, false),
+        RSUB_INT(null, null, Opcode.RSUB_INT, Opcode.RSUB_INT_LIT8, false, false),
+        SUB_INT(Opcode.SUB_INT, Opcode.SUB_INT_2ADDR, null, null, false, false),
+        MUL_INT(Opcode.MUL_INT, Opcode.MUL_INT_2ADDR, Opcode.MUL_INT_LIT16, Opcode.MUL_INT_LIT8, false, false),
+        DIV_INT(Opcode.DIV_INT, Opcode.DIV_INT_2ADDR, Opcode.DIV_INT_LIT16, Opcode.DIV_INT_LIT8, false, false),
+        REM_INT(Opcode.REM_INT, Opcode.REM_INT_2ADDR, Opcode.REM_INT_LIT16, Opcode.REM_INT_LIT8, false, false),
+        AND_INT(Opcode.AND_INT, Opcode.AND_INT_2ADDR, Opcode.AND_INT_LIT16, Opcode.AND_INT_LIT8, false, false),
+        OR_INT(Opcode.OR_INT, Opcode.OR_INT_2ADDR, Opcode.OR_INT_LIT16, Opcode.OR_INT_LIT8, false, false),
+        XOR_INT(Opcode.XOR_INT, Opcode.XOR_INT_2ADDR, Opcode.XOR_INT_LIT16, Opcode.XOR_INT_LIT8, false, false),
+        SHL_INT(Opcode.SHL_INT, Opcode.SHL_INT_2ADDR, null, Opcode.SHL_INT_LIT8, false, false),
+        SHR_INT(Opcode.SHR_INT, Opcode.SHR_INT_2ADDR, null, Opcode.SHR_INT_LIT8, false, false),
+        USHR_INT(Opcode.USHR_INT, Opcode.USHR_INT_2ADDR, null, Opcode.USHR_INT_LIT8, false, false),
 
         ADD_LONG(Opcode.ADD_LONG, Opcode.ADD_LONG_2ADDR, true, true),
         SUB_LONG(Opcode.SUB_LONG, Opcode.SUB_LONG_2ADDR, true, true),
@@ -1039,28 +1048,54 @@ public final class CodeBuilder {
         DIV_DOUBLE(Opcode.DIV_DOUBLE, Opcode.DIV_DOUBLE_2ADDR, true, true),
         REM_DOUBLE(Opcode.REM_DOUBLE, Opcode.REM_DOUBLE_2ADDR, true, true);
 
-        private final Opcode regular, _2addr;
+        private final Opcode regular, _2addr, lit16, lit8;
         private final boolean isDstAndSrc1Wide, isSrc2Wide;
 
-        RawBinOp(Opcode regular, Opcode _2addr, boolean isDstAndSrc1Wide, boolean isSrc2Wide) {
+        BinOp(Opcode regular, Opcode _2addr, Opcode lit16, Opcode lit8, boolean isDstAndSrc1Wide, boolean isSrc2Wide) {
             this.regular = regular;
             this._2addr = _2addr;
+            this.lit16 = lit16;
+            this.lit8 = lit8;
             this.isDstAndSrc1Wide = isDstAndSrc1Wide;
             this.isSrc2Wide = isSrc2Wide;
         }
+
+        BinOp(Opcode regular, Opcode _2addr, boolean isDstAndSrc1Wide, boolean isSrc2Wide) {
+            this(regular, _2addr, null, null, isDstAndSrc1Wide, isSrc2Wide);
+        }
     }
 
-    public CodeBuilder raw_binop(RawBinOp op, int dsr_reg_or_pair,
-                                 int first_src_reg_or_pair, int second_src_reg_or_pair) {
+    public CodeBuilder binop(BinOp op, int dsr_reg_or_pair,
+                             int first_src_reg_or_pair, int second_src_reg_or_pair) {
+        if (op.regular == null) {
+            throw new IllegalArgumentException("there is no regular version of " + op);
+        }
         return f23x(op.regular, dsr_reg_or_pair, op.isDstAndSrc1Wide,
                 first_src_reg_or_pair, op.isDstAndSrc1Wide,
                 second_src_reg_or_pair, op.isSrc2Wide);
     }
 
-    public CodeBuilder raw_binop_2addr(RawBinOp op, int dst_and_first_src_reg_or_pair,
-                                       int second_src_reg_or_pair) {
+    public CodeBuilder binop_2addr(BinOp op, int dst_and_first_src_reg_or_pair,
+                                   int second_src_reg_or_pair) {
+        if (op._2addr == null) {
+            throw new IllegalArgumentException("there is no 2addr version of " + op);
+        }
         return f12x(op._2addr, dst_and_first_src_reg_or_pair,
                 op.isDstAndSrc1Wide, second_src_reg_or_pair, op.isSrc2Wide);
+    }
+
+    public CodeBuilder binop_lit16(BinOp op, int dst_reg, int src_reg, int value) {
+        if (op.lit16 == null) {
+            throw new IllegalArgumentException("there is no lit16 version of " + op);
+        }
+        return f22s(op.lit16, dst_reg, false, src_reg, false, value);
+    }
+
+    public CodeBuilder binop_lit8(BinOp op, int dst_reg, int src_reg, int value) {
+        if (op.lit8 == null) {
+            throw new IllegalArgumentException("there is no lit8 version of " + op);
+        }
+        return f22b(op.lit8, dst_reg, false, src_reg, false, value);
     }
 
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_count, int arg_reg1,
