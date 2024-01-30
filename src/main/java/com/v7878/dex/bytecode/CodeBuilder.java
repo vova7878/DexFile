@@ -59,6 +59,7 @@ import com.v7878.dex.bytecode.Format.SparseSwitchPayload;
 import com.v7878.dex.util.MutableList;
 import com.v7878.misc.Checks;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -81,7 +82,7 @@ public final class CodeBuilder {
     private final Map<Object, Integer> labels;
     private final boolean has_this;
 
-    private int current_instruction, current_unit, max_outs;
+    private int current_unit, max_outs;
 
     private CodeBuilder(int registers_size, int ins_size, boolean has_hidden_this) {
         this.has_this = has_hidden_this;
@@ -92,7 +93,6 @@ public final class CodeBuilder {
         instructions = new ArrayList<>();
         payload_actions = new ArrayList<>();
         labels = new HashMap<>();
-        current_instruction = 0;
         current_unit = 0;
     }
 
@@ -172,7 +172,6 @@ public final class CodeBuilder {
 
     private void add(Instruction instruction) {
         instructions.add(() -> instruction);
-        current_instruction++;
         current_unit += instruction.units();
     }
 
@@ -181,7 +180,6 @@ public final class CodeBuilder {
             throw new AssertionError();
         }
         instructions.add(() -> factory.apply(format));
-        current_instruction++;
         current_unit += format.units();
     }
 
@@ -468,8 +466,6 @@ public final class CodeBuilder {
     }
 
     // <A|G|op BBBB F|E|D|C> [A] op {vC, vD, vE, vF, vG}, @BBBB
-    //TODO: filled-new-array
-    @SuppressWarnings("UnusedReturnValue")
     private CodeBuilder f35c(Opcode op, Object constant, int arg_count, int arg_reg1,
                              int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         format_35c_checks(arg_count, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
@@ -479,8 +475,6 @@ public final class CodeBuilder {
     }
 
     // <AA|op BBBB CCCC> op {vCCCC .. vNNNN}, @BBBB (where NNNN = CCCC+AA-1)
-    //TODO: filled-new-array/range
-    @SuppressWarnings("UnusedReturnValue")
     private CodeBuilder f3rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, 16, arg_count, 8);
         add(op.<Format3rc>format().make(arg_count, constant, first_arg_reg));
@@ -688,7 +682,43 @@ public final class CodeBuilder {
         return f22c(Opcode.NEW_ARRAY, dst_reg, false, size_reg, false, value);
     }
 
-    //TODO: add variants for int[], char[], etc...
+    public CodeBuilder filled_new_array(TypeId type, int arr_size, int arg_reg1,
+                                        int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
+        return f35c(Opcode.FILLED_NEW_ARRAY, type, arr_size,
+                arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
+    }
+
+    public CodeBuilder filled_new_array(TypeId type, int arg_reg1, int arg_reg2,
+                                        int arg_reg3, int arg_reg4, int arg_reg5) {
+        return filled_new_array(type, 5, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
+    }
+
+    public CodeBuilder filled_new_array(TypeId type, int arg_reg1, int arg_reg2,
+                                        int arg_reg3, int arg_reg4) {
+        return filled_new_array(type, 4, arg_reg1, arg_reg2, arg_reg3, arg_reg4, 0);
+    }
+
+    public CodeBuilder filled_new_array(TypeId type,
+                                        int arg_reg1, int arg_reg2, int arg_reg3) {
+        return filled_new_array(type, 3, arg_reg1, arg_reg2, arg_reg3, 0, 0);
+    }
+
+    public CodeBuilder filled_new_array(TypeId type, int arg_reg1, int arg_reg2) {
+        return filled_new_array(type, 2, arg_reg1, arg_reg2, 0, 0, 0);
+    }
+
+    public CodeBuilder filled_new_array(TypeId type, int arg_reg1) {
+        return filled_new_array(type, 1, arg_reg1, 0, 0, 0, 0);
+    }
+
+    public CodeBuilder filled_new_array(TypeId type) {
+        return filled_new_array(type, 0, 0, 0, 0, 0, 0);
+    }
+
+    public CodeBuilder filled_new_array_range(TypeId type, int arr_size, int first_arg_reg) {
+        return f3rc(Opcode.FILLED_NEW_ARRAY_RANGE, type, arr_size, first_arg_reg);
+    }
+
     public CodeBuilder fill_array_data(int arr_ref_reg, int element_width, byte[] data) {
         InstructionWriter.check_array_payload(element_width, data);
         int start_unit = current_unit;
@@ -700,6 +730,54 @@ public final class CodeBuilder {
         });
         return f31t(Opcode.FILL_ARRAY_DATA, arr_ref_reg, false,
                 () -> getLabelBranchOffset(payload, start_unit));
+    }
+
+    public CodeBuilder fill_array_data(int arr_ref_reg, boolean[] data) {
+        byte[] byte_data = new byte[data.length];
+        for (int i = 0; i < data.length; i++) {
+            byte_data[i] = (byte) (data[i] ? 1 : 0);
+        }
+        return fill_array_data(arr_ref_reg, 1, byte_data);
+    }
+
+    public CodeBuilder fill_array_data(int arr_ref_reg, byte[] data) {
+        return fill_array_data(arr_ref_reg, 1, data);
+    }
+
+    public CodeBuilder fill_array_data(int arr_ref_reg, short[] data) {
+        byte[] byte_data = new byte[data.length * 2];
+        ByteBuffer.wrap(byte_data).asShortBuffer().put(data);
+        return fill_array_data(arr_ref_reg, 2, byte_data);
+    }
+
+    public CodeBuilder fill_array_data(int arr_ref_reg, char[] data) {
+        byte[] byte_data = new byte[data.length * 2];
+        ByteBuffer.wrap(byte_data).asCharBuffer().put(data);
+        return fill_array_data(arr_ref_reg, 2, byte_data);
+    }
+
+    public CodeBuilder fill_array_data(int arr_ref_reg, int[] data) {
+        byte[] byte_data = new byte[data.length * 4];
+        ByteBuffer.wrap(byte_data).asIntBuffer().put(data);
+        return fill_array_data(arr_ref_reg, 4, byte_data);
+    }
+
+    public CodeBuilder fill_array_data(int arr_ref_reg, float[] data) {
+        byte[] byte_data = new byte[data.length * 4];
+        ByteBuffer.wrap(byte_data).asFloatBuffer().put(data);
+        return fill_array_data(arr_ref_reg, 4, byte_data);
+    }
+
+    public CodeBuilder fill_array_data(int arr_ref_reg, long[] data) {
+        byte[] byte_data = new byte[data.length * 8];
+        ByteBuffer.wrap(byte_data).asLongBuffer().put(data);
+        return fill_array_data(arr_ref_reg, 8, byte_data);
+    }
+
+    public CodeBuilder fill_array_data(int arr_ref_reg, double[] data) {
+        byte[] byte_data = new byte[data.length * 8];
+        ByteBuffer.wrap(byte_data).asDoubleBuffer().put(data);
+        return fill_array_data(arr_ref_reg, 8, byte_data);
     }
 
     public CodeBuilder throw_(int ex_reg) {
