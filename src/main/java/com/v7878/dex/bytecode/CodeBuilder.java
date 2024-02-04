@@ -231,6 +231,11 @@ public final class CodeBuilder {
         return this;
     }
 
+    public CodeBuilder commit(Consumer<CodeBuilder> branch) {
+        branch.accept(this);
+        return this;
+    }
+
     private void format_35c_checks(int arg_count, int arg_reg1, int arg_reg2,
                                    int arg_reg3, int arg_reg4, int arg_reg5) {
         Checks.checkRange(arg_count, 0, 6);
