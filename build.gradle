@@ -8,5 +8,5 @@ java {
 }
 
 dependencies {
-    implementation 'com.github.vova7878:AndroidMisc:v0.0.2'
+    implementation 'com.github.vova7878:AndroidMisc:v0.0.3'
 }
