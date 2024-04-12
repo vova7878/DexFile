@@ -71,6 +71,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+// TODO: add methods that automatically select the correct version of the "const" and "move" instructions
 public final class CodeBuilder {
 
     private static class InternalLabel {
