@@ -125,6 +125,10 @@ public final class TypeId implements Mutable {
         return equals(V) ? 0 : equals(D) || equals(J) ? 2 : 1;
     }
 
+    public TypeId array() {
+        return new TypeId("[" + descriptor);
+    }
+
     public static TypeId read(RandomInput in, ReadContext context) {
         return new TypeId(context.string(in.readInt()));
     }
