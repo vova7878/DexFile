@@ -71,7 +71,6 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-// TODO: add methods that automatically select the correct version of the "const" and "move" instructions
 public final class CodeBuilder {
 
     private static class InternalLabel {
@@ -568,16 +567,36 @@ public final class CodeBuilder {
         return f32x(Opcode.MOVE_16, dsr_reg, false, src_reg, false);
     }
 
-    public CodeBuilder move_wide(int dsr_regr_pair, int src_regr_pair) {
-        return f12x(Opcode.MOVE_WIDE, dsr_regr_pair, true, src_regr_pair, true);
+    public CodeBuilder move_auto(int dsr_reg, int src_reg) {
+        if (src_reg < 1 << 4 && dsr_reg < 1 << 4) {
+            return move(dsr_reg, src_reg);
+        }
+        if (src_reg < 1 << 8) {
+            return move_from16(dsr_reg, src_reg);
+        }
+        return move_16(dsr_reg, src_reg);
     }
 
-    public CodeBuilder move_wide_from16(int dsr_regr_pair, int src_regr_pair) {
-        return f22x(Opcode.MOVE_WIDE_FROM16, dsr_regr_pair, true, src_regr_pair, true);
+    public CodeBuilder move_wide(int dsr_reg_pair, int src_reg_pair) {
+        return f12x(Opcode.MOVE_WIDE, dsr_reg_pair, true, src_reg_pair, true);
     }
 
-    public CodeBuilder move_wide_16(int dsr_regr_pair, int src_regr_pair) {
-        return f32x(Opcode.MOVE_WIDE_16, dsr_regr_pair, true, src_regr_pair, true);
+    public CodeBuilder move_wide_from16(int dsr_reg_pair, int src_reg_pair) {
+        return f22x(Opcode.MOVE_WIDE_FROM16, dsr_reg_pair, true, src_reg_pair, true);
+    }
+
+    public CodeBuilder move_wide_16(int dsr_reg_pair, int src_reg_pair) {
+        return f32x(Opcode.MOVE_WIDE_16, dsr_reg_pair, true, src_reg_pair, true);
+    }
+
+    public CodeBuilder move_wide_auto(int dsr_reg, int src_reg) {
+        if (src_reg < 1 << 4 && dsr_reg < 1 << 4) {
+            return move_wide(dsr_reg, src_reg);
+        }
+        if (src_reg < 1 << 8) {
+            return move_wide_from16(dsr_reg, src_reg);
+        }
+        return move_wide_16(dsr_reg, src_reg);
     }
 
     public CodeBuilder move_object(int dsr_reg, int src_reg) {
@@ -590,6 +609,16 @@ public final class CodeBuilder {
 
     public CodeBuilder move_object_16(int dsr_reg, int src_reg) {
         return f32x(Opcode.MOVE_OBJECT_16, dsr_reg, false, src_reg, false);
+    }
+
+    public CodeBuilder move_object_auto(int dsr_reg, int src_reg) {
+        if (src_reg < 1 << 4 && dsr_reg < 1 << 4) {
+            return move_object(dsr_reg, src_reg);
+        }
+        if (src_reg < 1 << 8) {
+            return move_object_from16(dsr_reg, src_reg);
+        }
+        return move_object_16(dsr_reg, src_reg);
     }
 
     public CodeBuilder move_result(int dst_reg) {
@@ -640,6 +669,24 @@ public final class CodeBuilder {
         return f21ih(Opcode.CONST_HIGH16, dst_reg, value);
     }
 
+    private static boolean check_width_int(int value, int width) {
+        int empty_width = 32 - width;
+        return value << empty_width >> empty_width == value;
+    }
+
+    public CodeBuilder const_auto(int dst_reg, int value) {
+        if (dst_reg < 1 << 4 && check_width_int(value, 4)) {
+            return const_4(dst_reg, value);
+        }
+        if (check_width_int(value, 16)) {
+            return const_16(dst_reg, value);
+        }
+        if ((value & 0xffff) == 0) {
+            return const_high16(dst_reg, value);
+        }
+        return const_(dst_reg, value);
+    }
+
     public CodeBuilder const_wide_16(int dst_reg_pair, int value) {
         return f21s(Opcode.CONST_WIDE_16, dst_reg_pair, true, value);
     }
@@ -654,6 +701,24 @@ public final class CodeBuilder {
 
     public CodeBuilder const_wide_high16(int dst_reg_pair, long value) {
         return f21lh(Opcode.CONST_WIDE_HIGH16, dst_reg_pair, value);
+    }
+
+    private static boolean check_width_long(long value, int width) {
+        int empty_width = 64 - width;
+        return value << empty_width >> empty_width == value;
+    }
+
+    public CodeBuilder const_wide_auto(int dst_reg_pair, long value) {
+        if (check_width_long(value, 16)) {
+            return const_wide_16(dst_reg_pair, (int) value);
+        }
+        if (check_width_long(value, 32)) {
+            return const_wide_32(dst_reg_pair, (int) value);
+        }
+        if ((value & 0xffff_ffff_ffffL) == 0) {
+            return const_wide_high16(dst_reg_pair, value);
+        }
+        return const_wide(dst_reg_pair, value);
     }
 
     public CodeBuilder const_string(int dst_reg, String value) {
