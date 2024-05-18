@@ -117,10 +117,11 @@ public final class EncodedMethod implements Mutable {
     }
 
     public EncodedMethod withCode(int locals_size, Consumer<CodeBuilder> consumer) {
+        EncodedMethod out = mutate();
         int ins_size = method.getProto().getInputRegistersCount();
-        setCode(CodeBuilder.build(ins_size + locals_size, ins_size,
+        out.setCode(CodeBuilder.build(ins_size + locals_size, ins_size,
                 (access_flags & Modifier.STATIC) == 0, consumer));
-        return this;
+        return out;
     }
 
     public CodeItem getCode() {
