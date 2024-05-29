@@ -132,7 +132,7 @@ class FileMap {
         }
     }
 
-    public static FileMap read(RandomInput in, DexOptions options) {
+    public static FileMap read(RandomInput in, ReadOptions options) {
         FileMap out = new FileMap();
         byte[] magic = in.readByteArray(8);
         if (magic[0] == 'd' && magic[1] == 'e' && magic[2] == 'x' && magic[3] == '\n' && magic[7] == '\0') {
@@ -330,7 +330,7 @@ class FileMap {
         }
     }
 
-    public void writeHeader(RandomIO out, DexOptions options, int file_size) {
+    public void writeHeader(RandomIO out, WriteOptions options, int file_size) {
         out.position(0);
         out.writeByteArray(new byte[]{'d', 'e', 'x', '\n'});
         DexVersion version = DexVersion.fromApi(options.getTargetApi());

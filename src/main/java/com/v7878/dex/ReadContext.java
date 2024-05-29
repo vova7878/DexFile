@@ -26,7 +26,7 @@ import com.v7878.dex.bytecode.Opcode;
 
 public interface ReadContext {
 
-    DexOptions getOptions();
+    ReadOptions getOptions();
 
     String string(int index);
 

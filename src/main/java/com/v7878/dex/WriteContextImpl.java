@@ -47,9 +47,9 @@ final class WriteContextImpl implements WriteContext {
     private final Map<ClassDef, Integer> annotations_directories;
     private final Map<CodeItem, Integer> code_items;
 
-    private final DexOptions options;
+    private final WriteOptions options;
 
-    public WriteContextImpl(DataSet data, DexOptions options) {
+    public WriteContextImpl(DataSet data, WriteOptions options) {
         this.options = options;
 
         strings = data.getStrings();
@@ -80,7 +80,7 @@ final class WriteContextImpl implements WriteContext {
     }
 
     @Override
-    public DexOptions getOptions() {
+    public WriteOptions getOptions() {
         return options;
     }
 

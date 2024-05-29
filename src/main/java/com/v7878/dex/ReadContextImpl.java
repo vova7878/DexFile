@@ -38,15 +38,15 @@ final class ReadContextImpl implements ReadContext {
 
     private final SparseArray<Opcode> opcodes;
 
-    private final DexOptions options;
+    private final ReadOptions options;
 
-    public ReadContextImpl(DexOptions options) {
+    public ReadContextImpl(ReadOptions options) {
         this.options = options;
         this.opcodes = Opcode.forOptions(options);
     }
 
     @Override
-    public DexOptions getOptions() {
+    public ReadOptions getOptions() {
         return options;
     }
 

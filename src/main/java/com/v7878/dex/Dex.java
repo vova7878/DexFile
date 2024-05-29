@@ -62,10 +62,10 @@ public final class Dex extends MutableList<ClassDef> {
 
 
     public static Dex read(RandomInput src, int[] class_def_ids) {
-        return read(src, DexOptions.defaultOptions(), class_def_ids);
+        return read(src, ReadOptions.defaultOptions(), class_def_ids);
     }
 
-    public static Dex read(RandomInput src, DexOptions options, int[] class_def_ids) {
+    public static Dex read(RandomInput src, ReadOptions options, int[] class_def_ids) {
         RandomInput in = src.position() == 0 ? src : src.slice();
 
         FileMap map = FileMap.read(in, options);
@@ -167,10 +167,10 @@ public final class Dex extends MutableList<ClassDef> {
     }
 
     public void write(RandomIO dst) {
-        write(dst, DexOptions.defaultOptions());
+        write(dst, WriteOptions.defaultOptions());
     }
 
-    public void write(RandomIO dst, DexOptions options) {
+    public void write(RandomIO dst, WriteOptions options) {
         RandomIO out = dst.position() == 0 ? dst : dst.slice();
 
         DataSet data = new DataSet();
@@ -375,14 +375,14 @@ public final class Dex extends MutableList<ClassDef> {
         return null;
     }
 
-    public byte[] compile(DexOptions options) {
+    public byte[] compile(WriteOptions options) {
         ByteArrayIO out = new ByteArrayIO();
         write(out, options);
         return out.toByteArray();
     }
 
     public byte[] compile() {
-        return compile(DexOptions.defaultOptions());
+        return compile(WriteOptions.defaultOptions());
     }
 
     @Override

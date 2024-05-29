@@ -24,18 +24,17 @@ package com.v7878.dex;
 
 import static com.v7878.misc.Version.CORRECT_SDK_INT;
 
-//TODO: split into Read and Write Options
-public class DexOptions {
+public abstract class DexOptions {
     private static final int MIN_TARGET_API = 1;
     private static final int MAX_TARGET_API = 34;
     private static final int FIRST_ART_TARGET = 19;
-    private static final int LAST_DALVIK_TARGET = 20; // TODO: ?
+    private static final int LAST_DALVIK_TARGET = 20; // TODO: is this really true?
 
     private final int targetApi;
     private final boolean targetArt;
     private final boolean includeOdexInstructions;
 
-    public DexOptions(int targetApi, boolean targetArt, boolean includeOdexInstructions) {
+    DexOptions(int targetApi, boolean targetArt, boolean includeOdexInstructions) {
         if (targetApi < MIN_TARGET_API || targetApi > MAX_TARGET_API) {
             throw new IllegalArgumentException("unsupported target api: " + targetApi);
         }
@@ -45,6 +44,22 @@ public class DexOptions {
         }
         this.targetArt = targetArt;
         this.includeOdexInstructions = includeOdexInstructions;
+    }
+
+    @SuppressWarnings("ConstantValue")
+    DexOptions() {
+        boolean is_android;
+        int api;
+        try {
+            api = CORRECT_SDK_INT;
+            is_android = true;
+        } catch (Throwable th) {
+            api = 26;
+            is_android = false;
+        }
+        this.targetApi = api;
+        this.targetArt = api >= FIRST_ART_TARGET;
+        this.includeOdexInstructions = is_android;
     }
 
     public int getTargetApi() {
@@ -61,15 +76,6 @@ public class DexOptions {
 
     public boolean includeOdexInstructions() {
         return includeOdexInstructions;
-    }
-
-    public static DexOptions defaultOptions() {
-        try {
-            return new DexOptions(CORRECT_SDK_INT, true, true);
-        } catch (Throwable ignored) {
-            // non-android host
-            return new DexOptions(26, true, false);
-        }
     }
 
     public void requireMinApi(int minApi) {

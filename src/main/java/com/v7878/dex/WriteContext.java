@@ -23,7 +23,7 @@
 package com.v7878.dex;
 
 public interface WriteContext {
-    DexOptions getOptions();
+    WriteOptions getOptions();
 
     int getStringIndex(String value);
 
