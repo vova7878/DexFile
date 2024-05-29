@@ -90,11 +90,10 @@ public final class TypeList extends MutableList<TypeId> {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof TypeList) {
-            return super.equals(obj);
-        }
-        return false;
+        return obj instanceof TypeList && super.equals(obj);
     }
+
+    // hashcode from super
 
     @Override
     public TypeList mutate() {

@@ -386,6 +386,13 @@ public final class Dex extends MutableList<ClassDef> {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        return obj instanceof Dex && super.equals(obj);
+    }
+
+    // hashcode from super
+
+    @Override
     public Dex mutate() {
         return new Dex(this);
     }

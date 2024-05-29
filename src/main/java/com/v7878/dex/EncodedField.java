@@ -179,12 +179,18 @@ public final class EncodedField implements Mutable {
 
     @Override
     public String toString() {
+        StringBuilder out = new StringBuilder();
+        //TODO: Dex modifiers
         String flags = Modifier.toString(access_flags);
-        if (flags.length() != 0) {
-            flags += " ";
+        out.append(flags);
+        if (!flags.isEmpty()) {
+            out.append(' ');
         }
-        String v = value == null ? "" : " = " + value;
-        return flags + field + v;
+        out.append(field);
+        if (value != null) {
+            out.append(" = ").append(value);
+        }
+        return out.toString();
     }
 
     @Override

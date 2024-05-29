@@ -269,6 +269,27 @@ public final class ClassDef implements Mutable {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof ClassDef) {
+            ClassDef cdobj = (ClassDef) obj;
+            return access_flags == cdobj.access_flags
+                    && Objects.equals(clazz, cdobj.clazz)
+                    && Objects.equals(superclass, cdobj.superclass)
+                    && Objects.equals(interfaces, cdobj.interfaces)
+                    && Objects.equals(source_file, cdobj.source_file)
+                    && Objects.equals(annotations, cdobj.annotations)
+                    && Objects.equals(class_data, cdobj.class_data);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(clazz, access_flags, superclass,
+                interfaces, source_file, annotations, class_data);
+    }
+
+    @Override
     public ClassDef mutate() {
         return new ClassDef(clazz, access_flags, superclass, interfaces,
                 source_file, annotations, class_data);

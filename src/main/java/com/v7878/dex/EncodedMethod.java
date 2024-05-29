@@ -209,8 +209,9 @@ public final class EncodedMethod implements Mutable {
 
     @Override
     public String toString() {
+        //TODO: Dex modifiers
         String flags = Modifier.toString(access_flags);
-        if (flags.length() != 0) {
+        if (!flags.isEmpty()) {
             flags += " ";
         }
         return flags + method;

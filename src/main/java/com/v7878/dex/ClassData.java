@@ -27,6 +27,7 @@ import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.util.MutableList;
 
 import java.util.Collection;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public final class ClassData implements Mutable {
@@ -129,26 +130,7 @@ public final class ClassData implements Mutable {
         }
     }
 
-    public void write(WriteContext context, RandomOutput out) {
-        out.writeULeb128(static_fields.size());
-        out.writeULeb128(instance_fields.size());
-        out.writeULeb128(direct_methods.size());
-        out.writeULeb128(virtual_methods.size());
-
-        EncodedField.writeArray(true, context, out, static_fields);
-        EncodedField.writeArray(false, context, out, instance_fields);
-
-        EncodedMethod.writeArray(true, context, out, direct_methods);
-        EncodedMethod.writeArray(false, context, out, virtual_methods);
-    }
-
-    @Override
-    public ClassData mutate() {
-        return new ClassData(static_fields, instance_fields,
-                direct_methods, virtual_methods);
-    }
-
-    public void fillAnnotations(AnnotationsDirectory all_annotations) {
+    void fillAnnotations(AnnotationsDirectory all_annotations) {
         Consumer<EncodedField> fill_field = (field) -> {
             AnnotationSet fannotations = field.getAnnotations();
             if (!fannotations.isEmpty()) {
@@ -170,5 +152,40 @@ public final class ClassData implements Mutable {
         };
         direct_methods.forEach(fill_method);
         virtual_methods.forEach(fill_method);
+    }
+
+    public void write(WriteContext context, RandomOutput out) {
+        out.writeULeb128(static_fields.size());
+        out.writeULeb128(instance_fields.size());
+        out.writeULeb128(direct_methods.size());
+        out.writeULeb128(virtual_methods.size());
+
+        EncodedField.writeArray(true, context, out, static_fields);
+        EncodedField.writeArray(false, context, out, instance_fields);
+
+        EncodedMethod.writeArray(true, context, out, direct_methods);
+        EncodedMethod.writeArray(false, context, out, virtual_methods);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof ClassData) {
+            ClassData cdobj = (ClassData) obj;
+            return Objects.equals(static_fields, cdobj.static_fields)
+                    && Objects.equals(instance_fields, cdobj.instance_fields)
+                    && Objects.equals(direct_methods, cdobj.direct_methods)
+                    && Objects.equals(virtual_methods, cdobj.virtual_methods);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(static_fields, instance_fields, direct_methods, virtual_methods);
+    }
+
+    @Override
+    public ClassData mutate() {
+        return new ClassData(static_fields, instance_fields, direct_methods, virtual_methods);
     }
 }
