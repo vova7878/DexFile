@@ -108,7 +108,7 @@ public class ByteArrayIO implements RandomIO {
     }
 
     public void setByteOrder(ByteOrder order) {
-        order = Objects.requireNonNull(order);
+        this.order = Objects.requireNonNull(order);
     }
 
     public void setGrowFactor(int new_grow_factor) {
