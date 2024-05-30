@@ -81,6 +81,14 @@ public final class ProtoId implements Mutable {
         return new ProtoId(return_type, parameters);
     }
 
+    public static ProtoId[] readArray(RandomInput in, ReadContext context, int size) {
+        ProtoId[] out = new ProtoId[size];
+        for (int i = 0; i < size; i++) {
+            out[i] = read(in, context);
+        }
+        return out;
+    }
+
     public String getShorty() {
         StringBuilder out = new StringBuilder(parameters.size() + 1);
         out.append(return_type.getShorty());

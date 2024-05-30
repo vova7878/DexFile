@@ -41,6 +41,14 @@ public final class StringId {
         return in.duplicate(data_off).readMUTF8();
     }
 
+    public static String[] readArray(RandomInput in, int size) {
+        String[] out = new String[size];
+        for (int i = 0; i < size; i++) {
+            out[i] = read(in);
+        }
+        return out;
+    }
+
     public static void write(String value, WriteContext context,
                              RandomOutput ids_out, RandomOutput data_out) {
         ids_out.writeInt((int) data_out.position());

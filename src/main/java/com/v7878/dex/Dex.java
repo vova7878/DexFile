@@ -86,77 +86,30 @@ public final class Dex extends MutableList<ClassDef> {
             return new Dex();
         }
 
+        return readInternal(in, options, class_def_ids, map);
+    }
+
+    private static Dex readInternal(RandomInput in, ReadOptions options,
+                                    int[] class_def_ids, FileMap map) {
+
         ReadContextImpl context = new ReadContextImpl(options);
 
-        String[] strings = new String[map.string_ids_size];
-        if (map.string_ids_size != 0) {
-            RandomInput in2 = in.duplicate(map.string_ids_off);
-            for (int i = 0; i < map.string_ids_size; i++) {
-                strings[i] = StringId.read(in2);
-            }
-        }
-        context.setStrings(strings);
+        context.setStrings(StringId.readArray(in.duplicate(map.string_ids_off), map.string_ids_size));
+        context.setTypes(TypeId.readArray(in.duplicate(map.type_ids_off), context, map.type_ids_size));
+        context.setProtos(ProtoId.readArray(in.duplicate(map.proto_ids_off), context, map.proto_ids_size));
+        context.setFields(FieldId.readArray(in.duplicate(map.field_ids_off), context, map.field_ids_size));
+        context.setMethods(MethodId.readArray(in.duplicate(map.method_ids_off), context, map.method_ids_size));
+        context.setMethodHandles(MethodHandleItem.readArray(in.duplicate(map.method_handles_off), context, map.method_handles_size));
+        context.setCallSites(CallSiteId.readArray(in.duplicate(map.call_site_ids_off), context, map.call_site_ids_size));
 
-        TypeId[] types = new TypeId[map.type_ids_size];
-        if (map.type_ids_size != 0) {
-            RandomInput in2 = in.duplicate(map.type_ids_off);
-            for (int i = 0; i < map.type_ids_size; i++) {
-                types[i] = TypeId.read(in2, context);
-            }
-        }
-        context.setTypes(types);
-
-        ProtoId[] protos = new ProtoId[map.proto_ids_size];
-        if (map.proto_ids_size != 0) {
-            RandomInput in2 = in.duplicate(map.proto_ids_off);
-            for (int i = 0; i < map.proto_ids_size; i++) {
-                protos[i] = ProtoId.read(in2, context);
-            }
-        }
-        context.setProtos(protos);
-
-        FieldId[] fields = new FieldId[map.field_ids_size];
-        if (map.field_ids_size != 0) {
-            RandomInput in2 = in.duplicate(map.field_ids_off);
-            for (int i = 0; i < map.field_ids_size; i++) {
-                fields[i] = FieldId.read(in2, context);
-            }
-        }
-        context.setFields(fields);
-
-        MethodId[] methods = new MethodId[map.method_ids_size];
-        if (map.method_ids_size != 0) {
-            RandomInput in2 = in.duplicate(map.method_ids_off);
-            for (int i = 0; i < map.method_ids_size; i++) {
-                methods[i] = MethodId.read(in2, context);
-            }
-        }
-        context.setMethods(methods);
-
-        MethodHandleItem[] method_handles = new MethodHandleItem[map.method_handles_size];
-        if (map.method_handles_size != 0) {
-            RandomInput in2 = in.duplicate(map.method_handles_off);
-            for (int i = 0; i < map.method_handles_size; i++) {
-                method_handles[i] = MethodHandleItem.read(in2, context);
-            }
-        }
-        context.setMethodHandles(method_handles);
-
-        CallSiteId[] call_sites = new CallSiteId[map.call_site_ids_size];
-        if (map.call_site_ids_size != 0) {
-            RandomInput in2 = in.duplicate(map.call_site_ids_off);
-            for (int i = 0; i < map.call_site_ids_size; i++) {
-                call_sites[i] = CallSiteId.read(in2, context);
-            }
-        }
-        context.setCallSites(call_sites);
-
+        // TODO: move to ClassDef.readArray?
         ClassDef[] class_defs = new ClassDef[class_def_ids.length];
         for (int i = 0; i < class_def_ids.length; i++) {
             int offset = map.class_defs_off + ClassDef.SIZE * class_def_ids[i];
             RandomInput in2 = in.duplicate(offset);
             class_defs[i] = ClassDef.read(in2, context);
         }
+
         return new Dex(class_defs);
     }
 

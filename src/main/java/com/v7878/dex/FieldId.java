@@ -83,6 +83,14 @@ public final class FieldId extends FieldOrMethodId {
         );
     }
 
+    public static FieldId[] readArray(RandomInput in, ReadContext context, int size) {
+        FieldId[] out = new FieldId[size];
+        for (int i = 0; i < size; i++) {
+            out[i] = read(in, context);
+        }
+        return out;
+    }
+
     @Override
     public void collectData(DataCollector data) {
         data.add(type);
