@@ -30,6 +30,8 @@ import java.util.Collection;
 
 public final class AnnotationSetList extends MutableList<AnnotationSet> {
 
+    public static final int ALIGNMENT = 4;
+
     public AnnotationSetList(int initialCapacity) {
         super(initialCapacity);
     }

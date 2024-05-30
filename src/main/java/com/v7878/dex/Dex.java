@@ -22,8 +22,6 @@
 
 package com.v7878.dex;
 
-import static com.v7878.misc.Math.roundUp;
-
 import com.v7878.dex.EncodedValue.ArrayValue;
 import com.v7878.dex.io.ByteArrayIO;
 import com.v7878.dex.io.RandomIO;
@@ -125,175 +123,171 @@ public final class Dex extends MutableList<ClassDef> {
 
     public void write(RandomIO dst, WriteOptions options) {
         RandomIO out = dst.position() == 0 ? dst : dst.slice();
+        writeInternal(out, options);
+    }
 
-        DataSet data = new DataSet();
-        collectData(data);
+    //TODO: all sections
+    private void writeInternal(RandomIO out, WriteOptions options) {
+        DataSet sections = new DataSet();
+        collectData(sections);
 
-        WriteContextImpl context = new WriteContextImpl(data, options);
+        WriteContextImpl context = new WriteContextImpl(sections, options);
 
         FileMap map = new FileMap();
 
-        int offset = FileMap.HEADER_SIZE;
+        RandomOutput data;
 
-        map.string_ids_off = offset;
-        map.string_ids_size = context.getStringsCount();
-        offset += map.string_ids_size * StringId.SIZE;
+        {
+            int offset = FileMap.HEADER_SIZE;
 
-        map.type_ids_off = offset;
-        map.type_ids_size = context.getTypesCount();
-        offset += map.type_ids_size * TypeId.SIZE;
+            map.string_ids_off = offset;
+            map.string_ids_size = context.getStringsCount();
+            offset += map.string_ids_size * StringId.SIZE;
 
-        map.proto_ids_off = offset;
-        map.proto_ids_size = context.getProtosCount();
-        offset += map.proto_ids_size * ProtoId.SIZE;
+            map.type_ids_off = offset;
+            map.type_ids_size = context.getTypesCount();
+            offset += map.type_ids_size * TypeId.SIZE;
 
-        map.field_ids_off = offset;
-        map.field_ids_size = context.getFieldsCount();
-        offset += map.field_ids_size * FieldId.SIZE;
+            map.proto_ids_off = offset;
+            map.proto_ids_size = context.getProtosCount();
+            offset += map.proto_ids_size * ProtoId.SIZE;
 
-        map.method_ids_off = offset;
-        map.method_ids_size = context.getMethodsCount();
-        offset += map.method_ids_size * MethodId.SIZE;
+            map.field_ids_off = offset;
+            map.field_ids_size = context.getFieldsCount();
+            offset += map.field_ids_size * FieldId.SIZE;
 
-        map.class_defs_off = offset;
-        map.class_defs_size = context.getClassDefsCount();
-        offset += map.class_defs_size * ClassDef.SIZE;
+            map.method_ids_off = offset;
+            map.method_ids_size = context.getMethodsCount();
+            offset += map.method_ids_size * MethodId.SIZE;
 
-        map.call_site_ids_off = offset;
-        map.call_site_ids_size = context.getCallSitesCount();
-        offset += map.call_site_ids_size * CallSiteId.SIZE;
+            map.class_defs_off = offset;
+            map.class_defs_size = context.getClassDefsCount();
+            offset += map.class_defs_size * ClassDef.SIZE;
 
-        map.method_handles_off = offset;
-        map.method_handles_size = context.getMethodHandlesCount();
-        offset += map.method_handles_size * MethodHandleItem.SIZE;
+            map.call_site_ids_off = offset;
+            map.call_site_ids_size = context.getCallSitesCount();
+            offset += map.call_site_ids_size * CallSiteId.SIZE;
 
-        // writing
-        //TODO: all sections
-        map.data_off = offset;
+            map.method_handles_off = offset;
+            map.method_handles_size = context.getMethodHandlesCount();
+            offset += map.method_handles_size * MethodHandleItem.SIZE;
 
-        map.string_data_items_off = offset;
+            map.data_off = offset;
+
+            data = out.duplicate(offset);
+        }
+
+
+        map.string_data_items_off = (int) data.position();
         map.string_data_items_size = map.string_ids_size;
-
-        RandomOutput data_out = out.duplicate(offset);
-
         out.position(map.string_ids_off);
-        context.stringsStream().forEachOrdered(value -> StringId.write(value, context, out, data_out));
-        offset = (int) data_out.position();
+        context.stringsStream().forEachOrdered(value -> StringId.write(value, context, out, data));
 
-        TypeList[] lists = data.getTypeLists();
+        TypeList[] lists = sections.getTypeLists();
         if (lists.length != 0) {
-            offset = roundUp(offset, TypeList.ALIGNMENT);
-            map.type_lists_off = offset;
+            data.alignPosition(TypeList.ALIGNMENT);
+            map.type_lists_off = (int) data.position();
             map.type_lists_size = lists.length;
             for (TypeList tmp : lists) {
-                offset = roundUp(offset, TypeList.ALIGNMENT);
-                data_out.position(offset);
-                tmp.write(context, data_out);
-                context.addTypeList(tmp, offset);
-                offset = (int) data_out.position();
+                data.alignPosition(TypeList.ALIGNMENT);
+                int start = (int) data.position();
+                tmp.write(context, data);
+                context.addTypeList(tmp, start);
             }
         }
 
-        AnnotationItem[] annotations = data.getAnnotations();
-        map.annotations_off = offset;
+        AnnotationItem[] annotations = sections.getAnnotations();
+        map.annotations_off = (int) data.position();
         map.annotations_size = annotations.length;
         for (AnnotationItem tmp : annotations) {
-            tmp.write(context, data_out);
-            context.addAnnotation(tmp, offset);
-            offset = (int) data_out.position();
+            int start = (int) data.position();
+            tmp.write(context, data);
+            context.addAnnotation(tmp, start);
         }
 
-        AnnotationSet[] annotation_sets = data.getAnnotationSets();
+        AnnotationSet[] annotation_sets = sections.getAnnotationSets();
         if (annotation_sets.length != 0) {
-            offset = roundUp(offset, AnnotationSet.ALIGNMENT);
-            map.annotation_sets_off = offset;
+            data.alignPosition(AnnotationSet.ALIGNMENT);
+            map.annotation_sets_off = (int) data.position();
             map.annotation_sets_size = annotation_sets.length;
-            data_out.position(offset);
-
             for (AnnotationSet tmp : annotation_sets) {
-                tmp.write(context, data_out);
-                context.addAnnotationSet(tmp, offset);
-                offset = (int) data_out.position();
+                int start = (int) data.position();
+                tmp.write(context, data);
+                context.addAnnotationSet(tmp, start);
             }
         }
 
-        AnnotationSetList[] annotation_set_lists = data.getAnnotationSetLists();
+        AnnotationSetList[] annotation_set_lists = sections.getAnnotationSetLists();
         if (annotation_set_lists.length != 0) {
-            offset = roundUp(offset, AnnotationSet.ALIGNMENT);
-            map.annotation_set_refs_off = offset;
+            data.alignPosition(AnnotationSetList.ALIGNMENT);
+            map.annotation_set_refs_off = (int) data.position();
             map.annotation_set_refs_size = annotation_set_lists.length;
-            data_out.position(offset);
-
             for (AnnotationSetList tmp : annotation_set_lists) {
-                tmp.write(context, data_out);
-                context.addAnnotationSetList(tmp, offset);
-                offset = (int) data_out.position();
+                int start = (int) data.position();
+                tmp.write(context, data);
+                context.addAnnotationSetList(tmp, start);
             }
         }
 
-        CodeItem[] code_items = data.getCodeItems();
+        CodeItem[] code_items = sections.getCodeItems();
         if (code_items.length != 0) {
-            offset = roundUp(offset, CodeItem.ALIGNMENT);
-            map.code_items_off = offset;
+            data.alignPosition(CodeItem.ALIGNMENT);
+            map.code_items_off = (int) data.position();
             map.code_items_size = code_items.length;
             for (CodeItem tmp : code_items) {
-                offset = roundUp(offset, CodeItem.ALIGNMENT);
-                data_out.position(offset);
-                tmp.write(context, data_out);
-                context.addCodeItem(tmp, offset);
-                offset = (int) data_out.position();
+                data.alignPosition(CodeItem.ALIGNMENT);
+                int start = (int) data.position();
+                tmp.write(context, data);
+                context.addCodeItem(tmp, start);
             }
         }
 
-        ClassData[] class_data_items = data.getClassDataItems();
-        map.class_data_items_off = offset;
+        ClassData[] class_data_items = sections.getClassDataItems();
+        map.class_data_items_off = (int) data.position();
         map.class_data_items_size = class_data_items.length;
         for (ClassData tmp : class_data_items) {
-            tmp.write(context, data_out);
-            context.addClassData(tmp, offset);
-            offset = (int) data_out.position();
+            int start = (int) data.position();
+            tmp.write(context, data);
+            context.addClassData(tmp, start);
         }
 
         //TODO: delete duplicates
         Map<ClassDef, AnnotationsDirectory> annotations_directories
-                = data.getAnnotationsDirectories();
+                = sections.getAnnotationsDirectories();
         if (!annotations_directories.isEmpty()) {
-            offset = roundUp(offset, AnnotationsDirectory.ALIGNMENT);
-            map.annotations_directories_off = offset;
+            data.alignPosition(AnnotationsDirectory.ALIGNMENT);
+            map.annotations_directories_off = (int) data.position();
             map.annotations_directories_size = 0;
             for (Map.Entry<ClassDef, AnnotationsDirectory> tmp
                     : annotations_directories.entrySet()) {
                 AnnotationsDirectory ad = tmp.getValue();
                 if (!ad.isEmpty()) {
                     map.annotations_directories_size++;
-                    offset = roundUp(offset, AnnotationsDirectory.ALIGNMENT);
-                    data_out.position(offset);
-                    ad.write(context, data_out);
-                    context.addAnnotationsDirectory(tmp.getKey(), offset);
-                    offset = (int) data_out.position();
+                    data.alignPosition(AnnotationsDirectory.ALIGNMENT);
+                    int start = (int) data.position();
+                    ad.write(context, data);
+                    context.addAnnotationsDirectory(tmp.getKey(), start);
                 } else {
                     context.addAnnotationsDirectory(tmp.getKey(), 0);
                 }
             }
         }
 
-        ArrayValue[] array_values = data.getArrayValues();
-        map.encoded_arrays_off = offset;
+        ArrayValue[] array_values = sections.getArrayValues();
+        map.encoded_arrays_off = (int) data.position();
         map.encoded_arrays_size = array_values.length;
         for (ArrayValue tmp : array_values) {
-            tmp.writeData(context, data_out);
-            context.addArrayValue(tmp, offset);
-            offset = (int) data_out.position();
+            int start = (int) data.position();
+            tmp.writeData(context, data);
+            context.addArrayValue(tmp, start);
         }
 
-        offset = roundUp(offset, FileMap.MAP_ALIGNMENT);
-        data_out.position(offset);
-        map.writeMap(data_out);
-        offset = (int) data_out.position();
+        data.alignPosition(FileMap.MAP_ALIGNMENT);
+        map.writeMap(data);
 
-        map.data_size = offset - map.data_off;
+        int file_size = (int) data.position();
 
-        int file_size = offset;
+        map.data_size = file_size - map.data_off;
 
         out.position(map.type_ids_off);
         context.typesStream().forEachOrdered((value) -> value.write(context, out));
