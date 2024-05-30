@@ -105,11 +105,10 @@ public final class AnnotationSetList extends MutableList<AnnotationSet> {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof AnnotationSetList) {
-            return super.equals(obj);
-        }
-        return false;
+        return obj instanceof AnnotationSetList && super.equals(obj);
     }
+
+    // hashcode from super
 
     @Override
     public AnnotationSetList mutate() {
