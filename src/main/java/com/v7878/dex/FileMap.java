@@ -22,7 +22,6 @@
 
 package com.v7878.dex;
 
-import com.v7878.dex.DexConstants.DexVersion;
 import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;

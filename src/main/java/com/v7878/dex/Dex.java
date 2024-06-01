@@ -177,7 +177,6 @@ public final class Dex extends MutableList<ClassDef> {
             data = out.duplicate(offset);
         }
 
-
         map.string_data_items_off = (int) data.position();
         map.string_data_items_size = map.string_ids_size;
         out.position(map.string_ids_off);
