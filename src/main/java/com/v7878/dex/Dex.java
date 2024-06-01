@@ -99,14 +99,7 @@ public final class Dex extends MutableList<ClassDef> {
         context.setMethods(MethodId.readArray(in.duplicate(map.method_ids_off), context, map.method_ids_size));
         context.setMethodHandles(MethodHandleItem.readArray(in.duplicate(map.method_handles_off), context, map.method_handles_size));
         context.setCallSites(CallSiteId.readArray(in.duplicate(map.call_site_ids_off), context, map.call_site_ids_size));
-
-        // TODO: move to ClassDef.readArray?
-        ClassDef[] class_defs = new ClassDef[class_def_ids.length];
-        for (int i = 0; i < class_def_ids.length; i++) {
-            int offset = map.class_defs_off + ClassDef.SIZE * class_def_ids[i];
-            RandomInput in2 = in.duplicate(offset);
-            class_defs[i] = ClassDef.read(in2, context);
-        }
+        ClassDef[] class_defs = ClassDef.readArray(in.duplicate(map.class_defs_off), context, class_def_ids);
 
         return new Dex(class_defs);
     }

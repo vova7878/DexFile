@@ -133,7 +133,7 @@ public final class TypeId implements Mutable {
         return new TypeId(context.string(in.readInt()));
     }
 
-    public static TypeId[] readArray(RandomInput in, ReadContext context, int size) {
+    static TypeId[] readArray(RandomInput in, ReadContext context, int size) {
         TypeId[] out = new TypeId[size];
         for (int i = 0; i < size; i++) {
             out[i] = read(in, context);

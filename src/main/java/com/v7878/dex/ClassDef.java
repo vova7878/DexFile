@@ -211,6 +211,15 @@ public final class ClassDef implements Mutable {
                 source_file, class_annotations, class_data);
     }
 
+    static ClassDef[] readArray(RandomInput in, ReadContext context, int[] ids) {
+        ClassDef[] out = new ClassDef[ids.length];
+        for (int i = 0; i < ids.length; i++) {
+            RandomInput in2 = in.duplicate(ClassDef.SIZE * ids[i]);
+            out[i] = ClassDef.read(in2, context);
+        }
+        return out;
+    }
+
     private EncodedValue.ArrayValue getStaticFieldValues() {
         EncodedValue.ArrayValue out = new EncodedValue.ArrayValue();
         EncodedValue[] tmp = class_data.getStaticFields().stream()

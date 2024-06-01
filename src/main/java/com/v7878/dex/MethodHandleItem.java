@@ -131,7 +131,7 @@ public final class MethodHandleItem implements Mutable {
         return new MethodHandleItem(type, field_or_method);
     }
 
-    public static MethodHandleItem[] readArray(RandomInput in, ReadContext context, int size) {
+    static MethodHandleItem[] readArray(RandomInput in, ReadContext context, int size) {
         MethodHandleItem[] out = new MethodHandleItem[size];
         for (int i = 0; i < size; i++) {
             out[i] = read(in, context);

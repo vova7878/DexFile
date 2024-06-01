@@ -58,7 +58,7 @@ public final class CallSiteId implements Mutable {
         return new CallSiteId(value);
     }
 
-    public static CallSiteId[] readArray(RandomInput in, ReadContext context, int size) {
+    static CallSiteId[] readArray(RandomInput in, ReadContext context, int size) {
         CallSiteId[] out = new CallSiteId[size];
         for (int i = 0; i < size; i++) {
             out[i] = read(in, context);

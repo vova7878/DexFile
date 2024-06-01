@@ -70,7 +70,7 @@ public final class MethodId extends FieldOrMethodId {
         );
     }
 
-    public static MethodId[] readArray(RandomInput in, ReadContext context, int size) {
+    static MethodId[] readArray(RandomInput in, ReadContext context, int size) {
         MethodId[] out = new MethodId[size];
         for (int i = 0; i < size; i++) {
             out[i] = read(in, context);

@@ -41,7 +41,7 @@ public final class StringId {
         return in.duplicate(data_off).readMUTF8();
     }
 
-    public static String[] readArray(RandomInput in, int size) {
+    static String[] readArray(RandomInput in, int size) {
         String[] out = new String[size];
         for (int i = 0; i < size; i++) {
             out[i] = read(in);
