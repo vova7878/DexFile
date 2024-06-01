@@ -206,7 +206,8 @@ public final class ClassDef implements Mutable {
         ClassData class_data = null;
         if (class_data_off != 0) {
             class_data = ClassData.read(in.duplicate(class_data_off),
-                    context, static_values, annotations);
+                    context, static_values, annotations.annotated_fields,
+                    annotations.annotated_methods, annotations.annotated_parameters);
         }
         return new ClassDef(clazz, access_flags, superclass, interfaces,
                 source_file, class_annotations, class_data);
@@ -252,13 +253,6 @@ public final class ClassDef implements Mutable {
         if (!annotations.isEmpty()) {
             data.add(annotations);
         }
-        AnnotationsDirectory all_annotations = AnnotationsDirectory.empty();
-        all_annotations.setClassAnnotations(annotations);
-        if (!class_data.isEmpty()) {
-            data.add(class_data);
-            class_data.fillAnnotations(all_annotations);
-        }
-        data.add(this, all_annotations);
         ArrayValue static_values = getStaticFieldValues();
         if (!static_values.containsOnlyDefaults()) {
             data.add(static_values);
@@ -271,7 +265,7 @@ public final class ClassDef implements Mutable {
         out.writeInt(superclass == null ? DexConstants.NO_INDEX : context.getTypeIndex(superclass));
         out.writeInt(interfaces.isEmpty() ? 0 : context.getTypeListOffset(interfaces));
         out.writeInt(source_file == null ? DexConstants.NO_INDEX : context.getStringIndex(source_file));
-        out.writeInt(context.getAnnotationsDirectoryOffset(this));
+        out.writeInt(context.getAnnotationsDirectoryOffset(clazz));
         out.writeInt(class_data.isEmpty() ? 0 : context.getClassDataOffset(class_data));
         ArrayValue static_values = getStaticFieldValues();
         out.writeInt(static_values.containsOnlyDefaults() ? 0

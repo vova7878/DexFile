@@ -53,8 +53,6 @@ public interface DataCollector {
 
     void add(AnnotationSetList value);
 
-    void add(ClassDef clazz, AnnotationsDirectory value);
-
     void add(ArrayValue value);
 
     void add(CodeItem value);

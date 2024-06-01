@@ -244,13 +244,13 @@ public final class Dex extends MutableList<ClassDef> {
         }
 
         //TODO: delete duplicates
-        Map<ClassDef, AnnotationsDirectory> annotations_directories
+        Map<TypeId, AnnotationsDirectory> annotations_directories
                 = sections.getAnnotationsDirectories();
         if (!annotations_directories.isEmpty()) {
             data.alignPosition(AnnotationsDirectory.ALIGNMENT);
             map.annotations_directories_off = (int) data.position();
             map.annotations_directories_size = 0;
-            for (Map.Entry<ClassDef, AnnotationsDirectory> tmp
+            for (Map.Entry<TypeId, AnnotationsDirectory> tmp
                     : annotations_directories.entrySet()) {
                 AnnotationsDirectory ad = tmp.getValue();
                 if (!ad.isEmpty()) {

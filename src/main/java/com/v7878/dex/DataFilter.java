@@ -92,10 +92,6 @@ public abstract class DataFilter implements DataCollector {
     }
 
     @Override
-    public void add(ClassDef clazz, AnnotationsDirectory value) {
-    }
-
-    @Override
     public void add(ArrayValue value) {
         value.collectData(this);
     }

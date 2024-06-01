@@ -45,7 +45,7 @@ final class DataSet extends DataFilter {
     private final List<ClassDef> class_defs;
     private final List<ClassData> class_data_items;
 
-    private final Map<ClassDef, AnnotationsDirectory> annotations_directories;
+    private final Map<TypeId, AnnotationsDirectory> annotations_directories;
 
     private final Set<TypeList> type_lists;
     private final Set<AnnotationItem> annotations;
@@ -121,6 +121,7 @@ final class DataSet extends DataFilter {
     public void add(ClassDef value) {
         super.add(value);
         class_defs.add(value);
+        getAnnotationsDirectory(value.getType()).setClassAnnotations(value.getAnnotations());
     }
 
     @Override
@@ -163,14 +164,6 @@ final class DataSet extends DataFilter {
     }
 
     @Override
-    public void add(ClassDef clazz, AnnotationsDirectory value) {
-        if (annotations_directories.putIfAbsent(clazz, value) != null) {
-            throw new IllegalStateException(
-                    "annotations_directories contain duplicates");
-        }
-    }
-
-    @Override
     public void add(ArrayValue value) {
         super.add(value);
         array_values.add(value);
@@ -180,6 +173,32 @@ final class DataSet extends DataFilter {
     public void add(CodeItem value) {
         super.add(value);
         code_items.add(value);
+    }
+
+    @Override
+    public void fill(EncodedField value) {
+        super.fill(value);
+        AnnotationSet fannotations = value.getAnnotations();
+        if (!fannotations.isEmpty()) {
+            FieldId id = value.getField();
+            AnnotationsDirectory directory = getAnnotationsDirectory(id.getDeclaringClass());
+            directory.addFieldAnnotations(id, fannotations);
+        }
+    }
+
+    @Override
+    public void fill(EncodedMethod value) {
+        super.fill(value);
+        MethodId id = value.getMethod();
+        AnnotationsDirectory directory = getAnnotationsDirectory(id.getDeclaringClass());
+        AnnotationSet mannotations = value.getAnnotations();
+        if (!mannotations.isEmpty()) {
+            directory.addMethodAnnotations(id, mannotations);
+        }
+        AnnotationSetList pannotations = value.getParameterAnnotations();
+        if (!pannotations.isEmpty()) {
+            directory.addMethodParameterAnnotations(id, pannotations);
+        }
     }
 
     public String[] getStrings() {
@@ -234,7 +253,15 @@ final class DataSet extends DataFilter {
         return annotation_set_lists.toArray(new AnnotationSetList[0]);
     }
 
-    public Map<ClassDef, AnnotationsDirectory> getAnnotationsDirectories() {
+    private AnnotationsDirectory getAnnotationsDirectory(TypeId clazz) {
+        AnnotationsDirectory out = annotations_directories.get(clazz);
+        if (out == null) {
+            annotations_directories.put(clazz, out = AnnotationsDirectory.empty());
+        }
+        return out;
+    }
+
+    public Map<TypeId, AnnotationsDirectory> getAnnotationsDirectories() {
         return annotations_directories;
     }
 

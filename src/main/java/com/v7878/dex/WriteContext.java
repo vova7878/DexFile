@@ -49,9 +49,9 @@ public interface WriteContext {
 
     int getAnnotationSetListOffset(AnnotationSetList value);
 
-    int getClassDataOffset(ClassData value);
+    int getAnnotationsDirectoryOffset(TypeId declaring_class);
 
-    int getAnnotationsDirectoryOffset(ClassDef value);
+    int getClassDataOffset(ClassData value);
 
     int getArrayValueOffset(ArrayValue value);
 

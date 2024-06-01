@@ -46,7 +46,7 @@ final class WriteContextImpl implements WriteContext {
     private final Map<AnnotationSetList, Integer> annotation_set_lists;
     private final Map<ArrayValue, Integer> array_values;
     private final Map<ClassData, Integer> class_data_items;
-    private final Map<ClassDef, Integer> annotations_directories;
+    private final Map<TypeId, Integer> annotations_directories;
     private final Map<CodeItem, Integer> code_items;
 
     private final WriteOptions options;
@@ -106,7 +106,7 @@ final class WriteContextImpl implements WriteContext {
         class_data_items.put(value, offset);
     }
 
-    public void addAnnotationsDirectory(ClassDef value, int offset) {
+    public void addAnnotationsDirectory(TypeId value, int offset) {
         annotations_directories.put(value, offset);
     }
 
@@ -303,11 +303,11 @@ final class WriteContextImpl implements WriteContext {
     }
 
     @Override
-    public int getAnnotationsDirectoryOffset(ClassDef value) {
+    public int getAnnotationsDirectoryOffset(TypeId value) {
         Integer out = annotations_directories.get(value);
         if (out == null) {
             throw new IllegalArgumentException(
-                    "unable to find annotations directory for class def \""
+                    "unable to find annotations directory for type \""
                             + value + "\"");
         }
         return out;

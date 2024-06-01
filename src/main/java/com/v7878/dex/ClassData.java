@@ -28,8 +28,8 @@ import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.util.MutableList;
 
 import java.util.Collection;
+import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 public final class ClassData implements Mutable {
 
@@ -93,26 +93,26 @@ public final class ClassData implements Mutable {
         return new ClassData(null, null, null, null);
     }
 
-    public static ClassData read(RandomInput in, ReadContext context,
-                                 ArrayValue static_values, AnnotationsDirectory annotations) {
+    public static ClassData read(RandomInput in, ReadContext context, ArrayValue static_values,
+                                 Map<FieldId, AnnotationSet> annotated_fields,
+                                 Map<MethodId, AnnotationSet> annotated_methods,
+                                 Map<MethodId, AnnotationSetList> annotated_parameters) {
         ClassData out = empty();
         int static_fields_size = in.readULeb128();
         int instance_fields_size = in.readULeb128();
         int direct_methods_size = in.readULeb128();
         int virtual_methods_size = in.readULeb128();
         out.static_fields = EncodedField.readArray(in, context,
-                static_fields_size, annotations.annotated_fields);
+                static_fields_size, annotated_fields);
         for (int i = 0; i < static_values.size(); i++) {
             out.static_fields.get(i).setValue(static_values.get(i));
         }
         out.instance_fields = EncodedField.readArray(in, context,
-                instance_fields_size, annotations.annotated_fields);
+                instance_fields_size, annotated_fields);
         out.direct_methods = EncodedMethod.readArray(in, context,
-                direct_methods_size, annotations.annotated_methods,
-                annotations.annotated_parameters);
+                direct_methods_size, annotated_methods, annotated_parameters);
         out.virtual_methods = EncodedMethod.readArray(in, context,
-                virtual_methods_size, annotations.annotated_methods,
-                annotations.annotated_parameters);
+                virtual_methods_size, annotated_methods, annotated_parameters);
         return out;
     }
 
@@ -129,30 +129,6 @@ public final class ClassData implements Mutable {
         for (EncodedMethod tmp : virtual_methods) {
             data.fill(tmp);
         }
-    }
-
-    void fillAnnotations(AnnotationsDirectory all_annotations) {
-        Consumer<EncodedField> fill_field = (field) -> {
-            AnnotationSet fannotations = field.getAnnotations();
-            if (!fannotations.isEmpty()) {
-                all_annotations.addFieldAnnotations(field.getField(), fannotations);
-            }
-        };
-        static_fields.forEach(fill_field);
-        instance_fields.forEach(fill_field);
-
-        Consumer<EncodedMethod> fill_method = (method) -> {
-            AnnotationSet mannotations = method.getAnnotations();
-            if (!mannotations.isEmpty()) {
-                all_annotations.addMethodAnnotations(method.getMethod(), mannotations);
-            }
-            AnnotationSetList pannotations = method.getParameterAnnotations();
-            if (!pannotations.isEmpty()) {
-                all_annotations.addMethodParameterAnnotations(method.getMethod(), pannotations);
-            }
-        };
-        direct_methods.forEach(fill_method);
-        virtual_methods.forEach(fill_method);
     }
 
     public void write(WriteContext context, RandomOutput out) {

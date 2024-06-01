@@ -29,8 +29,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+// Temporary object. Needed to read or write
 //TODO: clean up code
-public final class AnnotationsDirectory {
+final class AnnotationsDirectory {
 
     public static final int ALIGNMENT = 4;
 
