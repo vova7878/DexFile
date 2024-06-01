@@ -22,6 +22,7 @@
 
 package com.v7878.dex;
 
+import com.v7878.dex.EncodedValue.ArrayValue;
 import com.v7878.dex.bytecode.Instruction;
 
 public abstract class DataFilter implements DataCollector {
@@ -95,7 +96,7 @@ public abstract class DataFilter implements DataCollector {
     }
 
     @Override
-    public void add(EncodedValue.ArrayValue value) {
+    public void add(ArrayValue value) {
         value.collectData(this);
     }
 

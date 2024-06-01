@@ -22,6 +22,7 @@
 
 package com.v7878.dex;
 
+import com.v7878.dex.EncodedValue.ArrayValue;
 import com.v7878.dex.bytecode.Instruction;
 
 public interface DataCollector {
@@ -54,7 +55,7 @@ public interface DataCollector {
 
     void add(ClassDef clazz, AnnotationsDirectory value);
 
-    void add(EncodedValue.ArrayValue value);
+    void add(ArrayValue value);
 
     void add(CodeItem value);
 

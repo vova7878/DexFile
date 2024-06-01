@@ -22,6 +22,7 @@
 
 package com.v7878.dex;
 
+import com.v7878.dex.EncodedValue.ArrayValue;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.util.MutableList;
@@ -93,7 +94,7 @@ public final class ClassData implements Mutable {
     }
 
     public static ClassData read(RandomInput in, ReadContext context,
-                                 EncodedValue.ArrayValue static_values, AnnotationsDirectory annotations) {
+                                 ArrayValue static_values, AnnotationsDirectory annotations) {
         ClassData out = empty();
         int static_fields_size = in.readULeb128();
         int instance_fields_size = in.readULeb128();

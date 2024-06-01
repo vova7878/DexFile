@@ -22,6 +22,8 @@
 
 package com.v7878.dex;
 
+import com.v7878.dex.EncodedValue.ArrayValue;
+
 public interface WriteContext {
     WriteOptions getOptions();
 
@@ -51,7 +53,7 @@ public interface WriteContext {
 
     int getAnnotationsDirectoryOffset(ClassDef value);
 
-    int getArrayValueOffset(EncodedValue.ArrayValue value);
+    int getArrayValueOffset(ArrayValue value);
 
     int getCodeItemOffset(CodeItem value);
 }

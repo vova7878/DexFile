@@ -22,6 +22,8 @@
 
 package com.v7878.dex;
 
+import com.v7878.dex.EncodedValue.ArrayValue;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,7 +44,7 @@ final class WriteContextImpl implements WriteContext {
     private final Map<AnnotationItem, Integer> annotations;
     private final Map<AnnotationSet, Integer> annotation_sets;
     private final Map<AnnotationSetList, Integer> annotation_set_lists;
-    private final Map<EncodedValue.ArrayValue, Integer> array_values;
+    private final Map<ArrayValue, Integer> array_values;
     private final Map<ClassData, Integer> class_data_items;
     private final Map<ClassDef, Integer> annotations_directories;
     private final Map<CodeItem, Integer> code_items;
@@ -108,7 +110,7 @@ final class WriteContextImpl implements WriteContext {
         annotations_directories.put(value, offset);
     }
 
-    public void addArrayValue(EncodedValue.ArrayValue value, int offset) {
+    public void addArrayValue(ArrayValue value, int offset) {
         array_values.put(value, offset);
     }
 
@@ -312,7 +314,7 @@ final class WriteContextImpl implements WriteContext {
     }
 
     @Override
-    public int getArrayValueOffset(EncodedValue.ArrayValue value) {
+    public int getArrayValueOffset(ArrayValue value) {
         Integer out = array_values.get(value);
         if (out == null) {
             throw new IllegalArgumentException(

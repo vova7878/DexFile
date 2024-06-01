@@ -22,6 +22,7 @@
 
 package com.v7878.dex;
 
+import com.v7878.dex.EncodedValue.ArrayValue;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
 
@@ -195,11 +196,11 @@ public final class ClassDef implements Mutable {
         }
         AnnotationSet class_annotations = annotations.class_annotations;
         int class_data_off = in.readInt();
-        EncodedValue.ArrayValue static_values = new EncodedValue.ArrayValue();
+        ArrayValue static_values = new ArrayValue();
         int static_values_off = in.readInt();
         if (static_values_off != 0) {
             RandomInput in2 = in.duplicate(static_values_off);
-            static_values = (EncodedValue.ArrayValue) EncodedValue
+            static_values = (ArrayValue) EncodedValue
                     .readValue(in2, context, EncodedValue.EncodedValueType.ARRAY);
         }
         ClassData class_data = null;
@@ -220,8 +221,8 @@ public final class ClassDef implements Mutable {
         return out;
     }
 
-    private EncodedValue.ArrayValue getStaticFieldValues() {
-        EncodedValue.ArrayValue out = new EncodedValue.ArrayValue();
+    private ArrayValue getStaticFieldValues() {
+        ArrayValue out = new ArrayValue();
         EncodedValue[] tmp = class_data.getStaticFields().stream()
                 .map(EncodedField::getValue).toArray(EncodedValue[]::new);
         if (tmp.length == 0) {
@@ -258,7 +259,7 @@ public final class ClassDef implements Mutable {
             class_data.fillAnnotations(all_annotations);
         }
         data.add(this, all_annotations);
-        EncodedValue.ArrayValue static_values = getStaticFieldValues();
+        ArrayValue static_values = getStaticFieldValues();
         if (!static_values.containsOnlyDefaults()) {
             data.add(static_values);
         }
@@ -272,7 +273,7 @@ public final class ClassDef implements Mutable {
         out.writeInt(source_file == null ? DexConstants.NO_INDEX : context.getStringIndex(source_file));
         out.writeInt(context.getAnnotationsDirectoryOffset(this));
         out.writeInt(class_data.isEmpty() ? 0 : context.getClassDataOffset(class_data));
-        EncodedValue.ArrayValue static_values = getStaticFieldValues();
+        ArrayValue static_values = getStaticFieldValues();
         out.writeInt(static_values.containsOnlyDefaults() ? 0
                 : context.getArrayValueOffset(static_values));
     }
