@@ -253,6 +253,9 @@ public final class ClassDef implements Mutable {
         if (!annotations.isEmpty()) {
             data.add(annotations);
         }
+        if (!class_data.isEmpty()) {
+            data.add(class_data);
+        }
         ArrayValue static_values = getStaticFieldValues();
         if (!static_values.containsOnlyDefaults()) {
             data.add(static_values);
