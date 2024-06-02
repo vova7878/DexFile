@@ -1174,6 +1174,19 @@ public interface EncodedValue extends Mutable {
             }
         }
 
+        static void writeSection(WriteContextImpl context, FileMap map,
+                                 RandomOutput out, ArrayValue[] array_values) {
+            if (array_values.length != 0) {
+                map.encoded_arrays_off = (int) out.position();
+                map.encoded_arrays_size = array_values.length;
+            }
+            for (ArrayValue tmp : array_values) {
+                int start = (int) out.position();
+                tmp.writeData(context, out);
+                context.addArrayValue(tmp, start);
+            }
+        }
+
         @Override
         public final ArrayValue value() {
             return this;

@@ -144,6 +144,29 @@ final class AnnotationsDirectory {
         }
     }
 
+    static void writeSection(WriteContextImpl context, FileMap map, RandomOutput out,
+                             Map<TypeId, AnnotationsDirectory> annotations_directories) {
+        //TODO: delete duplicates
+        if (!annotations_directories.isEmpty()) {
+            out.alignPosition(AnnotationsDirectory.ALIGNMENT);
+            map.annotations_directories_off = (int) out.position();
+            map.annotations_directories_size = 0;
+            for (Map.Entry<TypeId, AnnotationsDirectory> tmp
+                    : annotations_directories.entrySet()) {
+                AnnotationsDirectory ad = tmp.getValue();
+                if (!ad.isEmpty()) {
+                    map.annotations_directories_size++;
+                    out.alignPosition(AnnotationsDirectory.ALIGNMENT);
+                    int start = (int) out.position();
+                    ad.write(context, out);
+                    context.addAnnotationsDirectory(tmp.getKey(), start);
+                } else {
+                    context.addAnnotationsDirectory(tmp.getKey(), 0);
+                }
+            }
+        }
+    }
+
     public boolean isEmpty() {
         return class_annotations.isEmpty() && annotated_fields.isEmpty()
                 && annotated_methods.isEmpty() && annotated_parameters.isEmpty();

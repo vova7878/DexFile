@@ -149,6 +149,12 @@ public final class TypeId implements Mutable {
         out.writeInt(context.getStringIndex(descriptor));
     }
 
+    static void writeSection(WriteContext context, RandomOutput out, TypeId[] types) {
+        for (TypeId value : types) {
+            value.write(context, out);
+        }
+    }
+
     @Override
     public String toString() {
         return descriptor;

@@ -90,6 +90,12 @@ public final class MethodId extends FieldOrMethodId {
         out.writeInt(context.getStringIndex(getName()));
     }
 
+    static void writeSection(WriteContext context, RandomOutput out, MethodId[] methods) {
+        for (MethodId value : methods) {
+            value.write(context, out);
+        }
+    }
+
     @Override
     public String toString() {
         return getDeclaringClass() + "." + getName() + proto;

@@ -70,6 +70,23 @@ public final class ProtoId implements Mutable {
         return parameters;
     }
 
+    public String getShorty() {
+        StringBuilder out = new StringBuilder(parameters.size() + 1);
+        out.append(return_type.getShorty());
+        for (TypeId tmp : parameters) {
+            out.append(tmp.getShorty());
+        }
+        return out.toString();
+    }
+
+    public int getInputRegistersCount() {
+        int out = 0;
+        for (TypeId tmp : parameters) {
+            out += tmp.getRegistersCount();
+        }
+        return out;
+    }
+
     public static ProtoId read(RandomInput in, ReadContext context) {
         in.readInt(); // shorty
         TypeId return_type = context.type(in.readInt());
@@ -89,23 +106,6 @@ public final class ProtoId implements Mutable {
         return out;
     }
 
-    public String getShorty() {
-        StringBuilder out = new StringBuilder(parameters.size() + 1);
-        out.append(return_type.getShorty());
-        for (TypeId tmp : parameters) {
-            out.append(tmp.getShorty());
-        }
-        return out.toString();
-    }
-
-    public int getInputRegistersCount() {
-        int out = 0;
-        for (TypeId tmp : parameters) {
-            out += tmp.getRegistersCount();
-        }
-        return out;
-    }
-
     public void collectData(DataCollector data) {
         data.add(getShorty());
         data.add(return_type);
@@ -119,6 +119,12 @@ public final class ProtoId implements Mutable {
         out.writeInt(context.getTypeIndex(return_type));
         out.writeInt(parameters.isEmpty() ? 0
                 : context.getTypeListOffset(parameters));
+    }
+
+    static void writeSection(WriteContext context, RandomOutput out, ProtoId[] protos) {
+        for (ProtoId value : protos) {
+            value.write(context, out);
+        }
     }
 
     @Override

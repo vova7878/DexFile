@@ -82,6 +82,21 @@ public final class TypeList extends MutableList<TypeId> {
         }
     }
 
+    static void writeSection(WriteContextImpl context, FileMap map,
+                             RandomOutput out, TypeList[] lists) {
+        if (lists.length != 0) {
+            out.alignPosition(ALIGNMENT);
+            map.type_lists_off = (int) out.position();
+            map.type_lists_size = lists.length;
+        }
+        for (TypeList tmp : lists) {
+            out.alignPosition(ALIGNMENT);
+            int start = (int) out.position();
+            tmp.write(context, out);
+            context.addTypeList(tmp, start);
+        }
+    }
+
     @Override
     public String toString() {
         return stream().map(TypeId::toString)

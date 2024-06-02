@@ -236,7 +236,46 @@ class FileMap {
         return out;
     }
 
+    public void computeHeaderOffsets(WriteContextImpl context) {
+        int offset = FileMap.HEADER_SIZE;
+
+        string_ids_off = offset;
+        string_ids_size = context.strings().length;
+        offset += string_ids_size * StringId.SIZE;
+
+        type_ids_off = offset;
+        type_ids_size = context.types().length;
+        offset += type_ids_size * TypeId.SIZE;
+
+        proto_ids_off = offset;
+        proto_ids_size = context.protos().length;
+        offset += proto_ids_size * ProtoId.SIZE;
+
+        field_ids_off = offset;
+        field_ids_size = context.fields().length;
+        offset += field_ids_size * FieldId.SIZE;
+
+        method_ids_off = offset;
+        method_ids_size = context.methods().length;
+        offset += method_ids_size * MethodId.SIZE;
+
+        class_defs_off = offset;
+        class_defs_size = context.classDefs().length;
+        offset += class_defs_size * ClassDef.SIZE;
+
+        call_site_ids_off = offset;
+        call_site_ids_size = context.callSites().length;
+        offset += call_site_ids_size * CallSiteId.SIZE;
+
+        method_handles_off = offset;
+        method_handles_size = context.methodHandles().length;
+        offset += method_handles_size * MethodHandleItem.SIZE;
+
+        data_off = offset;
+    }
+
     public void writeMap(RandomOutput out) {
+        out.alignPosition(MAP_ALIGNMENT);
         map_list_off = (int) out.position();
         ArrayList<MapItem> list = new ArrayList<>();
         list.add(new MapItem(DexConstants.TYPE_HEADER_ITEM, 0, 1));

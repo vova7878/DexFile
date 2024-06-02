@@ -156,6 +156,12 @@ public final class MethodHandleItem implements Mutable {
         out.writeShort(0);
     }
 
+    static void writeSection(WriteContext context, RandomOutput out, MethodHandleItem[] methodHandles) {
+        for (MethodHandleItem value : methodHandles) {
+            value.write(context, out);
+        }
+    }
+
     @Override
     public String toString() {
         return "MethodHandle{" + "type = " + type + "; " + field_or_method + "}";

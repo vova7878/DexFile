@@ -74,6 +74,12 @@ public final class CallSiteId implements Mutable {
         out.writeInt(context.getArrayValueOffset(value));
     }
 
+    static void writeSection(WriteContext context, RandomOutput out, CallSiteId[] callSites) {
+        for (CallSiteId value : callSites) {
+            value.write(context, out);
+        }
+    }
+
     @Override
     public String toString() {
         return "CallSiteId" + value;

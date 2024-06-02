@@ -167,6 +167,19 @@ public final class AnnotationItem implements Mutable {
         annotation.write(context, out);
     }
 
+    static void writeSection(WriteContextImpl context, FileMap map,
+                             RandomOutput out, AnnotationItem[] annotations) {
+        if (annotations.length != 0) {
+            map.annotations_off = (int) out.position();
+            map.annotations_size = annotations.length;
+        }
+        for (AnnotationItem tmp : annotations) {
+            int start = (int) out.position();
+            tmp.write(context, out);
+            context.addAnnotation(tmp, start);
+        }
+    }
+
     @Override
     public String toString() {
         return "AnnotationItem{" + "visibility = " + visibility + "; " + annotation + "}";

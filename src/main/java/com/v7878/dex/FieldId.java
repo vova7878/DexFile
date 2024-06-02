@@ -103,6 +103,12 @@ public final class FieldId extends FieldOrMethodId {
         out.writeInt(context.getStringIndex(getName()));
     }
 
+    static void writeSection(WriteContext context, RandomOutput out, FieldId[] fields) {
+        for (FieldId value : fields) {
+            value.write(context, out);
+        }
+    }
+
     @Override
     public String toString() {
         return getDeclaringClass() + "." + getName() + ":" + type;

@@ -190,6 +190,21 @@ public final class CodeItem implements Mutable {
         }
     }
 
+    static void writeSection(WriteContextImpl context, FileMap map,
+                             RandomOutput out, CodeItem[] code_items) {
+        if (code_items.length != 0) {
+            out.alignPosition(CodeItem.ALIGNMENT);
+            map.code_items_off = (int) out.position();
+            map.code_items_size = code_items.length;
+        }
+        for (CodeItem tmp : code_items) {
+            out.alignPosition(CodeItem.ALIGNMENT);
+            int start = (int) out.position();
+            tmp.write(context, out);
+            context.addCodeItem(tmp, start);
+        }
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof CodeItem) {

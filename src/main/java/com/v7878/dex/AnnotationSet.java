@@ -91,6 +91,20 @@ public final class AnnotationSet extends AbstractSet<AnnotationItem> implements 
         }
     }
 
+    static void writeSection(WriteContextImpl context, FileMap map,
+                             RandomOutput out, AnnotationSet[] annotation_sets) {
+        if (annotation_sets.length != 0) {
+            out.alignPosition(ALIGNMENT);
+            map.annotation_sets_off = (int) out.position();
+            map.annotation_sets_size = annotation_sets.length;
+        }
+        for (AnnotationSet tmp : annotation_sets) {
+            int start = (int) out.position();
+            tmp.write(context, out);
+            context.addAnnotationSet(tmp, start);
+        }
+    }
+
     @Override
     public void clear() {
         annotations.clear();

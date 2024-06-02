@@ -275,6 +275,12 @@ public final class ClassDef implements Mutable {
                 : context.getArrayValueOffset(static_values));
     }
 
+    static void writeSection(WriteContext context, RandomOutput out, ClassDef[] classDefs) {
+        for (ClassDef value : classDefs) {
+            value.write(context, out);
+        }
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof ClassDef) {

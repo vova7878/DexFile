@@ -54,4 +54,15 @@ public final class StringId {
         ids_out.writeInt((int) data_out.position());
         data_out.writeMUtf8(value);
     }
+
+    static void writeSection(WriteContext context, FileMap map,
+                             RandomOutput ids_out, RandomOutput data_out, String[] strings) {
+        if (strings.length != 0) {
+            map.string_data_items_off = (int) data_out.position();
+            map.string_data_items_size = map.string_ids_size;
+        }
+        for (String value : strings) {
+            StringId.write(value, context, ids_out, data_out);
+        }
+    }
 }

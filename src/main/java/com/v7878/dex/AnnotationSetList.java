@@ -87,6 +87,20 @@ public final class AnnotationSetList extends MutableList<AnnotationSet> {
         }
     }
 
+    static void writeSection(WriteContextImpl context, FileMap map,
+                             RandomOutput out, AnnotationSetList[] annotation_set_lists) {
+        if (annotation_set_lists.length != 0) {
+            out.alignPosition(AnnotationSetList.ALIGNMENT);
+            map.annotation_set_refs_off = (int) out.position();
+            map.annotation_set_refs_size = annotation_set_lists.length;
+        }
+        for (AnnotationSetList tmp : annotation_set_lists) {
+            int start = (int) out.position();
+            tmp.write(context, out);
+            context.addAnnotationSetList(tmp, start);
+        }
+    }
+
     @Override
     public boolean isEmpty() {
         if (super.isEmpty()) {

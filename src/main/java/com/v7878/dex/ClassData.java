@@ -144,6 +144,19 @@ public final class ClassData implements Mutable {
         EncodedMethod.writeArray(false, context, out, virtual_methods);
     }
 
+    static void writeSection(WriteContextImpl context, FileMap map,
+                             RandomOutput out, ClassData[] class_data_items) {
+        if (class_data_items.length != 0) {
+            map.class_data_items_off = (int) out.position();
+            map.class_data_items_size = class_data_items.length;
+        }
+        for (ClassData tmp : class_data_items) {
+            int start = (int) out.position();
+            tmp.write(context, out);
+            context.addClassData(tmp, start);
+        }
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof ClassData) {

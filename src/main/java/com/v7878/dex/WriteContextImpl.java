@@ -27,7 +27,6 @@ import com.v7878.dex.EncodedValue.ArrayValue;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream;
 
 // Temporary object. Needed to write dex
 final class WriteContextImpl implements WriteContext {
@@ -118,68 +117,36 @@ final class WriteContextImpl implements WriteContext {
         code_items.put(value, offset);
     }
 
-    public Stream<String> stringsStream() {
-        return Arrays.stream(strings);
+    public String[] strings() {
+        return strings;
     }
 
-    public Stream<TypeId> typesStream() {
-        return Arrays.stream(types);
+    public TypeId[] types() {
+        return types;
     }
 
-    public Stream<ProtoId> protosStream() {
-        return Arrays.stream(protos);
+    public ProtoId[] protos() {
+        return protos;
     }
 
-    public Stream<FieldId> fieldsStream() {
-        return Arrays.stream(fields);
+    public FieldId[] fields() {
+        return fields;
     }
 
-    public Stream<MethodId> methodsStream() {
-        return Arrays.stream(methods);
+    public MethodId[] methods() {
+        return methods;
     }
 
-    public Stream<CallSiteId> callSitesStream() {
-        return Arrays.stream(call_sites);
+    public CallSiteId[] callSites() {
+        return call_sites;
     }
 
-    public Stream<MethodHandleItem> methodHandlesStream() {
-        return Arrays.stream(method_handles);
+    public MethodHandleItem[] methodHandles() {
+        return method_handles;
     }
 
-    public Stream<ClassDef> classDefsStream() {
-        return Arrays.stream(class_defs);
-    }
-
-    public int getStringsCount() {
-        return strings.length;
-    }
-
-    public int getTypesCount() {
-        return types.length;
-    }
-
-    public int getProtosCount() {
-        return protos.length;
-    }
-
-    public int getFieldsCount() {
-        return fields.length;
-    }
-
-    public int getMethodsCount() {
-        return methods.length;
-    }
-
-    public int getClassDefsCount() {
-        return class_defs.length;
-    }
-
-    public int getCallSitesCount() {
-        return call_sites.length;
-    }
-
-    public int getMethodHandlesCount() {
-        return method_handles.length;
+    public ClassDef[] classDefs() {
+        return class_defs;
     }
 
     @Override
