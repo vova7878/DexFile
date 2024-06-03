@@ -322,15 +322,35 @@ public final class CodeBuilder {
         try_blocks.add(new BuilderTryBlock(try_blocks.size(), start, end, exceptionType, handler));
     }
 
-    public CodeBuilder try_catch(String start, String end, TypeId exceptionType, String handler) {
+    private CodeBuilder try_catch_internal(Object start, Object end, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(exceptionType);
         addTryBlock(start, end, exceptionType, handler);
         return this;
     }
 
-    public CodeBuilder try_catch_all(String start, String end, String handler) {
+    public CodeBuilder try_catch(String start, String end, TypeId exceptionType, String handler) {
+        return try_catch_internal(start, end, exceptionType, handler);
+    }
+
+    public CodeBuilder try_catch(String start, String end, TypeId exceptionType) {
+        InternalLabel handler = new InternalLabel();
+        putLabel(handler);
+        return try_catch_internal(start, end, exceptionType, handler);
+    }
+
+    public CodeBuilder try_catch_all_internal(Object start, Object end, Object handler) {
         addTryBlock(start, end, null, handler);
         return this;
+    }
+
+    public CodeBuilder try_catch_all(String start, String end, String handler) {
+        return try_catch_all_internal(start, end, handler);
+    }
+
+    public CodeBuilder try_catch_all(String start, String end) {
+        InternalLabel handler = new InternalLabel();
+        putLabel(handler);
+        return try_catch_all_internal(start, end, handler);
     }
 
     public CodeBuilder if_(boolean value, Consumer<CodeBuilder> true_branch,
@@ -967,34 +987,34 @@ public final class CodeBuilder {
         return f11x(Opcode.THROW, ex_reg, false);
     }
 
-    private CodeBuilder goto_(Object label) {
+    private CodeBuilder goto_internal(Object label) {
         int start_unit = current_unit;
         return f10t(Opcode.GOTO, () -> getLabelBranchOffset(label, start_unit));
     }
 
     public CodeBuilder goto_(String label) {
-        return goto_((Object) label);
+        return goto_internal(label);
     }
 
-    private CodeBuilder goto_16(Object label) {
+    private CodeBuilder goto_16_internal(Object label) {
         int start_unit = current_unit;
         return f20t(Opcode.GOTO_16, () -> getLabelBranchOffset(label, start_unit));
     }
 
     public CodeBuilder goto_16(String label) {
-        return goto_16((Object) label);
+        return goto_16_internal(label);
     }
 
-    private CodeBuilder goto_32(Object label) {
+    private CodeBuilder goto_32_internal(Object label) {
         int start_unit = current_unit;
         return f30t(Opcode.GOTO_32, () -> getLabelBranchOffset(label, start_unit, true));
     }
 
     public CodeBuilder goto_32(String label) {
-        return goto_32((Object) label);
+        return goto_32_internal(label);
     }
 
-    private CodeBuilder packed_switch(int reg_to_test, int first_key, Object... labels) {
+    private CodeBuilder packed_switch_internal(int reg_to_test, int first_key, Object... labels) {
         Objects.requireNonNull(labels);
         int start_unit = current_unit;
         InternalLabel payload = new InternalLabel();
@@ -1012,10 +1032,10 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder packed_switch(int reg_to_test, int first_key, String... labels) {
-        return packed_switch(reg_to_test, first_key, (Object[]) labels);
+        return packed_switch_internal(reg_to_test, first_key, (Object[]) labels);
     }
 
-    private CodeBuilder sparse_switch(int reg_to_test, int[] keys, Object... labels) {
+    private CodeBuilder sparse_switch_internal(int reg_to_test, int[] keys, Object... labels) {
         if (keys.length != labels.length) {
             throw new IllegalArgumentException("sparse_switch: keys.length != labels.length");
         }
@@ -1035,7 +1055,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder sparse_switch(int reg_to_test, int[] keys, String... labels) {
-        return sparse_switch(reg_to_test, keys, (Object[]) labels);
+        return sparse_switch_internal(reg_to_test, keys, (Object[]) labels);
     }
 
     public enum Cmp {
@@ -1076,7 +1096,7 @@ public final class CodeBuilder {
         }
     }
 
-    private CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
+    private CodeBuilder if_test_internal(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
         int start_unit = current_unit;
         return f22t(test.test, first_reg_to_test, false,
                 second_reg_to_test, false,
@@ -1084,7 +1104,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test, String label) {
-        return if_test(test, first_reg_to_test, second_reg_to_test, (Object) label);
+        return if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
     }
 
     public CodeBuilder if_test_else(Test test, int first_reg_to_test, int second_reg_to_test,
@@ -1092,9 +1112,9 @@ public final class CodeBuilder {
         InternalLabel true_ = new InternalLabel();
         InternalLabel end = new InternalLabel();
 
-        if_test(test, first_reg_to_test, second_reg_to_test, true_);
+        if_test_internal(test, first_reg_to_test, second_reg_to_test, true_);
         false_branch.accept(this);
-        goto_32(end);
+        goto_32_internal(end);
         putLabel(true_);
         true_branch.accept(this);
         putLabel(end);
@@ -1102,14 +1122,14 @@ public final class CodeBuilder {
         return this;
     }
 
-    private CodeBuilder if_testz(Test test, int reg_to_test, Object label) {
+    private CodeBuilder if_testz_internal(Test test, int reg_to_test, Object label) {
         int start_unit = current_unit;
         return f21t(test.testz, reg_to_test, false,
                 () -> getLabelBranchOffset(label, start_unit));
     }
 
     public CodeBuilder if_testz(Test test, int reg_to_test, String label) {
-        return if_testz(test, reg_to_test, (Object) label);
+        return if_testz_internal(test, reg_to_test, label);
     }
 
     public CodeBuilder if_testz_else(Test test, int reg_to_test, Consumer<CodeBuilder> true_branch,
@@ -1117,9 +1137,9 @@ public final class CodeBuilder {
         InternalLabel true_ = new InternalLabel();
         InternalLabel end = new InternalLabel();
 
-        if_testz(test, reg_to_test, true_);
+        if_testz_internal(test, reg_to_test, true_);
         false_branch.accept(this);
-        goto_32(end);
+        goto_32_internal(end);
         putLabel(true_);
         true_branch.accept(this);
         putLabel(end);
