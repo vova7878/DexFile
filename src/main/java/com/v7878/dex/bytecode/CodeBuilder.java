@@ -23,11 +23,14 @@
 package com.v7878.dex.bytecode;
 
 import com.v7878.dex.CallSiteId;
+import com.v7878.dex.CatchHandler;
+import com.v7878.dex.CatchHandlerElement;
 import com.v7878.dex.CodeItem;
 import com.v7878.dex.FieldId;
 import com.v7878.dex.MethodHandleItem;
 import com.v7878.dex.MethodId;
 import com.v7878.dex.ProtoId;
+import com.v7878.dex.TryItem;
 import com.v7878.dex.TypeId;
 import com.v7878.dex.bytecode.Format.ArrayPayload;
 import com.v7878.dex.bytecode.Format.Format10t;
@@ -56,11 +59,11 @@ import com.v7878.dex.bytecode.Format.Format4rcc;
 import com.v7878.dex.bytecode.Format.Format51l;
 import com.v7878.dex.bytecode.Format.PackedSwitchPayload;
 import com.v7878.dex.bytecode.Format.SparseSwitchPayload;
-import com.v7878.dex.util.MutableList;
 import com.v7878.misc.Checks;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,61 +79,148 @@ public final class CodeBuilder {
     private static class InternalLabel {
     }
 
-    private final int registers_size, ins_size;
+    private class BuilderTryBlock {
+        private final Object startLabel, endLabel, handlerLabel;
+        private final TypeId exceptionType;
+        private final int index;
+        private int start = -1, end = -1, handler = -1;
+
+        BuilderTryBlock(int index, Object startLabel, Object endLabel, TypeId exceptionType, Object handlerLabel) {
+            this.startLabel = startLabel;
+            this.endLabel = endLabel;
+            this.handlerLabel = handlerLabel;
+            this.exceptionType = exceptionType;
+            this.index = index;
+        }
+
+        public int start() {
+            if (start < 0) {
+                start = getLabelUnit(startLabel);
+            }
+            return start;
+        }
+
+        public int end() {
+            if (end < 0) {
+                end = getLabelUnit(endLabel);
+            }
+            return end;
+        }
+
+        public int handler() {
+            if (handler < 0) {
+                handler = getLabelUnit(handlerLabel);
+            }
+            return handler;
+        }
+
+        public int index() {
+            return index;
+        }
+
+        public TypeId exceptionType() {
+            return exceptionType;
+        }
+    }
+
+    private static final Comparator<BuilderTryBlock> TRY_BLOCK_COMPARATOR = (a, b) -> {
+        int out = Integer.compare(a.start(), b.start());
+        if (out != 0) return out;
+        out = Integer.compare(a.end(), b.end());
+        if (out != 0) return out;
+        if (a.exceptionType() != null && b.exceptionType() == null) {
+            return 1;
+        }
+        return Integer.compare(a.index(), b.index());
+    };
+
+    private final int regs_size, ins_size;
     private final List<Supplier<Instruction>> instructions;
     private final List<Runnable> payload_actions;
+    private final List<BuilderTryBlock> try_blocks;
     private final Map<Object, Integer> labels;
     private final boolean has_this;
 
     private int current_unit, max_outs;
 
-    private CodeBuilder(int registers_size, int ins_size, boolean has_hidden_this) {
-        this.has_this = has_hidden_this;
-        this.registers_size = Checks.checkRange(registers_size, 0,
-                (1 << 16) - (has_this ? 1 : 0)) + (has_this ? 1 : 0);
-        this.ins_size = Checks.checkRange(ins_size, 0,
-                registers_size + 1) + (has_this ? 1 : 0);
-        instructions = new ArrayList<>();
-        payload_actions = new ArrayList<>();
-        labels = new HashMap<>();
-        current_unit = 0;
+    private CodeBuilder(int regs_size, int ins_size, boolean add_hidden_this) {
+        this.has_this = add_hidden_this;
+        int this_reg = add_hidden_this ? 1 : 0;
+        this.regs_size = Checks.checkRange(regs_size, 0, (1 << 16) - this_reg) + this_reg;
+        this.ins_size = Checks.checkRange(ins_size, 0, regs_size + 1) + this_reg;
+        this.instructions = new ArrayList<>();
+        this.payload_actions = new ArrayList<>();
+        this.try_blocks = new ArrayList<>();
+        this.labels = new HashMap<>();
+        this.current_unit = 0;
+    }
+
+    private List<TryItem> getTryItems() {
+        try_blocks.sort(TRY_BLOCK_COMPARATOR);
+
+        List<TryItem> out = new ArrayList<>(try_blocks.size());
+
+        for (int i = 0; i < try_blocks.size(); ) {
+            BuilderTryBlock block = try_blocks.get(i);
+            int start = block.start(), end = block.end();
+            CatchHandler handler = new CatchHandler();
+            for (; i < try_blocks.size(); i++) {
+                block = try_blocks.get(i);
+                if (block.start() != start || block.end() != end) {
+                    break;
+                }
+                TypeId ex = block.exceptionType();
+                int address = block.handler();
+                if (ex == null) {
+                    handler.setCatchAllAddress(address);
+                } else {
+                    handler.getHandlers().add(new CatchHandlerElement(ex, address));
+                }
+            }
+            out.add(new TryItem(start, end, handler));
+        }
+
+        return out;
     }
 
     private CodeItem end() {
         payload_actions.forEach(Runnable::run);
 
-        MutableList<Instruction> out = MutableList.empty();
-        out.addAll(instructions.stream().map(Supplier::get).collect(Collectors.toList()));
-        return new CodeItem(registers_size, ins_size, max_outs, out, null);
+        List<Instruction> insns = instructions.stream()
+                .map(Supplier::get).collect(Collectors.toList());
+
+        List<TryItem> try_items = getTryItems();
+
+        return new CodeItem(regs_size, ins_size, max_outs, insns, try_items);
     }
 
-    public static CodeItem build(int registers_size, int ins_size,
-                                 boolean has_hidden_this, Consumer<CodeBuilder> consumer) {
-        CodeBuilder builder = new CodeBuilder(registers_size, ins_size, has_hidden_this);
+    public static CodeItem build(int regs_size, int ins_size,
+                                 boolean add_hidden_this, Consumer<CodeBuilder> consumer) {
+        CodeBuilder builder = new CodeBuilder(regs_size, ins_size, add_hidden_this);
         consumer.accept(builder);
         return builder.end();
     }
 
-    public static CodeItem build(int registers_size, int ins_size, Consumer<CodeBuilder> consumer) {
-        CodeBuilder builder = new CodeBuilder(registers_size, ins_size, false);
+    public static CodeItem build(int regs_size, int ins_size, Consumer<CodeBuilder> consumer) {
+        CodeBuilder builder = new CodeBuilder(regs_size, ins_size, false);
         consumer.accept(builder);
         return builder.end();
     }
 
     public int v(int reg) {
         //all registers
-        return Checks.checkRange(reg, 0, registers_size);
+        return Checks.checkRange(reg, 0, regs_size);
     }
 
     public int l(int reg) {
         //only local registers
-        int locals = registers_size - ins_size;
+        int locals = regs_size - ins_size;
         return Checks.checkRange(reg, 0, locals);
     }
 
     private int p(int reg, boolean include_this) {
         //only parameter registers
-        int locals = registers_size - ins_size;
+        int locals = regs_size - ins_size;
         return locals + Checks.checkRange(reg, 0,
                 ins_size - (include_this ? 1 : 0)) + (include_this ? 1 : 0);
     }
@@ -148,11 +238,11 @@ public final class CodeBuilder {
     }
 
     private int check_reg(int reg, int width) {
-        return Checks.checkRange(reg, 0, Math.min(1 << width, registers_size));
+        return Checks.checkRange(reg, 0, Math.min(1 << width, regs_size));
     }
 
     private int check_reg_pair(int reg_pair, int width) {
-        Checks.checkRange(reg_pair + 1, 1, registers_size - 1);
+        Checks.checkRange(reg_pair + 1, 1, regs_size - 1);
         return check_reg(reg_pair, width);
     }
 
@@ -170,7 +260,7 @@ public final class CodeBuilder {
         }
         Checks.checkRange(count, 0, 1 << count_width);
         count--;
-        Checks.checkRange(first_reg + count, count, registers_size - count);
+        Checks.checkRange(first_reg + count, count, regs_size - count);
         return check_reg(first_reg, reg_width);
     }
 
@@ -222,6 +312,24 @@ public final class CodeBuilder {
 
     public CodeBuilder label(String label) {
         putLabel(label);
+        return this;
+    }
+
+    private void addTryBlock(Object start, Object end, TypeId exceptionType, Object handler) {
+        Objects.requireNonNull(start);
+        Objects.requireNonNull(end);
+        Objects.requireNonNull(handler);
+        try_blocks.add(new BuilderTryBlock(try_blocks.size(), start, end, exceptionType, handler));
+    }
+
+    public CodeBuilder try_catch(String start, String end, TypeId exceptionType, String handler) {
+        Objects.requireNonNull(exceptionType);
+        addTryBlock(start, end, exceptionType, handler);
+        return this;
+    }
+
+    public CodeBuilder try_catch_all(String start, String end, String handler) {
+        addTryBlock(start, end, null, handler);
         return this;
     }
 

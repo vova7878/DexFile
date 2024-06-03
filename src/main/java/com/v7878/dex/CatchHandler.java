@@ -41,6 +41,10 @@ public final class CatchHandler implements Mutable {
         setCatchAllAddress(catch_all_addr);
     }
 
+    public CatchHandler() {
+        this(null, null);
+    }
+
     public void setHandlers(Collection<CatchHandlerElement> handlers) {
         this.handlers = handlers == null
                 ? MutableList.empty() : new MutableList<>(handlers);
