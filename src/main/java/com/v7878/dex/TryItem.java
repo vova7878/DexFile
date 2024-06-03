@@ -27,10 +27,21 @@ import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.util.SparseArray;
 import com.v7878.misc.Checks;
 
+import java.util.Comparator;
 import java.util.Map;
 import java.util.Objects;
 
 public final class TryItem implements Mutable {
+
+    public static final Comparator<TryItem> COMPARATOR = (a, b) -> {
+        int out = Integer.compare(a.start_addr, b.start_addr);
+        if (out != 0) {
+            return out;
+        }
+
+        // a.start_addr == b.start_addr, but a != b
+        throw new IllegalStateException("try items are overlapping: " + a + " " + b);
+    };
 
     public static final int SIZE = 8;
     public static final int ALIGNMENT = 4;
