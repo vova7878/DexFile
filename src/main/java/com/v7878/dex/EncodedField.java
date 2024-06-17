@@ -28,7 +28,6 @@ import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.util.MutableList;
 
-import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -180,8 +179,7 @@ public final class EncodedField implements Mutable {
     @Override
     public String toString() {
         StringBuilder out = new StringBuilder();
-        //TODO: Dex modifiers
-        String flags = Modifier.toString(access_flags);
+        String flags = DexModifier.printFieldFlags(access_flags);
         out.append(flags);
         if (!flags.isEmpty()) {
             out.append(' ');

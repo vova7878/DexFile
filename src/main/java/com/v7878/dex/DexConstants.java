@@ -47,6 +47,7 @@ public final class DexConstants {
     public static final int ACC_SYNTHETIC = 0x1000;
     public static final int ACC_ANNOTATION = 0x2000;
     public static final int ACC_ENUM = 0x4000;
+    public static final int ACC_MANDATED = 0x8000;
     public static final int ACC_CONSTRUCTOR = 0x10000;
     public static final int ACC_DECLARED_SYNCHRONIZED = 0x20000;
 
