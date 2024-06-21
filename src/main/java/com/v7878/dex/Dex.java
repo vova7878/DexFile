@@ -73,9 +73,14 @@ public final class Dex extends MutableList<ClassDef> {
                 class_def_ids[i] = i;
             }
         } else {
-            //TODO: check unique
-            for (int id : class_def_ids) {
+            for (int i = 0; i < class_def_ids.length; i++) {
+                int id = class_def_ids[i];
                 Checks.checkIndex(id, map.class_defs_size);
+                for (int t = 0; t < i; t++) {
+                    if (id == class_def_ids[t]) {
+                        class_def_ids[i] = ~t;
+                    }
+                }
             }
         }
 

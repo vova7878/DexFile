@@ -216,8 +216,13 @@ public final class ClassDef implements Mutable {
     static ClassDef[] readArray(RandomInput in, ReadContext context, int[] ids) {
         ClassDef[] out = new ClassDef[ids.length];
         for (int i = 0; i < ids.length; i++) {
-            RandomInput in2 = in.duplicate(ClassDef.SIZE * ids[i]);
-            out[i] = ClassDef.read(in2, context);
+            int id = ids[i];
+            if (id < 0) {
+                out[i] = out[~id];
+            } else {
+                RandomInput in2 = in.duplicate(ClassDef.SIZE * id);
+                out[i] = ClassDef.read(in2, context);
+            }
         }
         return out;
     }
