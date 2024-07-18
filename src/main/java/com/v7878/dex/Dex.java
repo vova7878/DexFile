@@ -132,7 +132,7 @@ public final class Dex extends MutableList<ClassDef> {
         WriteContextImpl context = new WriteContextImpl(sections, options);
 
         FileMap map = new FileMap();
-        map.computeHeaderOffsets(context);
+        map.computeHeaderInfo(context);
 
         RandomOutput data = out.duplicate(map.data_off);
 

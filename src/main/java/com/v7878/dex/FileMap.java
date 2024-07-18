@@ -234,7 +234,9 @@ class FileMap {
         return out;
     }
 
-    public void computeHeaderOffsets(WriteContextImpl context) {
+    public void computeHeaderInfo(WriteContextImpl context) {
+        version = context.getDexVersion();
+
         int offset = FileMap.HEADER_SIZE;
 
         string_ids_off = offset;
@@ -368,7 +370,6 @@ class FileMap {
 
     public void writeHeader(RandomIO out, WriteOptions options, int file_size) {
         out.position(0);
-        DexVersion version = DexVersion.forApi(options.getTargetApi());
         out.writeByteArray(version.getMagic());
         out.addPosition(4); //checksum
         out.addPosition(20); //signature
