@@ -94,7 +94,7 @@ public final class Dex extends MutableList<ClassDef> {
     private static Dex readInternal(RandomInput in, ReadOptions options,
                                     int[] class_def_ids, FileMap map) {
 
-        ReadContextImpl context = new ReadContextImpl(options);
+        ReadContextImpl context = new ReadContextImpl(options, map.version);
 
         context.setStrings(StringId.readArray(in.duplicate(map.string_ids_off), map.string_ids_size));
         context.setTypes(TypeId.readArray(in.duplicate(map.type_ids_off), context, map.type_ids_size));
@@ -113,6 +113,8 @@ public final class Dex extends MutableList<ClassDef> {
             data.add(tmp);
         }
     }
+
+    // TODO: add check stage before writing
 
     public void write(RandomIO dst) {
         write(dst, WriteOptions.defaultOptions());

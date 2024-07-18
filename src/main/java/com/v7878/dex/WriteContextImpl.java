@@ -85,6 +85,11 @@ final class WriteContextImpl implements WriteContext {
         return options;
     }
 
+    @Override
+    public DexVersion getDexVersion() {
+        return options.getDexVersion();
+    }
+
     public void addTypeList(TypeList value, int offset) {
         type_lists.put(value, offset);
     }

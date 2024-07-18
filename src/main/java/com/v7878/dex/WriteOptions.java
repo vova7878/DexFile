@@ -1,20 +1,32 @@
 package com.v7878.dex;
 
-public final class WriteOptions extends DexOptions {
-    //TODO: public static final int WRITE_CDEX = 1 << 2;
+public final class WriteOptions extends DexOptions<WriteOptions> {
     //TODO: public static final int ALLOW_SPLITTING_INTO_DEX_CONTAINERS = 1 << 3;
-    private static final int ALL_WRITE_FLAGS = 0;
 
-    private WriteOptions(int targetApi, int flags) {
-        super(targetApi, flags & ~ALL_WRITE_FLAGS);
+    private final DexVersion version;
+
+    WriteOptions(DexVersion version, int targetApi, boolean targetForArt, boolean allowOdexInstructions) {
+        super(targetApi, targetForArt, allowOdexInstructions);
+        requireMinApi(version.getMinApi());
+        this.version = version;
     }
 
     private WriteOptions() {
         super();
+        version = DexVersion.forApi(targetApi);
     }
 
-    public static WriteOptions of(int targetApi, int flags) {
-        return new WriteOptions(targetApi, flags);
+    @Override
+    protected WriteOptions dup(int targetApi, boolean targetForArt, boolean allowOdexInstructions) {
+        return new WriteOptions(version, targetApi, targetForArt, allowOdexInstructions);
+    }
+
+    public DexVersion getDexVersion() {
+        return version;
+    }
+
+    public WriteOptions withDexVersion(DexVersion version) {
+        return new WriteOptions(version, targetApi, targetForArt, allowOdexInstructions);
     }
 
     public static WriteOptions defaultOptions() {

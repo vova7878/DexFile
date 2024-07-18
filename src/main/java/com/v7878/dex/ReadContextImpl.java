@@ -40,14 +40,22 @@ final class ReadContextImpl implements ReadContext {
 
     private final ReadOptions options;
 
-    public ReadContextImpl(ReadOptions options) {
+    private final DexVersion dex_version;
+
+    public ReadContextImpl(ReadOptions options, DexVersion dex_version) {
         this.options = options;
-        this.opcodes = Opcode.forOptions(options);
+        this.dex_version = dex_version;
+        this.opcodes = Opcode.forContext(this);
     }
 
     @Override
     public ReadOptions getOptions() {
         return options;
+    }
+
+    @Override
+    public DexVersion getDexVersion() {
+        return dex_version;
     }
 
     @Override

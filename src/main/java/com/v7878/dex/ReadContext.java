@@ -24,8 +24,8 @@ package com.v7878.dex;
 
 import com.v7878.dex.bytecode.Opcode;
 
-public interface ReadContext {
-
+public interface ReadContext extends DexContext {
+    @Override
     ReadOptions getOptions();
 
     String string(int index);

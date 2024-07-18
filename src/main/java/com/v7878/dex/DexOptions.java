@@ -24,33 +24,26 @@ package com.v7878.dex;
 
 import static com.v7878.misc.Version.CORRECT_SDK_INT;
 
-public abstract class DexOptions {
-    public static final int TARGET_FOR_ART = 1;
-    public static final int ALLOW_ODEX_INSTRUCTIONS = 1 << 1;
-    private static final int ALL_FLAGS = TARGET_FOR_ART | ALLOW_ODEX_INSTRUCTIONS;
-
+public abstract class DexOptions<D extends DexOptions<D>> {
     private static final int MIN_TARGET_API = 1;
     private static final int MAX_TARGET_API = 34;
     private static final int FIRST_ART_TARGET = 19;
     private static final int LAST_DALVIK_TARGET = 20; // TODO: is this really true?
 
-    private final int targetApi;
-    private final boolean targetForArt;
-    private final boolean allowOdexInstructions;
+    protected final int targetApi;
+    protected final boolean targetForArt;
+    protected final boolean allowOdexInstructions;
 
-    DexOptions(int targetApi, int flags) {
+    DexOptions(int targetApi, boolean targetForArt, boolean allowOdexInstructions) {
         if (targetApi < MIN_TARGET_API || targetApi > MAX_TARGET_API) {
             throw new IllegalArgumentException("unsupported target api: " + targetApi);
         }
-        if ((flags & ~ALL_FLAGS) != 0) {
-            throw new IllegalArgumentException("unsupported flags " + flags);
-        }
-        this.targetApi = targetApi;
-        this.targetForArt = (flags & TARGET_FOR_ART) != 0;
-        this.allowOdexInstructions = (flags & ALLOW_ODEX_INSTRUCTIONS) != 0;
         if ((targetForArt && targetApi < FIRST_ART_TARGET) || (!targetForArt && targetApi > LAST_DALVIK_TARGET)) {
             throw new IllegalArgumentException("unsupported " + targetForArt + " targetArt option with targetApi: " + targetApi);
         }
+        this.targetApi = targetApi;
+        this.targetForArt = targetForArt;
+        this.allowOdexInstructions = allowOdexInstructions;
     }
 
     @SuppressWarnings("ConstantValue")
@@ -69,12 +62,22 @@ public abstract class DexOptions {
         this.allowOdexInstructions = is_android;
     }
 
+    protected abstract D dup(int targetApi, boolean targetForArt, boolean allowOdexInstructions);
+
     public int getTargetApi() {
         return targetApi;
     }
 
+    public D withTargetApi(int targetApi) {
+        return dup(targetApi, targetForArt, allowOdexInstructions);
+    }
+
     public boolean isTargetForArt() {
         return targetForArt;
+    }
+
+    public D withTargetForArt(boolean targetForArt) {
+        return dup(targetApi, targetForArt, allowOdexInstructions);
     }
 
     public boolean isTargetForDalvik() {
@@ -85,38 +88,13 @@ public abstract class DexOptions {
         return allowOdexInstructions;
     }
 
-    public void requireMinApi(int minApi) {
-        if (targetApi < minApi) {
-            //TODO: message
-            throw new IllegalArgumentException();
-        }
+    public D withOdexInstructions(boolean allowOdexInstructions) {
+        return dup(targetApi, targetForArt, allowOdexInstructions);
     }
 
-    public void requireMaxApi(int maxApi) {
-        if (targetApi > maxApi) {
-            //TODO: message
-            throw new IllegalArgumentException();
-        }
-    }
-
-    public void requireForArt() {
-        if (!targetForArt) {
-            //TODO: message
-            throw new IllegalArgumentException();
-        }
-    }
-
-    public void requireForDalvik() {
-        if (targetForArt) {
-            //TODO: message
-            throw new IllegalArgumentException();
-        }
-    }
-
-    public void requireOdexInstructions() {
-        if (!allowOdexInstructions) {
-            //TODO: message
-            throw new IllegalArgumentException();
+    void requireMinApi(int api) {
+        if (targetApi < api) {
+            throw new IllegalArgumentException("Requested minimum API level " + api + " but target is " + targetApi);
         }
     }
 }

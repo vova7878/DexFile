@@ -48,6 +48,7 @@ public abstract class Instruction implements Mutable {
         return context.opcode(opcode).format().read(in, context, arg);
     }
 
+    //TODO: find a way to read code with incorrect instructions (which used to protect dex from reading)
     public static MutableList<Instruction> readArray(RandomInput in, ReadContext context) {
         MutableList<Instruction> insns = MutableList.empty();
 

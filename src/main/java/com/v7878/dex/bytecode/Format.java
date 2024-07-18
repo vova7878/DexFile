@@ -62,13 +62,8 @@ public abstract class Format {
 
     public abstract Instruction read(RandomInput in, ReadContext context, int arg);
 
-    private static int extend_sign(int value, int width) {
+    private static int extend_sign32(int value, int width) {
         int shift = 32 - width;
-        return (value << shift) >> shift;
-    }
-
-    private static long extend_sign64(long value, int width) {
-        int shift = 64 - width;
         return (value << shift) >> shift;
     }
 
@@ -81,7 +76,7 @@ public abstract class Format {
 
             @Override
             public void write(WriteContext context, RandomOutput out) {
-                InstructionWriter.write_10x(out, opcode().opcodeValue(context.getOptions()));
+                InstructionWriter.write_10x(out, opcode().opcodeValue(context));
             }
 
             @Override
@@ -141,7 +136,7 @@ public abstract class Format {
 
             @Override
             public void write(WriteContext context, RandomOutput out) {
-                InstructionWriter.write_12x(out, opcode().opcodeValue(context.getOptions()), A, B);
+                InstructionWriter.write_12x(out, opcode().opcodeValue(context), A, B);
             }
 
             @Override
@@ -202,7 +197,7 @@ public abstract class Format {
 
             @Override
             public void write(WriteContext context, RandomOutput out) {
-                InstructionWriter.write_11n(out, opcode().opcodeValue(context.getOptions()), A, sB);
+                InstructionWriter.write_11n(out, opcode().opcodeValue(context), A, sB);
             }
 
             @Override
@@ -242,7 +237,7 @@ public abstract class Format {
 
         @Override
         public Instruction read(RandomInput in, ReadContext context, int BA) {
-            return make(BA & 0xf, extend_sign(BA >> 4, 4));
+            return make(BA & 0xf, extend_sign32(BA >> 4, 4));
         }
 
         public Instruction make(int A, int sB) {
@@ -262,7 +257,7 @@ public abstract class Format {
 
             @Override
             public void write(WriteContext context, RandomOutput out) {
-                InstructionWriter.write_11x(out, opcode().opcodeValue(context.getOptions()), AA);
+                InstructionWriter.write_11x(out, opcode().opcodeValue(context), AA);
             }
 
             @Override
@@ -322,7 +317,7 @@ public abstract class Format {
 
             @Override
             public void write(WriteContext context, RandomOutput out) {
-                InstructionWriter.write_10t(out, opcode().opcodeValue(context.getOptions()), sAA);
+                InstructionWriter.write_10t(out, opcode().opcodeValue(context), sAA);
             }
 
             @Override
@@ -362,7 +357,7 @@ public abstract class Format {
 
         @Override
         public Instruction read(RandomInput in, ReadContext context, int AA) {
-            return make(extend_sign(AA, 8));
+            return make(extend_sign32(AA, 8));
         }
 
         public Instruction make(int sAA) {
@@ -383,7 +378,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_20t(out,
-                        opcode().opcodeValue(context.getOptions()), sAAAA);
+                        opcode().opcodeValue(context), sAAAA);
             }
 
             @Override
@@ -424,7 +419,7 @@ public abstract class Format {
         @Override
         public Instruction read(RandomInput in, ReadContext context, int _00) {
             int AAAA = in.readUnsignedShort();
-            return make(extend_sign(AAAA, 16));
+            return make(extend_sign32(AAAA, 16));
         }
 
         public Instruction make(int sAAAA) {
@@ -446,7 +441,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_22x_21c(out,
-                        opcode().opcodeValue(context.getOptions()), AA, BBBB);
+                        opcode().opcodeValue(context), AA, BBBB);
             }
 
             @Override
@@ -509,7 +504,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_21t_21s(out,
-                        opcode().opcodeValue(context.getOptions()), AA, sBBBB);
+                        opcode().opcodeValue(context), AA, sBBBB);
             }
 
             @Override
@@ -550,7 +545,7 @@ public abstract class Format {
         @Override
         public Instruction read(RandomInput in, ReadContext context, int AA) {
             int BBBB = in.readUnsignedShort();
-            return make(AA, extend_sign(BBBB, 16));
+            return make(AA, extend_sign32(BBBB, 16));
         }
 
         public Instruction make(int AA, int sBBBB) {
@@ -572,7 +567,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_21ih(out,
-                        opcode().opcodeValue(context.getOptions()), AA, sBBBB0000);
+                        opcode().opcodeValue(context), AA, sBBBB0000);
             }
 
             @Override
@@ -636,7 +631,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_21lh(out,
-                        opcode().opcodeValue(context.getOptions()), AA, sBBBB000000000000);
+                        opcode().opcodeValue(context), AA, sBBBB000000000000);
             }
 
             @Override
@@ -706,7 +701,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_22x_21c(out,
-                        opcode().opcodeValue(context.getOptions()), AA,
+                        opcode().opcodeValue(context), AA,
                         referenceType.refToIndex(context, cBBBB));
             }
 
@@ -780,7 +775,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_22c(out,
-                        opcode().opcodeValue(context.getOptions()), A, B,
+                        opcode().opcodeValue(context), A, B,
                         referenceType.refToIndex(context, cCCCC));
             }
 
@@ -847,7 +842,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_23x(out,
-                        opcode().opcodeValue(context.getOptions()), AA, BB, CC);
+                        opcode().opcodeValue(context), AA, BB, CC);
             }
 
             @Override
@@ -911,7 +906,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_22b(out,
-                        opcode().opcodeValue(context.getOptions()), AA, BB, sCC);
+                        opcode().opcodeValue(context), AA, BB, sCC);
             }
 
             @Override
@@ -952,7 +947,7 @@ public abstract class Format {
         @Override
         public Instruction read(RandomInput in, ReadContext context, int AA) {
             int CCBB = in.readUnsignedShort();
-            return make(AA, CCBB & 0xff, extend_sign(CCBB >> 8, 8));
+            return make(AA, CCBB & 0xff, extend_sign32(CCBB >> 8, 8));
         }
 
         public Instruction make(int AA, int BB, int sCC) {
@@ -975,7 +970,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_22t_22s(out,
-                        opcode().opcodeValue(context.getOptions()), A, B, sCCCC);
+                        opcode().opcodeValue(context), A, B, sCCCC);
             }
 
             @Override
@@ -1016,7 +1011,7 @@ public abstract class Format {
         @Override
         public Instruction read(RandomInput in, ReadContext context, int BA) {
             int CCCC = in.readUnsignedShort();
-            return make(BA & 0xf, BA >> 4, extend_sign(CCCC, 16));
+            return make(BA & 0xf, BA >> 4, extend_sign32(CCCC, 16));
         }
 
         public Instruction make(int A, int B, int sCCCC) {
@@ -1037,7 +1032,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_30t(out,
-                        opcode().opcodeValue(context.getOptions()), sAAAAAAAA);
+                        opcode().opcodeValue(context), sAAAAAAAA);
             }
 
             @Override
@@ -1101,7 +1096,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_32x(out,
-                        opcode().opcodeValue(context.getOptions()), AAAA, BBBB);
+                        opcode().opcodeValue(context), AAAA, BBBB);
             }
 
             @Override
@@ -1165,7 +1160,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_31i_31t_31c(out,
-                        opcode().opcodeValue(context.getOptions()), AA, sBBBBBBBB);
+                        opcode().opcodeValue(context), AA, sBBBBBBBB);
             }
 
             @Override
@@ -1237,7 +1232,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_31i_31t_31c(out,
-                        opcode().opcodeValue(context.getOptions()), AA,
+                        opcode().opcodeValue(context), AA,
                         referenceType.refToIndex(context, cBBBBBBBB));
             }
 
@@ -1318,7 +1313,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_35c_35ms_35mi(out,
-                        opcode().opcodeValue(context.getOptions()), A,
+                        opcode().opcodeValue(context), A,
                         referenceType.refToIndex(context, cBBBB), C, D, E, F, G);
             }
 
@@ -1403,7 +1398,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_3rc_3rms_3rmi(out,
-                        opcode().opcodeValue(context.getOptions()), AA,
+                        opcode().opcodeValue(context), AA,
                         referenceType.refToIndex(context, cBBBB), CCCC);
             }
 
@@ -1485,7 +1480,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_45cc(out,
-                        opcode().opcodeValue(context.getOptions()), A,
+                        opcode().opcodeValue(context), A,
                         referenceType.refToIndex(context, cBBBB), C, D, E, F, G,
                         referenceType2.refToIndex(context, cHHHH));
             }
@@ -1578,7 +1573,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_4rcc(out,
-                        opcode().opcodeValue(context.getOptions()), AA,
+                        opcode().opcodeValue(context), AA,
                         referenceType.refToIndex(context, cBBBB), CCCC,
                         referenceType2.refToIndex(context, cHHHH));
             }
@@ -1650,7 +1645,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_51l(out,
-                        opcode().opcodeValue(context.getOptions()), AA, sBBBBBBBBBBBBBBBB);
+                        opcode().opcodeValue(context), AA, sBBBBBBBBBBBBBBBB);
             }
 
             @Override
@@ -1718,7 +1713,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.packed_switch_payload(out,
-                        opcode().opcodeValue(context.getOptions()),
+                        opcode().opcodeValue(context),
                         first_key, targets);
             }
 
@@ -1795,7 +1790,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.sparse_switch_payload(out,
-                        opcode().opcodeValue(context.getOptions()),
+                        opcode().opcodeValue(context),
                         keys, targets);
             }
 
@@ -1872,7 +1867,7 @@ public abstract class Format {
             @Override
             public void write(WriteContext context, RandomOutput out) {
                 InstructionWriter.write_array_payload(out,
-                        opcode().opcodeValue(context.getOptions()),
+                        opcode().opcodeValue(context),
                         element_width, data);
             }
 

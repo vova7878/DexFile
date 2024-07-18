@@ -24,7 +24,8 @@ package com.v7878.dex;
 
 import com.v7878.dex.EncodedValue.ArrayValue;
 
-public interface WriteContext {
+public interface WriteContext extends DexContext {
+    @Override
     WriteOptions getOptions();
 
     int getStringIndex(String value);

@@ -29,7 +29,6 @@ import com.v7878.dex.io.RandomOutput;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.zip.Adler32;
 
@@ -72,6 +71,8 @@ class FileMap {
     public static final int CHECKSUM_OFFSET = 8;
     public static final int SIGNATURE_OFFSET = CHECKSUM_OFFSET + 4;
     public static final int FILE_SIZE_OFFSET = SIGNATURE_OFFSET + 20;
+
+    public DexVersion version;
 
     public int string_ids_size;
     public int string_ids_off;
@@ -134,15 +135,12 @@ class FileMap {
     public static FileMap read(RandomInput in, ReadOptions options) {
         FileMap out = new FileMap();
         byte[] magic = in.readByteArray(8);
-        if (magic[0] == 'd' && magic[1] == 'e' && magic[2] == 'x' && magic[3] == '\n' && magic[7] == '\0') {
-            // ok, regular dex file
-        } else if (magic[0] == 'c' && magic[1] == 'd' && magic[2] == 'e' && magic[3] == 'x' && magic[7] == '\0') {
+        DexVersion version = DexVersion.forMagic(magic);
+        if (version.isCompact()) {
             //TODO: cdex reading
             throw new UnsupportedOperationException("cdex reading unsupported yet");
-        } else {
-            throw new IllegalStateException("invalid magic: " + Arrays.toString(magic));
         }
-        DexVersion version = DexVersion.fromBytes(magic[4], magic[5], magic[6]);
+        out.version = version;
         options.requireMinApi(version.getMinApi());
         in.addPosition(4); //checksum
         in.addPosition(20); //signature
@@ -370,10 +368,8 @@ class FileMap {
 
     public void writeHeader(RandomIO out, WriteOptions options, int file_size) {
         out.position(0);
-        out.writeByteArray(new byte[]{'d', 'e', 'x', '\n'});
-        DexVersion version = DexVersion.fromApi(options.getTargetApi());
-        out.writeByteArray(new byte[]{version.firstByte(),
-                version.secondByte(), version.thirdByte(), '\0'});
+        DexVersion version = DexVersion.forApi(options.getTargetApi());
+        out.writeByteArray(version.getMagic());
         out.addPosition(4); //checksum
         out.addPosition(20); //signature
         out.writeInt(file_size);

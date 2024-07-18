@@ -22,7 +22,11 @@
 
 package com.v7878.dex.bytecode;
 
-import com.v7878.dex.DexOptions;
+import static com.v7878.dex.DexVersion.DEX038;
+import static com.v7878.dex.DexVersion.DEX039;
+
+import com.v7878.dex.DexContext;
+import com.v7878.dex.DexVersion;
 import com.v7878.dex.util.SparseArray;
 
 import java.util.function.Function;
@@ -269,12 +273,12 @@ public enum Opcode {
 
     // e3 - f9 unused
 
-    INVOKE_POLYMORPHIC(firstApi(0xfa, 26), "invoke-polymorphic", opcode -> new Format.Format45cc(opcode, ReferenceType.METHOD, ReferenceType.PROTO)),
-    INVOKE_POLYMORPHIC_RANGE(firstApi(0xfb, 26), "invoke-polymorphic/range", opcode -> new Format.Format4rcc(opcode, ReferenceType.METHOD, ReferenceType.PROTO)),
-    INVOKE_CUSTOM(firstApi(0xfc, 26), "invoke-custom", opcode -> new Format.Format35c(opcode, ReferenceType.CALLSITE)),
-    INVOKE_CUSTOM_RANGE(firstApi(0xfd, 26), "invoke-custom/range", opcode -> new Format.Format3rc(opcode, ReferenceType.CALLSITE)),
-    CONST_METHOD_HANDLE(firstApi(0xfe, 28), "const-method-handle", opcode -> new Format.Format21c(opcode, ReferenceType.METHOD_HANDLE)),
-    CONST_METHOD_TYPE(firstApi(0xff, 28), "const-method-type", opcode -> new Format.Format21c(opcode, ReferenceType.PROTO)),
+    INVOKE_POLYMORPHIC(firstDexVersionOrCDex(DEX038, firstApi(0xfa, 26)), "invoke-polymorphic", opcode -> new Format.Format45cc(opcode, ReferenceType.METHOD, ReferenceType.PROTO)),
+    INVOKE_POLYMORPHIC_RANGE(firstDexVersionOrCDex(DEX038, firstApi(0xfb, 26)), "invoke-polymorphic/range", opcode -> new Format.Format4rcc(opcode, ReferenceType.METHOD, ReferenceType.PROTO)),
+    INVOKE_CUSTOM(firstDexVersionOrCDex(DEX038, firstApi(0xfc, 26)), "invoke-custom", opcode -> new Format.Format35c(opcode, ReferenceType.CALLSITE)),
+    INVOKE_CUSTOM_RANGE(firstDexVersionOrCDex(DEX038, firstApi(0xfd, 26)), "invoke-custom/range", opcode -> new Format.Format3rc(opcode, ReferenceType.CALLSITE)),
+    CONST_METHOD_HANDLE(firstDexVersionOrCDex(DEX039, firstApi(0xfe, 28)), "const-method-handle", opcode -> new Format.Format21c(opcode, ReferenceType.METHOD_HANDLE)),
+    CONST_METHOD_TYPE(firstDexVersionOrCDex(DEX039, firstApi(0xff, 28)), "const-method-type", opcode -> new Format.Format21c(opcode, ReferenceType.PROTO)),
 
     PACKED_SWITCH_PAYLOAD(0x100, "packed-switch-payload", Format.PackedSwitchPayload::new),
     SPARSE_SWITCH_PAYLOAD(0x200, "sparse-switch-payload", Format.SparseSwitchPayload::new),
@@ -282,7 +286,11 @@ public enum Opcode {
 
     //TODO
     EXECUTE_INLINE(onlyDalvik(allApis(0xee)), "execute-inline", opcode -> new Format.Format35c(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
+    EXECUTE_INLINE_RANGE(onlyDalvik(firstApi(0xef, 8)), "execute-inline/range", opcode -> new Format.Format3rc(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
+
     /*INVOKE_DIRECT_EMPTY(onlyDalvik(lastApi(0xf0, 13)), "invoke-direct-empty", Format.TODO::new, Opcode.ODEX_ONLY),*/
+    //INVOKE_OBJECT_INIT_RANGE(onlyDalvik(firstApi(0xf0, 14)), "invoke-object-init/range", Format.TODO::new, Opcode.ODEX_ONLY),
+
     IGET_QUICK(allApis(0xf2), lastApi(0xe3, 30), "iget-quick", opcode -> new Format.Format22c(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
     IGET_WIDE_QUICK(allApis(0xf3), lastApi(0xe4, 30), "iget-wide-quick", opcode -> new Format.Format22c(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
     IGET_OBJECT_QUICK(allApis(0xf4), lastApi(0xe5, 30), "iget-object-quick", opcode -> new Format.Format22c(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
@@ -295,31 +303,26 @@ public enum Opcode {
     INVOKE_SUPER_QUICK(onlyDalvik(allApis(0xfa)), "invoke-super-quick", opcode -> new Format.Format35c(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
     INVOKE_SUPER_QUICK_RANGE(onlyDalvik(allApis(0xfb)), "invoke-super-quick/range", opcode -> new Format.Format3rc(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
 
-    /*THROW_VERIFICATION_ERROR(onlyDalvik(firstApi(0xed, 5)), "throw-verification-error", Format.TODO::new, Opcode.ODEX_ONLY),
+    //THROW_VERIFICATION_ERROR(onlyDalvik(firstApi(0xed, 5)), "throw-verification-error", TODO:Format.Format20bc::new, Opcode.ODEX_ONLY),
 
-    BREAKPOINT(onlyDalvik(firstApi(0xec, 8)), "breakpoint", Format.TODO::new, Opcode.ODEX_ONLY),*/
-    EXECUTE_INLINE_RANGE(onlyDalvik(firstApi(0xef, 8)), "execute-inline/range", opcode -> new Format.Format3rc(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
+    //BREAKPOINT(onlyDalvik(firstApi(0xec, 8)), "breakpoint", Format.TODO::new, Opcode.ODEX_ONLY),
 
     IGET_VOLATILE(onlyDalvik(firstApi(0xe3, 9)), "iget-volatile", opcode -> new Format.Format22c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
     IPUT_VOLATILE(onlyDalvik(firstApi(0xe4, 9)), "iput-volatile", opcode -> new Format.Format22c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
     SGET_VOLATILE(onlyDalvik(firstApi(0xe5, 9)), "sget-volatile", opcode -> new Format.Format21c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
     SPUT_VOLATILE(onlyDalvik(firstApi(0xe6, 9)), "sput-volatile", opcode -> new Format.Format21c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
 
-    IGET_OBJECT_VOLATILE(onlyDalvik(firstApi(0xe7, 9)), "iget-object-volatile", opcode -> new Format.Format22c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
-
     IGET_WIDE_VOLATILE(onlyDalvik(firstApi(0xe8, 9)), "iget-wide-volatile", opcode -> new Format.Format22c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
     IPUT_WIDE_VOLATILE(onlyDalvik(firstApi(0xe9, 9)), "iput-wide-volatile", opcode -> new Format.Format22c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
     SGET_WIDE_VOLATILE(onlyDalvik(firstApi(0xea, 9)), "sget-wide-volatile", opcode -> new Format.Format21c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
     SPUT_WIDE_VOLATILE(onlyDalvik(firstApi(0xeb, 9)), "sput-wide-volatile", opcode -> new Format.Format21c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
 
+    IGET_OBJECT_VOLATILE(onlyDalvik(firstApi(0xe7, 9)), "iget-object-volatile", opcode -> new Format.Format22c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
     IPUT_OBJECT_VOLATILE(onlyDalvik(firstApi(0xfc, 9)), "iput-object-volatile", opcode -> new Format.Format22c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
     SGET_OBJECT_VOLATILE(onlyDalvik(firstApi(0xfd, 9)), "sget-object-volatile", opcode -> new Format.Format21c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
     SPUT_OBJECT_VOLATILE(onlyDalvik(firstApi(0xfe, 9)), "sput-object-volatile", opcode -> new Format.Format21c(opcode, ReferenceType.FIELD), Opcode.ODEX_ONLY),
 
     RETURN_VOID_BARRIER(firstApi(0xf1, 11), lastApi(0x73, 22), "return-void-barrier", Format.Format10x::new, Opcode.ODEX_ONLY),
-
-    //INVOKE_OBJECT_INIT_RANGE(onlyDalvik(firstApi(0xf0, 14)), "invoke-object-init/range", Format.TODO::new, Opcode.ODEX_ONLY),
-
     RETURN_VOID_NO_BARRIER(onlyArt(betweenApi(0x73, 23, 30)), "return-void-no-barrier", Format.Format10x::new, Opcode.ODEX_ONLY),
 
     IPUT_BOOLEAN_QUICK(onlyArt(betweenApi(0xeb, 23, 30)), "iput-boolean-quick", opcode -> new Format.Format22c(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
@@ -331,21 +334,21 @@ public enum Opcode {
     IGET_CHAR_QUICK(onlyArt(betweenApi(0xf1, 23, 30)), "iget-char-quick", opcode -> new Format.Format22c(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
     IGET_SHORT_QUICK(onlyArt(betweenApi(0xf2, 23, 30)), "iget-short-quick", opcode -> new Format.Format22c(opcode, ReferenceType.RAW), Opcode.ODEX_ONLY),
 
-    /*INVOKE_LAMBDA(onlyArt(betweenApi(0xf3, 24, 25)), "invoke-lambda", Format.Format25x::new, Opcode.ODEX_ONLY),
-    CAPTURE_VARIABLE(onlyArt(betweenApi(0xf5, 24, 25)), "capture-variable", Format.TODO::new, Opcode.ODEX_ONLY),
-    CREATE_LAMBDA(onlyArt(betweenApi(0xf6, 24, 25)), "create-lambda", Format.TODO::new, Opcode.ODEX_ONLY),
-    LIBERATE_LAMBDA(onlyArt(betweenApi(0xf7, 24, 25)), "liberate-lambda", Format.TODO::new, Opcode.ODEX_ONLY),
-    BOX_LAMBDA(onlyArt(betweenApi(0xf8, 24, 25)), "box-lambda", Format.TODO::new, Opcode.ODEX_ONLY),
-    UNBOX_LAMBDA(onlyArt(betweenApi(0xf9, 24, 25)), "unbox-lambda", Format.TODO::new, Opcode.ODEX_ONLY)*/;
+    /*INVOKE_LAMBDA(onlyArt(betweenApi(0xf3, 24, 25)), "invoke-lambda", TODO:Format.Format25x::new, Opcode.EXPERIMENTAL_NOUGAT),
+    CAPTURE_VARIABLE(onlyArt(betweenApi(0xf5, 24, 25)), "capture-variable", TODO:Format.Format21c(string)::new, Opcode.EXPERIMENTAL_NOUGAT),
+    CREATE_LAMBDA(onlyArt(betweenApi(0xf6, 24, 25)), "create-lambda", TODO:Format.Format21c(method)::new, Opcode.EXPERIMENTAL_NOUGAT),
+    LIBERATE_LAMBDA(onlyArt(betweenApi(0xf7, 24, 25)), "liberate-lambda", TODO:Format.Format22c(string)::new, Opcode.EXPERIMENTAL_NOUGAT),
+    BOX_LAMBDA(onlyArt(betweenApi(0xf8, 24, 25)), "box-lambda", TODO:Format.Format22x::new, Opcode.EXPERIMENTAL_NOUGAT),
+    UNBOX_LAMBDA(onlyArt(betweenApi(0xf9, 24, 25)), "unbox-lambda", TODO:Format.Format22c(type)::new, Opcode.EXPERIMENTAL_NOUGAT)*/;
 
     private static final int ODEX_ONLY = 1;
 
     @FunctionalInterface
-    private interface VersionConstraints {
-        int opcodeValue(DexOptions options);
+    private interface DexConstraints {
+        Integer opcodeValue(DexContext context);
     }
 
-    private final VersionConstraints constraints;
+    private final DexConstraints constraints;
     private final String name;
     private final int flags;
     private final Format format;
@@ -354,8 +357,17 @@ public enum Opcode {
         return name;
     }
 
-    public int opcodeValue(DexOptions options) {
-        return constraints.opcodeValue(options);
+    private Integer rawOpcodeValue(DexContext context) {
+        return constraints.opcodeValue(context);
+    }
+
+    public int opcodeValue(DexContext context) {
+        Integer opcode = rawOpcodeValue(context);
+        if (opcode == null) {
+            //TODO: more useful message
+            throw new IllegalArgumentException("Can`t find opcode value for " + this);
+        }
+        return opcode;
     }
 
     public <T extends Format> T format() {
@@ -371,91 +383,86 @@ public enum Opcode {
         this(allApis(opcodeValue), name, format, 0);
     }
 
-    Opcode(VersionConstraints constraints, String name, Function<Opcode, Format> format) {
+    Opcode(DexConstraints constraints, String name, Function<Opcode, Format> format) {
         this(constraints, name, format, 0);
     }
 
-    Opcode(VersionConstraints constraints, String name, Function<Opcode, Format> format, int flags) {
+    Opcode(DexConstraints constraints, String name, Function<Opcode, Format> format, int flags) {
         this.flags = flags;
         this.constraints = isOdexOnly() ? onlyOdex(constraints) : constraints;
         this.name = name;
         this.format = format.apply(this);
     }
 
-    Opcode(VersionConstraints forDalvik, VersionConstraints forArt, String name, Function<Opcode, Format> format, int flags) {
+    Opcode(DexConstraints forDalvik, DexConstraints forArt, String name, Function<Opcode, Format> format, int flags) {
         this(combine(onlyDalvik(forDalvik), onlyArt(forArt)), name, format, flags);
     }
 
-    public static SparseArray<Opcode> forOptions(DexOptions options) {
+    public static SparseArray<Opcode> forContext(DexContext context) {
         SparseArray<Opcode> out = new SparseArray<>(values().length);
         for (Opcode op : values()) {
-            try {
-                out.put(op.opcodeValue(options), op);
-            } catch (Throwable ignore) {
+            Integer value = op.rawOpcodeValue(context);
+            if (value != null) {
+                out.put(value, op);
             }
         }
         return out;
     }
 
-    private static VersionConstraints allApis(int opcodeValue) {
-        return options -> opcodeValue;
+    private static DexConstraints allApis(int opcodeValue) {
+        return context -> opcodeValue;
     }
 
-    private static VersionConstraints firstApi(int opcodeValue, int api) {
-        return options -> {
-            options.requireMinApi(api);
-            return opcodeValue;
+    private static DexConstraints firstApi(int opcodeValue, int api) {
+        return context -> {
+            int target = context.getOptions().getTargetApi();
+            return target < api ? null : opcodeValue;
         };
     }
 
-    private static VersionConstraints lastApi(int opcodeValue, int api) {
-        return options -> {
-            options.requireMaxApi(api);
-            return opcodeValue;
+    private static DexConstraints lastApi(int opcodeValue, int api) {
+        return context -> {
+            int target = context.getOptions().getTargetApi();
+            return target > api ? null : opcodeValue;
         };
     }
 
-    private static VersionConstraints betweenApi(int opcodeValue, int minApi, int maxApi) {
-        return options -> {
-            options.requireMinApi(minApi);
-            options.requireMaxApi(maxApi);
-            return opcodeValue;
+    @SuppressWarnings("SameParameterValue")
+    private static DexConstraints betweenApi(int opcodeValue, int minApi, int maxApi) {
+        return context -> {
+            int target = context.getOptions().getTargetApi();
+            return (target < minApi || target > maxApi) ? null : opcodeValue;
         };
     }
 
-    private static VersionConstraints onlyOdex(VersionConstraints constraints) {
-        return options -> {
-            options.requireOdexInstructions();
-            return constraints.opcodeValue(options);
-        };
+    private static boolean checkDexVersion(DexVersion min, DexVersion target) {
+        return target.isCompact() || (min.ordinal() >= target.ordinal());
     }
 
-    private static VersionConstraints onlyArt(VersionConstraints constraints) {
-        return options -> {
-            options.requireForArt();
-            return constraints.opcodeValue(options);
-        };
+    private static DexConstraints firstDexVersionOrCDex(DexVersion version, DexConstraints constraints) {
+        return context -> checkDexVersion(version, context.getDexVersion()) ?
+                constraints.opcodeValue(context) : null;
     }
 
-    private static VersionConstraints onlyDalvik(VersionConstraints constraints) {
-        return options -> {
-            options.requireForDalvik();
-            return constraints.opcodeValue(options);
-        };
+    private static DexConstraints onlyOdex(DexConstraints constraints) {
+        return context -> context.getOptions().hasOdexInstructions() ?
+                constraints.opcodeValue(context) : null;
     }
 
-    private static VersionConstraints combine(VersionConstraints first, VersionConstraints second) {
-        return options -> {
-            try {
-                return first.opcodeValue(options);
-            } catch (Throwable th1) {
-                try {
-                    return second.opcodeValue(options);
-                } catch (Throwable th2) {
-                    th2.addSuppressed(th1);
-                    throw th2;
-                }
-            }
+    private static DexConstraints onlyArt(DexConstraints constraints) {
+        return context -> context.getOptions().isTargetForArt() ?
+                constraints.opcodeValue(context) : null;
+    }
+
+    private static DexConstraints onlyDalvik(DexConstraints constraints) {
+        return context -> context.getOptions().isTargetForDalvik() ?
+                constraints.opcodeValue(context) : null;
+    }
+
+    private static DexConstraints combine(DexConstraints first, DexConstraints second) {
+        return context -> {
+            Integer opcode = first.opcodeValue(context);
+            return opcode == null ? second.opcodeValue(context) : opcode;
         };
     }
 }

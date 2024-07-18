@@ -267,6 +267,8 @@ public final class ClassDef implements Mutable {
         }
     }
 
+    // TODO: check that if default methods exist then the targetApi is higher than 23 (dex 037+)
+
     public void write(WriteContext context, RandomOutput out) {
         out.writeInt(context.getTypeIndex(clazz));
         out.writeInt(access_flags);
