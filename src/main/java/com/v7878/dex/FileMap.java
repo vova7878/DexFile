@@ -22,6 +22,10 @@
 
 package com.v7878.dex;
 
+import static com.v7878.dex.DexConstants.COMPACT_HEADER_SIZE;
+import static com.v7878.dex.DexConstants.HEADER_SIZE;
+import static com.v7878.dex.DexVersion.forMagic;
+
 import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
@@ -65,7 +69,6 @@ class FileMap {
         }
     }
 
-    public static final int HEADER_SIZE = 0x70;
     public static final int MAP_ALIGNMENT = 4;
 
     public static final int CHECKSUM_OFFSET = 8;
@@ -93,7 +96,6 @@ class FileMap {
 
     public int map_list_off;
 
-    //extra data for write
     public int data_size;
     public int data_off;
 
@@ -120,33 +122,39 @@ class FileMap {
     public int hiddenapi_class_data_items_size;
     public int hiddenapi_class_data_items_off;
 
-    private static void throwISE(boolean value, String msg) {
-        if (!value) {
-            throw new IllegalStateException(msg);
+    public int compact_feature_flags;
+    public int compact_debug_info_offsets_pos;
+    public int compact_debug_info_offsets_table_offset;
+    public int compact_debug_info_base;
+
+    private static int getHeaderSize(DexVersion version) {
+        switch (version) {
+            case CDEX001:
+                return COMPACT_HEADER_SIZE;
+            //TODO: case DEX041:
+            //    return HEADER_V41_SIZE;
+            default:
+                return HEADER_SIZE;
         }
     }
 
-    private static void throwISE(boolean value) {
+    private static void check(boolean value) {
         if (!value) {
             throw new IllegalStateException();
         }
     }
 
-    public static FileMap read(RandomInput in, ReadOptions options) {
+    public static FileMap readHeader(RandomInput in, ReadOptions options) {
         FileMap out = new FileMap();
         byte[] magic = in.readByteArray(8);
-        DexVersion version = DexVersion.forMagic(magic);
-        if (version.isCompact()) {
-            //TODO: cdex reading
-            throw new UnsupportedOperationException("cdex reading unsupported yet");
-        }
+        DexVersion version = forMagic(magic);
         out.version = version;
         options.requireMinApi(version.getMinApi());
         in.addPosition(4); //checksum
         in.addPosition(20); //signature
         in.addPosition(4); //file_size
         int header_size = in.readInt();
-        if (header_size != HEADER_SIZE) {
+        if (header_size != getHeaderSize(version)) {
             throw new IllegalStateException("invalid header size: " + header_size);
         }
         int endian_tag = in.readInt();
@@ -168,52 +176,66 @@ class FileMap {
         out.method_ids_off = in.readInt();
         out.class_defs_size = in.readInt();
         out.class_defs_off = in.readInt();
-        in.addPosition(4); //data_size
-        in.addPosition(4); //data_off
-        RandomInput in2 = in.duplicate(out.map_list_off);
-        int map_size = in2.readInt();
+        out.data_size = in.readInt();
+        out.data_off = in.readInt();
+
+        if (version.isCompact()) {
+            out.compact_feature_flags = in.readInt();
+            out.compact_debug_info_offsets_pos = in.readInt();
+            out.compact_debug_info_offsets_table_offset = in.readInt();
+            out.compact_debug_info_base = in.readInt();
+            in.addPosition(4); //owned_data_begin
+            in.addPosition(4); //owned_data_end
+        }
+        return out;
+    }
+
+    public void readMap(ReadContext context) {
+        RandomInput in = context.data(map_list_off);
+        int map_size = in.readInt();
         //TODO: messages
         for (int i = 0; i < map_size; i++) {
-            MapItem item = MapItem.read(in2);
+            MapItem item = MapItem.read(in);
             switch (item.type) {
                 case DexConstants.TYPE_HEADER_ITEM:
-                    throwISE(item.size == 1);
-                    throwISE(item.offset == 0);
+                    check(item.size == 1);
+                    check(item.offset == 0);
                     break;
                 case DexConstants.TYPE_STRING_ID_ITEM:
-                    throwISE(item.size == out.string_ids_size);
-                    throwISE(item.offset == out.string_ids_off);
+                    check(item.size == string_ids_size);
+                    check(item.offset == string_ids_off);
                     break;
                 case DexConstants.TYPE_TYPE_ID_ITEM:
-                    throwISE(item.size == out.type_ids_size);
-                    throwISE(item.offset == out.type_ids_off);
+                    check(item.size == type_ids_size);
+                    check(item.offset == type_ids_off);
                     break;
                 case DexConstants.TYPE_PROTO_ID_ITEM:
-                    throwISE(item.size == out.proto_ids_size);
-                    throwISE(item.offset == out.proto_ids_off);
+                    check(item.size == proto_ids_size);
+                    check(item.offset == proto_ids_off);
                     break;
                 case DexConstants.TYPE_FIELD_ID_ITEM:
-                    throwISE(item.size == out.field_ids_size);
-                    throwISE(item.offset == out.field_ids_off);
+                    check(item.size == field_ids_size);
+                    check(item.offset == field_ids_off);
                     break;
                 case DexConstants.TYPE_METHOD_ID_ITEM:
-                    throwISE(item.size == out.method_ids_size);
-                    throwISE(item.offset == out.method_ids_off);
+                    check(item.size == method_ids_size);
+                    check(item.offset == method_ids_off);
                     break;
                 case DexConstants.TYPE_CLASS_DEF_ITEM:
-                    throwISE(item.size == out.class_defs_size);
-                    throwISE(item.offset == out.class_defs_off);
+                    check(item.size == class_defs_size);
+                    check(item.offset == class_defs_off);
                     break;
                 case DexConstants.TYPE_CALL_SITE_ID_ITEM:
-                    out.call_site_ids_size = item.size;
-                    out.call_site_ids_off = item.offset;
+                    call_site_ids_size = item.size;
+                    call_site_ids_off = item.offset;
                     break;
                 case DexConstants.TYPE_METHOD_HANDLE_ITEM:
-                    out.method_handles_size = item.size;
-                    out.method_handles_off = item.offset;
+                    method_handles_size = item.size;
+                    method_handles_off = item.offset;
                     break;
                 case DexConstants.TYPE_MAP_LIST:
-                    throwISE(item.size == 1);
+                    check(item.size == 1);
+                    check(item.offset == map_list_off);
                     break;
                 case DexConstants.TYPE_TYPE_LIST:
                 case DexConstants.TYPE_ANNOTATION_SET_REF_LIST:
@@ -231,13 +253,12 @@ class FileMap {
                     throw new IllegalStateException("unknown map_item type: " + item.type);
             }
         }
-        return out;
     }
 
     public void computeHeaderInfo(WriteContextImpl context) {
         version = context.getDexVersion();
 
-        int offset = FileMap.HEADER_SIZE;
+        int offset = getHeaderSize(version);
 
         string_ids_off = offset;
         string_ids_size = context.strings().length;
@@ -368,13 +389,13 @@ class FileMap {
         }
     }
 
-    public void writeHeader(RandomIO out, WriteOptions options, int file_size) {
+    public void writeHeader(RandomIO out, int file_size) {
         out.position(0);
         out.writeByteArray(version.getMagic());
         out.addPosition(4); //checksum
         out.addPosition(20); //signature
         out.writeInt(file_size);
-        out.writeInt(HEADER_SIZE);
+        out.writeInt(getHeaderSize(version));
         out.writeInt(DexConstants.ENDIAN_CONSTANT);
         out.writeInt(0); //link_size
         out.writeInt(0); //link_off

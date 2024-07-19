@@ -55,7 +55,7 @@ public final class AnnotationSetList extends MutableList<AnnotationSet> {
             int annotations_off = in.readInt();
             if (annotations_off != 0) {
                 out.add(AnnotationSet.read(
-                        in.duplicate(annotations_off), context));
+                        context.data(annotations_off), context));
             } else {
                 out.add(AnnotationSet.empty());
             }

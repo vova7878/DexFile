@@ -93,7 +93,7 @@ public final class ProtoId implements Mutable {
         int parameters_off = in.readInt();
         TypeList parameters = null;
         if (parameters_off != 0) {
-            parameters = TypeList.read(in.duplicate(parameters_off), context);
+            parameters = TypeList.read(context.data(parameters_off), context);
         }
         return new ProtoId(return_type, parameters);
     }

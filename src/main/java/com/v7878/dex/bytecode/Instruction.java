@@ -49,13 +49,11 @@ public abstract class Instruction implements Mutable {
     }
 
     //TODO: find a way to read code with incorrect instructions (which used to protect dex from reading)
-    public static MutableList<Instruction> readArray(RandomInput in, ReadContext context) {
+    public static MutableList<Instruction> readArray(RandomInput in, ReadContext context, int insns_count) {
         MutableList<Instruction> insns = MutableList.empty();
+        insns.ensureCapacity(insns_count);
 
-        int insns_size = in.readInt(); // in 2-byte code units
-        insns.ensureCapacity(insns_size);
-
-        int insns_bytes = insns_size * 2;
+        int insns_bytes = insns_count * 2;
         long start = in.position();
 
         while (in.position() - start < insns_bytes) {

@@ -71,7 +71,7 @@ public final class AnnotationSet extends AbstractSet<AnnotationItem> implements 
         int size = in.readInt();
         AnnotationItem[] out = new AnnotationItem[size];
         for (int i = 0; i < size; i++) {
-            out[i] = AnnotationItem.read(in.duplicate(in.readInt()), context);
+            out[i] = AnnotationItem.read(context.data(in.readInt()), context);
         }
         return new AnnotationSet(out);
     }

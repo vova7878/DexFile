@@ -133,12 +133,11 @@ public final class EncodedMethod implements Mutable {
                                      Map<MethodId, AnnotationSetList> annotated_parameters) {
         int access_flags = in.readULeb128();
         AnnotationSet annotations = annotated_methods.get(method);
-        AnnotationSetList parameter_annotations
-                = annotated_parameters.get(method);
+        AnnotationSetList parameter_annotations = annotated_parameters.get(method);
         int code_off = in.readULeb128();
         CodeItem code = null;
         if (code_off != 0) {
-            code = CodeItem.read(in.duplicate(code_off), context);
+            code = CodeItem.read(context.data(code_off), context);
         }
         return new EncodedMethod(method, access_flags, annotations,
                 parameter_annotations, code);
@@ -180,11 +179,11 @@ public final class EncodedMethod implements Mutable {
         //TODO: improve messages
         if (is_direct_list) {
             if (!encoded_method.isDirect()) {
-                throw new IllegalStateException("method must be direct");
+                throw new IllegalStateException("method must be direct: " + encoded_method);
             }
         } else {
             if (encoded_method.isDirect()) {
-                throw new IllegalStateException("method must not be direct");
+                throw new IllegalStateException("method must not be direct: " + encoded_method);
             }
         }
     }
@@ -214,6 +213,24 @@ public final class EncodedMethod implements Mutable {
             flags += " ";
         }
         return flags + method;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof EncodedMethod) {
+            EncodedMethod emobj = (EncodedMethod) obj;
+            return access_flags == emobj.access_flags
+                    && Objects.equals(method, emobj.method)
+                    && Objects.equals(annotations, emobj.annotations)
+                    && Objects.equals(parameter_annotations, emobj.parameter_annotations)
+                    && Objects.equals(code, emobj.code);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(method, access_flags, annotations, parameter_annotations, code);
     }
 
     @Override

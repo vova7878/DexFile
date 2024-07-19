@@ -29,6 +29,10 @@ public final class DexConstants {
     public static final int ENDIAN_CONSTANT = 0x12345678;
     public static final int NO_INDEX = -1;
 
+    public static final int HEADER_SIZE = 0x70;
+    public static final int HEADER_V41_SIZE = HEADER_SIZE + 4 * 2;
+    public static final int COMPACT_HEADER_SIZE = HEADER_SIZE + 4 * 6;
+
     //access_flags definitions
     public static final int ACC_PUBLIC = 0x1;
     public static final int ACC_PRIVATE = 0x2;

@@ -23,10 +23,13 @@
 package com.v7878.dex;
 
 import com.v7878.dex.bytecode.Opcode;
+import com.v7878.dex.io.RandomInput;
 
 public interface ReadContext extends DexContext {
     @Override
     ReadOptions getOptions();
+
+    RandomInput data(int offset);
 
     String string(int index);
 

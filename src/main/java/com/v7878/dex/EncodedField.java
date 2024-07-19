@@ -109,8 +109,7 @@ public final class EncodedField implements Mutable {
 
     public static EncodedField read(RandomInput in, FieldId field,
                                     Map<FieldId, AnnotationSet> annotated_fields) {
-        return new EncodedField(field, in.readULeb128(),
-                annotated_fields.get(field));
+        return new EncodedField(field, in.readULeb128(), annotated_fields.get(field));
     }
 
     public static MutableList<EncodedField> readArray(RandomInput in,
@@ -140,18 +139,16 @@ public final class EncodedField implements Mutable {
     }
 
     private static void check(boolean is_static_list, EncodedField encoded_field) {
-        //TODO: improve messages
         if (is_static_list) {
             if (!encoded_field.isStatic()) {
-                throw new IllegalStateException("field must be static");
+                throw new IllegalStateException("field must be static: " + encoded_field);
             }
         } else {
             if (encoded_field.isStatic()) {
-                throw new IllegalStateException("field must not be static");
+                throw new IllegalStateException("field must not be static: " + encoded_field);
             }
-            EncodedValue tmp = encoded_field.getValue();
-            if (!tmp.isDefault()) {
-                throw new IllegalStateException("instance field can`t have not default value: " + tmp);
+            if (encoded_field.hasValue()) {
+                throw new IllegalStateException("instance field can`t have value: " + encoded_field);
             }
         }
     }
@@ -189,6 +186,24 @@ public final class EncodedField implements Mutable {
             out.append(" = ").append(value);
         }
         return out.toString();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof EncodedField) {
+            EncodedField efobj = (EncodedField) obj;
+            return access_flags == efobj.access_flags
+                    && Objects.equals(field, efobj.field)
+                    && Objects.equals(annotations, efobj.annotations)
+                    //Note: getValue() method used instead value field
+                    && Objects.equals(getValue(), efobj.getValue());
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(field, access_flags, annotations, value);
     }
 
     @Override

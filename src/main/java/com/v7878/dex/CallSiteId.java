@@ -23,6 +23,7 @@
 package com.v7878.dex;
 
 import com.v7878.dex.EncodedValue.ArrayValue;
+import com.v7878.dex.EncodedValue.EncodedValueType;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
 
@@ -52,10 +53,8 @@ public final class CallSiteId implements Mutable {
     }
 
     public static CallSiteId read(RandomInput in, ReadContext context) {
-        RandomInput in2 = in.duplicate(in.readInt());
-        ArrayValue value = (ArrayValue) EncodedValue
-                .readValue(in2, context, EncodedValue.EncodedValueType.ARRAY);
-        return new CallSiteId(value);
+        return new CallSiteId((ArrayValue) EncodedValue.readValue(
+                context.data(in.readInt()), context, EncodedValueType.ARRAY));
     }
 
     static CallSiteId[] readArray(RandomInput in, ReadContext context, int size) {

@@ -76,7 +76,7 @@ final class AnnotationsDirectory {
         AnnotationsDirectory out = new AnnotationsDirectory();
         int class_annotations_off = in.readInt();
         if (class_annotations_off != 0) {
-            RandomInput in2 = in.duplicate(class_annotations_off);
+            RandomInput in2 = context.data(class_annotations_off);
             out.class_annotations = AnnotationSet.read(in2, context);
         } else {
             out.class_annotations = AnnotationSet.empty();
@@ -88,7 +88,7 @@ final class AnnotationsDirectory {
         for (int i = 0; i < annotated_fields_size; i++) {
             FieldId field = context.field(in.readInt());
             int field_annotations_off = in.readInt();
-            RandomInput in2 = in.duplicate(field_annotations_off);
+            RandomInput in2 = context.data(field_annotations_off);
             AnnotationSet field_annotations = AnnotationSet.read(in2, context);
             out.annotated_fields.put(field, field_annotations);
         }
@@ -96,7 +96,7 @@ final class AnnotationsDirectory {
         for (int i = 0; i < annotated_methods_size; i++) {
             MethodId method = context.method(in.readInt());
             int method_annotations_off = in.readInt();
-            RandomInput in2 = in.duplicate(method_annotations_off);
+            RandomInput in2 = context.data(method_annotations_off);
             AnnotationSet method_annotations = AnnotationSet.read(in2, context);
             out.annotated_methods.put(method, method_annotations);
         }
@@ -104,7 +104,7 @@ final class AnnotationsDirectory {
         for (int i = 0; i < annotated_parameters_size; i++) {
             MethodId method = context.method(in.readInt());
             int parameters_annotations_off = in.readInt();
-            RandomInput in2 = in.duplicate(parameters_annotations_off);
+            RandomInput in2 = context.data(parameters_annotations_off);
             AnnotationSetList parameters_annotations = AnnotationSetList.read(in2, context);
             out.annotated_parameters.put(method, parameters_annotations);
         }

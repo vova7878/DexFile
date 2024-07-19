@@ -23,6 +23,7 @@
 package com.v7878.dex;
 
 import com.v7878.dex.bytecode.Opcode;
+import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.util.SparseArray;
 
 // Temporary object. Needed to read dex
@@ -42,10 +43,27 @@ final class ReadContextImpl implements ReadContext {
 
     private final DexVersion dex_version;
 
-    public ReadContextImpl(ReadOptions options, DexVersion dex_version) {
+    private final RandomInput data_base;
+
+    private static RandomInput getDataBase(RandomInput in, DexVersion version, int data_off) {
+        if (version.isCompact()) {
+            // Note: start position of base should be 0
+            return in.slice(data_off);
+        }
+        return in;
+    }
+
+    public ReadContextImpl(RandomInput in, ReadOptions options, FileMap map) {
         this.options = options;
-        this.dex_version = dex_version;
+        this.dex_version = map.version;
         this.opcodes = Opcode.forContext(this);
+        // TODO: add a way to redirect data to another source (maybe from options...)
+        this.data_base = getDataBase(in, dex_version, map.data_off);
+    }
+
+    @Override
+    public RandomInput data(int offset) {
+        return data_base.duplicate(offset);
     }
 
     @Override

@@ -65,7 +65,7 @@ public final class Dex extends MutableList<ClassDef> {
     public static Dex read(RandomInput src, ReadOptions options, int[] class_def_ids) {
         RandomInput in = src.position() == 0 ? src : src.slice();
 
-        FileMap map = FileMap.read(in, options);
+        FileMap map = FileMap.readHeader(in, options);
 
         if (class_def_ids == null) {
             class_def_ids = new int[map.class_defs_size];
@@ -88,15 +88,16 @@ public final class Dex extends MutableList<ClassDef> {
             return new Dex();
         }
 
-        return readInternal(in, options, class_def_ids, map);
+        ReadContextImpl context = new ReadContextImpl(in, options, map);
+        map.readMap(context);
+
+        return readInternal(in, context, class_def_ids, map);
     }
 
-    private static Dex readInternal(RandomInput in, ReadOptions options,
+    private static Dex readInternal(RandomInput in, ReadContextImpl context,
                                     int[] class_def_ids, FileMap map) {
 
-        ReadContextImpl context = new ReadContextImpl(options, map.version);
-
-        context.setStrings(StringId.readArray(in.duplicate(map.string_ids_off), map.string_ids_size));
+        context.setStrings(StringId.readArray(in.duplicate(map.string_ids_off), context, map.string_ids_size));
         context.setTypes(TypeId.readArray(in.duplicate(map.type_ids_off), context, map.type_ids_size));
         context.setProtos(ProtoId.readArray(in.duplicate(map.proto_ids_off), context, map.proto_ids_size));
         context.setFields(FieldId.readArray(in.duplicate(map.field_ids_off), context, map.field_ids_size));
@@ -126,6 +127,11 @@ public final class Dex extends MutableList<ClassDef> {
     }
 
     private void writeInternal(RandomIO out, WriteOptions options) {
+        if (options.getDexVersion().isCompact()) {
+            //TODO: cdex writing
+            throw new UnsupportedOperationException("cdex writing unsupported yet");
+        }
+
         DataSet sections = new DataSet();
         collectData(sections);
 
@@ -163,7 +169,7 @@ public final class Dex extends MutableList<ClassDef> {
         CallSiteId.writeSection(context, out.duplicate(map.call_site_ids_off), context.callSites());
         MethodHandleItem.writeSection(context, out.duplicate(map.method_handles_off), context.methodHandles());
 
-        map.writeHeader(out, options, file_size);
+        map.writeHeader(out, file_size);
     }
 
     public ClassDef findClassDef(TypeId type) {

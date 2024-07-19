@@ -181,7 +181,7 @@ public final class ClassDef implements Mutable {
         int interfaces_off = in.readInt();
         TypeList interfaces = null;
         if (interfaces_off != 0) {
-            interfaces = TypeList.read(in.duplicate(interfaces_off), context);
+            interfaces = TypeList.read(context.data(interfaces_off), context);
         }
         int source_file_idx = in.readInt();
         String source_file = null;
@@ -191,7 +191,7 @@ public final class ClassDef implements Mutable {
         int annotations_off = in.readInt();
         AnnotationsDirectory annotations = AnnotationsDirectory.empty();
         if (annotations_off != 0) {
-            RandomInput in2 = in.duplicate(annotations_off);
+            RandomInput in2 = context.data(annotations_off);
             annotations = AnnotationsDirectory.read(in2, context);
         }
         AnnotationSet class_annotations = annotations.class_annotations;
@@ -199,13 +199,13 @@ public final class ClassDef implements Mutable {
         ArrayValue static_values = new ArrayValue();
         int static_values_off = in.readInt();
         if (static_values_off != 0) {
-            RandomInput in2 = in.duplicate(static_values_off);
+            RandomInput in2 = context.data(static_values_off);
             static_values = (ArrayValue) EncodedValue
                     .readValue(in2, context, EncodedValue.EncodedValueType.ARRAY);
         }
         ClassData class_data = null;
         if (class_data_off != 0) {
-            class_data = ClassData.read(in.duplicate(class_data_off),
+            class_data = ClassData.read(context.data(class_data_off),
                     context, static_values, annotations.annotated_fields,
                     annotations.annotated_methods, annotations.annotated_parameters);
         }
@@ -220,8 +220,9 @@ public final class ClassDef implements Mutable {
             if (id < 0) {
                 out[i] = out[~id];
             } else {
-                RandomInput in2 = in.duplicate(ClassDef.SIZE * id);
-                out[i] = ClassDef.read(in2, context);
+                RandomInput tmp = in.duplicate(in.position());
+                tmp.addPosition(id * ClassDef.SIZE);
+                out[i] = ClassDef.read(in, context);
             }
         }
         return out;

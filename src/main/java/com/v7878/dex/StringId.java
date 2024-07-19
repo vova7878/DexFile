@@ -36,15 +36,15 @@ public final class StringId {
 
     public static final Comparator<String> COMPARATOR = String::compareTo;
 
-    public static String read(RandomInput in) {
+    public static String read(RandomInput in, ReadContext context) {
         int data_off = in.readInt();
-        return in.duplicate(data_off).readMUTF8();
+        return context.data(data_off).readMUTF8();
     }
 
-    static String[] readArray(RandomInput in, int size) {
+    static String[] readArray(RandomInput in, ReadContext context, int size) {
         String[] out = new String[size];
         for (int i = 0; i < size; i++) {
-            out[i] = read(in);
+            out[i] = read(in, context);
         }
         return out;
     }
@@ -55,8 +55,8 @@ public final class StringId {
         data_out.writeMUtf8(value);
     }
 
-    static void writeSection(WriteContext context, FileMap map,
-                             RandomOutput ids_out, RandomOutput data_out, String[] strings) {
+    static void writeSection(WriteContext context, FileMap map, RandomOutput ids_out,
+                             RandomOutput data_out, String[] strings) {
         if (strings.length != 0) {
             map.string_data_items_off = (int) data_out.position();
             map.string_data_items_size = map.string_ids_size;

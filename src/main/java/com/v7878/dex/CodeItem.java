@@ -36,6 +36,7 @@ import java.util.Objects;
 public final class CodeItem implements Mutable {
 
     public static final int ALIGNMENT = 4;
+    public static final int COMPACT_ALIGNMENT = 2;
 
     private int registers_size;
     private int ins_size;
@@ -97,16 +98,73 @@ public final class CodeItem implements Mutable {
         return tries;
     }
 
+    private static final int kRegistersSizeShift = 12;
+    private static final int kInsSizeShift = 8;
+    private static final int kOutsSizeShift = 4;
+    private static final int kTriesSizeSizeShift = 0;
+    private static final int kInsnsSizeShift = 5;
+
+    private static final int kFlagPreHeaderRegistersSize = 0b00001;
+    private static final int kFlagPreHeaderInsSize = 0b00010;
+    private static final int kFlagPreHeaderOutsSize = 0b00100;
+    private static final int kFlagPreHeaderTriesSize = 0b01000;
+    private static final int kFlagPreHeaderInsnsSize = 0b10000;
+
+    private static int readUnsignedShortBackward(RandomInput in) {
+        in.addPosition(-2);
+        int out = in.readUnsignedShort();
+        in.addPosition(-2);
+        return out;
+    }
+
     public static CodeItem read(RandomInput in, ReadContext context) {
-        int registers_size = in.readUnsignedShort();
-        int ins_size = in.readUnsignedShort();
-        int outs_size = in.readUnsignedShort();
-        int tries_size = in.readUnsignedShort();
-        in.readInt(); //TODO: out.debug_info_off = in.readInt();
+        int registers_size;
+        int ins_size;
+        int outs_size;
+        int tries_size;
+        int insns_count; // in 2-byte code units
 
-        CodeItem out = new CodeItem(registers_size, ins_size, outs_size, null, null);
+        if (context.getDexVersion().isCompact()) {
+            RandomInput preheader = in.duplicate(in.position());
 
-        out.insns = Instruction.readArray(in, context);
+            int fields = in.readUnsignedShort();
+            int insns_count_and_flags = in.readUnsignedShort();
+
+            insns_count = insns_count_and_flags >> kInsnsSizeShift;
+            registers_size = (fields >> kRegistersSizeShift) & 0xF;
+            ins_size = (fields >> kInsSizeShift) & 0xF;
+            outs_size = (fields >> kOutsSizeShift) & 0xF;
+            tries_size = (fields >> kTriesSizeSizeShift) & 0xF;
+
+            if ((insns_count_and_flags & kFlagPreHeaderInsnsSize) != 0) {
+                insns_count += readUnsignedShortBackward(preheader) +
+                        (readUnsignedShortBackward(preheader) << 16);
+            }
+            if ((insns_count_and_flags & kFlagPreHeaderRegistersSize) != 0) {
+                registers_size += readUnsignedShortBackward(preheader);
+            }
+            if ((insns_count_and_flags & kFlagPreHeaderInsSize) != 0) {
+                ins_size += readUnsignedShortBackward(preheader);
+            }
+            if ((insns_count_and_flags & kFlagPreHeaderOutsSize) != 0) {
+                outs_size += readUnsignedShortBackward(preheader);
+            }
+            if ((insns_count_and_flags & kFlagPreHeaderTriesSize) != 0) {
+                tries_size += readUnsignedShortBackward(preheader);
+            }
+
+            registers_size += ins_size;
+        } else {
+            registers_size = in.readUnsignedShort();
+            ins_size = in.readUnsignedShort();
+            outs_size = in.readUnsignedShort();
+            tries_size = in.readUnsignedShort();
+            in.readInt(); //TODO: debug_info_off = in.readInt();
+            insns_count = in.readInt();
+        }
+
+        CodeItem out = new CodeItem(registers_size, ins_size, outs_size,
+                Instruction.readArray(in, context, insns_count), null);
 
         if (tries_size > 0) {
             in.alignPosition(TryItem.ALIGNMENT);
@@ -186,6 +244,7 @@ public final class CodeItem implements Mutable {
                 tmp.write(context, out);
                 handlers.replace(tmp, handler_offset);
             }
+
             for (TryItem tmp : tries) {
                 tmp.write(tries_out, handlers);
             }
@@ -194,13 +253,14 @@ public final class CodeItem implements Mutable {
 
     static void writeSection(WriteContextImpl context, FileMap map,
                              RandomOutput out, CodeItem[] code_items) {
+        int alignment = context.getDexVersion().isCompact() ? COMPACT_ALIGNMENT : ALIGNMENT;
         if (code_items.length != 0) {
-            out.alignPosition(CodeItem.ALIGNMENT);
+            out.alignPosition(alignment);
             map.code_items_off = (int) out.position();
             map.code_items_size = code_items.length;
         }
         for (CodeItem tmp : code_items) {
-            out.alignPosition(CodeItem.ALIGNMENT);
+            out.alignPosition(alignment);
             int start = (int) out.position();
             tmp.write(context, out);
             context.addCodeItem(tmp, start);
