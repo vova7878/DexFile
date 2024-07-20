@@ -226,7 +226,7 @@ public final class CodeItem implements Mutable {
         if (tries_size != 0) {
             tries.sort(TryItem.COMPARATOR);
 
-            out.alignPositionAndFillZeros(TryItem.ALIGNMENT);
+            out.fillZerosToAlignment(TryItem.ALIGNMENT);
 
             RandomOutput tries_out = out.duplicate(out.position());
             out.addPosition((long) TryItem.SIZE * tries_size);

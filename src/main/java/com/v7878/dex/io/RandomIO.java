@@ -69,8 +69,8 @@ class OffsetIO implements RandomIO {
     }
 
     @Override
-    public long position(long new_position) {
-        return delegate.position(Math.addExact(new_position, offset)) - offset;
+    public void position(long new_position) {
+        delegate.position(Math.addExact(new_position, offset));
     }
 
     @Override
@@ -85,12 +85,12 @@ public interface RandomIO extends RandomInput, RandomOutput {
         return getByteOrder() == ByteOrder.BIG_ENDIAN;
     }
 
-    default long addPosition(long delta) {
-        return position(Math.addExact(position(), delta));
+    default void addPosition(long delta) {
+        position(Math.addExact(position(), delta));
     }
 
-    default long alignPosition(long alignment) {
-        return position(roundUpL(position(), alignment));
+    default void alignPosition(long alignment) {
+        position(roundUpL(position(), alignment));
     }
 
     default void requireAlignment(int alignment) {

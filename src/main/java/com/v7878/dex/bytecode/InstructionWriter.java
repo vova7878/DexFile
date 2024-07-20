@@ -311,6 +311,6 @@ class InstructionWriter {
         out.writeShort(element_width);
         out.writeInt(data.length / element_width);
         out.writeByteArray(data);
-        out.alignPositionAndFillZeros(2); // unit size
+        out.fillZerosToAlignment(2); // unit size
     }
 }

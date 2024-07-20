@@ -117,13 +117,15 @@ public class ByteArrayIO implements RandomIO {
 
     @Override
     public void writeByte(int value) {
-        int index = (int) addPosition(1);
+        int index = offset;
+        position(index + 1);
         arr.data()[index] = (byte) value;
     }
 
     @Override
     public byte readByte() {
-        int index = (int) addPosition(1);
+        int index = offset;
+        position(index + 1);
         return arr.data()[index];
     }
 
@@ -142,12 +144,10 @@ public class ByteArrayIO implements RandomIO {
     }
 
     @Override
-    public long position(long new_position) {
+    public void position(long new_position) {
         Checks.checkRange(new_position, 0, Integer.MAX_VALUE);
         arr.ensureSize((int) new_position);
-        long tmp = offset;
         offset = (int) new_position;
-        return tmp;
     }
 
     @Override
