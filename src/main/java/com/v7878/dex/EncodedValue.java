@@ -119,7 +119,6 @@ public interface EncodedValue extends Mutable {
     EncodedValue mutate();
 
     static EncodedValue defaultValue(TypeId type) {
-        // V - void
         return switch (type.getShorty()) {
             case 'Z' -> new BooleanValue();
             case 'B' -> new ByteValue();
@@ -130,6 +129,7 @@ public interface EncodedValue extends Mutable {
             case 'F' -> new FloatValue();
             case 'D' -> new DoubleValue();
             case 'L' -> new NullValue();
+            // V - void
             default -> throw new IllegalArgumentException();
         };
     }
