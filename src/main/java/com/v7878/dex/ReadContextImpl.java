@@ -124,16 +124,19 @@ final class ReadContextImpl implements ReadContext {
         return out;
     }
 
+    private static <T> IntFunction<T> cachedReader(T[] array, IntFunction<T> reader) {
+        return i -> {
+            var value = array[i];
+            return value == null ? array[i] = reader.apply(i) : value;
+        };
+    }
+
     public void initStrings(String[] strings) {
         this.strings = i -> strings[i];
     }
 
     public void initStrings(int count, IntFunction<String> reader) {
-        var array = new String[count];
-        this.strings = i -> {
-            var value = array[i];
-            return value == null ? array[i] = reader.apply(i) : value;
-        };
+        this.strings = cachedReader(new String[count], reader);
     }
 
     public void initTypes(TypeId[] types) {
@@ -141,11 +144,7 @@ final class ReadContextImpl implements ReadContext {
     }
 
     public void initTypes(int count, IntFunction<TypeId> reader) {
-        var array = new TypeId[count];
-        this.types = i -> {
-            var value = array[i];
-            return value == null ? array[i] = reader.apply(i) : value;
-        };
+        this.types = cachedReader(new TypeId[count], reader);
     }
 
     public void initProtos(ProtoId[] protos) {
@@ -153,11 +152,7 @@ final class ReadContextImpl implements ReadContext {
     }
 
     public void initProtos(int count, IntFunction<ProtoId> reader) {
-        var array = new ProtoId[count];
-        this.protos = i -> {
-            var value = array[i];
-            return value == null ? array[i] = reader.apply(i) : value;
-        };
+        this.protos = cachedReader(new ProtoId[count], reader);
     }
 
     public void initFields(FieldId[] fields) {
@@ -165,11 +160,7 @@ final class ReadContextImpl implements ReadContext {
     }
 
     public void initFields(int count, IntFunction<FieldId> reader) {
-        var array = new FieldId[count];
-        this.fields = i -> {
-            var value = array[i];
-            return value == null ? array[i] = reader.apply(i) : value;
-        };
+        this.fields = cachedReader(new FieldId[count], reader);
     }
 
     public void initMethods(MethodId[] methods) {
@@ -177,11 +168,7 @@ final class ReadContextImpl implements ReadContext {
     }
 
     public void initMethods(int count, IntFunction<MethodId> reader) {
-        var array = new MethodId[count];
-        this.methods = i -> {
-            var value = array[i];
-            return value == null ? array[i] = reader.apply(i) : value;
-        };
+        this.methods = cachedReader(new MethodId[count], reader);
     }
 
     public void initMethodHandles(MethodHandleItem[] method_handles) {
@@ -189,11 +176,7 @@ final class ReadContextImpl implements ReadContext {
     }
 
     public void initMethodHandles(int count, IntFunction<MethodHandleItem> reader) {
-        var array = new MethodHandleItem[count];
-        this.method_handles = i -> {
-            var value = array[i];
-            return value == null ? array[i] = reader.apply(i) : value;
-        };
+        this.method_handles = cachedReader(new MethodHandleItem[count], reader);
     }
 
     public void initCallSites(CallSiteId[] call_sites) {
@@ -201,10 +184,6 @@ final class ReadContextImpl implements ReadContext {
     }
 
     public void initCallSites(int count, IntFunction<CallSiteId> reader) {
-        var array = new CallSiteId[count];
-        this.call_sites = i -> {
-            var value = array[i];
-            return value == null ? array[i] = reader.apply(i) : value;
-        };
+        this.call_sites = cachedReader(new CallSiteId[count], reader);
     }
 }
