@@ -106,6 +106,11 @@ public final class ProtoId implements Mutable {
         return out;
     }
 
+    static ProtoId readInArray(RandomInput in, ReadContext context, int index) {
+        in.addPosition((long) index * SIZE);
+        return read(in, context);
+    }
+
     public void collectData(DataCollector data) {
         data.add(getShorty());
         data.add(return_type);

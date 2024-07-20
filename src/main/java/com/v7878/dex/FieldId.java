@@ -91,6 +91,11 @@ public final class FieldId extends FieldOrMethodId {
         return out;
     }
 
+    static FieldId readInArray(RandomInput in, ReadContext context, int index) {
+        in.addPosition((long) index * SIZE);
+        return read(in, context);
+    }
+
     @Override
     public void collectData(DataCollector data) {
         data.add(type);

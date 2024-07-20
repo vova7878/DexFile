@@ -97,13 +97,24 @@ public final class Dex extends MutableList<ClassDef> {
     private static Dex readInternal(RandomInput in, ReadContextImpl context,
                                     int[] class_def_ids, FileMap map) {
 
-        context.setStrings(StringId.readArray(in.duplicate(map.string_ids_off), context, map.string_ids_size));
-        context.setTypes(TypeId.readArray(in.duplicate(map.type_ids_off), context, map.type_ids_size));
-        context.setProtos(ProtoId.readArray(in.duplicate(map.proto_ids_off), context, map.proto_ids_size));
-        context.setFields(FieldId.readArray(in.duplicate(map.field_ids_off), context, map.field_ids_size));
-        context.setMethods(MethodId.readArray(in.duplicate(map.method_ids_off), context, map.method_ids_size));
-        context.setMethodHandles(MethodHandleItem.readArray(in.duplicate(map.method_handles_off), context, map.method_handles_size));
-        context.setCallSites(CallSiteId.readArray(in.duplicate(map.call_site_ids_off), context, map.call_site_ids_size));
+        //TODO: add option
+        if (true) {
+            context.initStrings(map.string_ids_size, i -> StringId.readInArray(in.duplicate(map.string_ids_off), context, i));
+            context.initTypes(map.type_ids_size, i -> TypeId.readInArray(in.duplicate(map.type_ids_off), context, i));
+            context.initProtos(map.proto_ids_size, i -> ProtoId.readInArray(in.duplicate(map.proto_ids_off), context, i));
+            context.initFields(map.field_ids_size, i -> FieldId.readInArray(in.duplicate(map.field_ids_off), context, i));
+            context.initMethods(map.method_ids_size, i -> MethodId.readInArray(in.duplicate(map.method_ids_off), context, i));
+            context.initMethodHandles(map.method_handles_size, i -> MethodHandleItem.readInArray(in.duplicate(map.method_handles_off), context, i));
+            context.initCallSites(map.call_site_ids_size, i -> CallSiteId.readInArray(in.duplicate(map.call_site_ids_off), context, i));
+        } else {
+            context.initStrings(StringId.readArray(in.duplicate(map.string_ids_off), context, map.string_ids_size));
+            context.initTypes(TypeId.readArray(in.duplicate(map.type_ids_off), context, map.type_ids_size));
+            context.initProtos(ProtoId.readArray(in.duplicate(map.proto_ids_off), context, map.proto_ids_size));
+            context.initFields(FieldId.readArray(in.duplicate(map.field_ids_off), context, map.field_ids_size));
+            context.initMethods(MethodId.readArray(in.duplicate(map.method_ids_off), context, map.method_ids_size));
+            context.initMethodHandles(MethodHandleItem.readArray(in.duplicate(map.method_handles_off), context, map.method_handles_size));
+            context.initCallSites(CallSiteId.readArray(in.duplicate(map.call_site_ids_off), context, map.call_site_ids_size));
+        }
         ClassDef[] class_defs = ClassDef.readArray(in.duplicate(map.class_defs_off), context, class_def_ids);
 
         return new Dex(class_defs);

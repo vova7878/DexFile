@@ -139,6 +139,11 @@ public final class MethodHandleItem implements Mutable {
         return out;
     }
 
+    static MethodHandleItem readInArray(RandomInput in, ReadContext context, int index) {
+        in.addPosition((long) index * SIZE);
+        return read(in, context);
+    }
+
     public void collectData(DataCollector data) {
         if (type.isMethodAccess()) {
             data.add((MethodId) field_or_method);

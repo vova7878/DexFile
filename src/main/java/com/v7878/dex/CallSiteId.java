@@ -65,6 +65,11 @@ public final class CallSiteId implements Mutable {
         return out;
     }
 
+    static CallSiteId readInArray(RandomInput in, ReadContext context, int index) {
+        in.addPosition((long) index * SIZE);
+        return read(in, context);
+    }
+
     public void collectData(DataCollector data) {
         data.add(value);
     }

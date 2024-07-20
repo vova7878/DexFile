@@ -50,6 +50,11 @@ public final class StringId {
         return out;
     }
 
+    static String readInArray(RandomInput in, ReadContext context, int index) {
+        in.addPosition((long) index * SIZE);
+        return read(in, context);
+    }
+
     public static void write(String value, WriteContext context,
                              RandomOutput ids_out, RandomOutput data_out) {
         ids_out.writeInt((int) data_out.position());

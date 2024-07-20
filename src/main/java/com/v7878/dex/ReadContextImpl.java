@@ -26,16 +26,18 @@ import com.v7878.dex.bytecode.Opcode;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.util.SparseArray;
 
+import java.util.function.IntFunction;
+
 // Temporary object. Needed to read dex
 final class ReadContextImpl implements ReadContext {
 
-    private String[] strings;
-    private TypeId[] types;
-    private ProtoId[] protos;
-    private FieldId[] fields;
-    private MethodId[] methods;
-    private MethodHandleItem[] method_handles;
-    private CallSiteId[] call_sites;
+    private IntFunction<String> strings;
+    private IntFunction<TypeId> types;
+    private IntFunction<ProtoId> protos;
+    private IntFunction<FieldId> fields;
+    private IntFunction<MethodId> methods;
+    private IntFunction<MethodHandleItem> method_handles;
+    private IntFunction<CallSiteId> call_sites;
 
     private final SparseArray<Opcode> opcodes;
 
@@ -80,37 +82,37 @@ final class ReadContextImpl implements ReadContext {
 
     @Override
     public String string(int index) {
-        return strings[index];
+        return strings.apply(index);
     }
 
     @Override
     public TypeId type(int index) {
-        return types[index];
+        return types.apply(index);
     }
 
     @Override
     public ProtoId proto(int index) {
-        return protos[index];
+        return protos.apply(index);
     }
 
     @Override
     public FieldId field(int index) {
-        return fields[index];
+        return fields.apply(index);
     }
 
     @Override
     public MethodId method(int index) {
-        return methods[index];
+        return methods.apply(index);
     }
 
     @Override
     public MethodHandleItem method_handle(int index) {
-        return method_handles[index];
+        return method_handles.apply(index);
     }
 
     @Override
     public CallSiteId call_site(int index) {
-        return call_sites[index];
+        return call_sites.apply(index);
     }
 
     @Override
@@ -122,31 +124,87 @@ final class ReadContextImpl implements ReadContext {
         return out;
     }
 
-    public void setStrings(String[] strings) {
-        this.strings = strings;
+    public void initStrings(String[] strings) {
+        this.strings = i -> strings[i];
     }
 
-    public void setTypes(TypeId[] types) {
-        this.types = types;
+    public void initStrings(int count, IntFunction<String> reader) {
+        var array = new String[count];
+        this.strings = i -> {
+            var value = array[i];
+            return value == null ? array[i] = reader.apply(i) : value;
+        };
     }
 
-    public void setProtos(ProtoId[] protos) {
-        this.protos = protos;
+    public void initTypes(TypeId[] types) {
+        this.types = i -> types[i];
     }
 
-    public void setFields(FieldId[] fields) {
-        this.fields = fields;
+    public void initTypes(int count, IntFunction<TypeId> reader) {
+        var array = new TypeId[count];
+        this.types = i -> {
+            var value = array[i];
+            return value == null ? array[i] = reader.apply(i) : value;
+        };
     }
 
-    public void setMethods(MethodId[] methods) {
-        this.methods = methods;
+    public void initProtos(ProtoId[] protos) {
+        this.protos = i -> protos[i];
     }
 
-    public void setMethodHandles(MethodHandleItem[] method_handles) {
-        this.method_handles = method_handles;
+    public void initProtos(int count, IntFunction<ProtoId> reader) {
+        var array = new ProtoId[count];
+        this.protos = i -> {
+            var value = array[i];
+            return value == null ? array[i] = reader.apply(i) : value;
+        };
     }
 
-    public void setCallSites(CallSiteId[] call_sites) {
-        this.call_sites = call_sites;
+    public void initFields(FieldId[] fields) {
+        this.fields = i -> fields[i];
+    }
+
+    public void initFields(int count, IntFunction<FieldId> reader) {
+        var array = new FieldId[count];
+        this.fields = i -> {
+            var value = array[i];
+            return value == null ? array[i] = reader.apply(i) : value;
+        };
+    }
+
+    public void initMethods(MethodId[] methods) {
+        this.methods = i -> methods[i];
+    }
+
+    public void initMethods(int count, IntFunction<MethodId> reader) {
+        var array = new MethodId[count];
+        this.methods = i -> {
+            var value = array[i];
+            return value == null ? array[i] = reader.apply(i) : value;
+        };
+    }
+
+    public void initMethodHandles(MethodHandleItem[] method_handles) {
+        this.method_handles = i -> method_handles[i];
+    }
+
+    public void initMethodHandles(int count, IntFunction<MethodHandleItem> reader) {
+        var array = new MethodHandleItem[count];
+        this.method_handles = i -> {
+            var value = array[i];
+            return value == null ? array[i] = reader.apply(i) : value;
+        };
+    }
+
+    public void initCallSites(CallSiteId[] call_sites) {
+        this.call_sites = i -> call_sites[i];
+    }
+
+    public void initCallSites(int count, IntFunction<CallSiteId> reader) {
+        var array = new CallSiteId[count];
+        this.call_sites = i -> {
+            var value = array[i];
+            return value == null ? array[i] = reader.apply(i) : value;
+        };
     }
 }

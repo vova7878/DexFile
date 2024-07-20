@@ -78,6 +78,11 @@ public final class MethodId extends FieldOrMethodId {
         return out;
     }
 
+    static MethodId readInArray(RandomInput in, ReadContext context, int index) {
+        in.addPosition((long) index * SIZE);
+        return read(in, context);
+    }
+
     @Override
     public void collectData(DataCollector data) {
         data.add(proto);

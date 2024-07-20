@@ -123,6 +123,11 @@ public final class TypeId implements Mutable {
         return out;
     }
 
+    static TypeId readInArray(RandomInput in, ReadContext context, int index) {
+        in.addPosition((long) index * SIZE);
+        return read(in, context);
+    }
+
     public void collectData(DataCollector data) {
         data.add(descriptor);
     }
