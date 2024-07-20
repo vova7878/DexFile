@@ -45,20 +45,22 @@ final class ReadContextImpl implements ReadContext {
 
     private final RandomInput data_base;
 
-    private static RandomInput getDataBase(RandomInput in, DexVersion version, int data_off) {
-        if (version.isCompact()) {
-            // Note: start position of base should be 0
-            return in.slice(data_off);
+    private static RandomInput getDataBase(RandomInput in, ReadOptions options, DexVersion version, int data_off) {
+        RandomInput base = options.getRedirectedDataBase();
+        if (base == null) {
+            base = version.isCompact() ? in.duplicate(data_off) : in;
         }
-        return in;
+        if (base.position() != 0) {
+            base = base.slice();
+        }
+        return base;
     }
 
     public ReadContextImpl(RandomInput in, ReadOptions options, FileMap map) {
         this.options = options;
         this.dex_version = map.version;
         this.opcodes = Opcode.forContext(this);
-        // TODO: add a way to redirect data to another source (maybe from options...)
-        this.data_base = getDataBase(in, dex_version, map.data_off);
+        this.data_base = getDataBase(in, options, dex_version, map.data_off);
     }
 
     @Override

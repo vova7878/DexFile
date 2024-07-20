@@ -13,7 +13,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
 
     private WriteOptions() {
         super();
-        version = DexVersion.forApi(targetApi);
+        this.version = DexVersion.forApi(targetApi);
     }
 
     @Override
