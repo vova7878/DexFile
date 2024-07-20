@@ -66,6 +66,24 @@ public final class ClassData implements Mutable {
         return instance_fields;
     }
 
+    private EncodedField findField(boolean static_, FieldId field) {
+        var fields = static_ ? static_fields : instance_fields;
+        for (var tmp : fields) {
+            if (tmp.getField().equals(field)) {
+                return tmp;
+            }
+        }
+        return null;
+    }
+
+    public EncodedField findStaticField(FieldId field) {
+        return findField(true, field);
+    }
+
+    public EncodedField findInstanceField(FieldId field) {
+        return findField(false, field);
+    }
+
     public void setDirectMethods(Collection<EncodedMethod> direct_methods) {
         this.direct_methods = direct_methods == null
                 ? MutableList.empty() : new MutableList<>(direct_methods);
@@ -82,6 +100,24 @@ public final class ClassData implements Mutable {
 
     public MutableList<EncodedMethod> getVirtualMethods() {
         return virtual_methods;
+    }
+
+    private EncodedMethod findMethod(boolean direct, MethodId method) {
+        var methods = direct ? direct_methods : virtual_methods;
+        for (var tmp : methods) {
+            if (tmp.getMethod().equals(method)) {
+                return tmp;
+            }
+        }
+        return null;
+    }
+
+    public EncodedMethod findDirectMethod(MethodId method) {
+        return findMethod(true, method);
+    }
+
+    public EncodedMethod findVirtualMethod(MethodId method) {
+        return findMethod(false, method);
     }
 
     public boolean isEmpty() {
