@@ -75,7 +75,7 @@ class OffsetIO implements RandomIO {
 
     @Override
     public RandomIO duplicate() {
-        return new OffsetIO(delegate.duplicate(offset), offset);
+        return new OffsetIO(delegate, offset);
     }
 }
 

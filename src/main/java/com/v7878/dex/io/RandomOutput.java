@@ -74,7 +74,7 @@ class OffsetOutput implements RandomOutput {
 
     @Override
     public RandomOutput duplicate() {
-        return new OffsetOutput(delegate.duplicate(offset), offset);
+        return new OffsetOutput(delegate, offset);
     }
 }
 

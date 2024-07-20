@@ -73,7 +73,7 @@ class OffsetInput implements RandomInput {
 
     @Override
     public RandomInput duplicate() {
-        return new OffsetInput(delegate.duplicate(offset), offset);
+        return new OffsetInput(delegate, offset);
     }
 }
 
