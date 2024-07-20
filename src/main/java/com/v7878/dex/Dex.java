@@ -96,9 +96,7 @@ public final class Dex extends MutableList<ClassDef> {
 
     private static Dex readInternal(RandomInput in, ReadContextImpl context,
                                     int[] class_def_ids, FileMap map) {
-
-        //TODO: add option
-        if (true) {
+        if (context.getOptions().isLazyReading()) {
             context.initStrings(map.string_ids_size, i -> StringId.readInArray(in.duplicate(map.string_ids_off), context, i));
             context.initTypes(map.type_ids_size, i -> TypeId.readInArray(in.duplicate(map.type_ids_off), context, i));
             context.initProtos(map.proto_ids_size, i -> ProtoId.readInArray(in.duplicate(map.proto_ids_off), context, i));
@@ -115,6 +113,7 @@ public final class Dex extends MutableList<ClassDef> {
             context.initMethodHandles(MethodHandleItem.readArray(in.duplicate(map.method_handles_off), context, map.method_handles_size));
             context.initCallSites(CallSiteId.readArray(in.duplicate(map.call_site_ids_off), context, map.call_site_ids_size));
         }
+
         ClassDef[] class_defs = ClassDef.readArray(in.duplicate(map.class_defs_off), context, class_def_ids);
 
         return new Dex(class_defs);
