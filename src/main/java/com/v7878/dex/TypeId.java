@@ -162,6 +162,7 @@ public final class TypeId implements Mutable {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         if (obj instanceof TypeId) {
             TypeId tobj = (TypeId) obj;
             return Objects.equals(descriptor, tobj.descriptor);

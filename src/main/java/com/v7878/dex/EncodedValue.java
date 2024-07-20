@@ -514,6 +514,7 @@ public interface EncodedValue extends Mutable {
 
         @Override
         public boolean equals(Object obj) {
+            if (obj == this) return true;
             if (obj instanceof SimpleValue) {
                 EncodedValue evobj = (EncodedValue) obj;
                 return type() == evobj.type()
@@ -1201,8 +1202,11 @@ public interface EncodedValue extends Mutable {
             return true;
         }
 
+        // hashcode from super
+
         @Override
         public boolean equals(Object obj) {
+            if (obj == this) return true;
             if (obj instanceof ArrayValue) {
                 return super.equals(obj);
             }

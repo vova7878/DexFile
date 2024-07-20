@@ -77,6 +77,7 @@ public final class CatchHandlerElement implements Mutable {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         if (obj instanceof CatchHandlerElement) {
             CatchHandlerElement eobj = (CatchHandlerElement) obj;
             return address == eobj.address

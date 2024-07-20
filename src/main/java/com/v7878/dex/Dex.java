@@ -193,6 +193,7 @@ public final class Dex extends MutableList<ClassDef> {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         return obj instanceof Dex && super.equals(obj);
     }
 

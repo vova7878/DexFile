@@ -103,6 +103,7 @@ public final class MethodId extends FieldOrMethodId {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         if (!super.equals(obj)) {
             return false;
         }

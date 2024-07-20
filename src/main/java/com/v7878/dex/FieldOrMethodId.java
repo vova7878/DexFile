@@ -58,6 +58,7 @@ public abstract class FieldOrMethodId implements Mutable {
 
     @Override
     public boolean equals(Object obj) {
+        // Note: "this" check in inherited classes
         if (obj instanceof FieldOrMethodId) {
             FieldOrMethodId fmobj = (FieldOrMethodId) obj;
             return Objects.equals(declaring_class, fmobj.declaring_class)

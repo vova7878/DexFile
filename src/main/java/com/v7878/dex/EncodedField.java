@@ -190,6 +190,7 @@ public final class EncodedField implements Mutable {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         if (obj instanceof EncodedField) {
             EncodedField efobj = (EncodedField) obj;
             return access_flags == efobj.access_flags

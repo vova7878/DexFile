@@ -291,6 +291,7 @@ public final class ClassDef implements Mutable {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         if (obj instanceof ClassDef) {
             ClassDef cdobj = (ClassDef) obj;
             return access_flags == cdobj.access_flags

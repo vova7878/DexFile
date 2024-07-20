@@ -107,6 +107,7 @@ public final class CatchHandler implements Mutable {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         if (obj instanceof CatchHandler) {
             CatchHandler chobj = (CatchHandler) obj;
             return Objects.equals(catch_all_addr, chobj.catch_all_addr)

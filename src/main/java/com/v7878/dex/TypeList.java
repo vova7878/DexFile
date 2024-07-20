@@ -105,6 +105,7 @@ public final class TypeList extends MutableList<TypeId> {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         return obj instanceof TypeList && super.equals(obj);
     }
 

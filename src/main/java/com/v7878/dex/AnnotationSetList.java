@@ -121,6 +121,7 @@ public final class AnnotationSetList extends MutableList<AnnotationSet> {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         return obj instanceof AnnotationSetList && super.equals(obj);
     }
 

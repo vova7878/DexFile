@@ -269,6 +269,7 @@ public final class CodeItem implements Mutable {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         if (obj instanceof CodeItem) {
             CodeItem ciobj = (CodeItem) obj;
             return registers_size == ciobj.registers_size

@@ -134,6 +134,7 @@ public final class ProtoId implements Mutable {
 
     @Override
     public boolean equals(Object obj) {
+        if (obj == this) return true;
         if (obj instanceof ProtoId) {
             ProtoId pobj = (ProtoId) obj;
             return Objects.equals(return_type, pobj.return_type)
