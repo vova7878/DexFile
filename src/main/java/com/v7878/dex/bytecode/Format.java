@@ -91,11 +91,9 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode());
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode());
             }
 
             @Override
@@ -151,12 +149,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && A == iobj.A && B == iobj.B;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && A == iobj.A && B == iobj.B;
             }
 
             @Override
@@ -212,12 +208,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && A == iobj.A && sB == iobj.sB;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && A == iobj.A && sB == iobj.sB;
             }
 
             @Override
@@ -272,12 +266,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AA == iobj.AA;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AA == iobj.AA;
             }
 
             @Override
@@ -332,12 +324,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && sAA == iobj.sAA;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && sAA == iobj.sAA;
             }
 
             @Override
@@ -393,12 +383,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && sAAAA == iobj.sAAAA;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && sAAAA == iobj.sAAAA;
             }
 
             @Override
@@ -456,12 +444,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AA == iobj.AA && BBBB == iobj.BBBB;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AA == iobj.AA && BBBB == iobj.BBBB;
             }
 
             @Override
@@ -519,12 +505,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AA == iobj.AA && sBBBB == iobj.sBBBB;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AA == iobj.AA && sBBBB == iobj.sBBBB;
             }
 
             @Override
@@ -582,12 +566,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AA == iobj.AA && sBBBB0000 == iobj.sBBBB0000;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AA == iobj.AA && sBBBB0000 == iobj.sBBBB0000;
             }
 
             @Override
@@ -646,12 +628,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode()) && AA == iobj.AA
-                            && sBBBB000000000000 == iobj.sBBBB000000000000;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode()) && AA == iobj.AA
+                        && sBBBB000000000000 == iobj.sBBBB000000000000;
             }
 
             @Override
@@ -717,12 +697,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AA == iobj.AA && Objects.equals(cBBBB, iobj.cBBBB);
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AA == iobj.AA && Objects.equals(cBBBB, iobj.cBBBB);
             }
 
             @Override
@@ -791,13 +769,11 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && A == iobj.A && B == iobj.B
-                            && Objects.equals(cCCCC, iobj.cCCCC);
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && A == iobj.A && B == iobj.B
+                        && Objects.equals(cCCCC, iobj.cCCCC);
             }
 
             @Override
@@ -857,12 +833,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AA == iobj.AA && BB == iobj.BB && CC == iobj.CC;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AA == iobj.AA && BB == iobj.BB && CC == iobj.CC;
             }
 
             @Override
@@ -921,12 +895,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AA == iobj.AA && BB == iobj.BB && sCC == iobj.sCC;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AA == iobj.AA && BB == iobj.BB && sCC == iobj.sCC;
             }
 
             @Override
@@ -985,12 +957,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && A == iobj.A && B == iobj.B && sCCCC == iobj.sCCCC;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && A == iobj.A && B == iobj.B && sCCCC == iobj.sCCCC;
             }
 
             @Override
@@ -1047,12 +1017,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && sAAAAAAAA == iobj.sAAAAAAAA;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && sAAAAAAAA == iobj.sAAAAAAAA;
             }
 
             @Override
@@ -1111,12 +1079,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AAAA == iobj.AAAA && BBBB == iobj.BBBB;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AAAA == iobj.AAAA && BBBB == iobj.BBBB;
             }
 
             @Override
@@ -1175,12 +1141,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AA == iobj.AA && sBBBBBBBB == iobj.sBBBBBBBB;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AA == iobj.AA && sBBBBBBBB == iobj.sBBBBBBBB;
             }
 
             @Override
@@ -1248,12 +1212,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode()) && AA == iobj.AA
-                            && Objects.equals(cBBBBBBBB, iobj.cBBBBBBBB);
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode()) && AA == iobj.AA
+                        && Objects.equals(cBBBBBBBB, iobj.cBBBBBBBB);
             }
 
             @Override
@@ -1330,14 +1292,12 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && A == iobj.A && Objects.equals(cBBBB, iobj.cBBBB)
-                            && C == iobj.C && D == iobj.D && E == iobj.E
-                            && F == iobj.F && G == iobj.G;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && A == iobj.A && Objects.equals(cBBBB, iobj.cBBBB)
+                        && C == iobj.C && D == iobj.D && E == iobj.E
+                        && F == iobj.F && G == iobj.G;
             }
 
             @Override
@@ -1414,12 +1374,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode()) && AA == iobj.AA
-                            && Objects.equals(cBBBB, iobj.cBBBB) && CCCC == iobj.CCCC;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode()) && AA == iobj.AA
+                        && Objects.equals(cBBBB, iobj.cBBBB) && CCCC == iobj.CCCC;
             }
 
             @Override
@@ -1498,14 +1456,12 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && A == iobj.A && Objects.equals(cBBBB, iobj.cBBBB)
-                            && C == iobj.C && D == iobj.D && E == iobj.E
-                            && F == iobj.F && G == iobj.G && Objects.equals(cHHHH, iobj.cHHHH);
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && A == iobj.A && Objects.equals(cBBBB, iobj.cBBBB)
+                        && C == iobj.C && D == iobj.D && E == iobj.E
+                        && F == iobj.F && G == iobj.G && Objects.equals(cHHHH, iobj.cHHHH);
             }
 
             @Override
@@ -1590,13 +1546,11 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode()) && AA == iobj.AA
-                            && Objects.equals(cBBBB, iobj.cBBBB) && CCCC == iobj.CCCC
-                            && Objects.equals(cHHHH, iobj.cHHHH);
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode()) && AA == iobj.AA
+                        && Objects.equals(cBBBB, iobj.cBBBB) && CCCC == iobj.CCCC
+                        && Objects.equals(cHHHH, iobj.cHHHH);
             }
 
             @Override
@@ -1660,12 +1614,10 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && AA == iobj.AA && sBBBBBBBBBBBBBBBB == iobj.sBBBBBBBBBBBBBBBB;
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && AA == iobj.AA && sBBBBBBBBBBBBBBBB == iobj.sBBBBBBBBBBBBBBBB;
             }
 
             @Override
@@ -1734,13 +1686,11 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && first_key == iobj.first_key
-                            && Arrays.equals(targets, iobj.targets);
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && first_key == iobj.first_key
+                        && Arrays.equals(targets, iobj.targets);
             }
 
             @Override
@@ -1811,13 +1761,11 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && Arrays.equals(keys, iobj.keys)
-                            && Arrays.equals(targets, iobj.targets);
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && Arrays.equals(keys, iobj.keys)
+                        && Arrays.equals(targets, iobj.targets);
             }
 
             @Override
@@ -1888,13 +1836,11 @@ public abstract class Format {
 
             @Override
             public boolean equals(Object obj) {
-                if (obj instanceof Instance) {
-                    Instance iobj = (Instance) obj;
-                    return Objects.equals(opcode(), iobj.opcode())
-                            && element_width == iobj.element_width
-                            && Arrays.equals(data, iobj.data);
-                }
-                return false;
+                if (obj == this) return true;
+                return obj instanceof Instance iobj
+                        && Objects.equals(opcode(), iobj.opcode())
+                        && element_width == iobj.element_width
+                        && Arrays.equals(data, iobj.data);
             }
 
             @Override

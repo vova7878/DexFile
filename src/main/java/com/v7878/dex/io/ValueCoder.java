@@ -137,7 +137,6 @@ public final class ValueCoder {
         for (int i = zwidth; i >= 0; i--) {
             result = (result >>> 8) | ((in.readByte() & 0xffL) << 56);
         }
-        //noinspection IntegerMultiplicationImplicitCastToLong
         result >>= (7 - zwidth) * 8;
         return result;
     }
@@ -148,7 +147,6 @@ public final class ValueCoder {
             result = (result >>> 8) | ((in.readByte() & 0xffL) << 56);
         }
         if (!fillOnRight) {
-            //noinspection IntegerMultiplicationImplicitCastToLong
             result >>>= (7 - zwidth) * 8;
         }
         return result;

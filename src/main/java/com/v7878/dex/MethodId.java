@@ -104,14 +104,9 @@ public final class MethodId extends FieldOrMethodId {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (!super.equals(obj)) {
-            return false;
-        }
-        if (obj instanceof MethodId) {
-            MethodId mobj = (MethodId) obj;
-            return Objects.equals(proto, mobj.proto);
-        }
-        return false;
+        if (!super.equals(obj)) return false;
+        return obj instanceof MethodId mobj
+                && Objects.equals(proto, mobj.proto);
     }
 
     @Override

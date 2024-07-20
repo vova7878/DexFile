@@ -221,7 +221,7 @@ public final class ClassDef implements Mutable {
                 out[i] = out[~id];
             } else {
                 RandomInput tmp = in.duplicate(in.position());
-                tmp.addPosition(id * ClassDef.SIZE);
+                tmp.addPosition((long) id * ClassDef.SIZE);
                 out[i] = ClassDef.read(in, context);
             }
         }
@@ -292,17 +292,14 @@ public final class ClassDef implements Mutable {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof ClassDef) {
-            ClassDef cdobj = (ClassDef) obj;
-            return access_flags == cdobj.access_flags
-                    && Objects.equals(clazz, cdobj.clazz)
-                    && Objects.equals(superclass, cdobj.superclass)
-                    && Objects.equals(interfaces, cdobj.interfaces)
-                    && Objects.equals(source_file, cdobj.source_file)
-                    && Objects.equals(annotations, cdobj.annotations)
-                    && Objects.equals(class_data, cdobj.class_data);
-        }
-        return false;
+        return obj instanceof ClassDef cdobj
+                && access_flags == cdobj.access_flags
+                && Objects.equals(clazz, cdobj.clazz)
+                && Objects.equals(superclass, cdobj.superclass)
+                && Objects.equals(interfaces, cdobj.interfaces)
+                && Objects.equals(source_file, cdobj.source_file)
+                && Objects.equals(annotations, cdobj.annotations)
+                && Objects.equals(class_data, cdobj.class_data);
     }
 
     @Override

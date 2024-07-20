@@ -160,14 +160,11 @@ public final class ClassData implements Mutable {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof ClassData) {
-            ClassData cdobj = (ClassData) obj;
-            return Objects.equals(static_fields, cdobj.static_fields)
-                    && Objects.equals(instance_fields, cdobj.instance_fields)
-                    && Objects.equals(direct_methods, cdobj.direct_methods)
-                    && Objects.equals(virtual_methods, cdobj.virtual_methods);
-        }
-        return false;
+        return obj instanceof ClassData cdobj
+                && Objects.equals(static_fields, cdobj.static_fields)
+                && Objects.equals(instance_fields, cdobj.instance_fields)
+                && Objects.equals(direct_methods, cdobj.direct_methods)
+                && Objects.equals(virtual_methods, cdobj.virtual_methods);
     }
 
     @Override

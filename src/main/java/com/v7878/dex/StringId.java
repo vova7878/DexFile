@@ -38,6 +38,7 @@ public final class StringId {
 
     public static String read(RandomInput in, ReadContext context) {
         int data_off = in.readInt();
+        //noinspection resource
         return context.data(data_off).readMUTF8();
     }
 

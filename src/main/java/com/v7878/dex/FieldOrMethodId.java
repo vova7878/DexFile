@@ -24,7 +24,8 @@ package com.v7878.dex;
 
 import java.util.Objects;
 
-public abstract class FieldOrMethodId implements Mutable {
+public sealed abstract class FieldOrMethodId
+        implements Mutable permits FieldId, MethodId {
 
     private TypeId declaring_class;
     private String name;
@@ -59,12 +60,9 @@ public abstract class FieldOrMethodId implements Mutable {
     @Override
     public boolean equals(Object obj) {
         // Note: "this" check in inherited classes
-        if (obj instanceof FieldOrMethodId) {
-            FieldOrMethodId fmobj = (FieldOrMethodId) obj;
-            return Objects.equals(declaring_class, fmobj.declaring_class)
-                    && Objects.equals(name, fmobj.name);
-        }
-        return false;
+        return obj instanceof FieldOrMethodId fmobj
+                && Objects.equals(declaring_class, fmobj.declaring_class)
+                && Objects.equals(name, fmobj.name);
     }
 
     @Override

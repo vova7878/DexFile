@@ -90,12 +90,9 @@ public final class AnnotationElement implements Mutable {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof AnnotationElement) {
-            AnnotationElement aeobj = (AnnotationElement) obj;
-            return Objects.equals(name, aeobj.name)
-                    && Objects.equals(value, aeobj.value);
-        }
-        return false;
+        return obj instanceof AnnotationElement aeobj
+                && Objects.equals(name, aeobj.name)
+                && Objects.equals(value, aeobj.value);
     }
 
     @Override

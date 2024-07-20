@@ -115,12 +115,9 @@ public final class EncodedAnnotation implements Mutable {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof EncodedAnnotation) {
-            EncodedAnnotation eaobj = (EncodedAnnotation) obj;
-            return Objects.equals(type, eaobj.type)
-                    && Objects.equals(elements, eaobj.elements);
-        }
-        return false;
+        return obj instanceof EncodedAnnotation eaobj
+                && Objects.equals(type, eaobj.type)
+                && Objects.equals(elements, eaobj.elements);
     }
 
     @Override

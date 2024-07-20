@@ -121,13 +121,10 @@ public final class TryItem implements Mutable {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof TryItem) {
-            TryItem tobj = (TryItem) obj;
-            return start_addr == tobj.start_addr
-                    && insn_count == tobj.insn_count
-                    && Objects.equals(handler, tobj.handler);
-        }
-        return false;
+        return obj instanceof TryItem tobj
+                && start_addr == tobj.start_addr
+                && insn_count == tobj.insn_count
+                && Objects.equals(handler, tobj.handler);
     }
 
     @Override

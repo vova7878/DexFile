@@ -163,11 +163,9 @@ public class MutableList<T extends Mutable>
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof MutableList) {
-            MutableList<?> tlobj = (MutableList<?>) obj;
-            return Objects.equals(elements, tlobj.elements);
-        }
-        return false;
+        if (obj == this) return true;
+        return obj instanceof MutableList<?> tlobj
+                && Objects.equals(elements, tlobj.elements);
     }
 
     @Override

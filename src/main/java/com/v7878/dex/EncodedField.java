@@ -191,15 +191,12 @@ public final class EncodedField implements Mutable {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof EncodedField) {
-            EncodedField efobj = (EncodedField) obj;
-            return access_flags == efobj.access_flags
-                    && Objects.equals(field, efobj.field)
-                    && Objects.equals(annotations, efobj.annotations)
-                    //Note: getValue() method used instead value field
-                    && Objects.equals(getValue(), efobj.getValue());
-        }
-        return false;
+        return obj instanceof EncodedField efobj
+                && access_flags == efobj.access_flags
+                && Objects.equals(field, efobj.field)
+                && Objects.equals(annotations, efobj.annotations)
+                //Note: getValue() method used instead value field
+                && Objects.equals(getValue(), efobj.getValue());
     }
 
     @Override

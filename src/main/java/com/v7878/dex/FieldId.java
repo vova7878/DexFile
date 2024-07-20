@@ -117,14 +117,9 @@ public final class FieldId extends FieldOrMethodId {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (!super.equals(obj)) {
-            return false;
-        }
-        if (obj instanceof FieldId) {
-            FieldId fobj = (FieldId) obj;
-            return Objects.equals(type, fobj.type);
-        }
-        return false;
+        if (!super.equals(obj)) return false;
+        return obj instanceof FieldId fobj
+                && Objects.equals(type, fobj.type);
     }
 
     @Override

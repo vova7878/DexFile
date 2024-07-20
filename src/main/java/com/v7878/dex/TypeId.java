@@ -57,38 +57,20 @@ public final class TypeId implements Mutable {
             out.append('[');
         }
         switch (class_name) {
-            case "void":
-                out.append("V");
-                break;
-            case "boolean":
-                out.append("Z");
-                break;
-            case "byte":
-                out.append("B");
-                break;
-            case "short":
-                out.append("S");
-                break;
-            case "char":
-                out.append("C");
-                break;
-            case "int":
-                out.append("I");
-                break;
-            case "float":
-                out.append("F");
-                break;
-            case "long":
-                out.append("J");
-                break;
-            case "double":
-                out.append("D");
-                break;
-            default:
+            case "void" -> out.append("V");
+            case "boolean" -> out.append("Z");
+            case "byte" -> out.append("B");
+            case "short" -> out.append("S");
+            case "char" -> out.append("C");
+            case "int" -> out.append("I");
+            case "float" -> out.append("F");
+            case "long" -> out.append("J");
+            case "double" -> out.append("D");
+            default -> {
                 out.append("L");
                 out.append(class_name.replace('.', '/'));
                 out.append(";");
-                break;
+            }
         }
         return new TypeId(out.toString());
     }
@@ -163,11 +145,8 @@ public final class TypeId implements Mutable {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof TypeId) {
-            TypeId tobj = (TypeId) obj;
-            return Objects.equals(descriptor, tobj.descriptor);
-        }
-        return false;
+        return obj instanceof TypeId tobj
+                && Objects.equals(descriptor, tobj.descriptor);
     }
 
     @Override

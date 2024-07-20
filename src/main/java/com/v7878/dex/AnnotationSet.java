@@ -148,11 +148,8 @@ public final class AnnotationSet extends AbstractSet<AnnotationItem> implements 
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof AnnotationSet) {
-            AnnotationSet asobj = (AnnotationSet) obj;
-            return Objects.equals(annotations, asobj.annotations);
-        }
-        return false;
+        return obj instanceof AnnotationSet asobj
+                && Objects.equals(annotations, asobj.annotations);
     }
 
     @Override

@@ -87,11 +87,8 @@ public final class CallSiteId implements Mutable {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof CallSiteId) {
-            CallSiteId csobj = (CallSiteId) obj;
-            return Objects.equals(value, csobj.value);
-        }
-        return false;
+        return obj instanceof CallSiteId csobj
+                && Objects.equals(value, csobj.value);
     }
 
     @Override

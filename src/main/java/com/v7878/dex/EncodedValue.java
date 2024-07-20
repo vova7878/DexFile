@@ -119,29 +119,19 @@ public interface EncodedValue extends Mutable {
     EncodedValue mutate();
 
     static EncodedValue defaultValue(TypeId type) {
-        switch (type.getShorty()) {
-            case 'Z':
-                return new BooleanValue();
-            case 'B':
-                return new ByteValue();
-            case 'S':
-                return new ShortValue();
-            case 'C':
-                return new CharValue();
-            case 'I':
-                return new IntValue();
-            case 'J':
-                return new LongValue();
-            case 'F':
-                return new FloatValue();
-            case 'D':
-                return new DoubleValue();
-            case 'L':
-                return new NullValue();
-            default:
-                // V - void
-                throw new IllegalArgumentException();
-        }
+        // V - void
+        return switch (type.getShorty()) {
+            case 'Z' -> new BooleanValue();
+            case 'B' -> new ByteValue();
+            case 'S' -> new ShortValue();
+            case 'C' -> new CharValue();
+            case 'I' -> new IntValue();
+            case 'J' -> new LongValue();
+            case 'F' -> new FloatValue();
+            case 'D' -> new DoubleValue();
+            case 'L' -> new NullValue();
+            default -> throw new IllegalArgumentException();
+        };
     }
 
     static EncodedValue of(Object obj) {
@@ -441,46 +431,29 @@ public interface EncodedValue extends Mutable {
         int type_and_arg = peek(in, type);
         int arg = (type_and_arg & 0xe0) >> 5;
         int int_type = type_and_arg & 0x1f;
-        switch (EncodedValueType.of(int_type)) {
-            case BOOLEAN:
-                return readBoolean(arg);
-            case BYTE:
-                return readByte(in, arg);
-            case SHORT:
-                return readShort(in, arg);
-            case CHAR:
-                return readChar(in, arg);
-            case INT:
-                return readInt(in, arg);
-            case LONG:
-                return readLong(in, arg);
-            case FLOAT:
-                return readFloat(in, arg);
-            case DOUBLE:
-                return readDouble(in, arg);
-            case METHOD_TYPE:
-                return readMethodType(in, arg, context);
-            case METHOD_HANDLE:
-                return readMethodHandle(in, arg, context);
-            case STRING:
-                return readString(in, arg, context);
-            case TYPE:
-                return readType(in, arg, context);
-            case FIELD:
-                return readField(in, arg, context);
-            case ENUM:
-                return readEnum(in, arg, context);
-            case METHOD:
-                return readMethod(in, arg, context);
-            case ARRAY:
-                return readArray(in, context);
-            case ANNOTATION:
-                return readAnnotation(in, context);
-            case NULL:
-                return new NullValue();
-            default:
-                throw new RuntimeException("Unexpected type: " + Integer.toHexString(int_type));
-        }
+        return switch (EncodedValueType.of(int_type)) {
+            case BOOLEAN -> readBoolean(arg);
+            case BYTE -> readByte(in, arg);
+            case SHORT -> readShort(in, arg);
+            case CHAR -> readChar(in, arg);
+            case INT -> readInt(in, arg);
+            case LONG -> readLong(in, arg);
+            case FLOAT -> readFloat(in, arg);
+            case DOUBLE -> readDouble(in, arg);
+            case METHOD_TYPE -> readMethodType(in, arg, context);
+            case METHOD_HANDLE -> readMethodHandle(in, arg, context);
+            case STRING -> readString(in, arg, context);
+            case TYPE -> readType(in, arg, context);
+            case FIELD -> readField(in, arg, context);
+            case ENUM -> readEnum(in, arg, context);
+            case METHOD -> readMethod(in, arg, context);
+            case ARRAY -> readArray(in, context);
+            case ANNOTATION -> readAnnotation(in, context);
+            case NULL -> new NullValue();
+            //noinspection UnnecessaryDefault
+            default ->
+                    throw new RuntimeException("Unexpected type: " + Integer.toHexString(int_type));
+        };
     }
 
     abstract class SimpleValue implements EncodedValue {
@@ -515,12 +488,9 @@ public interface EncodedValue extends Mutable {
         @Override
         public boolean equals(Object obj) {
             if (obj == this) return true;
-            if (obj instanceof SimpleValue) {
-                EncodedValue evobj = (EncodedValue) obj;
-                return type() == evobj.type()
-                        && Objects.equals(value(), evobj.value());
-            }
-            return false;
+            return obj instanceof SimpleValue evobj
+                    && type() == evobj.type()
+                    && Objects.equals(value(), evobj.value());
         }
 
         @Override
@@ -1207,10 +1177,7 @@ public interface EncodedValue extends Mutable {
         @Override
         public boolean equals(Object obj) {
             if (obj == this) return true;
-            if (obj instanceof ArrayValue) {
-                return super.equals(obj);
-            }
-            return false;
+            return obj instanceof ArrayValue && super.equals(obj);
         }
 
         @Override

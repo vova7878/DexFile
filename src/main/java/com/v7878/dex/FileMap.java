@@ -39,19 +39,8 @@ import java.util.zip.Adler32;
 // Temporary object. Needed to read or write
 class FileMap {
 
-    public static class MapItem {
-
+    public record MapItem(int type, int offset, int size) {
         public static final Comparator<MapItem> COMPARATOR = Comparator.comparingInt(a -> a.offset);
-
-        public final int type;
-        public final int offset;
-        public final int size;
-
-        public MapItem(int type, int offset, int size) {
-            this.type = type;
-            this.offset = offset;
-            this.size = size;
-        }
 
         public static MapItem read(RandomInput in) {
             int type = in.readUnsignedShort();
@@ -128,14 +117,11 @@ class FileMap {
     public int compact_debug_info_base;
 
     private static int getHeaderSize(DexVersion version) {
-        switch (version) {
-            case CDEX001:
-                return COMPACT_HEADER_SIZE;
-            //TODO: case DEX041:
-            //    return HEADER_V41_SIZE;
-            default:
-                return HEADER_SIZE;
-        }
+        return switch (version) {
+            case CDEX001 -> COMPACT_HEADER_SIZE;
+            // TODO: case DEX041 -> HEADER_V41_SIZE;
+            default -> HEADER_SIZE;
+        };
     }
 
     private static void check(boolean value) {
@@ -197,60 +183,54 @@ class FileMap {
         for (int i = 0; i < map_size; i++) {
             MapItem item = MapItem.read(in);
             switch (item.type) {
-                case DexConstants.TYPE_HEADER_ITEM:
+                case DexConstants.TYPE_HEADER_ITEM -> {
                     check(item.size == 1);
                     check(item.offset == 0);
-                    break;
-                case DexConstants.TYPE_STRING_ID_ITEM:
+                }
+                case DexConstants.TYPE_STRING_ID_ITEM -> {
                     check(item.size == string_ids_size);
                     check(item.offset == string_ids_off);
-                    break;
-                case DexConstants.TYPE_TYPE_ID_ITEM:
+                }
+                case DexConstants.TYPE_TYPE_ID_ITEM -> {
                     check(item.size == type_ids_size);
                     check(item.offset == type_ids_off);
-                    break;
-                case DexConstants.TYPE_PROTO_ID_ITEM:
+                }
+                case DexConstants.TYPE_PROTO_ID_ITEM -> {
                     check(item.size == proto_ids_size);
                     check(item.offset == proto_ids_off);
-                    break;
-                case DexConstants.TYPE_FIELD_ID_ITEM:
+                }
+                case DexConstants.TYPE_FIELD_ID_ITEM -> {
                     check(item.size == field_ids_size);
                     check(item.offset == field_ids_off);
-                    break;
-                case DexConstants.TYPE_METHOD_ID_ITEM:
+                }
+                case DexConstants.TYPE_METHOD_ID_ITEM -> {
                     check(item.size == method_ids_size);
                     check(item.offset == method_ids_off);
-                    break;
-                case DexConstants.TYPE_CLASS_DEF_ITEM:
+                }
+                case DexConstants.TYPE_CLASS_DEF_ITEM -> {
                     check(item.size == class_defs_size);
                     check(item.offset == class_defs_off);
-                    break;
-                case DexConstants.TYPE_CALL_SITE_ID_ITEM:
+                }
+                case DexConstants.TYPE_CALL_SITE_ID_ITEM -> {
                     call_site_ids_size = item.size;
                     call_site_ids_off = item.offset;
-                    break;
-                case DexConstants.TYPE_METHOD_HANDLE_ITEM:
+                }
+                case DexConstants.TYPE_METHOD_HANDLE_ITEM -> {
                     method_handles_size = item.size;
                     method_handles_off = item.offset;
-                    break;
-                case DexConstants.TYPE_MAP_LIST:
+                }
+                case DexConstants.TYPE_MAP_LIST -> {
                     check(item.size == 1);
                     check(item.offset == map_list_off);
-                    break;
-                case DexConstants.TYPE_TYPE_LIST:
-                case DexConstants.TYPE_ANNOTATION_SET_REF_LIST:
-                case DexConstants.TYPE_ANNOTATION_SET_ITEM:
-                case DexConstants.TYPE_CLASS_DATA_ITEM:
-                case DexConstants.TYPE_CODE_ITEM:
-                case DexConstants.TYPE_STRING_DATA_ITEM:
-                case DexConstants.TYPE_DEBUG_INFO_ITEM:
-                case DexConstants.TYPE_ANNOTATION_ITEM:
-                case DexConstants.TYPE_ENCODED_ARRAY_ITEM:
-                case DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM:
-                case DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM:
-                    break; // ok
-                default:
-                    throw new IllegalStateException("unknown map_item type: " + item.type);
+                }
+                case DexConstants.TYPE_TYPE_LIST, DexConstants.TYPE_ANNOTATION_SET_REF_LIST,
+                     DexConstants.TYPE_ANNOTATION_SET_ITEM, DexConstants.TYPE_CLASS_DATA_ITEM,
+                     DexConstants.TYPE_CODE_ITEM, DexConstants.TYPE_STRING_DATA_ITEM,
+                     DexConstants.TYPE_DEBUG_INFO_ITEM, DexConstants.TYPE_ANNOTATION_ITEM,
+                     DexConstants.TYPE_ENCODED_ARRAY_ITEM,
+                     DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM,
+                     DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM -> { /* ok */ }
+                default -> throw new IllegalStateException("unknown map_item type: " + item.type);
             }
         }
     }

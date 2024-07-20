@@ -62,11 +62,8 @@ public class MutableSparseArray<T extends Mutable> extends SparseArray<T> implem
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof MutableSparseArray) {
-            MutableSparseArray<?> other = (MutableSparseArray<?>) obj;
-            return contentEquals(other);
-        }
-        return false;
+        if (obj == this) return true;
+        return obj instanceof MutableSparseArray<?> other && contentEquals(other);
     }
 
     @Override

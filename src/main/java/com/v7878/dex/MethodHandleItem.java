@@ -170,12 +170,9 @@ public final class MethodHandleItem implements Mutable {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        if (obj instanceof MethodHandleItem) {
-            MethodHandleItem mhobj = (MethodHandleItem) obj;
-            return Objects.equals(type, mhobj.type)
-                    && Objects.equals(field_or_method, mhobj.field_or_method);
-        }
-        return false;
+        return obj instanceof MethodHandleItem mhobj
+                && Objects.equals(type, mhobj.type)
+                && Objects.equals(field_or_method, mhobj.field_or_method);
     }
 
     @Override
