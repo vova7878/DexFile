@@ -225,9 +225,8 @@ public final class CodeItem implements Mutable {
         outs_size &= ~0xF;
         tries_size &= ~0xF;
 
-        int insns_count_and_flags = 0;
-        //int insns_count_and_flags = (insns_count & kInsnsSizeMask) << kInsnsSizeShift;
-        //insns_count &= ~kInsnsSizeMask;
+        int insns_count_and_flags = (insns_count & kInsnsSizeMask) << kInsnsSizeShift;
+        insns_count &= ~kInsnsSizeMask;
 
         if (has_payloads) {
             boolean odd_shorts = (tries_size != 0) ^ (outs_size != 0) ^ (ins_size != 0)
