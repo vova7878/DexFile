@@ -104,6 +104,8 @@ public final class CodeItem implements Mutable {
     private static final int kTriesSizeSizeShift = 0;
     private static final int kInsnsSizeShift = 5;
 
+    private static final int kInsnsSizeMask = 0xffff >>> kInsnsSizeShift;
+
     private static final int kFlagPreHeaderRegistersSize = 0b00001;
     private static final int kFlagPreHeaderInsSize = 0b00010;
     private static final int kFlagPreHeaderOutsSize = 0b00100;
@@ -197,31 +199,107 @@ public final class CodeItem implements Mutable {
         }
     }
 
-    public void write(WriteContext context, RandomOutput out) {
-        out.writeShort(registers_size);
-        out.writeShort(ins_size);
-        out.writeShort(outs_size);
+    private int countCodeUnits() {
+        boolean has_payloads = false;
+        int out = 0;
+        for (var tmp : insns) {
+            out += tmp.units();
+            if (!has_payloads) {
+                has_payloads = tmp.opcode().format().isPayload();
+            }
+        }
+        return has_payloads ? ~out : out;
+    }
 
+    private static int writePreHeader(RandomOutput out, int registers_size,
+                                      int ins_size, int outs_size,
+                                      int tries_size, int insns_count,
+                                      boolean has_payloads) {
+        registers_size -= ins_size;
+        int fields = (registers_size & 0xF) << kRegistersSizeShift
+                | (ins_size & 0xF) << kInsSizeShift
+                | (outs_size & 0xF) << kOutsSizeShift
+                | (tries_size & 0xF) << kTriesSizeSizeShift;
+        registers_size &= ~0xF;
+        ins_size &= ~0xF;
+        outs_size &= ~0xF;
+        tries_size &= ~0xF;
+
+        int insns_count_and_flags = (insns_count & kInsnsSizeMask) << kInsnsSizeShift;
+        insns_count &= ~kInsnsSizeMask;
+
+        if (has_payloads) {
+            boolean odd_shorts = (tries_size != 0) ^ (outs_size != 0) ^ (ins_size != 0)
+                    ^ (registers_size != 0) ^ ((out.position() & 0b10) != 0);
+            if (odd_shorts) {
+                out.addPosition(2);
+            }
+        }
+
+        if (tries_size != 0) {
+            out.writeShort(tries_size);
+            insns_count_and_flags |= kFlagPreHeaderTriesSize;
+        }
+        if (outs_size != 0) {
+            out.writeShort(outs_size);
+            insns_count_and_flags |= kFlagPreHeaderOutsSize;
+        }
+        if (ins_size != 0) {
+            out.writeShort(ins_size);
+            insns_count_and_flags |= kFlagPreHeaderInsSize;
+        }
+        if (registers_size != 0) {
+            out.writeShort(registers_size);
+            insns_count_and_flags |= kFlagPreHeaderRegistersSize;
+        }
+        if (insns_count != 0) {
+            insns_count_and_flags |= kFlagPreHeaderInsnsSize;
+            out.writeShort(insns_count >> 16);
+            out.writeShort(insns_count);
+        }
+
+        int code_item_start = (int) out.position();
+
+        out.writeShort(fields);
+        out.writeShort(insns_count_and_flags);
+
+        return code_item_start;
+    }
+
+    // returns real starting position of the actual code item
+    public int write(WriteContext context, RandomOutput out) {
         int tries_size = tries.size();
-        out.writeShort(tries_size);
+        int insns_count = countCodeUnits();
+        boolean has_payloads = insns_count < 0;
+        insns_count = has_payloads ? ~insns_count : insns_count;
 
-        out.writeInt(0); // TODO: debug_info_off
+        int code_item_start;
 
-        long insns_size_pos = out.position();
-        out.addPosition(4);
+        if (context.getDexVersion().isCompact()) {
+            code_item_start = writePreHeader(out, registers_size, ins_size,
+                    outs_size, tries_size, insns_count, has_payloads);
+        } else {
+            code_item_start = (int) out.position();
+
+            out.writeShort(registers_size);
+            out.writeShort(ins_size);
+            out.writeShort(outs_size);
+            out.writeShort(tries_size);
+            out.writeInt(0); // TODO: debug_info_off
+            out.writeInt(insns_count);
+        }
 
         long insns_start = out.position();
         for (Instruction tmp : insns) {
             tmp.write(context, out);
         }
         int insns_size = (int) (out.position() - insns_start);
-        if ((insns_size & 1) != 0) {
-            throw new IllegalStateException("insns_size is odd");
-        }
 
-        out.position(insns_size_pos);
-        out.writeInt(insns_size / 2); // size in code units
-        out.position(insns_start + insns_size);
+        if (insns_size != insns_count * 2) {
+            throw new IllegalStateException(String.format(
+                    "calculated instructions size(%s) != written bytes(%s)",
+                    insns_count * 2, insns_size));
+        }
 
         if (tries_size != 0) {
             tries.sort(TryItem.COMPARATOR);
@@ -249,6 +327,7 @@ public final class CodeItem implements Mutable {
                 tmp.write(tries_out, handlers);
             }
         }
+        return code_item_start;
     }
 
     static void writeSection(WriteContextImpl context, FileMap map,
@@ -261,9 +340,7 @@ public final class CodeItem implements Mutable {
         }
         for (CodeItem tmp : code_items) {
             out.alignPosition(alignment);
-            int start = (int) out.position();
-            tmp.write(context, out);
-            context.addCodeItem(tmp, start);
+            context.addCodeItem(tmp, tmp.write(context, out));
         }
     }
 

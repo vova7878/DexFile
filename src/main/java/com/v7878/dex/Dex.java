@@ -137,11 +137,6 @@ public final class Dex extends MutableList<ClassDef> {
     }
 
     private void writeInternal(RandomIO out, WriteOptions options) {
-        if (options.getDexVersion().isCompact()) {
-            //TODO: cdex writing
-            throw new UnsupportedOperationException("cdex writing unsupported yet");
-        }
-
         DataSet sections = new DataSet();
         collectData(sections);
 
@@ -150,7 +145,9 @@ public final class Dex extends MutableList<ClassDef> {
         FileMap map = new FileMap();
         map.computeHeaderInfo(context);
 
-        RandomOutput data = out.duplicate(map.data_off);
+        // Note: for compact dex, offsets are calculated from the data section, not the header
+        RandomOutput data = context.getDexVersion().isCompact() ?
+                out.slice(map.data_off) : out.duplicate(map.data_off);
 
         TypeList.writeSection(context, map, data, sections.getTypeLists());
         AnnotationItem.writeSection(context, map, data, sections.getAnnotations());
@@ -171,6 +168,12 @@ public final class Dex extends MutableList<ClassDef> {
 
         map.data_size = file_size - map.data_off;
 
+        // Note: for compact dex, data section is placed
+        // after the entire file and isn`t included in its size
+        if (context.getDexVersion().isCompact()) {
+            file_size = map.data_off;
+        }
+
         TypeId.writeSection(context, out.duplicate(map.type_ids_off), context.types());
         FieldId.writeSection(context, out.duplicate(map.field_ids_off), context.fields());
         ProtoId.writeSection(context, out.duplicate(map.proto_ids_off), context.protos());
@@ -179,7 +182,7 @@ public final class Dex extends MutableList<ClassDef> {
         CallSiteId.writeSection(context, out.duplicate(map.call_site_ids_off), context.callSites());
         MethodHandleItem.writeSection(context, out.duplicate(map.method_handles_off), context.methodHandles());
 
-        map.writeHeader(out, file_size);
+        map.writeHeader(out.duplicate(0), file_size);
     }
 
     public ClassDef findClassDef(TypeId type) {

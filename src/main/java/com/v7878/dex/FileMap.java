@@ -279,8 +279,9 @@ class FileMap {
         out.alignPosition(MAP_ALIGNMENT);
         map_list_off = (int) out.position();
         ArrayList<MapItem> list = new ArrayList<>();
-        list.add(new MapItem(DexConstants.TYPE_HEADER_ITEM, 0, 1));
 
+        // main section
+        list.add(new MapItem(DexConstants.TYPE_HEADER_ITEM, 0, 1));
         if (string_ids_size > 0) {
             list.add(new MapItem(DexConstants.TYPE_STRING_ID_ITEM,
                     string_ids_off, string_ids_size));
@@ -314,6 +315,7 @@ class FileMap {
                     method_handles_off, method_handles_size));
         }
 
+        // data section
         if (type_lists_size > 0) {
             list.add(new MapItem(DexConstants.TYPE_TYPE_LIST,
                     type_lists_off, type_lists_size));
@@ -370,7 +372,6 @@ class FileMap {
     }
 
     public void writeHeader(RandomIO out, int file_size) {
-        out.position(0);
         out.writeByteArray(version.getMagic());
         out.addPosition(4); //checksum
         out.addPosition(20); //signature
@@ -396,22 +397,35 @@ class FileMap {
         out.writeInt(data_size);
         out.writeInt(data_size > 0 ? data_off : 0);
 
-        out.position(SIGNATURE_OFFSET);
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance("SHA-1");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("unable to find SHA-1 MessageDigest", e);
+        if (version.isCompact()) {
+            out.writeInt(0x1 /* kDefaultMethods */); //compact_feature_flags TODO: add option
+            out.writeInt(0); //compact_debug_info_offsets_pos
+            out.writeInt(0); //compact_debug_info_offsets_table_offset
+            out.writeInt(0); //compact_debug_info_base
+            out.writeInt(0); //owned_data_begin
+            out.writeInt(data_size); //owned_data_end
         }
-        byte[] signature = md.digest(out.duplicate(FILE_SIZE_OFFSET)
-                .readByteArray(file_size - FILE_SIZE_OFFSET));
-        out.writeByteArray(signature);
 
-        out.position(CHECKSUM_OFFSET);
-        Adler32 adler = new Adler32();
-        int adler_length = file_size - SIGNATURE_OFFSET;
-        adler.update(out.duplicate(SIGNATURE_OFFSET)
-                .readByteArray(adler_length), 0, adler_length);
-        out.writeInt((int) adler.getValue());
+        if (version.isCompact()) {
+            // TODO: How are the checksum and signature fields calculated for compact dex?
+        } else {
+            out.position(SIGNATURE_OFFSET);
+            MessageDigest md;
+            try {
+                md = MessageDigest.getInstance("SHA-1");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException("unable to find SHA-1 MessageDigest", e);
+            }
+            byte[] signature = md.digest(out.duplicate(FILE_SIZE_OFFSET)
+                    .readByteArray(file_size - FILE_SIZE_OFFSET));
+            out.writeByteArray(signature);
+
+            out.position(CHECKSUM_OFFSET);
+            Adler32 adler = new Adler32();
+            int adler_length = file_size - SIGNATURE_OFFSET;
+            adler.update(out.duplicate(SIGNATURE_OFFSET)
+                    .readByteArray(adler_length), 0, adler_length);
+            out.writeInt((int) adler.getValue());
+        }
     }
 }
