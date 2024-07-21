@@ -23,8 +23,10 @@
 package com.v7878.dex;
 
 import static com.v7878.dex.DexConstants.COMPACT_HEADER_SIZE;
+import static com.v7878.dex.DexConstants.DATA_SECTION_ALIGNMENT;
 import static com.v7878.dex.DexConstants.HEADER_SIZE;
 import static com.v7878.dex.DexVersion.forMagic;
+import static com.v7878.misc.Math.roundUp;
 
 import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.RandomInput;
@@ -272,7 +274,7 @@ class FileMap {
         method_handles_size = context.methodHandles().length;
         offset += method_handles_size * MethodHandleItem.SIZE;
 
-        data_off = offset;
+        data_off = roundUp(offset, DATA_SECTION_ALIGNMENT);
     }
 
     public void writeMap(RandomOutput out) {

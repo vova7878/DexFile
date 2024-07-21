@@ -33,6 +33,8 @@ public final class DexConstants {
     public static final int HEADER_V41_SIZE = HEADER_SIZE + 4 * 2;
     public static final int COMPACT_HEADER_SIZE = HEADER_SIZE + 4 * 6;
 
+    public static final int DATA_SECTION_ALIGNMENT = 8;
+
     //access_flags definitions
     public static final int ACC_PUBLIC = 0x1;
     public static final int ACC_PRIVATE = 0x2;

@@ -22,6 +22,8 @@
 
 package com.v7878.dex;
 
+import static com.v7878.dex.DexConstants.DATA_SECTION_ALIGNMENT;
+
 import com.v7878.dex.EncodedValue.ArrayValue;
 import com.v7878.dex.io.ByteArrayIO;
 import com.v7878.dex.io.RandomIO;
@@ -148,6 +150,11 @@ public final class Dex extends MutableList<ClassDef> {
         // Note: for compact dex, offsets are calculated from the data section, not the header
         RandomOutput data = context.getDexVersion().isCompact() ?
                 out.slice(map.data_off) : out.duplicate(map.data_off);
+
+        // We want offset 0 to be reserved for null
+        if (context.getDexVersion().isCompact()) {
+            data.addPosition(DATA_SECTION_ALIGNMENT);
+        }
 
         TypeList.writeSection(context, map, data, sections.getTypeLists());
         AnnotationItem.writeSection(context, map, data, sections.getAnnotations());
