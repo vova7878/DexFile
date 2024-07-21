@@ -164,14 +164,16 @@ public final class Dex extends MutableList<ClassDef> {
 
         map.writeMap(data);
 
-        int file_size = (int) data.position();
-
-        map.data_size = file_size - map.data_off;
+        int file_size;
 
         // Note: for compact dex, data section is placed
         // after the entire file and isn`t included in its size
         if (context.getDexVersion().isCompact()) {
             file_size = map.data_off;
+            map.data_size = (int) data.position();
+        } else {
+            file_size = (int) data.position();
+            map.data_size = file_size - map.data_off;
         }
 
         TypeId.writeSection(context, out.duplicate(map.type_ids_off), context.types());
