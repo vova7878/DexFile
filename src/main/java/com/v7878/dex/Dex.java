@@ -90,7 +90,7 @@ public final class Dex extends MutableList<ClassDef> {
             return new Dex();
         }
 
-        ReadContextImpl context = new ReadContextImpl(in, options, map);
+        ReadContextImpl context = new ReadContextImpl(in.duplicate(0), options, map);
         map.readMap(context);
 
         return readInternal(in, context, class_def_ids, map);
