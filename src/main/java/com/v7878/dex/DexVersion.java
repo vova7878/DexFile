@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 public enum DexVersion implements Comparable<DexVersion> {
     //TODO: DEX041(35, '0', '4', '1'); // dex containers,
-    DEX040(29, 'd', 'e', 'x', '\n', '0', '4', '0', '\0'),
+    DEX040(30, 'd', 'e', 'x', '\n', '0', '4', '0', '\0'),
     DEX039(28, 'd', 'e', 'x', '\n', '0', '3', '9', '\0'),
     DEX038(26, 'd', 'e', 'x', '\n', '0', '3', '8', '\0'),
     DEX037(24, 'd', 'e', 'x', '\n', '0', '3', '7', '\0'),
