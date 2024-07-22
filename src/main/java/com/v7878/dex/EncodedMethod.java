@@ -54,18 +54,26 @@ public final class EncodedMethod implements Mutable {
 
     private MethodId method;
     private int access_flags;
+    private int hiddenapi_flag;
     private AnnotationSet annotations;
     private AnnotationSetList parameter_annotations;
     private CodeItem code;
 
-    public EncodedMethod(MethodId method,
-                         int access_flags, AnnotationSet annotations,
+    public EncodedMethod(MethodId method, int access_flags,
+                         int hiddenapi_flag, AnnotationSet annotations,
                          Collection<AnnotationSet> parameter_annotations, CodeItem code) {
         setMethod(method);
         setAccessFlags(access_flags);
+        setHiddenapiFlag(hiddenapi_flag);
         setAnnotations(annotations);
         setParameterAnnotations(parameter_annotations);
         setCode(code);
+
+    }
+
+    public EncodedMethod(MethodId method, int access_flags, AnnotationSet annotations,
+                         Collection<AnnotationSet> parameter_annotations, CodeItem code) {
+        this(method, access_flags, 0, annotations, parameter_annotations, code);
     }
 
     public EncodedMethod(MethodId method, int access_flags) {
@@ -87,6 +95,14 @@ public final class EncodedMethod implements Mutable {
 
     public int getAccessFlags() {
         return access_flags;
+    }
+
+    public void setHiddenapiFlag(int hiddenapi_flag) {
+        this.hiddenapi_flag = hiddenapi_flag;
+    }
+
+    public int getHiddenapiFlag() {
+        return hiddenapi_flag;
     }
 
     public boolean isDirect() {
@@ -208,11 +224,17 @@ public final class EncodedMethod implements Mutable {
 
     @Override
     public String toString() {
+        StringBuilder out = new StringBuilder();
         String flags = DexModifier.printExecutableFlags(access_flags);
+        out.append(flags);
         if (!flags.isEmpty()) {
-            flags += " ";
+            out.append(' ');
         }
-        return flags + method;
+        if (hiddenapi_flag != 0) {
+            out.append(HiddenApi.printFlag(hiddenapi_flag)).append(' ');
+        }
+        out.append(method);
+        return out.toString();
     }
 
     @Override

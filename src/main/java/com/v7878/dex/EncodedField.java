@@ -49,20 +49,31 @@ public final class EncodedField implements Mutable {
 
     private FieldId field;
     private int access_flags;
+    private int hiddenapi_flag;
     private AnnotationSet annotations;
     private EncodedValue value;
 
-    public EncodedField(FieldId field, int access_flags,
+    public EncodedField(FieldId field, int access_flags, int hiddenapi_flag,
                         Collection<AnnotationItem> annotations, EncodedValue value) {
         setField(field);
         setAccessFlags(access_flags);
+        setHiddenapiFlag(hiddenapi_flag);
         setAnnotations(annotations);
         setValue(value);
     }
 
     public EncodedField(FieldId field, int access_flags,
+                        Collection<AnnotationItem> annotations, EncodedValue value) {
+        this(field, access_flags, 0, annotations, value);
+    }
+
+    public EncodedField(FieldId field, int access_flags,
                         AnnotationSet annotations) {
         this(field, access_flags, annotations, null);
+    }
+
+    public EncodedField(FieldId field, int access_flags) {
+        this(field, access_flags, null);
     }
 
     public void setField(FieldId field) {
@@ -80,6 +91,14 @@ public final class EncodedField implements Mutable {
 
     public int getAccessFlags() {
         return access_flags;
+    }
+
+    public void setHiddenapiFlag(int hiddenapi_flag) {
+        this.hiddenapi_flag = hiddenapi_flag;
+    }
+
+    public int getHiddenapiFlag() {
+        return hiddenapi_flag;
     }
 
     public boolean isStatic() {
@@ -181,6 +200,9 @@ public final class EncodedField implements Mutable {
         if (!flags.isEmpty()) {
             out.append(' ');
         }
+        if (hiddenapi_flag != 0) {
+            out.append(HiddenApi.printFlag(hiddenapi_flag)).append(' ');
+        }
         out.append(field);
         if (value != null) {
             out.append(" = ").append(value);
@@ -193,6 +215,7 @@ public final class EncodedField implements Mutable {
         if (obj == this) return true;
         return obj instanceof EncodedField efobj
                 && access_flags == efobj.access_flags
+                && hiddenapi_flag == efobj.hiddenapi_flag
                 && Objects.equals(field, efobj.field)
                 && Objects.equals(annotations, efobj.annotations)
                 //Note: getValue() method used instead value field
@@ -201,11 +224,11 @@ public final class EncodedField implements Mutable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(field, access_flags, annotations, value);
+        return Objects.hash(field, access_flags, hiddenapi_flag, annotations, value);
     }
 
     @Override
     public EncodedField mutate() {
-        return new EncodedField(field, access_flags, annotations, value);
+        return new EncodedField(field, access_flags, hiddenapi_flag, annotations, value);
     }
 }

@@ -117,6 +117,7 @@ public final class Dex extends MutableList<ClassDef> {
         }
 
         ClassDef[] class_defs = ClassDef.readArray(in.duplicate(map.class_defs_off), context, class_def_ids);
+        HiddenApi.readSection(context, map, class_defs); // TODO: add aption to skip hiddenapi reading
 
         return new Dex(class_defs);
     }
@@ -129,7 +130,7 @@ public final class Dex extends MutableList<ClassDef> {
 
     // TODO: int computeMainSectionSize(WriteOptions options)
 
-    // TODO: add check stage before writing
+    // TODO?: add check stage before writing
 
     public void write(RandomIO dst) {
         write(dst, WriteOptions.defaultOptions());
@@ -167,7 +168,11 @@ public final class Dex extends MutableList<ClassDef> {
         CodeItem.writeSection(context, map, data, sections.getCodeItems());
         ClassData.writeSection(context, map, data, sections.getClassDataItems());
         ArrayValue.writeSection(context, map, data, sections.getArrayValues());
-        //TODO: HiddenApi.writeSection(context, map, data, ...);
+
+        ClassDef[] classDefs = context.classDefs();
+
+        // TODO: add aption to skip hiddenapi reading
+        HiddenApi.writeSection(context, map, data, classDefs);
 
         StringId.writeSection(context, map, out.duplicate(map.string_ids_off), data, context.strings());
 
@@ -189,7 +194,7 @@ public final class Dex extends MutableList<ClassDef> {
         FieldId.writeSection(context, out.duplicate(map.field_ids_off), context.fields());
         ProtoId.writeSection(context, out.duplicate(map.proto_ids_off), context.protos());
         MethodId.writeSection(context, out.duplicate(map.method_ids_off), context.methods());
-        ClassDef.writeSection(context, out.duplicate(map.class_defs_off), context.classDefs());
+        ClassDef.writeSection(context, out.duplicate(map.class_defs_off), classDefs);
         CallSiteId.writeSection(context, out.duplicate(map.call_site_ids_off), context.callSites());
         MethodHandleItem.writeSection(context, out.duplicate(map.method_handles_off), context.methodHandles());
 
