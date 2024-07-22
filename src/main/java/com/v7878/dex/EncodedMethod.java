@@ -242,6 +242,7 @@ public final class EncodedMethod implements Mutable {
         if (obj == this) return true;
         return obj instanceof EncodedMethod emobj
                 && access_flags == emobj.access_flags
+                && hiddenapi_flag == emobj.hiddenapi_flag
                 && Objects.equals(method, emobj.method)
                 && Objects.equals(annotations, emobj.annotations)
                 && Objects.equals(parameter_annotations, emobj.parameter_annotations)
@@ -250,12 +251,13 @@ public final class EncodedMethod implements Mutable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(method, access_flags, annotations, parameter_annotations, code);
+        return Objects.hash(method, access_flags, hiddenapi_flag,
+                annotations, parameter_annotations, code);
     }
 
     @Override
     public EncodedMethod mutate() {
-        return new EncodedMethod(method, access_flags, annotations,
-                parameter_annotations, code);
+        return new EncodedMethod(method, access_flags, hiddenapi_flag,
+                annotations, parameter_annotations, code);
     }
 }
