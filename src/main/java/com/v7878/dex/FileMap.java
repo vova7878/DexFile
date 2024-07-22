@@ -110,7 +110,7 @@ class FileMap {
     public int encoded_arrays_off;
     public int annotations_directories_size;
     public int annotations_directories_off;
-    public int hiddenapi_class_data_items_size;
+
     public int hiddenapi_class_data_items_off;
 
     public int compact_feature_flags;
@@ -221,6 +221,10 @@ class FileMap {
                     method_handles_size = item.size;
                     method_handles_off = item.offset;
                 }
+                case DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM -> {
+                    check(item.size == 1);
+                    hiddenapi_class_data_items_off = item.offset;
+                }
                 case DexConstants.TYPE_MAP_LIST -> {
                     check(item.size == 1);
                     check(item.offset == map_list_off);
@@ -230,8 +234,7 @@ class FileMap {
                      DexConstants.TYPE_CODE_ITEM, DexConstants.TYPE_STRING_DATA_ITEM,
                      DexConstants.TYPE_DEBUG_INFO_ITEM, DexConstants.TYPE_ANNOTATION_ITEM,
                      DexConstants.TYPE_ENCODED_ARRAY_ITEM,
-                     DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM,
-                     DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM -> { /* ok */ }
+                     DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM -> { /* ok */ }
                 default -> throw new IllegalStateException("unknown map_item type: " + item.type);
             }
         }
@@ -358,9 +361,9 @@ class FileMap {
             list.add(new MapItem(DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM,
                     annotations_directories_off, annotations_directories_size));
         }
-        if (hiddenapi_class_data_items_size > 0) {
+        if (hiddenapi_class_data_items_off > 0) {
             list.add(new MapItem(DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM,
-                    hiddenapi_class_data_items_off, hiddenapi_class_data_items_size));
+                    hiddenapi_class_data_items_off, 1));
         }
 
         list.add(new MapItem(DexConstants.TYPE_MAP_LIST, map_list_off, 1));

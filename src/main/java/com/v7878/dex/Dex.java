@@ -127,6 +127,8 @@ public final class Dex extends MutableList<ClassDef> {
         }
     }
 
+    // TODO: int computeMainSectionSize(WriteOptions options)
+
     // TODO: add check stage before writing
 
     public void write(RandomIO dst) {

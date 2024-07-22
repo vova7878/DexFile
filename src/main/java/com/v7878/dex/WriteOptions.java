@@ -32,4 +32,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
     public static WriteOptions defaultOptions() {
         return new WriteOptions();
     }
+
+    //TODO: withRedirectedDataBase(int offset /*from main section*/, RandomOutput)
+    //TODO: withCDEXFlags(int flags)
 }

@@ -79,7 +79,7 @@ public final class DexConstants {
     public static final int TYPE_ANNOTATION_ITEM = 0x2004;
     public static final int TYPE_ENCODED_ARRAY_ITEM = 0x2005;
     public static final int TYPE_ANNOTATIONS_DIRECTORY_ITEM = 0x2006;
-    //TODO?
+    //TODO
     public static final int TYPE_HIDDENAPI_CLASS_DATA_ITEM = 0xF000;
 
     //Value formats
@@ -112,4 +112,14 @@ public final class DexConstants {
     public static final int METHOD_HANDLE_TYPE_INVOKE_CONSTRUCTOR = 0x06;
     public static final int METHOD_HANDLE_TYPE_INVOKE_DIRECT = 0x07;
     public static final int METHOD_HANDLE_TYPE_INVOKE_INTERFACE = 0x08;
+
+    //Restriction flags
+    public static final int HIDDENAPI_FLAG_SDK = 0;
+    public static final int HIDDENAPI_FLAG_UNSUPPORTED = 1;
+    public static final int HIDDENAPI_FLAG_BLOCKED = 2;
+    public static final int HIDDENAPI_FLAG_MAX_TARGET_O = 3;
+    public static final int HIDDENAPI_FLAG_MAX_TARGET_P = 4;
+    public static final int HIDDENAPI_FLAG_MAX_TARGET_Q = 5;
+    public static final int HIDDENAPI_FLAG_MAX_TARGET_R = 6;
+    public static final int HIDDENAPI_FLAG_MAX_TARGET_S = 7;
 }
