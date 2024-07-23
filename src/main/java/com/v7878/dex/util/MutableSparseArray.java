@@ -56,6 +56,12 @@ public class MutableSparseArray<T extends Mutable> extends SparseArray<T> implem
 
     @Override
     @SuppressWarnings("unchecked")
+    public void append(int key, T value) {
+        super.append(key, (T) check(value).mutate());
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
     public void setValueAt(int index, T value) {
         super.setValueAt(index, (T) check(value).mutate());
     }
@@ -73,12 +79,9 @@ public class MutableSparseArray<T extends Mutable> extends SparseArray<T> implem
 
     @Override
     public MutableSparseArray<T> mutate() {
-        //TODO: maybe faster?
         int count = size();
         MutableSparseArray<T> out = new MutableSparseArray<>(count);
-        for (int i = 0; i < count; i++) {
-            out.put(keyAt(i), valueAt(i));
-        }
+        out.putAll(this);
         return out;
     }
 }
