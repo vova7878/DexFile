@@ -79,7 +79,6 @@ public final class DexConstants {
     public static final int TYPE_ANNOTATION_ITEM = 0x2004;
     public static final int TYPE_ENCODED_ARRAY_ITEM = 0x2005;
     public static final int TYPE_ANNOTATIONS_DIRECTORY_ITEM = 0x2006;
-    //TODO
     public static final int TYPE_HIDDENAPI_CLASS_DATA_ITEM = 0xF000;
 
     //Value formats

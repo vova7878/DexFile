@@ -62,11 +62,6 @@ public abstract class Format {
 
     public abstract Instruction read(RandomInput in, ReadContext context, int arg);
 
-    private static int extend_sign32(int value, int width) {
-        int shift = 32 - width;
-        return (value << shift) >> shift;
-    }
-
     public static final class Format10x extends Format {
 
         public final class Instance extends Instruction {
@@ -102,7 +97,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance();
             }
         }
@@ -112,11 +107,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int _00) {
-            return make();
+        public Instance read(RandomInput in, ReadContext context, int _00) {
+            return InstructionReader.read_10x(this, _00);
         }
 
-        public Instruction make() {
+        public Instance make() {
             return new Instance();
         }
     }
@@ -161,7 +156,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(A, B);
             }
         }
@@ -171,11 +166,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int BA) {
-            return make(BA & 0xf, BA >> 4);
+        public Instance read(RandomInput in, ReadContext context, int BA) {
+            return InstructionReader.read_12x(this, BA);
         }
 
-        public Instruction make(int A, int B) {
+        public Instance make(int A, int B) {
             return new Instance(A, B);
         }
     }
@@ -220,7 +215,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(A, sB);
             }
         }
@@ -230,11 +225,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int BA) {
-            return make(BA & 0xf, extend_sign32(BA >> 4, 4));
+        public Instance read(RandomInput in, ReadContext context, int BA) {
+            return InstructionReader.read_11n(this, BA);
         }
 
-        public Instruction make(int A, int sB) {
+        public Instance make(int A, int sB) {
             return new Instance(A, sB);
         }
     }
@@ -278,7 +273,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA);
             }
         }
@@ -288,11 +283,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            return make(AA);
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_11x(this, AA);
         }
 
-        public Instruction make(int AA) {
+        public Instance make(int AA) {
             return new Instance(AA);
         }
     }
@@ -336,7 +331,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(sAA);
             }
         }
@@ -346,11 +341,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            return make(extend_sign32(AA, 8));
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_10t(this, AA);
         }
 
-        public Instruction make(int sAA) {
+        public Instance make(int sAA) {
             return new Instance(sAA);
         }
     }
@@ -395,7 +390,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(sAAAA);
             }
         }
@@ -405,12 +400,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int _00) {
-            int AAAA = in.readUnsignedShort();
-            return make(extend_sign32(AAAA, 16));
+        public Instance read(RandomInput in, ReadContext context, int _00) {
+            return InstructionReader.read_20t(this, in, _00);
         }
 
-        public Instruction make(int sAAAA) {
+        public Instance make(int sAAAA) {
             return new Instance(sAAAA);
         }
     }
@@ -456,7 +450,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, BBBB);
             }
         }
@@ -466,12 +460,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int BBBB = in.readUnsignedShort();
-            return make(AA, BBBB);
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_22x(this, in, AA);
         }
 
-        public Instruction make(int AA, int BBBB) {
+        public Instance make(int AA, int BBBB) {
             return new Instance(AA, BBBB);
         }
     }
@@ -517,7 +510,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, sBBBB);
             }
         }
@@ -527,12 +520,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int BBBB = in.readUnsignedShort();
-            return make(AA, extend_sign32(BBBB, 16));
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_21t_21s(this, in, AA);
         }
 
-        public Instruction make(int AA, int sBBBB) {
+        public Instance make(int AA, int sBBBB) {
             return new Instance(AA, sBBBB);
         }
     }
@@ -578,7 +570,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, sBBBB0000);
             }
         }
@@ -588,12 +580,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int BBBB = in.readUnsignedShort();
-            return make(AA, BBBB << 16);
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_21ih(this, in, AA);
         }
 
-        public Instruction make(int AA, int sBBBB0000) {
+        public Instance make(int AA, int sBBBB0000) {
             return new Instance(AA, sBBBB0000);
         }
     }
@@ -640,7 +631,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, sBBBB000000000000);
             }
         }
@@ -650,12 +641,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            long BBBB = in.readUnsignedShort();
-            return make(AA, BBBB << 48);
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_21lh(this, in, AA);
         }
 
-        public Instruction make(int AA, long sBBBB000000000000) {
+        public Instance make(int AA, long sBBBB000000000000) {
             return new Instance(AA, sBBBB000000000000);
         }
     }
@@ -709,7 +699,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, referenceType.mutate(cBBBB));
             }
         }
@@ -720,12 +710,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int BBBB = in.readUnsignedShort();
-            return make(AA, referenceType.indexToRef(context, BBBB));
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_21c(this, in, context, AA);
         }
 
-        public Instruction make(int AA, Object cBBBB) {
+        public Instance make(int AA, Object cBBBB) {
             return new Instance(AA, cBBBB);
         }
     }
@@ -782,7 +771,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(A, B, cCCCC);
             }
         }
@@ -793,12 +782,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int BA) {
-            int CCCC = in.readUnsignedShort();
-            return make(BA & 0xf, BA >> 4, referenceType.indexToRef(context, CCCC));
+        public Instance read(RandomInput in, ReadContext context, int BA) {
+            return InstructionReader.read_22c(this, in, context, BA);
         }
 
-        public Instruction make(int A, int B, Object cCCCC) {
+        public Instance make(int A, int B, Object cCCCC) {
             return new Instance(A, B, cCCCC);
         }
     }
@@ -845,7 +833,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, BB, CC);
             }
         }
@@ -855,12 +843,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int CCBB = in.readUnsignedShort();
-            return make(AA, CCBB & 0xff, CCBB >> 8);
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_23x(this, in, AA);
         }
 
-        public Instruction make(int AA, int BB, int CC) {
+        public Instance make(int AA, int BB, int CC) {
             return new Instance(AA, BB, CC);
         }
     }
@@ -907,7 +894,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, BB, sCC);
             }
         }
@@ -917,12 +904,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int CCBB = in.readUnsignedShort();
-            return make(AA, CCBB & 0xff, extend_sign32(CCBB >> 8, 8));
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_22b(this, in, AA);
         }
 
-        public Instruction make(int AA, int BB, int sCC) {
+        public Instance make(int AA, int BB, int sCC) {
             return new Instance(AA, BB, sCC);
         }
     }
@@ -969,7 +955,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(A, B, sCCCC);
             }
         }
@@ -979,12 +965,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int BA) {
-            int CCCC = in.readUnsignedShort();
-            return make(BA & 0xf, BA >> 4, extend_sign32(CCCC, 16));
+        public Instance read(RandomInput in, ReadContext context, int BA) {
+            return InstructionReader.read_22t_22s(this, in, BA);
         }
 
-        public Instruction make(int A, int B, int sCCCC) {
+        public Instance make(int A, int B, int sCCCC) {
             return new Instance(A, B, sCCCC);
         }
     }
@@ -1029,7 +1014,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(sAAAAAAAA);
             }
         }
@@ -1039,13 +1024,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int _00) {
-            int AAAAlo = in.readUnsignedShort();
-            int AAAAhi = in.readUnsignedShort();
-            return make(AAAAlo | (AAAAhi << 16));
+        public Instance read(RandomInput in, ReadContext context, int _00) {
+            return InstructionReader.read_30t(this, in, _00);
         }
 
-        public Instruction make(int sAAAAAAAA) {
+        public Instance make(int sAAAAAAAA) {
             return new Instance(sAAAAAAAA);
         }
     }
@@ -1091,7 +1074,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AAAA, BBBB);
             }
         }
@@ -1101,13 +1084,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int _00) {
-            int AAAA = in.readUnsignedShort();
-            int BBBB = in.readUnsignedShort();
-            return make(AAAA, BBBB);
+        public Instance read(RandomInput in, ReadContext context, int _00) {
+            return InstructionReader.read_32x(this, in, _00);
         }
 
-        public Instruction make(int AAAA, int BBBB) {
+        public Instance make(int AAAA, int BBBB) {
             return new Instance(AAAA, BBBB);
         }
     }
@@ -1153,7 +1134,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, sBBBBBBBB);
             }
         }
@@ -1163,13 +1144,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int BBBBlo = in.readUnsignedShort();
-            int BBBBhi = in.readUnsignedShort();
-            return make(AA, BBBBlo | (BBBBhi << 16));
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_31i_31t(this, in, AA);
         }
 
-        public Instruction make(int AA, int sBBBBBBBB) {
+        public Instance make(int AA, int sBBBBBBBB) {
             return new Instance(AA, sBBBBBBBB);
         }
     }
@@ -1224,7 +1203,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, cBBBBBBBB);
             }
         }
@@ -1236,19 +1215,16 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int BBBBlo = in.readUnsignedShort();
-            int BBBBhi = in.readUnsignedShort();
-            int BBBBBBBB = BBBBlo | (BBBBhi << 16);
-            return make(AA, referenceType.indexToRef(context, BBBBBBBB));
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_31c(this, in, context, AA);
         }
 
-        public Instruction make(int AA, Object cBBBBBBBB) {
+        public Instance make(int AA, Object cBBBBBBBB) {
             return new Instance(AA, cBBBBBBBB);
         }
     }
 
-    public static final class Format35c extends Format {
+    public static final class Format35c35ms35mi extends Format {
 
         public final ReferenceType referenceType;
 
@@ -1306,35 +1282,27 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(A, cBBBB, C, D, E, F, G);
             }
         }
 
-        Format35c(Opcode opcode, ReferenceType referenceType) {
+        Format35c35ms35mi(Opcode opcode, ReferenceType referenceType) {
             super(opcode, 3);
             this.referenceType = referenceType;
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AG) {
-            int A = AG >> 4;
-            int G = AG & 0xf;
-            int BBBB = in.readUnsignedShort();
-            int FEDC = in.readUnsignedShort();
-            int F = FEDC >> 12;
-            int E = (FEDC >> 8) & 0xf;
-            int D = (FEDC >> 4) & 0xf;
-            int C = FEDC & 0xf;
-            return make(A, referenceType.indexToRef(context, BBBB), C, D, E, F, G);
+        public Instance read(RandomInput in, ReadContext context, int AG) {
+            return InstructionReader.read_35c_35ms_35mi(this, in, context, AG);
         }
 
-        public Instruction make(int A, Object cBBBB, int C, int D, int E, int F, int G) {
+        public Instance make(int A, Object cBBBB, int C, int D, int E, int F, int G) {
             return new Instance(A, cBBBB, C, D, E, F, G);
         }
     }
 
-    public static final class Format3rc extends Format {
+    public static final class Format3rc3rms3rmi extends Format {
 
         public final ReferenceType referenceType;
 
@@ -1386,24 +1354,22 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, cBBBB, CCCC);
             }
         }
 
-        Format3rc(Opcode opcode, ReferenceType referenceType) {
+        Format3rc3rms3rmi(Opcode opcode, ReferenceType referenceType) {
             super(opcode, 3);
             this.referenceType = referenceType;
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int BBBB = in.readUnsignedShort();
-            int CCCC = in.readUnsignedShort();
-            return make(AA, referenceType.indexToRef(context, BBBB), CCCC);
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_3rc_3rms_3rmi(this, in, context, AA);
         }
 
-        public Instruction make(int AA, Object cBBBB, int CCCC) {
+        public Instance make(int AA, Object cBBBB, int CCCC) {
             return new Instance(AA, cBBBB, CCCC);
         }
     }
@@ -1470,7 +1436,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(A, cBBBB, C, D, E, F, G, cHHHH);
             }
         }
@@ -1482,21 +1448,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AG) {
-            int A = AG >> 4;
-            int G = AG & 0xf;
-            int BBBB = in.readUnsignedShort();
-            int FEDC = in.readUnsignedShort();
-            int F = FEDC >> 12;
-            int E = (FEDC >> 8) & 0xf;
-            int D = (FEDC >> 4) & 0xf;
-            int C = FEDC & 0xf;
-            int HHHH = in.readUnsignedShort();
-            return make(A, referenceType.indexToRef(context, BBBB), C, D,
-                    E, F, G, referenceType2.indexToRef(context, HHHH));
+        public Instance read(RandomInput in, ReadContext context, int AG) {
+            return InstructionReader.read_45cc(this, in, context, AG);
         }
 
-        public Instruction make(int A, Object cBBBB, int C, int D, int E, int F, int G, Object cHHHH) {
+        public Instance make(int A, Object cBBBB, int C, int D, int E, int F, int G, Object cHHHH) {
             return new Instance(A, cBBBB, C, D, E, F, G, cHHHH);
         }
     }
@@ -1559,7 +1515,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, cBBBB, CCCC, cHHHH);
             }
         }
@@ -1571,15 +1527,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            int BBBB = in.readUnsignedShort();
-            int CCCC = in.readUnsignedShort();
-            int HHHH = in.readUnsignedShort();
-            return make(AA, referenceType.indexToRef(context, BBBB),
-                    CCCC, referenceType2.indexToRef(context, HHHH));
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_4rcc(this, in, context, AA);
         }
 
-        public Instruction make(int AA, Object cBBBB, int CCCC, Object cHHHH) {
+        public Instance make(int AA, Object cBBBB, int CCCC, Object cHHHH) {
             return new Instance(AA, cBBBB, CCCC, cHHHH);
         }
     }
@@ -1626,7 +1578,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(AA, sBBBBBBBBBBBBBBBB);
             }
         }
@@ -1636,16 +1588,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int AA) {
-            long BBBBlolo = in.readUnsignedShort();
-            long BBBBhilo = in.readUnsignedShort();
-            long BBBBlohi = in.readUnsignedShort();
-            long BBBBhihi = in.readUnsignedShort();
-            return make(AA, (BBBBhihi << 48) | (BBBBlohi << 32)
-                    | (BBBBhilo << 16) | BBBBlolo);
+        public Instance read(RandomInput in, ReadContext context, int AA) {
+            return InstructionReader.read_51l(this, in, AA);
         }
 
-        public Instruction make(int AA, long sBBBBBBBBBBBBBBBB) {
+        public Instance make(int AA, long sBBBBBBBBBBBBBBBB) {
             return new Instance(AA, sBBBBBBBBBBBBBBBB);
         }
     }
@@ -1664,7 +1611,7 @@ public abstract class Format {
 
             @Override
             public void write(WriteContext context, RandomOutput out) {
-                InstructionWriter.packed_switch_payload(out,
+                InstructionWriter.write_packed_switch_payload(out,
                         opcode().opcodeValue(context),
                         first_key, targets);
             }
@@ -1699,7 +1646,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(first_key, targets);
             }
         }
@@ -1709,18 +1656,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int _00) {
-            in.addPosition(-2); // code unit
-            in.requireAlignment(PAYLOAD_ALIGNMENT);
-            in.addPosition(2);
-
-            int size = in.readUnsignedShort();
-            int first_key = in.readInt();
-            int[] targets = in.readIntArray(size);
-            return make(first_key, targets);
+        public Instance read(RandomInput in, ReadContext context, int _00) {
+            return InstructionReader.read_packed_switch_payload(this, in, _00);
         }
 
-        public Instruction make(int first_key, int[] targets) {
+        public Instance make(int first_key, int[] targets) {
             return new Instance(first_key, targets);
         }
     }
@@ -1739,7 +1679,7 @@ public abstract class Format {
 
             @Override
             public void write(WriteContext context, RandomOutput out) {
-                InstructionWriter.sparse_switch_payload(out,
+                InstructionWriter.write_sparse_switch_payload(out,
                         opcode().opcodeValue(context),
                         keys, targets);
             }
@@ -1774,7 +1714,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(keys, targets);
             }
         }
@@ -1784,18 +1724,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int _00) {
-            in.addPosition(-2); // code unit
-            in.requireAlignment(PAYLOAD_ALIGNMENT);
-            in.addPosition(2);
-
-            int size = in.readUnsignedShort();
-            int[] keys = in.readIntArray(size);
-            int[] targets = in.readIntArray(size);
-            return make(keys, targets);
+        public Instance read(RandomInput in, ReadContext context, int _00) {
+            return InstructionReader.read_sparse_switch_payload(this, in, _00);
         }
 
-        public Instruction make(int[] keys, int[] targets) {
+        public Instance make(int[] keys, int[] targets) {
             return new Instance(keys, targets);
         }
     }
@@ -1849,7 +1782,7 @@ public abstract class Format {
             }
 
             @Override
-            public Instruction mutate() {
+            public Instance mutate() {
                 return new Instance(element_width, data);
             }
         }
@@ -1859,27 +1792,11 @@ public abstract class Format {
         }
 
         @Override
-        public Instruction read(RandomInput in, ReadContext context, int _00) {
-            in.addPosition(-2); // code unit
-            in.requireAlignment(PAYLOAD_ALIGNMENT);
-            in.addPosition(2);
-
-            int element_width = in.readUnsignedShort();
-            if (!(element_width == 1 || element_width == 2 || element_width == 4 || element_width == 8)) {
-                throw new IllegalStateException("unsupported element_width: " + element_width);
-            }
-            int size = in.readInt();
-            if (size < 0) {
-                throw new IllegalStateException("negative size: " + size);
-            }
-            byte[] data = in.readByteArray(size * element_width);
-            if ((data.length & 1) != 0) {
-                in.readByte(); // padding
-            }
-            return make(element_width, data);
+        public Instance read(RandomInput in, ReadContext context, int _00) {
+            return InstructionReader.read_array_payload(this, in, _00);
         }
 
-        public Instruction make(int element_width, byte[] data) {
+        public Instance make(int element_width, byte[] data) {
             return new Instance(element_width, data);
         }
     }

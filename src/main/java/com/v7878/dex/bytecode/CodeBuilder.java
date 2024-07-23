@@ -52,8 +52,8 @@ import com.v7878.dex.bytecode.Format.Format30t;
 import com.v7878.dex.bytecode.Format.Format31c;
 import com.v7878.dex.bytecode.Format.Format31i31t;
 import com.v7878.dex.bytecode.Format.Format32x;
-import com.v7878.dex.bytecode.Format.Format35c;
-import com.v7878.dex.bytecode.Format.Format3rc;
+import com.v7878.dex.bytecode.Format.Format35c35ms35mi;
+import com.v7878.dex.bytecode.Format.Format3rc3rms3rmi;
 import com.v7878.dex.bytecode.Format.Format45cc;
 import com.v7878.dex.bytecode.Format.Format4rcc;
 import com.v7878.dex.bytecode.Format.Format51l;
@@ -606,7 +606,7 @@ public final class CodeBuilder {
     private CodeBuilder f35c(Opcode op, Object constant, int arg_count, int arg_reg1,
                              int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         format_35c_checks(arg_count, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
-        add(op.<Format35c>format().make(arg_count,
+        add(op.<Format35c35ms35mi>format().make(arg_count,
                 constant, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5));
         return this;
     }
@@ -614,7 +614,7 @@ public final class CodeBuilder {
     // <AA|op BBBB CCCC> op {vCCCC .. vNNNN}, @BBBB (where NNNN = CCCC+AA-1)
     private CodeBuilder f3rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, 16, arg_count, 8);
-        add(op.<Format3rc>format().make(arg_count, constant, first_arg_reg));
+        add(op.<Format3rc3rms3rmi>format().make(arg_count, constant, first_arg_reg));
         return this;
     }
 

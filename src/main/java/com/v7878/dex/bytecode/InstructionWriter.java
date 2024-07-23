@@ -260,8 +260,8 @@ class InstructionWriter {
         out.writeShort((int) (BBBBBBBBBBBBBBBB >>> 48));
     }
 
-    public static void packed_switch_payload(RandomOutput out, int opcode,
-                                             int first_key, int[] targets) {
+    public static void write_packed_switch_payload(RandomOutput out, int opcode,
+                                                   int first_key, int[] targets) {
         Objects.requireNonNull(targets);
         int size = targets.length;
         if ((size & 0xffff) != size) {
@@ -274,8 +274,8 @@ class InstructionWriter {
         out.writeIntArray(targets);
     }
 
-    public static void sparse_switch_payload(RandomOutput out, int opcode,
-                                             int[] keys, int[] targets) {
+    public static void write_sparse_switch_payload(RandomOutput out, int opcode,
+                                                   int[] keys, int[] targets) {
         Objects.requireNonNull(keys);
         Objects.requireNonNull(targets);
         if (keys.length != targets.length) {
@@ -295,11 +295,13 @@ class InstructionWriter {
 
     public static void check_array_payload(int element_width, byte[] data) {
         Objects.requireNonNull(data);
-        if (!(element_width == 1 || element_width == 2 || element_width == 4 || element_width == 8)) {
+        if (!(element_width == 1 || element_width == 2
+                || element_width == 4 || element_width == 8)) {
             throw new IllegalStateException("unsupported element_width: " + element_width);
         }
         if (data.length % element_width != 0) {
-            throw new IllegalStateException("data.length is not multiple of element_width: " + data.length);
+            throw new IllegalStateException(
+                    "data.length is not multiple of element_width: " + data.length);
         }
     }
 
