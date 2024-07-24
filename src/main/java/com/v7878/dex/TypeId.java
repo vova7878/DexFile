@@ -40,6 +40,8 @@ public final class TypeId implements Mutable {
     public static final TypeId J = new TypeId("J");
     public static final TypeId D = new TypeId("D");
 
+    public static final TypeId OBJECT = TypeId.of(Object.class);
+
     public static final int SIZE = 0x04;
 
     public static final Comparator<TypeId> COMPARATOR =
