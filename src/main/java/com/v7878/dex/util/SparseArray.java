@@ -48,6 +48,12 @@ public class SparseArray<E> implements Cloneable {
         size = 0;
     }
 
+    @SuppressWarnings("CopyConstructorMissesField")
+    public SparseArray(SparseArray<E> sparseArray) {
+        this(sparseArray.size());
+        putAll(sparseArray);
+    }
+
     public void ensureCapacity(int minCapacity) {
         int new_length = unpadded_length(minCapacity);
         if (new_length > keys.length) {
@@ -211,6 +217,9 @@ public class SparseArray<E> implements Cloneable {
     public void putAll(SparseArray<? extends E> other) {
         Objects.requireNonNull(other);
         int length = other.size;
+        if (length == 0) {
+            return;
+        }
         ensureCapacity(size + length);
         int[] other_keys = other.keys;
         Object[] other_values = other.values;

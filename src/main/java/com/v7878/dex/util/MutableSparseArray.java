@@ -35,6 +35,10 @@ public class MutableSparseArray<T extends Mutable> extends SparseArray<T> implem
         super(initialCapacity);
     }
 
+    public MutableSparseArray(SparseArray<T> sparseArray) {
+        super(sparseArray);
+    }
+
     public static <E extends Mutable> MutableSparseArray<E> empty() {
         return new MutableSparseArray<>();
     }
@@ -79,9 +83,6 @@ public class MutableSparseArray<T extends Mutable> extends SparseArray<T> implem
 
     @Override
     public MutableSparseArray<T> mutate() {
-        int count = size();
-        MutableSparseArray<T> out = new MutableSparseArray<>(count);
-        out.putAll(this);
-        return out;
+        return new MutableSparseArray<>(this);
     }
 }
