@@ -54,7 +54,7 @@ import java.util.Comparator;
 import java.util.Objects;
 
 //TODO: cleanup code
-public interface EncodedValue extends Mutable {
+public sealed interface EncodedValue extends Mutable {
 
     Comparator<EncodedValue> COMPARATOR = (a, b) -> {
         EncodedValueType type;
@@ -456,7 +456,11 @@ public interface EncodedValue extends Mutable {
         };
     }
 
-    abstract class SimpleValue implements EncodedValue {
+    abstract sealed class SimpleValue implements EncodedValue
+            permits AnnotationValue, BooleanValue, ByteValue, CharValue,
+            DoubleValue, EnumValue, FieldValue, FloatValue, IntValue,
+            LongValue, MethodHandleValue, MethodTypeValue, MethodValue,
+            NullValue, ShortValue, StringValue, TypeValue {
 
         private final EncodedValueType type;
 
@@ -499,7 +503,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class BooleanValue extends SimpleValue {
+    final class BooleanValue extends SimpleValue {
 
         public static final Comparator<BooleanValue> COMPARATOR =
                 (a, b) -> Boolean.compare(a.value, b.value);
@@ -536,7 +540,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class ByteValue extends SimpleValue {
+    final class ByteValue extends SimpleValue {
 
         public static final Comparator<ByteValue> COMPARATOR =
                 Comparator.comparingInt(a -> a.value);
@@ -573,7 +577,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class ShortValue extends SimpleValue {
+    final class ShortValue extends SimpleValue {
 
         public static final Comparator<ShortValue> COMPARATOR =
                 Comparator.comparingInt(a -> a.value);
@@ -610,7 +614,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class CharValue extends SimpleValue {
+    final class CharValue extends SimpleValue {
 
         public static final Comparator<CharValue> COMPARATOR =
                 Comparator.comparingInt(a -> a.value);
@@ -647,7 +651,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class IntValue extends SimpleValue {
+    final class IntValue extends SimpleValue {
 
         public static final Comparator<IntValue> COMPARATOR =
                 Comparator.comparingInt(a -> a.value);
@@ -684,7 +688,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class LongValue extends SimpleValue {
+    final class LongValue extends SimpleValue {
 
         public static final Comparator<LongValue> COMPARATOR =
                 Comparator.comparingLong(a -> a.value);
@@ -721,7 +725,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class FloatValue extends SimpleValue {
+    final class FloatValue extends SimpleValue {
 
         public static final Comparator<FloatValue> COMPARATOR =
                 (a, b) -> Float.compare(a.value, b.value);
@@ -759,7 +763,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class DoubleValue extends SimpleValue {
+    final class DoubleValue extends SimpleValue {
 
         public static final Comparator<DoubleValue> COMPARATOR =
                 Comparator.comparingDouble(a -> a.value);
@@ -798,7 +802,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class NullValue extends SimpleValue {
+    final class NullValue extends SimpleValue {
 
         public static final Comparator<NullValue> COMPARATOR = (a, b) -> 0;
 
@@ -832,7 +836,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class MethodTypeValue extends SimpleValue {
+    final class MethodTypeValue extends SimpleValue {
 
         public static final Comparator<MethodTypeValue> COMPARATOR =
                 (a, b) -> ProtoId.COMPARATOR.compare(a.value, b.value);
@@ -856,13 +860,13 @@ public interface EncodedValue extends Mutable {
             );
         }
 
-        public final void setValue(ProtoId value) {
+        public void setValue(ProtoId value) {
             this.value = Objects.requireNonNull(value,
                     "value can`t be null").mutate();
         }
 
         @Override
-        public final ProtoId value() {
+        public ProtoId value() {
             return value;
         }
 
@@ -872,7 +876,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class MethodHandleValue extends SimpleValue {
+    final class MethodHandleValue extends SimpleValue {
 
         public static final Comparator<MethodHandleValue> COMPARATOR =
                 (a, b) -> MethodHandleItem.COMPARATOR.compare(a.value, b.value);
@@ -895,13 +899,13 @@ public interface EncodedValue extends Mutable {
                     context.getMethodHandleIndex(value));
         }
 
-        public final void setValue(MethodHandleItem value) {
+        public void setValue(MethodHandleItem value) {
             this.value = Objects.requireNonNull(value,
                     "value can`t be null").mutate();
         }
 
         @Override
-        public final MethodHandleItem value() {
+        public MethodHandleItem value() {
             return value;
         }
 
@@ -911,7 +915,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class StringValue extends SimpleValue {
+    final class StringValue extends SimpleValue {
 
         public static final Comparator<StringValue> COMPARATOR =
                 (a, b) -> StringId.COMPARATOR.compare(a.value, b.value);
@@ -934,13 +938,13 @@ public interface EncodedValue extends Mutable {
                     context.getStringIndex(value));
         }
 
-        public final void setValue(String value) {
+        public void setValue(String value) {
             this.value = Objects.requireNonNull(value,
                     "value can`t be null");
         }
 
         @Override
-        public final String value() {
+        public String value() {
             return value;
         }
 
@@ -950,7 +954,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class TypeValue extends SimpleValue {
+    final class TypeValue extends SimpleValue {
 
         public static final Comparator<TypeValue> COMPARATOR =
                 (a, b) -> TypeId.COMPARATOR.compare(a.value, b.value);
@@ -973,13 +977,13 @@ public interface EncodedValue extends Mutable {
                     context.getTypeIndex(value));
         }
 
-        public final void setValue(TypeId value) {
+        public void setValue(TypeId value) {
             this.value = Objects.requireNonNull(value,
                     "value can`t be null").mutate();
         }
 
         @Override
-        public final TypeId value() {
+        public TypeId value() {
             return value;
         }
 
@@ -989,7 +993,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class FieldValue extends SimpleValue {
+    final class FieldValue extends SimpleValue {
 
         public static final Comparator<FieldValue> COMPARATOR =
                 (a, b) -> FieldId.COMPARATOR.compare(a.value, b.value);
@@ -1012,13 +1016,13 @@ public interface EncodedValue extends Mutable {
                     context.getFieldIndex(value));
         }
 
-        public final void setValue(FieldId value) {
+        public void setValue(FieldId value) {
             this.value = Objects.requireNonNull(value,
                     "value can`t be null").mutate();
         }
 
         @Override
-        public final FieldId value() {
+        public FieldId value() {
             return value;
         }
 
@@ -1028,7 +1032,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class MethodValue extends SimpleValue {
+    final class MethodValue extends SimpleValue {
 
         public static final Comparator<MethodValue> COMPARATOR =
                 (a, b) -> MethodId.COMPARATOR.compare(a.value, b.value);
@@ -1051,13 +1055,13 @@ public interface EncodedValue extends Mutable {
                     context.getMethodIndex(value));
         }
 
-        public final void setValue(MethodId value) {
+        public void setValue(MethodId value) {
             this.value = Objects.requireNonNull(value,
                     "value can`t be null").mutate();
         }
 
         @Override
-        public final MethodId value() {
+        public MethodId value() {
             return value;
         }
 
@@ -1067,7 +1071,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class EnumValue extends SimpleValue {
+    final class EnumValue extends SimpleValue {
 
         public static final Comparator<EnumValue> COMPARATOR =
                 (a, b) -> FieldId.COMPARATOR.compare(a.value, b.value);
@@ -1090,13 +1094,13 @@ public interface EncodedValue extends Mutable {
                     context.getFieldIndex(value));
         }
 
-        public final void setValue(FieldId value) {
+        public void setValue(FieldId value) {
             this.value = Objects.requireNonNull(value,
                     "value can`t be null").mutate();
         }
 
         @Override
-        public final FieldId value() {
+        public FieldId value() {
             return value;
         }
 
@@ -1106,7 +1110,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class ArrayValue extends MutableList<EncodedValue> implements EncodedValue {
+    final class ArrayValue extends MutableList<EncodedValue> implements EncodedValue {
 
         public static final Comparator<ArrayValue> COMPARATOR
                 = getComparator(EncodedValue.COMPARATOR);
@@ -1159,7 +1163,7 @@ public interface EncodedValue extends Mutable {
         }
 
         @Override
-        public final ArrayValue value() {
+        public ArrayValue value() {
             return this;
         }
 
@@ -1188,7 +1192,7 @@ public interface EncodedValue extends Mutable {
         }
     }
 
-    class AnnotationValue extends SimpleValue {
+    final class AnnotationValue extends SimpleValue {
 
         public static final Comparator<AnnotationValue> COMPARATOR =
                 (a, b) -> EncodedAnnotation.COMPARATOR.compare(a.value, b.value);
@@ -1211,13 +1215,13 @@ public interface EncodedValue extends Mutable {
             value.write(context, out);
         }
 
-        public final void setValue(EncodedAnnotation value) {
+        public void setValue(EncodedAnnotation value) {
             this.value = Objects.requireNonNull(value,
                     "value can`t be null").mutate();
         }
 
         @Override
-        public final EncodedAnnotation value() {
+        public EncodedAnnotation value() {
             return value;
         }
 
