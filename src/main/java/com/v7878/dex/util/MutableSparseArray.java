@@ -54,20 +54,20 @@ public class MutableSparseArray<T extends Mutable> extends SparseArray<T> implem
 
     @Override
     @SuppressWarnings("unchecked")
-    public void put(int key, T value) {
-        super.put(key, (T) check(value).mutate());
+    public T put(int key, T value) {
+        return super.put(key, (T) check(value).mutate());
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public void append(int key, T value) {
-        super.append(key, (T) check(value).mutate());
+    public T append(int key, T value) {
+        return super.append(key, (T) check(value).mutate());
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public void setValueAt(int index, T value) {
-        super.setValueAt(index, (T) check(value).mutate());
+    public T setValueAt(int index, T value) {
+        return super.setValueAt(index, (T) check(value).mutate());
     }
 
     @Override

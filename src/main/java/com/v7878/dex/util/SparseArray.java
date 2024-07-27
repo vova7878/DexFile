@@ -97,14 +97,18 @@ public class SparseArray<E> implements Cloneable {
         return i < 0 || values[i] == DELETED ? valueIfKeyNotFound : (E) values[i];
     }
 
-    public void remove(int key) {
+    public E remove(int key) {
         int i = Arrays.binarySearch(keys, 0, size, key);
         if (i >= 0) {
-            if (values[i] != DELETED) {
+            Object last = values[i];
+            if (last != DELETED) {
                 values[i] = DELETED;
                 garbage = true;
+                //noinspection unchecked
+                return (E) last;
             }
         }
+        return null;
     }
 
     private void removeAtNoGC(int index) {
@@ -183,35 +187,38 @@ public class SparseArray<E> implements Cloneable {
         return newArray;
     }
 
-    public void put(int key, E value) {
+    public E put(int key, E value) {
         int i = Arrays.binarySearch(keys, 0, size, key);
         if (i >= 0) {
+            Object last = values[i];
             values[i] = value;
-        } else {
-            i = ~i;
-            if (i < size && values[i] == DELETED) {
-                keys[i] = key;
-                values[i] = value;
-                return;
-            }
-            if (garbage && size >= keys.length) {
-                gc();
-                // Search again because indices may have changed.
-                i = ~Arrays.binarySearch(keys, 0, size, key);
-            }
-            keys = insert(keys, size, i, key);
-            values = insert(values, size, i, value);
-            size++;
+            //noinspection unchecked
+            return last == DELETED ? null : (E) last;
         }
+        i = ~i;
+        if (i < size && values[i] == DELETED) {
+            keys[i] = key;
+            values[i] = value;
+            return null;
+        }
+        if (garbage && size >= keys.length) {
+            gc();
+            // Search again because indices may have changed.
+            i = ~Arrays.binarySearch(keys, 0, size, key);
+        }
+        keys = insert(keys, size, i, key);
+        values = insert(values, size, i, value);
+        size++;
+        return null;
     }
 
     /**
      * Puts a key/value pair into the array, optimizing for the case where
      * the key is greater than all existing keys in the array.
      */
-    public void append(int key, E value) {
+    public E append(int key, E value) {
         //TODO: optimize
-        put(key, value);
+        return put(key, value);
     }
 
     public void putAll(SparseArray<? extends E> other) {
@@ -250,10 +257,13 @@ public class SparseArray<E> implements Cloneable {
         return (E) values[index];
     }
 
-    public void setValueAt(int index, E value) {
+    public E setValueAt(int index, E value) {
         gcIfNeeded();
         checkIndex(index);
+        Object last = values[index];
         values[index] = value;
+        //noinspection unchecked
+        return last == DELETED ? null : (E) last;
     }
 
     public int indexOfKey(int key) {
