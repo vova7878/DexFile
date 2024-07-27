@@ -163,6 +163,16 @@ public interface RandomOutput extends AutoCloseable {
         MUTF8.writeMUTF8(this, value);
     }
 
+    default void writeFrom(RandomInput in, long length) {
+        for (int i = 0; i < length; i++) {
+            writeByte(in.readByte());
+        }
+    }
+
+    default void writeFrom(RandomInput in) {
+        writeFrom(in, size());
+    }
+
     long size();
 
     long position();
