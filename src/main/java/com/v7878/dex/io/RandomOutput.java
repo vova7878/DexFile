@@ -170,7 +170,7 @@ public interface RandomOutput extends AutoCloseable {
     }
 
     default void writeFrom(RandomInput in) {
-        writeFrom(in, size());
+        writeFrom(in, size() - position());
     }
 
     long size();

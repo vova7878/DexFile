@@ -184,7 +184,7 @@ public interface RandomInput extends AutoCloseable {
     }
 
     default void readTo(RandomOutput out) {
-        readTo(out, size());
+        readTo(out, size() - position());
     }
 
     long size();
