@@ -244,6 +244,10 @@ public class SparseArray<E> implements Cloneable {
         return size;
     }
 
+    public boolean isEmpty() {
+        return size() == 0;
+    }
+
     public int keyAt(int index) {
         gcIfNeeded();
         checkIndex(index);
@@ -345,6 +349,13 @@ public class SparseArray<E> implements Cloneable {
         return true;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        return obj instanceof SparseArray<?> other
+                && contentEquals(other);
+    }
+
     public int contentHashCode() {
         int hash = 0;
         int length = size();
@@ -356,6 +367,11 @@ public class SparseArray<E> implements Cloneable {
             hash = 31 * hash + Objects.hashCode(value);
         }
         return hash;
+    }
+
+    @Override
+    public int hashCode() {
+        return contentHashCode();
     }
 
     public void trimToSize() {

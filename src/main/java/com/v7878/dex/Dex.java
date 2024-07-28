@@ -164,7 +164,7 @@ public final class Dex extends MutableList<ClassDef> {
         AnnotationSet.writeSection(context, map, data, sections.getAnnotationSets());
         AnnotationSetList.writeSection(context, map, data, sections.getAnnotationSetLists());
         AnnotationsDirectory.writeSection(context, map, data, sections.getAnnotationsDirectories());
-        //TODO: DebugInfo.writeSection(context, map, data, sections.getDebugInfos());
+        DebugInfo.writeSection(context, map, data, sections.getDebugInfos());
         CodeItem.writeSection(context, map, data, sections.getCodeItems());
         ClassData.writeSection(context, map, data, sections.getClassDataItems());
         ArrayValue.writeSection(context, map, data, sections.getArrayValues());

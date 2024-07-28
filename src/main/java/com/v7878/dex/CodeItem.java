@@ -43,14 +43,22 @@ public final class CodeItem implements Mutable {
     private int outs_size;
     private MutableList<Instruction> insns;
     private MutableList<TryItem> tries;
+    private DebugInfo debug_info;
 
     public CodeItem(int registers_size, int ins_size, int outs_size,
-                    Collection<Instruction> insns, Collection<TryItem> tries) {
+                    Collection<Instruction> insns, Collection<TryItem> tries,
+                    DebugInfo debug_info) {
         setRegistersSize(registers_size);
         setInputsSize(ins_size);
         setOutputsSize(outs_size);
         setInstructions(insns);
         setTries(tries);
+        setDebugInfo(debug_info);
+    }
+
+    public CodeItem(int registers_size, int ins_size, int outs_size,
+                    Collection<Instruction> insns, Collection<TryItem> tries) {
+        this(registers_size, ins_size, outs_size, insns, tries, null);
     }
 
     public void setRegistersSize(int registers_size) {
@@ -98,6 +106,15 @@ public final class CodeItem implements Mutable {
         return tries;
     }
 
+    public void setDebugInfo(DebugInfo debug_info) {
+        this.debug_info = debug_info == null
+                ? new DebugInfo() : debug_info.mutate();
+    }
+
+    public DebugInfo getDebugInfo() {
+        return debug_info;
+    }
+
     private static final int kRegistersSizeShift = 12;
     private static final int kInsSizeShift = 8;
     private static final int kOutsSizeShift = 4;
@@ -125,6 +142,7 @@ public final class CodeItem implements Mutable {
         int outs_size;
         int tries_size;
         int insns_count; // in 2-byte code units
+        DebugInfo debug_info;
 
         if (context.getDexVersion().isCompact()) {
             RandomInput preheader = in.duplicate(in.position());
@@ -156,17 +174,21 @@ public final class CodeItem implements Mutable {
             }
 
             registers_size += ins_size;
+
+            debug_info = null; // TODO
         } else {
             registers_size = in.readUnsignedShort();
             ins_size = in.readUnsignedShort();
             outs_size = in.readUnsignedShort();
             tries_size = in.readUnsignedShort();
-            in.readInt(); //TODO: debug_info_off = in.readInt();
+            int debug_info_off = in.readInt();
+            debug_info = debug_info_off == 0 ? null :
+                    DebugInfo.read(context.data(debug_info_off), context);
             insns_count = in.readInt();
         }
 
         CodeItem out = new CodeItem(registers_size, ins_size, outs_size,
-                Instruction.readArray(in, context, insns_count), null);
+                Instruction.readArray(in, context, insns_count), null, debug_info);
 
         if (tries_size > 0) {
             in.alignPosition(TryItem.ALIGNMENT);
@@ -197,6 +219,7 @@ public final class CodeItem implements Mutable {
         for (TryItem tmp : tries) {
             data.fill(tmp);
         }
+        if (!debug_info.isEmpty()) data.add(debug_info);
     }
 
     private int countCodeUnits() {
@@ -285,7 +308,8 @@ public final class CodeItem implements Mutable {
             out.writeShort(ins_size);
             out.writeShort(outs_size);
             out.writeShort(tries_size);
-            out.writeInt(0); // TODO: debug_info_off
+            out.writeInt(debug_info.isEmpty() ? 0 :
+                    context.getDebugInfoOffset(debug_info));
             out.writeInt(insns_count);
         }
 
@@ -352,17 +376,19 @@ public final class CodeItem implements Mutable {
                 && ins_size == ciobj.ins_size
                 && outs_size == ciobj.outs_size
                 && Objects.equals(insns, ciobj.insns)
-                && Objects.equals(tries, ciobj.tries);
+                && Objects.equals(tries, ciobj.tries)
+                && Objects.equals(debug_info, ciobj.debug_info);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(registers_size, ins_size,
-                outs_size, insns, tries);
+                outs_size, insns, tries, debug_info);
     }
 
     @Override
     public CodeItem mutate() {
-        return new CodeItem(registers_size, ins_size, outs_size, insns, tries);
+        return new CodeItem(registers_size, ins_size,
+                outs_size, insns, tries, debug_info);
     }
 }

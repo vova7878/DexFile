@@ -102,6 +102,11 @@ public abstract class DataFilter implements DataCollector {
     }
 
     @Override
+    public void add(DebugInfo value) {
+        value.collectData(this);
+    }
+
+    @Override
     public void fill(CatchHandlerElement value) {
         value.collectData(this);
     }
@@ -143,6 +148,11 @@ public abstract class DataFilter implements DataCollector {
 
     @Override
     public void fill(EncodedValue value) {
+        value.collectData(this);
+    }
+
+    @Override
+    public void fill(DebugItem value) {
         value.collectData(this);
     }
 }

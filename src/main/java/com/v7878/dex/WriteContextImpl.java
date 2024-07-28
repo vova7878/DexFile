@@ -47,6 +47,7 @@ final class WriteContextImpl implements WriteContext {
     private final Map<ClassData, Integer> class_data_items;
     private final Map<TypeId, Integer> annotations_directories;
     private final Map<CodeItem, Integer> code_items;
+    private final Map<DebugInfo, Integer> debug_infos;
 
     private final WriteOptions options;
 
@@ -78,6 +79,7 @@ final class WriteContextImpl implements WriteContext {
         annotations_directories = new HashMap<>();
         array_values = new HashMap<>();
         code_items = new HashMap<>();
+        debug_infos = new HashMap<>();
     }
 
     @Override
@@ -120,6 +122,10 @@ final class WriteContextImpl implements WriteContext {
 
     public void addCodeItem(CodeItem value, int offset) {
         code_items.put(value, offset);
+    }
+
+    public void addDebugInfo(DebugInfo value, int offset) {
+        debug_infos.put(value, offset);
     }
 
     public String[] strings() {
@@ -301,6 +307,16 @@ final class WriteContextImpl implements WriteContext {
         if (out == null) {
             throw new IllegalArgumentException(
                     "unable to find code item \"" + value + "\"");
+        }
+        return out;
+    }
+
+    @Override
+    public int getDebugInfoOffset(DebugInfo value) {
+        Integer out = debug_infos.get(value);
+        if (out == null) {
+            throw new IllegalArgumentException(
+                    "unable to find debug info \"" + value + "\"");
         }
         return out;
     }

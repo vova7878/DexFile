@@ -53,6 +53,7 @@ final class DataSet extends DataFilter {
     private final Set<AnnotationSetList> annotation_set_lists;
     private final Set<ArrayValue> array_values;
     private final Set<CodeItem> code_items;
+    private final Set<DebugInfo> debug_infos;
 
     public DataSet() {
         strings = new HashSet<>();
@@ -74,6 +75,7 @@ final class DataSet extends DataFilter {
         annotation_set_lists = new HashSet<>();
         array_values = new HashSet<>();
         code_items = new HashSet<>();
+        debug_infos = new HashSet<>();
     }
 
     @Override
@@ -176,6 +178,15 @@ final class DataSet extends DataFilter {
     }
 
     @Override
+    public void add(DebugInfo value) {
+        super.add(value);
+        if (value.isEmpty()) {
+            throw new IllegalStateException("debug_info is empty");
+        }
+        debug_infos.add(value);
+    }
+
+    @Override
     public void fill(EncodedField value) {
         super.fill(value);
         AnnotationSet fannotations = value.getAnnotations();
@@ -271,5 +282,9 @@ final class DataSet extends DataFilter {
 
     public CodeItem[] getCodeItems() {
         return code_items.toArray(new CodeItem[0]);
+    }
+
+    public DebugInfo[] getDebugInfos() {
+        return debug_infos.toArray(new DebugInfo[0]);
     }
 }

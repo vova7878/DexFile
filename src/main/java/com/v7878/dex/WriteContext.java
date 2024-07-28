@@ -57,4 +57,6 @@ public interface WriteContext extends DexContext {
     int getArrayValueOffset(ArrayValue value);
 
     int getCodeItemOffset(CodeItem value);
+
+    int getDebugInfoOffset(DebugInfo value);
 }

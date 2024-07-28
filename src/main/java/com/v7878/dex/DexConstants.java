@@ -74,7 +74,6 @@ public final class DexConstants {
     public static final int TYPE_CLASS_DATA_ITEM = 0x2000;
     public static final int TYPE_CODE_ITEM = 0x2001;
     public static final int TYPE_STRING_DATA_ITEM = 0x2002;
-    //TODO
     public static final int TYPE_DEBUG_INFO_ITEM = 0x2003;
     public static final int TYPE_ANNOTATION_ITEM = 0x2004;
     public static final int TYPE_ENCODED_ARRAY_ITEM = 0x2005;
@@ -121,4 +120,21 @@ public final class DexConstants {
     public static final int HIDDENAPI_FLAG_MAX_TARGET_Q = 5;
     public static final int HIDDENAPI_FLAG_MAX_TARGET_R = 6;
     public static final int HIDDENAPI_FLAG_MAX_TARGET_S = 7;
+
+    //Debug byte code values
+    public static final int DBG_END_SEQUENCE = 0x00;
+    public static final int DBG_ADVANCE_PC = 0x01;
+    public static final int DBG_ADVANCE_LINE = 0x02;
+    public static final int DBG_START_LOCAL = 0x03;
+    public static final int DBG_START_LOCAL_EXTENDED = 0x04;
+    public static final int DBG_END_LOCAL = 0x05;
+    public static final int DBG_RESTART_LOCAL = 0x06;
+    public static final int DBG_SET_PROLOGUE_END = 0x07;
+    public static final int DBG_SET_EPILOGUE_BEGIN = 0x08;
+    public static final int DBG_SET_FILE = 0x09;
+    public static final int DBG_FIRST_SPECIAL = 0x0a;
+    public static final int DBG_LAST_SPECIAL = 0xff;
+    public static final int DBG_LINE_BASE = -4;
+    public static final int DBG_LINE_RANGE = 15;
+    public static final int DBG_LINE_TOP = DBG_LINE_BASE + DBG_LINE_RANGE - 1;
 }

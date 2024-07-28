@@ -57,6 +57,8 @@ public interface DataCollector {
 
     void add(CodeItem value);
 
+    void add(DebugInfo value);
+
     void fill(CatchHandlerElement value);
 
     void fill(CatchHandler value);
@@ -74,4 +76,6 @@ public interface DataCollector {
     void fill(AnnotationElement value);
 
     void fill(EncodedValue value);
+
+    void fill(DebugItem value);
 }

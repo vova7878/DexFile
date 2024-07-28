@@ -74,6 +74,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+// TODO: debug info
 public final class CodeBuilder {
 
     private static class InternalLabel {
