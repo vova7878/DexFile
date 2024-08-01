@@ -222,7 +222,7 @@ public final class ClassDef implements Mutable {
             } else {
                 RandomInput tmp = in.duplicate(in.position());
                 tmp.addPosition((long) id * ClassDef.SIZE);
-                out[i] = ClassDef.read(in, context);
+                out[i] = ClassDef.read(tmp, context);
             }
         }
         return out;
