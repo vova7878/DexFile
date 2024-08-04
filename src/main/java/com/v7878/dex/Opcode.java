@@ -48,10 +48,10 @@ public enum Opcode {
     MOVE_RESULT_WIDE(0x0b, "move-result-wide", Format11x, 0),
     MOVE_RESULT_OBJECT(0x0c, "move-result-object", Format11x, 0),
     MOVE_EXCEPTION(0x0d, "move-exception", Format11x, 0),
-    RETURN_VOID(0x0e, "return-void", Format10x, 0),
-    RETURN(0x0f, "return", Format11x, 0),
-    RETURN_WIDE(0x10, "return-wide", Format11x, 0),
-    RETURN_OBJECT(0x11, "return-object", Format11x, 0),
+    RETURN_VOID(0x0e, "return-void", Format10x, Opcode.TYPE_RETURN | Opcode.ENDS_FLOW),
+    RETURN(0x0f, "return", Format11x, Opcode.TYPE_RETURN | Opcode.ENDS_FLOW),
+    RETURN_WIDE(0x10, "return-wide", Format11x, Opcode.TYPE_RETURN | Opcode.ENDS_FLOW),
+    RETURN_OBJECT(0x11, "return-object", Format11x, Opcode.TYPE_RETURN | Opcode.ENDS_FLOW),
     CONST_4(0x12, "const/4", Format11n, 0),
     CONST_16(0x13, "const/16", Format21s, 0),
     CONST(0x14, "const", Format31i, 0),
@@ -60,25 +60,25 @@ public enum Opcode {
     CONST_WIDE_32(0x17, "const-wide/32", Format31i, 0),
     CONST_WIDE(0x18, "const-wide", Format51l, 0),
     CONST_WIDE_HIGH16(0x19, "const-wide/high16", Format21lh, 0),
-    CONST_STRING(0x1a, "const-string", Format21c, ReferenceType.STRING, 0),
-    CONST_STRING_JUMBO(0x1b, "const-string/jumbo", Format31c, ReferenceType.STRING, 0),
-    CONST_CLASS(0x1c, "const-class", Format21c, ReferenceType.TYPE, 0),
-    MONITOR_ENTER(0x1d, "monitor-enter", Format11x, 0),
-    MONITOR_EXIT(0x1e, "monitor-exit", Format11x, 0),
-    CHECK_CAST(0x1f, "check-cast", Format21c, ReferenceType.TYPE, 0),
-    INSTANCE_OF(0x20, "instance-of", Format22c22cs, ReferenceType.TYPE, 0),
-    ARRAY_LENGTH(0x21, "array-length", Format12x, 0),
-    NEW_INSTANCE(0x22, "new-instance", Format21c, ReferenceType.TYPE, 0),
-    NEW_ARRAY(0x23, "new-array", Format22c22cs, ReferenceType.TYPE, 0),
-    FILLED_NEW_ARRAY(0x24, "filled-new-array", Format35c35mi35ms, ReferenceType.TYPE, 0),
-    FILLED_NEW_ARRAY_RANGE(0x25, "filled-new-array/range", Format3rc3rmi3rms, ReferenceType.TYPE, 0),
-    FILL_ARRAY_DATA(0x26, "fill-array-data", Format31t, 0),
-    THROW(0x27, "throw", Format11x, 0),
-    GOTO(0x28, "goto", Format10t, 0),
-    GOTO_16(0x29, "goto/16", Format20t, 0),
-    GOTO_32(0x2a, "goto/32", Format30t, 0),
-    PACKED_SWITCH(0x2b, "packed-switch", Format31t, 0),
-    SPARSE_SWITCH(0x2c, "sparse-switch", Format31t, 0),
+    CONST_STRING(0x1a, "const-string", Format21c, ReferenceType.STRING, Opcode.CAN_THROW),
+    CONST_STRING_JUMBO(0x1b, "const-string/jumbo", Format31c, ReferenceType.STRING, Opcode.CAN_THROW),
+    CONST_CLASS(0x1c, "const-class", Format21c, ReferenceType.TYPE, Opcode.CAN_THROW),
+    MONITOR_ENTER(0x1d, "monitor-enter", Format11x, Opcode.CAN_THROW),
+    MONITOR_EXIT(0x1e, "monitor-exit", Format11x, Opcode.CAN_THROW),
+    CHECK_CAST(0x1f, "check-cast", Format21c, ReferenceType.TYPE, Opcode.CAN_THROW),
+    INSTANCE_OF(0x20, "instance-of", Format22c22cs, ReferenceType.TYPE, Opcode.CAN_THROW),
+    ARRAY_LENGTH(0x21, "array-length", Format12x, Opcode.CAN_THROW),
+    NEW_INSTANCE(0x22, "new-instance", Format21c, ReferenceType.TYPE, Opcode.CAN_THROW),
+    NEW_ARRAY(0x23, "new-array", Format22c22cs, ReferenceType.TYPE, Opcode.CAN_THROW),
+    FILLED_NEW_ARRAY(0x24, "filled-new-array", Format35c35mi35ms, ReferenceType.TYPE, Opcode.CAN_THROW),
+    FILLED_NEW_ARRAY_RANGE(0x25, "filled-new-array/range", Format3rc3rmi3rms, ReferenceType.TYPE, Opcode.CAN_THROW),
+    FILL_ARRAY_DATA(0x26, "fill-array-data", Format31t, Opcode.CAN_THROW | Opcode.HAS_PAYLOAD),
+    THROW(0x27, "throw", Format11x, Opcode.CAN_THROW | Opcode.ENDS_FLOW),
+    GOTO(0x28, "goto", Format10t, Opcode.TYPE_BRANCH | Opcode.UNCONDITIONAL | Opcode.ENDS_FLOW),
+    GOTO_16(0x29, "goto/16", Format20t, Opcode.TYPE_BRANCH | Opcode.UNCONDITIONAL | Opcode.ENDS_FLOW),
+    GOTO_32(0x2a, "goto/32", Format30t, Opcode.TYPE_BRANCH | Opcode.UNCONDITIONAL | Opcode.ENDS_FLOW),
+    PACKED_SWITCH(0x2b, "packed-switch", Format31t, Opcode.HAS_PAYLOAD | Opcode.TYPE_SWITCH),
+    SPARSE_SWITCH(0x2c, "sparse-switch", Format31t, Opcode.HAS_PAYLOAD | Opcode.TYPE_SWITCH),
 
     CMPL_FLOAT(0x2d, "cmpl-float", Format23x, 0),
     CMPG_FLOAT(0x2e, "cmpg-float", Format23x, 0),
@@ -86,80 +86,80 @@ public enum Opcode {
     CMPG_DOUBLE(0x30, "cmpg-double", Format23x, 0),
     CMP_LONG(0x31, "cmp-long", Format23x, 0),
 
-    IF_EQ(0x32, "if-eq", Format22t, 0),
-    IF_NE(0x33, "if-ne", Format22t, 0),
-    IF_LT(0x34, "if-lt", Format22t, 0),
-    IF_GE(0x35, "if-ge", Format22t, 0),
-    IF_GT(0x36, "if-gt", Format22t, 0),
-    IF_LE(0x37, "if-le", Format22t, 0),
+    IF_EQ(0x32, "if-eq", Format22t, Opcode.TYPE_BRANCH),
+    IF_NE(0x33, "if-ne", Format22t, Opcode.TYPE_BRANCH),
+    IF_LT(0x34, "if-lt", Format22t, Opcode.TYPE_BRANCH),
+    IF_GE(0x35, "if-ge", Format22t, Opcode.TYPE_BRANCH),
+    IF_GT(0x36, "if-gt", Format22t, Opcode.TYPE_BRANCH),
+    IF_LE(0x37, "if-le", Format22t, Opcode.TYPE_BRANCH),
 
-    IF_EQZ(0x38, "if-eqz", Format21t, 0),
-    IF_NEZ(0x39, "if-nez", Format21t, 0),
-    IF_LTZ(0x3a, "if-ltz", Format21t, 0),
-    IF_GEZ(0x3b, "if-gez", Format21t, 0),
-    IF_GTZ(0x3c, "if-gtz", Format21t, 0),
-    IF_LEZ(0x3d, "if-lez", Format21t, 0),
+    IF_EQZ(0x38, "if-eqz", Format21t, Opcode.TYPE_BRANCH),
+    IF_NEZ(0x39, "if-nez", Format21t, Opcode.TYPE_BRANCH),
+    IF_LTZ(0x3a, "if-ltz", Format21t, Opcode.TYPE_BRANCH),
+    IF_GEZ(0x3b, "if-gez", Format21t, Opcode.TYPE_BRANCH),
+    IF_GTZ(0x3c, "if-gtz", Format21t, Opcode.TYPE_BRANCH),
+    IF_LEZ(0x3d, "if-lez", Format21t, Opcode.TYPE_BRANCH),
 
     // 3e - 43 unused
 
-    AGET(0x44, "aget", Format23x, 0),
-    AGET_WIDE(0x45, "aget-wide", Format23x, 0),
-    AGET_OBJECT(0x46, "aget-object", Format23x, 0),
-    AGET_BOOLEAN(0x47, "aget-boolean", Format23x, 0),
-    AGET_BYTE(0x48, "aget-byte", Format23x, 0),
-    AGET_CHAR(0x49, "aget-char", Format23x, 0),
-    AGET_SHORT(0x4a, "aget-short", Format23x, 0),
-    APUT(0x4b, "aput", Format23x, 0),
-    APUT_WIDE(0x4c, "aput-wide", Format23x, 0),
-    APUT_OBJECT(0x4d, "aput-object", Format23x, 0),
-    APUT_BOOLEAN(0x4e, "aput-boolean", Format23x, 0),
-    APUT_BYTE(0x4f, "aput-byte", Format23x, 0),
-    APUT_CHAR(0x50, "aput-char", Format23x, 0),
-    APUT_SHORT(0x51, "aput-short", Format23x, 0),
+    AGET(0x44, "aget", Format23x, Opcode.CAN_THROW),
+    AGET_WIDE(0x45, "aget-wide", Format23x, Opcode.CAN_THROW),
+    AGET_OBJECT(0x46, "aget-object", Format23x, Opcode.CAN_THROW),
+    AGET_BOOLEAN(0x47, "aget-boolean", Format23x, Opcode.CAN_THROW),
+    AGET_BYTE(0x48, "aget-byte", Format23x, Opcode.CAN_THROW),
+    AGET_CHAR(0x49, "aget-char", Format23x, Opcode.CAN_THROW),
+    AGET_SHORT(0x4a, "aget-short", Format23x, Opcode.CAN_THROW),
+    APUT(0x4b, "aput", Format23x, Opcode.CAN_THROW),
+    APUT_WIDE(0x4c, "aput-wide", Format23x, Opcode.CAN_THROW),
+    APUT_OBJECT(0x4d, "aput-object", Format23x, Opcode.CAN_THROW),
+    APUT_BOOLEAN(0x4e, "aput-boolean", Format23x, Opcode.CAN_THROW),
+    APUT_BYTE(0x4f, "aput-byte", Format23x, Opcode.CAN_THROW),
+    APUT_CHAR(0x50, "aput-char", Format23x, Opcode.CAN_THROW),
+    APUT_SHORT(0x51, "aput-short", Format23x, Opcode.CAN_THROW),
 
-    IGET(0x52, "iget", Format22c22cs, ReferenceType.FIELD, 0),
-    IGET_WIDE(0x53, "iget-wide", Format22c22cs, ReferenceType.FIELD, 0),
-    IGET_OBJECT(0x54, "iget-object", Format22c22cs, ReferenceType.FIELD, 0),
-    IGET_BOOLEAN(0x55, "iget-boolean", Format22c22cs, ReferenceType.FIELD, 0),
-    IGET_BYTE(0x56, "iget-byte", Format22c22cs, ReferenceType.FIELD, 0),
-    IGET_CHAR(0x57, "iget-char", Format22c22cs, ReferenceType.FIELD, 0),
-    IGET_SHORT(0x58, "iget-short", Format22c22cs, ReferenceType.FIELD, 0),
-    IPUT(0x59, "iput", Format22c22cs, ReferenceType.FIELD, 0),
-    IPUT_WIDE(0x5a, "iput-wide", Format22c22cs, ReferenceType.FIELD, 0),
-    IPUT_OBJECT(0x5b, "iput-object", Format22c22cs, ReferenceType.FIELD, 0),
-    IPUT_BOOLEAN(0x5c, "iput-boolean", Format22c22cs, ReferenceType.FIELD, 0),
-    IPUT_BYTE(0x5d, "iput-byte", Format22c22cs, ReferenceType.FIELD, 0),
-    IPUT_CHAR(0x5e, "iput-char", Format22c22cs, ReferenceType.FIELD, 0),
-    IPUT_SHORT(0x5f, "iput-short", Format22c22cs, ReferenceType.FIELD, 0),
+    IGET(0x52, "iget", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IGET_WIDE(0x53, "iget-wide", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IGET_OBJECT(0x54, "iget-object", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IGET_BOOLEAN(0x55, "iget-boolean", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IGET_BYTE(0x56, "iget-byte", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IGET_CHAR(0x57, "iget-char", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IGET_SHORT(0x58, "iget-short", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IPUT(0x59, "iput", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IPUT_WIDE(0x5a, "iput-wide", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IPUT_OBJECT(0x5b, "iput-object", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IPUT_BOOLEAN(0x5c, "iput-boolean", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IPUT_BYTE(0x5d, "iput-byte", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IPUT_CHAR(0x5e, "iput-char", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
+    IPUT_SHORT(0x5f, "iput-short", Format22c22cs, ReferenceType.FIELD, Opcode.CAN_THROW),
 
-    SGET(0x60, "sget", Format21c, ReferenceType.FIELD, 0),
-    SGET_WIDE(0x61, "sget-wide", Format21c, ReferenceType.FIELD, 0),
-    SGET_OBJECT(0x62, "sget-object", Format21c, ReferenceType.FIELD, 0),
-    SGET_BOOLEAN(0x63, "sget-boolean", Format21c, ReferenceType.FIELD, 0),
-    SGET_BYTE(0x64, "sget-byte", Format21c, ReferenceType.FIELD, 0),
-    SGET_CHAR(0x65, "sget-char", Format21c, ReferenceType.FIELD, 0),
-    SGET_SHORT(0x66, "sget-short", Format21c, ReferenceType.FIELD, 0),
-    SPUT(0x67, "sput", Format21c, ReferenceType.FIELD, 0),
-    SPUT_WIDE(0x68, "sput-wide", Format21c, ReferenceType.FIELD, 0),
-    SPUT_OBJECT(0x69, "sput-object", Format21c, ReferenceType.FIELD, 0),
-    SPUT_BOOLEAN(0x6a, "sput-boolean", Format21c, ReferenceType.FIELD, 0),
-    SPUT_BYTE(0x6b, "sput-byte", Format21c, ReferenceType.FIELD, 0),
-    SPUT_CHAR(0x6c, "sput-char", Format21c, ReferenceType.FIELD, 0),
-    SPUT_SHORT(0x6d, "sput-short", Format21c, ReferenceType.FIELD, 0),
+    SGET(0x60, "sget", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SGET_WIDE(0x61, "sget-wide", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SGET_OBJECT(0x62, "sget-object", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SGET_BOOLEAN(0x63, "sget-boolean", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SGET_BYTE(0x64, "sget-byte", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SGET_CHAR(0x65, "sget-char", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SGET_SHORT(0x66, "sget-short", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SPUT(0x67, "sput", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SPUT_WIDE(0x68, "sput-wide", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SPUT_OBJECT(0x69, "sput-object", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SPUT_BOOLEAN(0x6a, "sput-boolean", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SPUT_BYTE(0x6b, "sput-byte", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SPUT_CHAR(0x6c, "sput-char", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
+    SPUT_SHORT(0x6d, "sput-short", Format21c, ReferenceType.FIELD, Opcode.CAN_THROW),
 
-    INVOKE_VIRTUAL(0x6e, "invoke-virtual", Format35c35mi35ms, ReferenceType.METHOD, 0),
-    INVOKE_SUPER(0x6f, "invoke-super", Format35c35mi35ms, ReferenceType.METHOD, 0),
-    INVOKE_DIRECT(0x70, "invoke-direct", Format35c35mi35ms, ReferenceType.METHOD, 0),
-    INVOKE_STATIC(0x71, "invoke-static", Format35c35mi35ms, ReferenceType.METHOD, 0),
-    INVOKE_INTERFACE(0x72, "invoke-interface", Format35c35mi35ms, ReferenceType.METHOD, 0),
+    INVOKE_VIRTUAL(0x6e, "invoke-virtual", Format35c35mi35ms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_SUPER(0x6f, "invoke-super", Format35c35mi35ms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_DIRECT(0x70, "invoke-direct", Format35c35mi35ms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE | Opcode.CAN_INITIALIZE_REFERENCE),
+    INVOKE_STATIC(0x71, "invoke-static", Format35c35mi35ms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_INTERFACE(0x72, "invoke-interface", Format35c35mi35ms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
 
     // 73 unused
 
-    INVOKE_VIRTUAL_RANGE(0x74, "invoke-virtual/range", Format3rc3rmi3rms, ReferenceType.METHOD, 0),
-    INVOKE_SUPER_RANGE(0x75, "invoke-super/range", Format3rc3rmi3rms, ReferenceType.METHOD, 0),
-    INVOKE_DIRECT_RANGE(0x76, "invoke-direct/range", Format3rc3rmi3rms, ReferenceType.METHOD, 0),
-    INVOKE_STATIC_RANGE(0x77, "invoke-static/range", Format3rc3rmi3rms, ReferenceType.METHOD, 0),
-    INVOKE_INTERFACE_RANGE(0x78, "invoke-interface/range", Format3rc3rmi3rms, ReferenceType.METHOD, 0),
+    INVOKE_VIRTUAL_RANGE(0x74, "invoke-virtual/range", Format3rc3rmi3rms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_SUPER_RANGE(0x75, "invoke-super/range", Format3rc3rmi3rms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_DIRECT_RANGE(0x76, "invoke-direct/range", Format3rc3rmi3rms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE | Opcode.CAN_INITIALIZE_REFERENCE),
+    INVOKE_STATIC_RANGE(0x77, "invoke-static/range", Format3rc3rmi3rms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_INTERFACE_RANGE(0x78, "invoke-interface/range", Format3rc3rmi3rms, ReferenceType.METHOD, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
 
     // 79 - 7a unused
 
@@ -188,8 +188,8 @@ public enum Opcode {
     ADD_INT(0x90, "add-int", Format23x, 0),
     SUB_INT(0x91, "sub-int", Format23x, 0),
     MUL_INT(0x92, "mul-int", Format23x, 0),
-    DIV_INT(0x93, "div-int", Format23x, 0),
-    REM_INT(0x94, "rem-int", Format23x, 0),
+    DIV_INT(0x93, "div-int", Format23x, Opcode.CAN_THROW),
+    REM_INT(0x94, "rem-int", Format23x, Opcode.CAN_THROW),
     AND_INT(0x95, "and-int", Format23x, 0),
     OR_INT(0x96, "or-int", Format23x, 0),
     XOR_INT(0x97, "xor-int", Format23x, 0),
@@ -199,8 +199,8 @@ public enum Opcode {
     ADD_LONG(0x9b, "add-long", Format23x, 0),
     SUB_LONG(0x9c, "sub-long", Format23x, 0),
     MUL_LONG(0x9d, "mul-long", Format23x, 0),
-    DIV_LONG(0x9e, "div-long", Format23x, 0),
-    REM_LONG(0x9f, "rem-long", Format23x, 0),
+    DIV_LONG(0x9e, "div-long", Format23x, Opcode.CAN_THROW),
+    REM_LONG(0x9f, "rem-long", Format23x, Opcode.CAN_THROW),
     AND_LONG(0xa0, "and-long", Format23x, 0),
     OR_LONG(0xa1, "or-long", Format23x, 0),
     XOR_LONG(0xa2, "xor-long", Format23x, 0),
@@ -221,8 +221,8 @@ public enum Opcode {
     ADD_INT_2ADDR(0xb0, "add-int/2addr", Format12x, 0),
     SUB_INT_2ADDR(0xb1, "sub-int/2addr", Format12x, 0),
     MUL_INT_2ADDR(0xb2, "mul-int/2addr", Format12x, 0),
-    DIV_INT_2ADDR(0xb3, "div-int/2addr", Format12x, 0),
-    REM_INT_2ADDR(0xb4, "rem-int/2addr", Format12x, 0),
+    DIV_INT_2ADDR(0xb3, "div-int/2addr", Format12x, Opcode.CAN_THROW),
+    REM_INT_2ADDR(0xb4, "rem-int/2addr", Format12x, Opcode.CAN_THROW),
     AND_INT_2ADDR(0xb5, "and-int/2addr", Format12x, 0),
     OR_INT_2ADDR(0xb6, "or-int/2addr", Format12x, 0),
     XOR_INT_2ADDR(0xb7, "xor-int/2addr", Format12x, 0),
@@ -232,8 +232,8 @@ public enum Opcode {
     ADD_LONG_2ADDR(0xbb, "add-long/2addr", Format12x, 0),
     SUB_LONG_2ADDR(0xbc, "sub-long/2addr", Format12x, 0),
     MUL_LONG_2ADDR(0xbd, "mul-long/2addr", Format12x, 0),
-    DIV_LONG_2ADDR(0xbe, "div-long/2addr", Format12x, 0),
-    REM_LONG_2ADDR(0xbf, "rem-long/2addr", Format12x, 0),
+    DIV_LONG_2ADDR(0xbe, "div-long/2addr", Format12x, Opcode.CAN_THROW),
+    REM_LONG_2ADDR(0xbf, "rem-long/2addr", Format12x, Opcode.CAN_THROW),
     AND_LONG_2ADDR(0xc0, "and-long/2addr", Format12x, 0),
     OR_LONG_2ADDR(0xc1, "or-long/2addr", Format12x, 0),
     XOR_LONG_2ADDR(0xc2, "xor-long/2addr", Format12x, 0),
@@ -254,8 +254,8 @@ public enum Opcode {
     ADD_INT_LIT16(0xd0, "add-int/lit16", Format22s, 0),
     RSUB_INT(0xd1, "rsub-int", Format22s, 0),
     MUL_INT_LIT16(0xd2, "mul-int/lit16", Format22s, 0),
-    DIV_INT_LIT16(0xd3, "div-int/lit16", Format22s, 0),
-    REM_INT_LIT16(0xd4, "rem-int/lit16", Format22s, 0),
+    DIV_INT_LIT16(0xd3, "div-int/lit16", Format22s, Opcode.CAN_THROW),
+    REM_INT_LIT16(0xd4, "rem-int/lit16", Format22s, Opcode.CAN_THROW),
     AND_INT_LIT16(0xd5, "and-int/lit16", Format22s, 0),
     OR_INT_LIT16(0xd6, "or-int/lit16", Format22s, 0),
     XOR_INT_LIT16(0xd7, "xor-int/lit16", Format22s, 0),
@@ -263,8 +263,8 @@ public enum Opcode {
     ADD_INT_LIT8(0xd8, "add-int/lit8", Format22b, 0),
     RSUB_INT_LIT8(0xd9, "rsub-int/lit8", Format22b, 0),
     MUL_INT_LIT8(0xda, "mul-int/lit8", Format22b, 0),
-    DIV_INT_LIT8(0xdb, "div-int/lit8", Format22b, 0),
-    REM_INT_LIT8(0xdc, "rem-int/lit8", Format22b, 0),
+    DIV_INT_LIT8(0xdb, "div-int/lit8", Format22b, Opcode.CAN_THROW),
+    REM_INT_LIT8(0xdc, "rem-int/lit8", Format22b, Opcode.CAN_THROW),
     AND_INT_LIT8(0xdd, "and-int/lit8", Format22b, 0),
     OR_INT_LIT8(0xde, "or-int/lit8", Format22b, 0),
     XOR_INT_LIT8(0xdf, "xor-int/lit8", Format22b, 0),
@@ -274,12 +274,12 @@ public enum Opcode {
 
     // e3 - f9 unused
 
-    INVOKE_POLYMORPHIC(firstDex(DEX038, firstApi(0xfa, 26)), "invoke-polymorphic", Format45cc, ReferenceType.METHOD, ReferenceType.PROTO, 0),
-    INVOKE_POLYMORPHIC_RANGE(firstDex(DEX038, firstApi(0xfb, 26)), "invoke-polymorphic/range", Format4rcc, ReferenceType.METHOD, ReferenceType.PROTO, 0),
-    INVOKE_CUSTOM(firstDex(DEX038, firstApi(0xfc, 26)), "invoke-custom", Format35c35mi35ms, ReferenceType.CALLSITE, 0),
-    INVOKE_CUSTOM_RANGE(firstDex(DEX038, firstApi(0xfd, 26)), "invoke-custom/range", Format3rc3rmi3rms, ReferenceType.CALLSITE, 0),
-    CONST_METHOD_HANDLE(firstDex(DEX039, firstApi(0xfe, 28)), "const-method-handle", Format21c, ReferenceType.METHOD_HANDLE, 0),
-    CONST_METHOD_TYPE(firstDex(DEX039, firstApi(0xff, 28)), "const-method-type", Format21c, ReferenceType.PROTO, 0),
+    INVOKE_POLYMORPHIC(firstDex(DEX038, firstApi(0xfa, 26)), "invoke-polymorphic", Format45cc, ReferenceType.METHOD, ReferenceType.PROTO, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_POLYMORPHIC_RANGE(firstDex(DEX038, firstApi(0xfb, 26)), "invoke-polymorphic/range", Format4rcc, ReferenceType.METHOD, ReferenceType.PROTO, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_CUSTOM(firstDex(DEX038, firstApi(0xfc, 26)), "invoke-custom", Format35c35mi35ms, ReferenceType.CALLSITE, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_CUSTOM_RANGE(firstDex(DEX038, firstApi(0xfd, 26)), "invoke-custom/range", Format3rc3rmi3rms, ReferenceType.CALLSITE, Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    CONST_METHOD_HANDLE(firstDex(DEX039, firstApi(0xfe, 28)), "const-method-handle", Format21c, ReferenceType.METHOD_HANDLE, Opcode.CAN_THROW),
+    CONST_METHOD_TYPE(firstDex(DEX039, firstApi(0xff, 28)), "const-method-type", Format21c, ReferenceType.PROTO, Opcode.CAN_THROW),
 
     PACKED_SWITCH_PAYLOAD(0x100, "packed-switch-payload", PackedSwitchPayload, 0),
     SPARSE_SWITCH_PAYLOAD(0x200, "sparse-switch-payload", SparseSwitchPayload, 0),
@@ -287,55 +287,57 @@ public enum Opcode {
 
     // odex opcodes
 
-    EXECUTE_INLINE(onlyDalvik(0xee), "execute-inline", Format35c35mi35ms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    EXECUTE_INLINE_RANGE(onlyDalvik(firstApi(0xef, 8)), "execute-inline/range", Format3rc3rmi3rms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
+    // TODO: allows only 4 args, instead 5
+    EXECUTE_INLINE(onlyDalvik(0xee), "execute-inline", Format35c35mi35ms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    // TODO: allows only 4 args, instead 255
+    EXECUTE_INLINE_RANGE(onlyDalvik(firstApi(0xef, 8)), "execute-inline/range", Format3rc3rmi3rms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
 
-    INVOKE_DIRECT_EMPTY(onlyDalvik(lastApi(0xf0, 13)), "invoke-direct-empty", Format35c35mi35ms, ReferenceType.METHOD, Opcode.ODEX_ONLY),
-    INVOKE_OBJECT_INIT_RANGE(onlyDalvik(firstApi(0xf0, 14)), "invoke-object-init/range", Format3rc3rmi3rms, ReferenceType.METHOD, Opcode.ODEX_ONLY),
+    INVOKE_DIRECT_EMPTY(onlyDalvik(lastApi(0xf0, 13)), "invoke-direct-empty", Format35c35mi35ms, ReferenceType.METHOD, Opcode.ODEX_ONLY | Opcode.CAN_THROW | Opcode.TYPE_INVOKE | Opcode.CAN_INITIALIZE_REFERENCE),
+    INVOKE_OBJECT_INIT_RANGE(onlyDalvik(firstApi(0xf0, 14)), "invoke-object-init/range", Format3rc3rmi3rms, ReferenceType.METHOD, Opcode.ODEX_ONLY | Opcode.CAN_THROW | Opcode.TYPE_INVOKE | Opcode.CAN_INITIALIZE_REFERENCE),
 
-    IGET_QUICK(value(0xf2), lastApi(0xe3, 30), "iget-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IGET_WIDE_QUICK(value(0xf3), lastApi(0xe4, 30), "iget-wide-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IGET_OBJECT_QUICK(value(0xf4), lastApi(0xe5, 30), "iget-object-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IPUT_QUICK(value(0xf5), lastApi(0xe6, 30), "iput-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IPUT_WIDE_QUICK(value(0xf6), lastApi(0xe7, 30), "iput-wide-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IPUT_OBJECT_QUICK(value(0xf7), lastApi(0xe8, 30), "iput-object-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
+    IGET_QUICK(value(0xf2), lastApi(0xe3, 30), "iget-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IGET_WIDE_QUICK(value(0xf3), lastApi(0xe4, 30), "iget-wide-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IGET_OBJECT_QUICK(value(0xf4), lastApi(0xe5, 30), "iget-object-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IPUT_QUICK(value(0xf5), lastApi(0xe6, 30), "iput-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IPUT_WIDE_QUICK(value(0xf6), lastApi(0xe7, 30), "iput-wide-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IPUT_OBJECT_QUICK(value(0xf7), lastApi(0xe8, 30), "iput-object-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
 
-    INVOKE_VIRTUAL_QUICK(value(0xf8), lastApi(0xe9, 30), "invoke-virtual-quick", Format35c35mi35ms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    INVOKE_VIRTUAL_QUICK_RANGE(value(0xf9), lastApi(0xea, 30), "invoke-virtual-quick/range", Format3rc3rmi3rms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    INVOKE_SUPER_QUICK(onlyDalvik(0xfa), "invoke-super-quick", Format35c35mi35ms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    INVOKE_SUPER_QUICK_RANGE(onlyDalvik(0xfb), "invoke-super-quick/range", Format3rc3rmi3rms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
+    INVOKE_VIRTUAL_QUICK(value(0xf8), lastApi(0xe9, 30), "invoke-virtual-quick", Format35c35mi35ms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_VIRTUAL_QUICK_RANGE(value(0xf9), lastApi(0xea, 30), "invoke-virtual-quick/range", Format3rc3rmi3rms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_SUPER_QUICK(onlyDalvik(0xfa), "invoke-super-quick", Format35c35mi35ms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
+    INVOKE_SUPER_QUICK_RANGE(onlyDalvik(0xfb), "invoke-super-quick/range", Format3rc3rmi3rms, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW | Opcode.TYPE_INVOKE),
 
-    //TODO THROW_VERIFICATION_ERROR(onlyDalvik(firstApi(0xed, 5)), "throw-verification-error", Format20bc, ODEX_ONLY),
+    //TODO THROW_VERIFICATION_ERROR(onlyDalvik(firstApi(0xed, 5)), "throw-verification-error", Format20bc, ODEX_ONLY | CAN_THROW | END_FLOW),
 
     // Note: breakpoint replaces the original opcode and restores it back when executed (it only exists at runtime)
-    // BREAKPOINT(onlyDalvik(firstApi(0xec, 8)), "breakpoint", Format00x, ODEX_ONLY),
+    // BREAKPOINT(onlyDalvik(firstApi(0xec, 8)), "breakpoint", Format00x, RUNTIME_ONLY),
 
-    IGET_VOLATILE(onlyDalvik(firstApi(0xe3, 9)), "iget-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY),
-    IPUT_VOLATILE(onlyDalvik(firstApi(0xe4, 9)), "iput-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY),
-    SGET_VOLATILE(onlyDalvik(firstApi(0xe5, 9)), "sget-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY),
-    SPUT_VOLATILE(onlyDalvik(firstApi(0xe6, 9)), "sput-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY),
+    IGET_VOLATILE(onlyDalvik(firstApi(0xe3, 9)), "iget-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IPUT_VOLATILE(onlyDalvik(firstApi(0xe4, 9)), "iput-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    SGET_VOLATILE(onlyDalvik(firstApi(0xe5, 9)), "sget-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    SPUT_VOLATILE(onlyDalvik(firstApi(0xe6, 9)), "sput-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
 
-    IGET_WIDE_VOLATILE(onlyDalvik(firstApi(0xe8, 9)), "iget-wide-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY),
-    IPUT_WIDE_VOLATILE(onlyDalvik(firstApi(0xe9, 9)), "iput-wide-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY),
-    SGET_WIDE_VOLATILE(onlyDalvik(firstApi(0xea, 9)), "sget-wide-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY),
-    SPUT_WIDE_VOLATILE(onlyDalvik(firstApi(0xeb, 9)), "sput-wide-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY),
+    IGET_WIDE_VOLATILE(onlyDalvik(firstApi(0xe8, 9)), "iget-wide-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IPUT_WIDE_VOLATILE(onlyDalvik(firstApi(0xe9, 9)), "iput-wide-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    SGET_WIDE_VOLATILE(onlyDalvik(firstApi(0xea, 9)), "sget-wide-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    SPUT_WIDE_VOLATILE(onlyDalvik(firstApi(0xeb, 9)), "sput-wide-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
 
-    IGET_OBJECT_VOLATILE(onlyDalvik(firstApi(0xe7, 9)), "iget-object-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY),
-    IPUT_OBJECT_VOLATILE(onlyDalvik(firstApi(0xfc, 9)), "iput-object-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY),
-    SGET_OBJECT_VOLATILE(onlyDalvik(firstApi(0xfd, 9)), "sget-object-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY),
-    SPUT_OBJECT_VOLATILE(onlyDalvik(firstApi(0xfe, 9)), "sput-object-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY),
+    IGET_OBJECT_VOLATILE(onlyDalvik(firstApi(0xe7, 9)), "iget-object-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IPUT_OBJECT_VOLATILE(onlyDalvik(firstApi(0xfc, 9)), "iput-object-volatile", Format22c22cs, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    SGET_OBJECT_VOLATILE(onlyDalvik(firstApi(0xfd, 9)), "sget-object-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    SPUT_OBJECT_VOLATILE(onlyDalvik(firstApi(0xfe, 9)), "sput-object-volatile", Format21c, ReferenceType.FIELD, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
 
-    RETURN_VOID_BARRIER(firstApi(0xf1, 11), lastApi(0x73, 22), "return-void-barrier", Format10x, Opcode.ODEX_ONLY),
-    RETURN_VOID_NO_BARRIER(onlyArt(betweenApi(0x73, 23, 30)), "return-void-no-barrier", Format10x, Opcode.ODEX_ONLY),
+    RETURN_VOID_BARRIER(firstApi(0xf1, 11), lastApi(0x73, 22), "return-void-barrier", Format10x, Opcode.ODEX_ONLY | Opcode.TYPE_RETURN | Opcode.ENDS_FLOW),
+    RETURN_VOID_NO_BARRIER(onlyArt(betweenApi(0x73, 23, 30)), "return-void-no-barrier", Format10x, Opcode.ODEX_ONLY | Opcode.TYPE_RETURN | Opcode.ENDS_FLOW),
 
-    IPUT_BOOLEAN_QUICK(onlyArt(betweenApi(0xeb, 23, 30)), "iput-boolean-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IPUT_BYTE_QUICK(onlyArt(betweenApi(0xec, 23, 30)), "iput-byte-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IPUT_CHAR_QUICK(onlyArt(betweenApi(0xed, 23, 30)), "iput-char-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IPUT_SHORT_QUICK(onlyArt(betweenApi(0xee, 23, 30)), "iput-short-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IGET_BOOLEAN_QUICK(onlyArt(betweenApi(0xef, 23, 30)), "iget-boolean-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IGET_BYTE_QUICK(onlyArt(betweenApi(0xf0, 23, 30)), "iget-byte-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IGET_CHAR_QUICK(onlyArt(betweenApi(0xf1, 23, 30)), "iget-char-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
-    IGET_SHORT_QUICK(onlyArt(betweenApi(0xf2, 23, 30)), "iget-short-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY),
+    IPUT_BOOLEAN_QUICK(onlyArt(betweenApi(0xeb, 23, 30)), "iput-boolean-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IPUT_BYTE_QUICK(onlyArt(betweenApi(0xec, 23, 30)), "iput-byte-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IPUT_CHAR_QUICK(onlyArt(betweenApi(0xed, 23, 30)), "iput-char-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IPUT_SHORT_QUICK(onlyArt(betweenApi(0xee, 23, 30)), "iput-short-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IGET_BOOLEAN_QUICK(onlyArt(betweenApi(0xef, 23, 30)), "iget-boolean-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IGET_BYTE_QUICK(onlyArt(betweenApi(0xf0, 23, 30)), "iget-byte-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IGET_CHAR_QUICK(onlyArt(betweenApi(0xf1, 23, 30)), "iget-char-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
+    IGET_SHORT_QUICK(onlyArt(betweenApi(0xf2, 23, 30)), "iget-short-quick", Format22c22cs, ReferenceType.RAW_INDEX, Opcode.ODEX_ONLY | Opcode.CAN_THROW),
 
     // experimental lambda opcodes
 
@@ -358,7 +360,26 @@ public enum Opcode {
         public abstract String toString();
     }
 
-    private static final int ODEX_ONLY = 1;
+    // a flavor of invoke
+    private static final int TYPE_INVOKE = 0x1;
+    // returns, no additional statements
+    private static final int TYPE_RETURN = 0x2;
+    // switch statement
+    private static final int TYPE_SWITCH = 0x4;
+    // conditional or unconditional branch
+    private static final int TYPE_BRANCH = 0x8;
+    // unconditional branch
+    private static final int UNCONDITIONAL = 0x10;
+    // can initialize an uninitialized object reference
+    private static final int CAN_INITIALIZE_REFERENCE = 0x20;
+    // with supplemental data
+    private static final int HAS_PAYLOAD = 0x40;
+    // flow can`t continue to next statement
+    private static final int ENDS_FLOW = 0x80;
+    // could cause an exception to be thrown
+    private static final int CAN_THROW = 0x100;
+    // odex only instruction
+    private static final int ODEX_ONLY = 0x200;
 
     private final Constraint constraint;
     private final String name;
@@ -393,7 +414,7 @@ public enum Opcode {
 
     Opcode(Constraint constraint, String name, Format format, ReferenceType reference1, ReferenceType reference2, int flags) {
         this.flags = flags;
-        this.constraint = isOdexOnly() ? onlyOdex(constraint) : constraint;
+        this.constraint = odexOnly() ? onlyOdex(constraint) : constraint;
         this.name = name;
         this.format = format;
         this.reference1 = reference1;
@@ -416,8 +437,56 @@ public enum Opcode {
         return reference2;
     }
 
-    public boolean isOdexOnly() {
+    public final boolean canThrow() {
+        return (flags & CAN_THROW) != 0;
+    }
+
+    public final boolean odexOnly() {
         return (flags & ODEX_ONLY) != 0;
+    }
+
+    public final boolean endsFlow() {
+        return (flags & ENDS_FLOW) != 0;
+    }
+
+    public final boolean canContinue() {
+        return !endsFlow();
+    }
+
+    public final boolean isInvoke() {
+        return (flags & TYPE_INVOKE) != 0;
+    }
+
+    public final boolean setsResult() {
+        return isInvoke();
+    }
+
+    public final boolean isReturn() {
+        return (flags & TYPE_RETURN) != 0;
+    }
+
+    public final boolean isSwitch() {
+        return (flags & TYPE_SWITCH) != 0;
+    }
+
+    public final boolean isBranch() {
+        return (flags & TYPE_BRANCH) != 0;
+    }
+
+    public final boolean isUnconditionalBranch() {
+        return (flags & UNCONDITIONAL) != 0;
+    }
+
+    public final boolean hasSupplementalData() {
+        return (flags & HAS_PAYLOAD) != 0;
+    }
+
+    public final boolean isPayload() {
+        return format.isPayload();
+    }
+
+    public final boolean canInitializeReference() {
+        return (flags & CAN_INITIALIZE_REFERENCE) != 0;
     }
 
     Integer getValue(DexVersion dex, int api, boolean art, boolean odex) {
