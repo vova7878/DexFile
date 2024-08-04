@@ -1,7 +1,7 @@
 package com.v7878.dex.iface.bytecode.formats;
 
 import com.v7878.dex.iface.bytecode.OneRegisterInstruction;
-import com.v7878.dex.iface.bytecode.ReferenceInstruction;
+import com.v7878.dex.iface.bytecode.SingleReferenceInstruction;
 
-public non-sealed interface Instruction31c extends OneRegisterInstruction, ReferenceInstruction {
+public non-sealed interface Instruction31c extends OneRegisterInstruction, SingleReferenceInstruction {
 }

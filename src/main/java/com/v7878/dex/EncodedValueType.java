@@ -39,7 +39,7 @@ public enum EncodedValueType {
     NULL(VALUE_NULL),
     BOOLEAN(VALUE_BOOLEAN);
 
-    public final int value;
+    private final int value;
 
     EncodedValueType(int value) {
         this.value = value;
