@@ -4,7 +4,7 @@ import com.v7878.dex.iface.value.EncodedValue;
 
 import java.util.List;
 
-public interface CallSiteId {
+public interface CallSiteId extends Comparable<CallSiteId> {
     MethodHandleId getMethodHandle();
 
     String getMethodName();
