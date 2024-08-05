@@ -1,5 +1,7 @@
 package com.v7878.dex.iface;
 
+import com.v7878.dex.util.CollectionUtils;
+
 import java.util.NavigableSet;
 
 public interface ClassDef extends Comparable<ClassDef>, Annotatable {
@@ -13,15 +15,23 @@ public interface ClassDef extends Comparable<ClassDef>, Annotatable {
 
     String getSourceFile();
 
-    NavigableSet<? extends FieldDef> getStaticFields();
-
-    NavigableSet<? extends FieldDef> getInstanceFields();
-
     NavigableSet<? extends FieldDef> getFields();
 
-    NavigableSet<? extends MethodDef> getDirectMethods();
+    default NavigableSet<? extends FieldDef> getStaticFields() {
+        return CollectionUtils.getStaticFieldsSubset(getFields());
+    }
 
-    NavigableSet<? extends MethodDef> getVirtualMethods();
+    default NavigableSet<? extends FieldDef> getInstanceFields() {
+        return CollectionUtils.getInstanceFieldsSubset(getFields());
+    }
 
     NavigableSet<? extends MethodDef> getMethods();
+
+    default NavigableSet<? extends MethodDef> getDirectMethods() {
+        return CollectionUtils.getDirectMethodsSubset(getMethods());
+    }
+
+    default NavigableSet<? extends MethodDef> getVirtualMethods() {
+        return CollectionUtils.getVirtualMethodsSubset(getMethods());
+    }
 }

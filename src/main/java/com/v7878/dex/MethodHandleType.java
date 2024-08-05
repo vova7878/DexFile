@@ -49,4 +49,8 @@ public enum MethodHandleType {
         }
         throw new IllegalArgumentException("Unknown method handle type: " + value);
     }
+
+    public static int compare(MethodHandleType left, MethodHandleType right) {
+        return Integer.compare(left.value(), right.value());
+    }
 }

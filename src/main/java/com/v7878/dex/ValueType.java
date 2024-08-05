@@ -19,7 +19,7 @@ import static com.v7878.dex.DexConstants.VALUE_SHORT;
 import static com.v7878.dex.DexConstants.VALUE_STRING;
 import static com.v7878.dex.DexConstants.VALUE_TYPE;
 
-public enum EncodedValueType {
+public enum ValueType {
     BYTE(VALUE_BYTE),
     SHORT(VALUE_SHORT),
     CHAR(VALUE_CHAR),
@@ -41,7 +41,7 @@ public enum EncodedValueType {
 
     private final int value;
 
-    EncodedValueType(int value) {
+    ValueType(int value) {
         this.value = value;
     }
 
@@ -49,12 +49,16 @@ public enum EncodedValueType {
         return value;
     }
 
-    public static EncodedValueType of(int value) {
-        for (EncodedValueType type : values()) {
+    public static ValueType of(int value) {
+        for (ValueType type : values()) {
             if (value == type.value) {
                 return type;
             }
         }
         throw new IllegalStateException("Unknown encoded value type: " + value);
+    }
+
+    public static int compare(ValueType left, ValueType right) {
+        return Integer.compare(left.value(), right.value());
     }
 }

@@ -12,6 +12,7 @@ import com.v7878.dex.iface.Parameter;
 import com.v7878.dex.iface.TypeId;
 import com.v7878.dex.iface.value.EncodedValue;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NavigableSet;
@@ -22,12 +23,12 @@ public class CollectionUtils {
     }
 
     public static <T extends Comparable<? super T>> int compareLexicographically(
-            List<? extends T> left, List<? extends T> right) {
+            Collection<? extends T> left, Collection<? extends T> right) {
         return compareLexicographically(CollectionUtils::compareNonNull, left, right);
     }
 
     public static <T> int compareLexicographically(
-            Comparator<? super T> comparator, List<? extends T> left, List<? extends T> right) {
+            Comparator<? super T> comparator, Collection<? extends T> left, Collection<? extends T> right) {
         int lsize = left.size();
         int rsize = right.size();
         int size = Math.min(lsize, rsize);
