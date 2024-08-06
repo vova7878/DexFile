@@ -1,6 +1,6 @@
 package com.v7878.dex.base.bytecode;
 
-import static com.v7878.dex.Format.Format4rcc;
+import static com.v7878.dex.Format.Format30t;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction30t;
@@ -11,7 +11,7 @@ public abstract class BaseInstruction30t implements Instruction30t {
     private final Opcode opcode;
 
     public BaseInstruction30t(Opcode opcode) {
-        assert opcode.format() == Format4rcc;
+        assert opcode.format() == Format30t;
         this.opcode = opcode;
     }
 
