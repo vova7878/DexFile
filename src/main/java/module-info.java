@@ -9,4 +9,5 @@ module com.v7878.dex {
     exports com.v7878.dex.base;
     exports com.v7878.dex.base.debug;
     exports com.v7878.dex.base.value;
+    exports com.v7878.dex.base.bytecode;
 }

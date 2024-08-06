@@ -9,5 +9,8 @@ public sealed interface Instruction permits
         WideLiteralInstruction, Instruction10x {
     Opcode getOpcode();
 
-    int getUnitCount();
+    default int getUnitCount() {
+        assert !getOpcode().isPayload();
+        return getOpcode().format().getUnitCount();
+    }
 }

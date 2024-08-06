@@ -4,4 +4,6 @@ import com.v7878.dex.iface.bytecode.formats.ArrayPayload;
 
 public sealed interface PayloadInstruction extends Instruction
         permits SwitchPayloadInstruction, ArrayPayload {
+    @Override
+    int getUnitCount();
 }
