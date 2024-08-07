@@ -27,6 +27,7 @@ public class ImmutableMethodImplementation extends BaseMethodImplementation {
                 value -> value instanceof ImmutableInstruction, instructions);
         this.try_blocks = ItemConverter.toNavigableSet(ImmutableTryBlock::of,
                 value -> value instanceof ImmutableTryBlock, try_blocks);
+        // TODO: deduplicate and remove unused AdvancePC items
         this.debug_items = ItemConverter.toList(ImmutableDebugItem::of,
                 value -> value instanceof ImmutableDebugItem, debug_items);
     }

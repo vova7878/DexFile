@@ -27,6 +27,7 @@ public interface ImmutableEncodedValue extends EncodedValue {
     }
 
     static ImmutableEncodedValue of(ValueType type, EncodedValue other) {
+        if (other instanceof ImmutableEncodedValue immutable) return immutable;
         return switch (type) {
             case BYTE -> ImmutableEncodedByte.of((EncodedByte) other);
             case BOOLEAN -> ImmutableEncodedBoolean.of((EncodedBoolean) other);
