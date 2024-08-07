@@ -12,7 +12,6 @@ import com.v7878.dex.iface.Parameter;
 import com.v7878.dex.iface.TypeId;
 import com.v7878.dex.iface.value.EncodedValue;
 
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NavigableSet;
@@ -23,24 +22,36 @@ public class CollectionUtils {
     }
 
     public static <T extends Comparable<? super T>> int compareLexicographically(
-            Collection<? extends T> left, Collection<? extends T> right) {
-        return compareLexicographically(CollectionUtils::compareNonNull, left, right);
+            Iterable<? extends T> left, Iterable<? extends T> right) {
+        return compareLexicographically(naturalOrder(), left, right);
     }
 
     public static <T> int compareLexicographically(
-            Comparator<? super T> comparator, Collection<? extends T> left, Collection<? extends T> right) {
-        int lsize = left.size();
-        int rsize = right.size();
-        int size = Math.min(lsize, rsize);
-
-        var elements1 = left.iterator();
-        var elements2 = right.iterator();
-        for (int i = 0; i < size; i++) {
-            int out = comparator.compare(elements1.next(), elements2.next());
+            Comparator<? super T> comparator, Iterable<? extends T> left, Iterable<? extends T> right) {
+        var i1 = left.iterator();
+        var i2 = right.iterator();
+        while (i1.hasNext() && i2.hasNext()) {
+            int out = comparator.compare(i1.next(), i2.next());
             if (out != 0) return out;
         }
+        return Boolean.compare(i1.hasNext(), i2.hasNext());
+    }
 
-        return Integer.compare(lsize, rsize);
+    public static <T> Comparator<? super T> naturalOrder() {
+        //noinspection unchecked
+        return (Comparator<? super T>) NaturalOrder.INSTANCE;
+    }
+
+    private final static class NaturalOrder<T extends Comparable<? super T>> implements Comparator<T> {
+        public static final NaturalOrder<?> INSTANCE = new NaturalOrder<>();
+
+        private NaturalOrder() {
+        }
+
+        @Override
+        public int compare(T left, T right) {
+            return compareNonNull(left, right);
+        }
     }
 
     private static final TypeId EMPTY_TYPE = new BaseTypeId() {
@@ -84,12 +95,12 @@ public class CollectionUtils {
 
     public static <T extends FieldDef> NavigableSet<T> getStaticFieldsSubset(NavigableSet<T> set) {
         //noinspection unchecked
-        return set.headSet((T) LAST_STATIC_FIELD, true);
+        return set.tailSet((T) LAST_STATIC_FIELD, true);
     }
 
     public static <T extends FieldDef> NavigableSet<T> getInstanceFieldsSubset(NavigableSet<T> set) {
         //noinspection unchecked
-        return set.tailSet((T) LAST_STATIC_FIELD, false);
+        return set.headSet((T) LAST_STATIC_FIELD, false);
     }
 
     private static final MethodDef LAST_DIRECT_METHOD = new BaseMethodDef() {
@@ -131,11 +142,11 @@ public class CollectionUtils {
 
     public static <T extends MethodDef> NavigableSet<T> getDirectMethodsSubset(NavigableSet<T> set) {
         //noinspection unchecked
-        return set.headSet((T) LAST_DIRECT_METHOD, true);
+        return set.tailSet((T) LAST_DIRECT_METHOD, true);
     }
 
     public static <T extends MethodDef> NavigableSet<T> getVirtualMethodsSubset(NavigableSet<T> set) {
         //noinspection unchecked
-        return set.tailSet((T) LAST_DIRECT_METHOD, false);
+        return set.headSet((T) LAST_DIRECT_METHOD, false);
     }
 }

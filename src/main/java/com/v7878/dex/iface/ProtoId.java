@@ -5,5 +5,5 @@ import java.util.List;
 public interface ProtoId extends Comparable<ProtoId> {
     List<? extends TypeId> getParameterTypes();
 
-    String getReturnType();
+    TypeId getReturnType();
 }

@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format45cc;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction45cc;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction45cc implements Instruction45cc {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction45cc extends BaseInstruction implements Instruction45cc {
     public BaseInstruction45cc(Opcode opcode) {
-        assert opcode.format() == Format45cc;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format45cc));
     }
 
     @Override

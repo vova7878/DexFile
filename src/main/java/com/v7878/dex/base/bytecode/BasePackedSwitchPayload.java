@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.PackedSwitchPayload;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.PackedSwitchPayload;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BasePackedSwitchPayload implements PackedSwitchPayload {
-    private final Opcode opcode;
-
+public abstract class BasePackedSwitchPayload extends BaseInstruction implements PackedSwitchPayload {
     public BasePackedSwitchPayload(Opcode opcode) {
-        assert opcode.format() == PackedSwitchPayload;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, PackedSwitchPayload));
     }
 
     @Override

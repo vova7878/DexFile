@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format23x;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction23x;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction23x implements Instruction23x {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction23x extends BaseInstruction implements Instruction23x {
     public BaseInstruction23x(Opcode opcode) {
-        assert opcode.format() == Format23x;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format23x));
     }
 
     @Override

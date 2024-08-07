@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format11n;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction11n;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction11n implements Instruction11n {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction11n extends BaseInstruction implements Instruction11n {
     public BaseInstruction11n(Opcode opcode) {
-        assert opcode.format() == Format11n;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format11n));
     }
 
     @Override

@@ -4,7 +4,7 @@ import com.v7878.dex.util.CollectionUtils;
 
 import java.util.NavigableSet;
 
-public interface ClassDef extends Comparable<ClassDef>, Annotatable {
+public interface ClassDef extends Annotatable {
     TypeId getType();
 
     int getAccessFlags();

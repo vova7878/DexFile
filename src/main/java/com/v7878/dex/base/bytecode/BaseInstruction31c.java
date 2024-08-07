@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format31c;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction31c;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction31c implements Instruction31c {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction31c extends BaseInstruction implements Instruction31c {
     public BaseInstruction31c(Opcode opcode) {
-        assert opcode.format() == Format31c;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format31c));
     }
 
     @Override

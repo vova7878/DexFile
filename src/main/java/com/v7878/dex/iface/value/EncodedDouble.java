@@ -2,7 +2,7 @@ package com.v7878.dex.iface.value;
 
 import com.v7878.dex.ValueType;
 
-public non-sealed interface EncodedDouble extends EncodedValue {
+public interface EncodedDouble extends EncodedValue {
     double getValue();
 
     @Override

@@ -2,7 +2,7 @@ package com.v7878.dex.iface.value;
 
 import com.v7878.dex.ValueType;
 
-public non-sealed interface EncodedShort extends EncodedValue {
+public interface EncodedShort extends EncodedValue {
     short getValue();
 
     @Override

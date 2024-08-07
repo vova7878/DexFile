@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format21s;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction21s;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction21s implements Instruction21s {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction21s extends BaseInstruction implements Instruction21s {
     public BaseInstruction21s(Opcode opcode) {
-        assert opcode.format() == Format21s;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format21s));
     }
 
     @Override

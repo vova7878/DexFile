@@ -1,6 +1,5 @@
 package com.v7878.dex.iface.bytecode;
 
-public sealed interface VariableRegisterInstruction extends Instruction
-        permits RegisterRangeInstruction, VariableFiveRegisterInstruction {
+public interface VariableRegisterInstruction extends Instruction {
     int getRegisterCount();
 }

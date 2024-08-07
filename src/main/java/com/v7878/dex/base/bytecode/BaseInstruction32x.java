@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format32x;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction32x;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction32x implements Instruction32x {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction32x extends BaseInstruction implements Instruction32x {
     public BaseInstruction32x(Opcode opcode) {
-        assert opcode.format() == Format32x;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format32x));
     }
 
     @Override

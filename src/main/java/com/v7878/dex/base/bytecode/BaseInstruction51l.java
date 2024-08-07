@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format51l;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction51l;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction51l implements Instruction51l {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction51l extends BaseInstruction implements Instruction51l {
     public BaseInstruction51l(Opcode opcode) {
-        assert opcode.format() == Format51l;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format51l));
     }
 
     @Override

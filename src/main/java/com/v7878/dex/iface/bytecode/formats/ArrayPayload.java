@@ -4,7 +4,7 @@ import com.v7878.dex.iface.bytecode.PayloadInstruction;
 
 import java.util.List;
 
-public non-sealed interface ArrayPayload extends PayloadInstruction {
+public interface ArrayPayload extends PayloadInstruction {
     int getElementWidth();
 
     List<Number> getArrayElements();

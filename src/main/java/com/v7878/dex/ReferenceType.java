@@ -6,6 +6,7 @@ import com.v7878.dex.iface.MethodHandleId;
 import com.v7878.dex.iface.MethodId;
 import com.v7878.dex.iface.ProtoId;
 import com.v7878.dex.iface.TypeId;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
@@ -48,7 +49,7 @@ public enum ReferenceType {
     }, RAW_INDEX {
         @Override
         public Integer validate(Object ref) {
-            return (Integer) Objects.requireNonNull(ref);
+            return Preconditions.checkRawIndex((Integer) Objects.requireNonNull(ref));
         }
     };
 

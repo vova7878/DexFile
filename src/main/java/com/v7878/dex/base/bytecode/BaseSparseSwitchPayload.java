@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.SparseSwitchPayload;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.SparseSwitchPayload;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseSparseSwitchPayload implements SparseSwitchPayload {
-    private final Opcode opcode;
-
+public abstract class BaseSparseSwitchPayload extends BaseInstruction implements SparseSwitchPayload {
     public BaseSparseSwitchPayload(Opcode opcode) {
-        assert opcode.format() == SparseSwitchPayload;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, SparseSwitchPayload));
     }
 
     @Override

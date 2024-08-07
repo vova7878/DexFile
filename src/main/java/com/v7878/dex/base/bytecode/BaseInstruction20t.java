@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format20t;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction20t;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction20t implements Instruction20t {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction20t extends BaseInstruction implements Instruction20t {
     public BaseInstruction20t(Opcode opcode) {
-        assert opcode.format() == Format20t;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format20t));
     }
 
     @Override

@@ -4,7 +4,7 @@ import com.v7878.dex.ValueType;
 
 import java.util.List;
 
-public non-sealed interface EncodedArray extends EncodedValue {
+public interface EncodedArray extends EncodedValue {
     List<? extends EncodedValue> getValue();
 
     @Override

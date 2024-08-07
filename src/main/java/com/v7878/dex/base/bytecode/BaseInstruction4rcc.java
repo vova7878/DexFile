@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format4rcc;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction4rcc;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction4rcc implements Instruction4rcc {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction4rcc extends BaseInstruction implements Instruction4rcc {
     public BaseInstruction4rcc(Opcode opcode) {
-        assert opcode.format() == Format4rcc;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format4rcc));
     }
 
     @Override

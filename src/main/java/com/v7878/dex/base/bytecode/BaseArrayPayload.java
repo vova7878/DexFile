@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.ArrayPayload;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.ArrayPayload;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseArrayPayload implements ArrayPayload {
-    private final Opcode opcode;
-
+public abstract class BaseArrayPayload extends BaseInstruction implements ArrayPayload {
     public BaseArrayPayload(Opcode opcode) {
-        assert opcode.format() == ArrayPayload;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, ArrayPayload));
     }
 
     @Override

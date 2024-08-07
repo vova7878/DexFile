@@ -4,20 +4,13 @@ import static com.v7878.dex.Format.Format12x;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.formats.Instruction12x;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public abstract class BaseInstruction12x implements Instruction12x {
-    private final Opcode opcode;
-
+public abstract class BaseInstruction12x extends BaseInstruction implements Instruction12x {
     public BaseInstruction12x(Opcode opcode) {
-        assert opcode.format() == Format12x;
-        this.opcode = opcode;
-    }
-
-    @Override
-    public final Opcode getOpcode() {
-        return opcode;
+        super(Preconditions.checkFormat(opcode, Format12x));
     }
 
     @Override
