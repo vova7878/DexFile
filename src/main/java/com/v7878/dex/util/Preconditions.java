@@ -61,6 +61,14 @@ public class Preconditions {
         return addr_diff;
     }
 
+    public static int checkDebugLine(int line) {
+        if (line < 0) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid line: %d. Must be greater than zero", line));
+        }
+        return line;
+    }
+
     public static int checkCodeAddress(int address) {
         if (address < 0) {
             throw new IllegalArgumentException(
