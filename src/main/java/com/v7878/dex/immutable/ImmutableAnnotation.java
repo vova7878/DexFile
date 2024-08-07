@@ -5,6 +5,7 @@ import com.v7878.dex.base.BaseAnnotation;
 import com.v7878.dex.iface.Annotation;
 import com.v7878.dex.iface.AnnotationElement;
 import com.v7878.dex.iface.TypeId;
+import com.v7878.dex.iface.value.EncodedAnnotation;
 import com.v7878.dex.util.ItemConverter;
 
 import java.util.NavigableSet;
@@ -26,6 +27,10 @@ public class ImmutableAnnotation extends BaseAnnotation {
     public static ImmutableAnnotation of(AnnotationVisibility visibility, TypeId type,
                                          Iterable<? extends AnnotationElement> elements) {
         return new ImmutableAnnotation(visibility, type, elements);
+    }
+
+    public static ImmutableAnnotation of(AnnotationVisibility visibility, EncodedAnnotation annotation) {
+        return new ImmutableAnnotation(visibility, annotation.getType(), annotation.getElements());
     }
 
     public static ImmutableAnnotation of(Annotation other) {
