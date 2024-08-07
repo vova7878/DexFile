@@ -54,4 +54,16 @@ public enum ReferenceType {
     };
 
     public abstract Object validate(Object ref);
+
+    public static ReferenceType of(Object reference) {
+        if (reference instanceof String) return STRING;
+        if (reference instanceof Integer) return RAW_INDEX;
+        if (reference instanceof TypeId) return TYPE;
+        if (reference instanceof FieldId) return FIELD;
+        if (reference instanceof MethodId) return METHOD;
+        if (reference instanceof ProtoId) return PROTO;
+        if (reference instanceof MethodHandleId) return METHOD_HANDLE;
+        if (reference instanceof CallSiteId) return CALLSITE;
+        throw new IllegalArgumentException("Invalid reference type");
+    }
 }

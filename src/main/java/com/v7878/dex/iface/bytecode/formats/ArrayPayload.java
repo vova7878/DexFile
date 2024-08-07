@@ -7,7 +7,7 @@ import java.util.List;
 public interface ArrayPayload extends PayloadInstruction {
     int getElementWidth();
 
-    List<Number> getArrayElements();
+    List<? extends Number> getArrayElements();
 
     @Override
     default int getUnitCount() {
