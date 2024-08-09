@@ -1,8 +1,6 @@
 package com.v7878.dex.iface;
 
-import com.v7878.dex.util.CollectionUtils;
-
-import java.util.NavigableSet;
+import java.util.Set;
 
 public interface ClassDef extends Annotatable {
     TypeId getType();
@@ -11,27 +9,19 @@ public interface ClassDef extends Annotatable {
 
     TypeId getSuperclass();
 
-    NavigableSet<? extends TypeId> getInterfaces();
+    Set<? extends TypeId> getInterfaces();
 
     String getSourceFile();
 
-    NavigableSet<? extends FieldDef> getFields();
+    Set<? extends FieldDef> getFields();
 
-    default NavigableSet<? extends FieldDef> getStaticFields() {
-        return CollectionUtils.getStaticFieldsSubset(getFields());
-    }
+    Set<? extends FieldDef> getStaticFields();
 
-    default NavigableSet<? extends FieldDef> getInstanceFields() {
-        return CollectionUtils.getInstanceFieldsSubset(getFields());
-    }
+    Set<? extends FieldDef> getInstanceFields();
 
-    NavigableSet<? extends MethodDef> getMethods();
+    Set<? extends MethodDef> getMethods();
 
-    default NavigableSet<? extends MethodDef> getDirectMethods() {
-        return CollectionUtils.getDirectMethodsSubset(getMethods());
-    }
+    Set<? extends MethodDef> getDirectMethods();
 
-    default NavigableSet<? extends MethodDef> getVirtualMethods() {
-        return CollectionUtils.getVirtualMethodsSubset(getMethods());
-    }
+    Set<? extends MethodDef> getVirtualMethods();
 }

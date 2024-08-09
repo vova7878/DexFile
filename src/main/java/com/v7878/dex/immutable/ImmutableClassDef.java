@@ -6,6 +6,7 @@ import com.v7878.dex.iface.ClassDef;
 import com.v7878.dex.iface.FieldDef;
 import com.v7878.dex.iface.MethodDef;
 import com.v7878.dex.iface.TypeId;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 
@@ -85,8 +86,28 @@ public class ImmutableClassDef extends BaseClassDef {
     }
 
     @Override
+    public NavigableSet<? extends FieldDef> getStaticFields() {
+        return CollectionUtils.getStaticFieldsSubset(getFields());
+    }
+
+    @Override
+    public NavigableSet<? extends FieldDef> getInstanceFields() {
+        return CollectionUtils.getInstanceFieldsSubset(getFields());
+    }
+
+    @Override
     public NavigableSet<? extends ImmutableMethodDef> getMethods() {
         return methods;
+    }
+
+    @Override
+    public NavigableSet<? extends MethodDef> getDirectMethods() {
+        return CollectionUtils.getDirectMethodsSubset(getMethods());
+    }
+
+    @Override
+    public NavigableSet<? extends MethodDef> getVirtualMethods() {
+        return CollectionUtils.getVirtualMethodsSubset(getMethods());
     }
 
     @Override

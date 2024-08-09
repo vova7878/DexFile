@@ -1,7 +1,7 @@
 package com.v7878.dex.iface;
 
-import java.util.NavigableSet;
+import java.util.Set;
 
 public interface Annotatable {
-    NavigableSet<? extends Annotation> getAnnotations();
+    Set<? extends Annotation> getAnnotations();
 }
