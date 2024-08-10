@@ -8,6 +8,7 @@ import com.v7878.dex.iface.Annotation;
 import com.v7878.dex.iface.FieldDef;
 import com.v7878.dex.iface.MethodDef;
 import com.v7878.dex.iface.TypeId;
+import com.v7878.dex.reader.raw.AnnotationDirectory;
 import com.v7878.dex.reader.util.FixedSizeSet;
 import com.v7878.dex.reader.util.OptionalUtils;
 import com.v7878.dex.reader.util.ValueContainer;
@@ -42,6 +43,7 @@ public class ReaderClassDef extends BaseClassDef {
     private ValueContainer<ReaderTypeId> superclass;
     private Set<ReaderTypeId> interfaces;
     private ValueContainer<String> source_file;
+    private AnnotationDirectory annotations;
 
     @Override
     public TypeId getType() {
@@ -117,9 +119,15 @@ public class ReaderClassDef extends BaseClassDef {
         throw new UnsupportedOperationException();
     }
 
+    public AnnotationDirectory getAnnotationDirectory() {
+        if (annotations != null) return annotations;
+        return annotations = OptionalUtils.getOrDefault(
+                dexfile.mainAt(offset + ANNOTATIONS_OFFSET).readSmallUInt(),
+                NO_OFFSET, dexfile::getAnnotationDirectory, AnnotationDirectory.EMPTY);
+    }
+
     @Override
     public Set<? extends Annotation> getAnnotations() {
-        //TODO
-        throw new UnsupportedOperationException();
+        return getAnnotationDirectory().getClassAnnotations();
     }
 }

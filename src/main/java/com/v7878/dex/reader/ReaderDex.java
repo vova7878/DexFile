@@ -9,17 +9,22 @@ import com.v7878.dex.ReadOptions;
 import com.v7878.dex.base.BaseDex;
 import com.v7878.dex.io.ByteArrayInput;
 import com.v7878.dex.io.RandomInput;
+import com.v7878.dex.reader.raw.AnnotationDirectory;
+import com.v7878.dex.reader.raw.AnnotationList;
+import com.v7878.dex.reader.raw.AnnotationSetList;
 import com.v7878.dex.reader.raw.HiddenApiData;
 import com.v7878.dex.reader.raw.MapItem;
 import com.v7878.dex.reader.raw.StringId;
 import com.v7878.dex.reader.raw.TypeList;
 import com.v7878.dex.reader.util.CachedFixedSizeList;
+import com.v7878.dex.reader.util.FixedSizeSet;
 import com.v7878.dex.reader.util.InvalidFile;
 import com.v7878.dex.reader.util.NotADexFile;
 import com.v7878.dex.reader.value.ReaderEncodedArray;
 import com.v7878.dex.util.SparseArray;
 
 import java.util.List;
+import java.util.Set;
 import java.util.function.IntSupplier;
 
 public class ReaderDex extends BaseDex {
@@ -29,8 +34,12 @@ public class ReaderDex extends BaseDex {
     private final ReadOptions options;
     private final DexVersion version;
 
-    private final SparseArray<TypeList> typelist_section;
-    private final SparseArray<ReaderEncodedArray> encoded_array_section;
+    private final SparseArray<TypeList> typelist_cache;
+    private final SparseArray<ReaderEncodedArray> encoded_array_cache;
+    private final SparseArray<ReaderAnnotation> annotation_cache;
+    private final SparseArray<AnnotationList> annotation_list_cache;
+    private final SparseArray<AnnotationSetList> annotation_set_list_cache;
+    private final SparseArray<AnnotationDirectory> annotation_directory_cache;
 
     private final List<String> string_section;
     private final List<ReaderTypeId> type_section;
@@ -72,8 +81,12 @@ public class ReaderDex extends BaseDex {
         }
         data_buffer = main_buffer.slice(data_off);
 
-        typelist_section = new SparseArray<>();
-        encoded_array_section = new SparseArray<>();
+        typelist_cache = new SparseArray<>();
+        encoded_array_cache = new SparseArray<>();
+        annotation_cache = new SparseArray<>();
+        annotation_list_cache = new SparseArray<>();
+        annotation_set_list_cache = new SparseArray<>();
+        annotation_directory_cache = new SparseArray<>();
 
         string_section = makeStringSection(
                 mainAt(header_offset + DexConstants.STRING_COUNT_OFFSET).readSmallUInt(),
@@ -166,18 +179,60 @@ public class ReaderDex extends BaseDex {
     }
 
     public TypeList getTypeList(int offset) {
-        TypeList out = typelist_section.get(offset);
+        var section = typelist_cache;
+        TypeList out = section.get(offset);
         if (out != null) return out;
         out = TypeList.readItem(this, offset);
-        typelist_section.put(offset, out);
+        section.put(offset, out);
         return out;
     }
 
     public ReaderEncodedArray getEncodedArray(int offset) {
-        ReaderEncodedArray out = encoded_array_section.get(offset);
+        var section = encoded_array_cache;
+        ReaderEncodedArray out = section.get(offset);
         if (out != null) return out;
         out = ReaderEncodedArray.readValue(this, offset);
-        encoded_array_section.put(offset, out);
+        section.put(offset, out);
+        return out;
+    }
+
+    public ReaderAnnotation getAnnotation(int offset) {
+        var section = annotation_cache;
+        ReaderAnnotation out = section.get(offset);
+        if (out != null) return out;
+        out = new ReaderAnnotation(this, offset);
+        section.put(offset, out);
+        return out;
+    }
+
+    public AnnotationList getAnnotationList(int offset) {
+        var section = annotation_list_cache;
+        AnnotationList out = section.get(offset);
+        if (out != null) return out;
+        out = AnnotationList.readItem(this, offset);
+        section.put(offset, out);
+        return out;
+    }
+
+    public Set<ReaderAnnotation> getAnnotationSet(int offset) {
+        return FixedSizeSet.ofList(getAnnotationList(offset));
+    }
+
+    public AnnotationSetList getAnnotationSetList(int offset) {
+        var section = annotation_set_list_cache;
+        AnnotationSetList out = section.get(offset);
+        if (out != null) return out;
+        out = AnnotationSetList.readItem(this, offset);
+        section.put(offset, out);
+        return out;
+    }
+
+    public AnnotationDirectory getAnnotationDirectory(int offset) {
+        var section = annotation_directory_cache;
+        AnnotationDirectory out = section.get(offset);
+        if (out != null) return out;
+        out = new AnnotationDirectory(this, offset);
+        section.put(offset, out);
         return out;
     }
 
