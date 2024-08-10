@@ -7,9 +7,9 @@ import com.v7878.dex.DexConstants;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.ReadOptions;
 import com.v7878.dex.base.BaseDex;
-import com.v7878.dex.iface.ClassDef;
 import com.v7878.dex.io.ByteArrayInput;
 import com.v7878.dex.io.RandomInput;
+import com.v7878.dex.reader.raw.HiddenApiData;
 import com.v7878.dex.reader.raw.MapItem;
 import com.v7878.dex.reader.raw.StringId;
 import com.v7878.dex.reader.raw.TypeList;
@@ -20,6 +20,7 @@ import com.v7878.dex.reader.value.ReaderEncodedArray;
 import com.v7878.dex.util.SparseArray;
 
 import java.util.List;
+import java.util.function.IntSupplier;
 
 public class ReaderDex extends BaseDex {
     private final RandomInput main_buffer;
@@ -28,6 +29,9 @@ public class ReaderDex extends BaseDex {
     private final ReadOptions options;
     private final DexVersion version;
 
+    private final SparseArray<TypeList> typelist_section;
+    private final SparseArray<ReaderEncodedArray> encoded_array_section;
+
     private final List<String> string_section;
     private final List<ReaderTypeId> type_section;
     private final List<ReaderProtoId> proto_section;
@@ -35,14 +39,11 @@ public class ReaderDex extends BaseDex {
     private final List<ReaderMethodId> method_section;
     private final List<ReaderMethodHandleId> method_handle_section;
     private final List<ReaderCallSiteId> callsite_section;
-    private final SparseArray<TypeList> typelist_section;
-    private final SparseArray<ReaderEncodedArray> encoded_array_section;
-    private final int class_defs_size;
-    private final int class_defs_off;
+    private final List<ReaderClassDef> class_section;
 
     private final List<MapItem> map_items;
 
-    private final int hiddenapi_items_off;
+    private final HiddenApiData hiddenapi_section;
 
     public ReaderDex(ReadOptions options, byte[] buf, int offset, int header_offset) {
         this.options = options;
@@ -110,10 +111,13 @@ public class ReaderDex extends BaseDex {
         );
 
         MapItem hiddenapi = getMapItemForSection(DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM);
-        hiddenapi_items_off = hiddenapi != null ? hiddenapi.getOffset() : NO_OFFSET;
+        hiddenapi_section = new HiddenApiData(this,
+                hiddenapi != null ? hiddenapi.getOffset() : NO_OFFSET);
 
-        class_defs_size = mainAt(header_offset + DexConstants.CLASS_COUNT_OFFSET).readSmallUInt();
-        class_defs_off = mainAt(header_offset + DexConstants.CLASS_START_OFFSET).readSmallUInt();
+        class_section = makeClassSection(
+                mainAt(header_offset + DexConstants.CLASS_COUNT_OFFSET).readSmallUInt(),
+                mainAt(header_offset + DexConstants.CLASS_START_OFFSET).readSmallUInt()
+        );
     }
 
     public ReaderDex(ReadOptions options, byte[] buf) {
@@ -300,9 +304,23 @@ public class ReaderDex extends BaseDex {
         return section.get(index);
     }
 
+    private List<ReaderClassDef> makeClassSection(int class_defs_size, int class_defs_off) {
+        if (class_defs_size == 0) return List.of();
+        return new CachedFixedSizeList<>(class_defs_size) {
+            @Override
+            protected ReaderClassDef compute(int index) {
+                return new ReaderClassDef(ReaderDex.this, index, class_defs_off);
+            }
+        };
+    }
+
     @Override
-    public List<? extends ClassDef> getClasses() {
-        // TODO
-        throw new UnsupportedOperationException();
+    public List<? extends ReaderClassDef> getClasses() {
+        return class_section;
+    }
+
+    public IntSupplier getHiddenApiIterator(int class_idx) {
+        checkIndex(class_idx, class_section.size(), "class def");
+        return hiddenapi_section.iterator(class_idx);
     }
 }

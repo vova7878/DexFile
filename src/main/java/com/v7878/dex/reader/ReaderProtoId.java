@@ -4,6 +4,7 @@ import static com.v7878.dex.DexConstants.NO_OFFSET;
 
 import com.v7878.dex.base.BaseProtoId;
 import com.v7878.dex.iface.TypeId;
+import com.v7878.dex.reader.util.OptionalUtils;
 
 import java.util.List;
 
@@ -35,10 +36,8 @@ public class ReaderProtoId extends BaseProtoId {
     @Override
     public List<ReaderTypeId> getParameterTypes() {
         if (parameters != null) return parameters;
-        int parameters_off = dexfile.mainAt(offset + PARAMETERS_OFFSET).readSmallUInt();
-        if (parameters_off == NO_OFFSET) {
-            return parameters = List.of();
-        }
-        return parameters = dexfile.getTypeList(parameters_off);
+        return parameters = OptionalUtils.getOrDefault(
+                dexfile.mainAt(offset + PARAMETERS_OFFSET).readSmallUInt(),
+                NO_OFFSET, dexfile::getTypeList, List.of());
     }
 }

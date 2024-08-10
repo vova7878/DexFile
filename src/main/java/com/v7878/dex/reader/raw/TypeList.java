@@ -3,6 +3,9 @@ package com.v7878.dex.reader.raw;
 import com.v7878.dex.reader.ReaderDex;
 import com.v7878.dex.reader.ReaderTypeId;
 import com.v7878.dex.reader.util.CachedFixedSizeList;
+import com.v7878.dex.reader.util.FixedSizeSet;
+
+import java.util.Set;
 
 public class TypeList extends CachedFixedSizeList<ReaderTypeId> {
     public static final int SIZE_OFFSET = 0;
@@ -25,5 +28,14 @@ public class TypeList extends CachedFixedSizeList<ReaderTypeId> {
     public static TypeList readItem(ReaderDex dexfile, int item_offset) {
         int size = dexfile.dataAt(item_offset + SIZE_OFFSET).readSmallUInt();
         return new TypeList(dexfile, size, item_offset + LIST_OFFSET);
+    }
+
+    public Set<ReaderTypeId> asSet() {
+        return new FixedSizeSet<>(size()) {
+            @Override
+            protected ReaderTypeId compute(int index) {
+                return get(index);
+            }
+        };
     }
 }
