@@ -45,7 +45,7 @@ public class ByteArrayInput implements RandomInput {
 
     @Override
     public void position(int new_position) {
-        Objects.checkIndex(new_position, array.length);
+        Objects.checkIndex(new_position, array.length + 1);
         offset = new_position;
     }
 

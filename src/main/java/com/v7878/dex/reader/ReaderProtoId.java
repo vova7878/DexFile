@@ -1,8 +1,11 @@
 package com.v7878.dex.reader;
 
+import static com.v7878.dex.DexConstants.NO_OFFSET;
+
 import com.v7878.dex.base.BaseProtoId;
 import com.v7878.dex.iface.TypeId;
-import com.v7878.dex.reader.raw.TypeList;
+
+import java.util.List;
 
 public class ReaderProtoId extends BaseProtoId {
     public static final int ITEM_SIZE = 12;
@@ -20,7 +23,7 @@ public class ReaderProtoId extends BaseProtoId {
     }
 
     private ReaderTypeId return_type;
-    private TypeList parameters;
+    private List<ReaderTypeId> parameters;
 
     @Override
     public TypeId getReturnType() {
@@ -30,9 +33,12 @@ public class ReaderProtoId extends BaseProtoId {
     }
 
     @Override
-    public TypeList getParameterTypes() {
+    public List<ReaderTypeId> getParameterTypes() {
         if (parameters != null) return parameters;
-        return parameters = dexfile.getTypeList(
-                dexfile.mainAt(offset + PARAMETERS_OFFSET).readSmallUInt());
+        int parameters_off = dexfile.mainAt(offset + PARAMETERS_OFFSET).readSmallUInt();
+        if (parameters_off == NO_OFFSET) {
+            return parameters = List.of();
+        }
+        return parameters = dexfile.getTypeList(parameters_off);
     }
 }

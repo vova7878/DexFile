@@ -2,7 +2,8 @@ package com.v7878.dex.reader;
 
 import com.v7878.dex.base.BaseMethodId;
 import com.v7878.dex.iface.TypeId;
-import com.v7878.dex.reader.raw.TypeList;
+
+import java.util.List;
 
 public class ReaderMethodId extends BaseMethodId implements ReaderMemberId {
     public static final int ITEM_SIZE = 8;
@@ -49,7 +50,7 @@ public class ReaderMethodId extends BaseMethodId implements ReaderMemberId {
     }
 
     @Override
-    public TypeList getParameterTypes() {
+    public List<ReaderTypeId> getParameterTypes() {
         return getProto().getParameterTypes();
     }
 }

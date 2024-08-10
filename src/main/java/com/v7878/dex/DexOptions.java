@@ -4,7 +4,7 @@ import static com.v7878.misc.Version.CORRECT_SDK_INT;
 
 public abstract class DexOptions<D extends DexOptions<D>> {
     private static final int MIN_TARGET_API = 1;
-    private static final int MAX_TARGET_API = 34;
+    private static final int MAX_TARGET_API = 35;
     private static final int FIRST_ART_TARGET = 19;
     private static final int LAST_DALVIK_TARGET = 20;
 
@@ -31,7 +31,7 @@ public abstract class DexOptions<D extends DexOptions<D>> {
         try {
             api = CORRECT_SDK_INT;
             is_android = true;
-        } catch (NoSuchFieldError th) {
+        } catch (Throwable th) {
             api = FIRST_ART_TARGET;
             is_android = false;
         }
