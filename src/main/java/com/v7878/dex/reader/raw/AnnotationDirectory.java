@@ -5,6 +5,7 @@ import static com.v7878.dex.DexConstants.NO_OFFSET;
 import com.v7878.dex.reader.ReaderAnnotation;
 import com.v7878.dex.reader.ReaderDex;
 import com.v7878.dex.reader.util.OptionalUtils;
+import com.v7878.dex.util.SparseArray;
 
 import java.util.Set;
 
@@ -37,7 +38,18 @@ public class AnnotationDirectory {
                 NO_OFFSET, dexfile::getAnnotationSet, Set.of());
     }
 
-    //TODO public SparceArray<AnnotationSet> getFieldAnnotations()
-    //TODO public SparceArray<AnnotationSet> getMethodAnnotations()
-    //TODO public SparceArray<AnnotationSetList> getParameterAnnotations()
+    public SparseArray<Set<ReaderAnnotation>> getFieldAnnotations() {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
+
+    public SparseArray<Set<ReaderAnnotation>> getMethodAnnotations() {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
+
+    public SparseArray<AnnotationSetList> getParameterAnnotations() {
+        // TODO
+        throw new UnsupportedOperationException();
+    }
 }
