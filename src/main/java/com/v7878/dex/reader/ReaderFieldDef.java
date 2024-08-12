@@ -1,7 +1,6 @@
 package com.v7878.dex.reader;
 
 import com.v7878.dex.base.BaseFieldDef;
-import com.v7878.dex.iface.TypeId;
 import com.v7878.dex.iface.value.EncodedValue;
 import com.v7878.dex.io.RandomInput;
 
@@ -11,7 +10,6 @@ import java.util.Set;
 import java.util.function.IntSupplier;
 
 public class ReaderFieldDef extends BaseFieldDef {
-
     private final ReaderDex dexfile;
     private final ReaderClassDef class_def;
     private final int field_idx;
@@ -45,7 +43,7 @@ public class ReaderFieldDef extends BaseFieldDef {
 
     private ReaderFieldId field;
     private EncodedValue value;
-    private Set<? extends ReaderAnnotation> annotations;
+    private Set<ReaderAnnotation> annotations;
 
     public ReaderFieldId getFieldId() {
         if (field != null) return field;
@@ -58,7 +56,7 @@ public class ReaderFieldDef extends BaseFieldDef {
     }
 
     @Override
-    public TypeId getType() {
+    public ReaderTypeId getType() {
         return getFieldId().getType();
     }
 
@@ -84,7 +82,7 @@ public class ReaderFieldDef extends BaseFieldDef {
     }
 
     @Override
-    public Set<? extends ReaderAnnotation> getAnnotations() {
+    public Set<ReaderAnnotation> getAnnotations() {
         if (annotations != null) return annotations;
         var field_annotations = class_def.getAnnotationDirectory()
                 .getFieldAnnotations().get(field_idx);

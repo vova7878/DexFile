@@ -4,10 +4,6 @@ import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 
 import com.v7878.dex.base.BaseClassDef;
-import com.v7878.dex.iface.Annotation;
-import com.v7878.dex.iface.FieldDef;
-import com.v7878.dex.iface.MethodDef;
-import com.v7878.dex.iface.TypeId;
 import com.v7878.dex.iface.value.EncodedValue;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.reader.raw.AnnotationDirectory;
@@ -37,6 +33,8 @@ public class ReaderClassDef extends BaseClassDef {
 
     private final Set<ReaderFieldDef> static_fields;
     private final Set<ReaderFieldDef> instance_fields;
+    private final Set<ReaderMethodDef> direct_methods;
+    private final Set<ReaderMethodDef> virtual_methods;
 
     public ReaderClassDef(ReaderDex dexfile, int index, int class_defs_off) {
         this.dexfile = dexfile;
@@ -47,6 +45,8 @@ public class ReaderClassDef extends BaseClassDef {
             if (class_data_offset == NO_OFFSET) {
                 static_fields = Set.of();
                 instance_fields = Set.of();
+                direct_methods = Set.of();
+                virtual_methods = Set.of();
                 return;
             }
             RandomInput class_data = dexfile.dataAt(class_data_offset);
@@ -59,7 +59,10 @@ public class ReaderClassDef extends BaseClassDef {
                     class_data, hiddenapi_iterator, static_fields_size, true));
             instance_fields = FixedSizeSet.ofList(ReaderFieldDef.readList(dexfile, this,
                     class_data, hiddenapi_iterator, instance_fields_size, false));
-            // TODO: methods
+            direct_methods = FixedSizeSet.ofList(ReaderMethodDef.readList(dexfile, this,
+                    class_data, hiddenapi_iterator, direct_methods_size));
+            virtual_methods = FixedSizeSet.ofList(ReaderMethodDef.readList(dexfile, this,
+                    class_data, hiddenapi_iterator, virtual_methods_size));
         }
     }
 
@@ -72,7 +75,7 @@ public class ReaderClassDef extends BaseClassDef {
     private List<? extends EncodedValue> static_values;
 
     @Override
-    public TypeId getType() {
+    public ReaderTypeId getType() {
         if (type != null) return type;
         return type = dexfile.getTypeId(dexfile.mainAt(
                 offset + TYPE_OFFSET).readSmallUInt());
@@ -86,7 +89,7 @@ public class ReaderClassDef extends BaseClassDef {
     }
 
     @Override
-    public TypeId getSuperclass() {
+    public ReaderTypeId getSuperclass() {
         if (superclass != null) return superclass.value();
         return (superclass = ValueContainer.of(OptionalUtils.getOrDefault(
                 dexfile.mainAt(offset + SUPERCLASS_OFFSET).readSmallUInt(),
@@ -94,7 +97,7 @@ public class ReaderClassDef extends BaseClassDef {
     }
 
     @Override
-    public Set<? extends TypeId> getInterfaces() {
+    public Set<ReaderTypeId> getInterfaces() {
         if (interfaces != null) return interfaces;
         return interfaces = FixedSizeSet.ofList(OptionalUtils.getOrDefault(
                 dexfile.mainAt(offset + INTERFACES_OFFSET).readSmallUInt(),
@@ -117,7 +120,7 @@ public class ReaderClassDef extends BaseClassDef {
     }
 
     @Override
-    public Set<? extends Annotation> getAnnotations() {
+    public Set<ReaderAnnotation> getAnnotations() {
         return getAnnotationDirectory().getClassAnnotations();
     }
 
@@ -129,34 +132,32 @@ public class ReaderClassDef extends BaseClassDef {
     }
 
     @Override
-    public Set<? extends FieldDef> getStaticFields() {
+    public Set<ReaderFieldDef> getStaticFields() {
         return static_fields;
     }
 
     @Override
-    public Set<? extends FieldDef> getInstanceFields() {
+    public Set<ReaderFieldDef> getInstanceFields() {
         return instance_fields;
     }
 
     @Override
-    public Set<? extends FieldDef> getFields() {
+    public Set<ReaderFieldDef> getFields() {
         return new ChainedSet<>(getStaticFields(), getInstanceFields());
     }
 
     @Override
-    public Set<? extends MethodDef> getDirectMethods() {
-        //TODO
-        throw new UnsupportedOperationException();
+    public Set<ReaderMethodDef> getDirectMethods() {
+        return direct_methods;
     }
 
     @Override
-    public Set<? extends MethodDef> getVirtualMethods() {
-        //TODO
-        throw new UnsupportedOperationException();
+    public Set<ReaderMethodDef> getVirtualMethods() {
+        return virtual_methods;
     }
 
     @Override
-    public Set<? extends MethodDef> getMethods() {
+    public Set<ReaderMethodDef> getMethods() {
         return new ChainedSet<>(getDirectMethods(), getVirtualMethods());
     }
 }

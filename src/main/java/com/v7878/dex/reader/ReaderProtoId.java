@@ -3,7 +3,6 @@ package com.v7878.dex.reader;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 
 import com.v7878.dex.base.BaseProtoId;
-import com.v7878.dex.iface.TypeId;
 import com.v7878.dex.reader.util.OptionalUtils;
 
 import java.util.List;
@@ -27,7 +26,7 @@ public class ReaderProtoId extends BaseProtoId {
     private List<ReaderTypeId> parameters;
 
     @Override
-    public TypeId getReturnType() {
+    public ReaderTypeId getReturnType() {
         if (return_type != null) return return_type;
         return return_type = dexfile.getTypeId(
                 dexfile.mainAt(offset + RETURN_TYPE_OFFSET).readSmallUInt());

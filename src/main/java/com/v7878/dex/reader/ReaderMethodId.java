@@ -1,7 +1,6 @@
 package com.v7878.dex.reader;
 
 import com.v7878.dex.base.BaseMethodId;
-import com.v7878.dex.iface.TypeId;
 
 import java.util.List;
 
@@ -45,7 +44,7 @@ public class ReaderMethodId extends BaseMethodId implements ReaderMemberId {
     }
 
     @Override
-    public TypeId getReturnType() {
+    public ReaderTypeId getReturnType() {
         return getProto().getReturnType();
     }
 
