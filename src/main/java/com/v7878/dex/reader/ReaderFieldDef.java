@@ -2,6 +2,7 @@ package com.v7878.dex.reader;
 
 import com.v7878.dex.base.BaseFieldDef;
 import com.v7878.dex.iface.value.EncodedValue;
+import com.v7878.dex.immutable.value.ImmutableEncodedValue;
 import com.v7878.dex.io.RandomInput;
 
 import java.util.ArrayList;
@@ -78,7 +79,7 @@ public class ReaderFieldDef extends BaseFieldDef {
         if (index < values.size()) {
             return value = values.get(index);
         }
-        return value = /*TODO: default value*/ null;
+        return value = ImmutableEncodedValue.defaultValue(getType());
     }
 
     @Override
