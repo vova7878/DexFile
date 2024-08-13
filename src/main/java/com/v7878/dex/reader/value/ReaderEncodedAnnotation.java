@@ -30,6 +30,7 @@ public class ReaderEncodedAnnotation extends BaseEncodedAnnotation {
             var tmp = new CachedVariableSizeSet<ReaderAnnotationElement>(size) {
                 @Override
                 protected ReaderAnnotationElement computeNext() {
+                    // TODO: what if exception?
                     return ReaderAnnotationElement.readElement(dexfile, in);
                 }
             };

@@ -5,20 +5,27 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public abstract class CachedVariableSizeSet<T> extends AbstractSet<T> {
-    private final T[] data;
     private final int size;
+    private T[] data;
     private int position;
 
     public CachedVariableSizeSet(int size) {
         this.size = size;
         this.position = 0;
-        //noinspection unchecked
-        this.data = (T[]) new Object[size];
     }
 
     @Override
     public int size() {
         return size;
+    }
+
+    private T[] getCache() {
+        T[] arr = data;
+        if (arr == null) {
+            //noinspection unchecked
+            data = arr = (T[]) new Object[size];
+        }
+        return arr;
     }
 
     @Override
@@ -42,16 +49,18 @@ public abstract class CachedVariableSizeSet<T> extends AbstractSet<T> {
     }
 
     private T get(int index) {
-        T value = data[index];
+        T[] cache = getCache();
+        T value = cache[index];
         if (value != null) return value;
         return compute(index);
     }
 
     private T compute(int index) {
+        T[] cache = getCache();
         while (position <= index) {
-            data[position++] = computeNext();
+            cache[position++] = computeNext();
         }
-        return data[index];
+        return cache[index];
     }
 
     public void computeAll() {

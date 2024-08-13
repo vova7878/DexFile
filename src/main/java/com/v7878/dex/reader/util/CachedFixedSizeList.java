@@ -3,13 +3,11 @@ package com.v7878.dex.reader.util;
 import java.util.AbstractList;
 
 public abstract class CachedFixedSizeList<T> extends AbstractList<T> {
-    private final T[] data;
     private final int size;
+    private T[] data;
 
     public CachedFixedSizeList(int size) {
         this.size = size;
-        //noinspection unchecked
-        this.data = (T[]) new Object[size];
     }
 
     @Override
@@ -17,11 +15,21 @@ public abstract class CachedFixedSizeList<T> extends AbstractList<T> {
         return size;
     }
 
+    private T[] getCache() {
+        T[] arr = data;
+        if (arr == null) {
+            //noinspection unchecked
+            data = arr = (T[]) new Object[size];
+        }
+        return arr;
+    }
+
     @Override
     public T get(int index) {
-        T value = data[index];
+        T[] cache = getCache();
+        T value = cache[index];
         if (value != null) return value;
-        return data[index] = compute(index);
+        return cache[index] = compute(index);
     }
 
     protected abstract T compute(int index);

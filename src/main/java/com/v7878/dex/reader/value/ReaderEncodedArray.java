@@ -25,13 +25,14 @@ public class ReaderEncodedArray extends BaseEncodedArray {
             value = new CachedVariableSizeList<>(size) {
                 @Override
                 protected EncodedValue computeNext() {
+                    // TODO: what if exception?
                     return EncodedValueReader.readValue(dexfile, in);
                 }
             };
         } else {
             value = new ArrayList<>(size);
             for (int i = 0; i < size; i++) {
-                value.set(i, EncodedValueReader.readValue(dexfile, in));
+                value.add(i, EncodedValueReader.readValue(dexfile, in));
             }
         }
         return new ReaderEncodedArray(value);
