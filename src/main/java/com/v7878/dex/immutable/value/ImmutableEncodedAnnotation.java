@@ -2,8 +2,8 @@ package com.v7878.dex.immutable.value;
 
 import com.v7878.dex.base.value.BaseEncodedAnnotation;
 import com.v7878.dex.iface.AnnotationElement;
+import com.v7878.dex.iface.CommonAnnotation;
 import com.v7878.dex.iface.TypeId;
-import com.v7878.dex.iface.value.EncodedAnnotation;
 import com.v7878.dex.immutable.ImmutableAnnotationElement;
 import com.v7878.dex.immutable.ImmutableTypeId;
 import com.v7878.dex.util.ItemConverter;
@@ -24,7 +24,7 @@ public class ImmutableEncodedAnnotation extends BaseEncodedAnnotation implements
         return new ImmutableEncodedAnnotation(type, elements);
     }
 
-    public static ImmutableEncodedAnnotation of(EncodedAnnotation other) {
+    public static ImmutableEncodedAnnotation of(CommonAnnotation other) {
         if (other instanceof ImmutableEncodedAnnotation immutable) return immutable;
         return new ImmutableEncodedAnnotation(other.getType(), other.getElements());
     }

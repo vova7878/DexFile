@@ -95,8 +95,7 @@ public interface ImmutableEncodedValue extends EncodedValue {
         if (obj instanceof MethodId value) return ImmutableEncodedMethod.of(value);
         if (obj instanceof FieldId value) return ImmutableEncodedField.of(value);
         if (obj instanceof MethodHandleId value) return ImmutableEncodedMethodHandle.of(value);
-        if (obj instanceof CommonAnnotation value)
-            return ImmutableEncodedAnnotation.of(value.getType(), value.getElements());
+        if (obj instanceof CommonAnnotation value) return ImmutableEncodedAnnotation.of(value);
 
         if (obj instanceof Class<?> value)
             return ImmutableEncodedType.of(ImmutableTypeId.of(value));
