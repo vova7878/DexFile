@@ -23,7 +23,6 @@
 package com.v7878.dex.util;
 
 import com.v7878.dex.Mutable;
-import com.v7878.misc.Checks;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -129,7 +128,7 @@ public class MutableList<T extends Mutable>
 
     public final boolean addAll(int index, T[] data, int from, int to) {
         ensureCapacity(size() + to - from);
-        Checks.checkFromToIndex(from, to, data.length);
+        Objects.checkFromToIndex(from, to, data.length);
         if (to <= from) {
             return false;
         }

@@ -25,9 +25,9 @@ package com.v7878.dex;
 import com.v7878.dex.bytecode.Instruction;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
+import com.v7878.dex.util.Checks;
 import com.v7878.dex.util.MutableList;
 import com.v7878.dex.util.SparseArray;
-import com.v7878.misc.Checks;
 
 import java.util.Collection;
 import java.util.HashMap;

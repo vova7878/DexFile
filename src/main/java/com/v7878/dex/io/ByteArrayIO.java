@@ -22,7 +22,7 @@
 
 package com.v7878.dex.io;
 
-import com.v7878.misc.Checks;
+import com.v7878.dex.util.Checks;
 
 import java.nio.ByteOrder;
 import java.util.Arrays;

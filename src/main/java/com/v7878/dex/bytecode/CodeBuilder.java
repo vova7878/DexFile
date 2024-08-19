@@ -59,7 +59,7 @@ import com.v7878.dex.bytecode.Format.Format4rcc;
 import com.v7878.dex.bytecode.Format.Format51l;
 import com.v7878.dex.bytecode.Format.PackedSwitchPayload;
 import com.v7878.dex.bytecode.Format.SparseSwitchPayload;
-import com.v7878.misc.Checks;
+import com.v7878.dex.util.Checks;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

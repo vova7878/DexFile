@@ -30,7 +30,6 @@ import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.util.MutableList;
-import com.v7878.misc.Checks;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -77,7 +76,7 @@ public final class Dex extends MutableList<ClassDef> {
         } else {
             for (int i = 0; i < class_def_ids.length; i++) {
                 int id = class_def_ids[i];
-                Checks.checkIndex(id, map.class_defs_size);
+                Objects.checkIndex(id, map.class_defs_size);
                 for (int t = 0; t < i; t++) {
                     if (id == class_def_ids[t]) {
                         class_def_ids[i] = ~t;

@@ -25,8 +25,6 @@ package com.v7878.dex.io;
 import static com.v7878.misc.Math.isAlignedL;
 import static com.v7878.misc.Math.roundUpL;
 
-import com.v7878.misc.Checks;
-
 import java.nio.ByteOrder;
 import java.util.Objects;
 
@@ -94,7 +92,7 @@ public interface RandomOutput extends AutoCloseable {
 
     default void writeByteArray(byte[] arr, int off, int len) {
         Objects.requireNonNull(arr);
-        Checks.checkFromIndexSize(off, len, arr.length);
+        Objects.checkFromIndexSize(off, len, arr.length);
         if (len == 0) {
             return;
         }
