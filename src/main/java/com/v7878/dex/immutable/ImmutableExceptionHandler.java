@@ -5,6 +5,8 @@ import com.v7878.dex.iface.ExceptionHandler;
 import com.v7878.dex.iface.TypeId;
 import com.v7878.dex.util.Preconditions;
 
+import java.util.Objects;
+
 public class ImmutableExceptionHandler extends BaseExceptionHandler {
     private final ImmutableTypeId exception_type;
     private final int address;
@@ -31,5 +33,18 @@ public class ImmutableExceptionHandler extends BaseExceptionHandler {
     @Override
     public int getAddress() {
         return address;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getAddress(), getExceptionType());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof ExceptionHandler other
+                && getAddress() == other.getAddress()
+                && Objects.equals(getExceptionType(), other.getExceptionType());
     }
 }

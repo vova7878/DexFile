@@ -1,10 +1,14 @@
 package com.v7878.dex.immutable.bytecode;
 
+import static com.v7878.dex.Format.Format22c22cs;
+
 import com.v7878.dex.Opcode;
 import com.v7878.dex.base.bytecode.BaseInstruction22c22cs;
 import com.v7878.dex.iface.bytecode.formats.Instruction22c22cs;
 import com.v7878.dex.immutable.ImmutableReferenceFactory;
 import com.v7878.dex.util.Preconditions;
+
+import java.util.Objects;
 
 public class ImmutableInstruction22c22cs extends BaseInstruction22c22cs implements ImmutableInstruction {
     private final int register1;
@@ -13,7 +17,7 @@ public class ImmutableInstruction22c22cs extends BaseInstruction22c22cs implemen
 
     protected ImmutableInstruction22c22cs(
             Opcode opcode, int register1, int register2, Object reference1) {
-        super(opcode);
+        super(Preconditions.checkFormat(opcode, Format22c22cs));
         this.register1 = Preconditions.checkNibbleRegister(register1);
         this.register2 = Preconditions.checkNibbleRegister(register2);
         this.reference1 = ImmutableReferenceFactory.of(opcode.getReferenceType1(), reference1);
@@ -43,5 +47,20 @@ public class ImmutableInstruction22c22cs extends BaseInstruction22c22cs implemen
     @Override
     public Object getReference1() {
         return reference1;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getOpcode(), getRegister1(), getRegister2(), getReference1());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof Instruction22c22cs other
+                && Objects.equals(getOpcode(), other.getOpcode())
+                && getRegister1() == other.getRegister1()
+                && getRegister2() == other.getRegister2()
+                && Objects.equals(getReference1(), other.getReference1());
     }
 }

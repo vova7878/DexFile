@@ -6,6 +6,7 @@ import com.v7878.dex.iface.Dex;
 import com.v7878.dex.util.ItemConverter;
 
 import java.util.List;
+import java.util.Objects;
 
 public class ImmutableDex extends BaseDex {
     private final List<? extends ImmutableClassDef> classes;
@@ -27,5 +28,17 @@ public class ImmutableDex extends BaseDex {
     @Override
     public List<? extends ImmutableClassDef> getClasses() {
         return classes;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(getClasses());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof Dex other
+                && Objects.equals(getClasses(), other.getClasses());
     }
 }

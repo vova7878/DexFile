@@ -24,4 +24,16 @@ public class ImmutableLineNumber extends BaseLineNumber implements ImmutableDebu
     public int getLine() {
         return line;
     }
+
+    @Override
+    public int hashCode() {
+        return getLine();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof LineNumber other
+                && getLine() == other.getLine();
+    }
 }

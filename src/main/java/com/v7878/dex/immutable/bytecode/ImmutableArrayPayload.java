@@ -2,6 +2,7 @@ package com.v7878.dex.immutable.bytecode;
 
 import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
 
+import com.v7878.dex.Format;
 import com.v7878.dex.base.bytecode.BaseArrayPayload;
 import com.v7878.dex.iface.bytecode.formats.ArrayPayload;
 import com.v7878.dex.util.ItemConverter;
@@ -15,7 +16,7 @@ public class ImmutableArrayPayload extends BaseArrayPayload implements Immutable
     private final List<? extends Number> elements;
 
     protected ImmutableArrayPayload(int element_width, Iterable<? extends Number> elements) {
-        super(ARRAY_PAYLOAD);
+        super(Preconditions.checkFormat(ARRAY_PAYLOAD, Format.ArrayPayload));
         this.element_width = Preconditions.checkArrayPayloadElementWidth(element_width);
         this.elements = Preconditions.checkArrayPayloadElements(element_width,
                 ItemConverter.toList(Objects::requireNonNull, Objects::nonNull, elements));
@@ -38,5 +39,19 @@ public class ImmutableArrayPayload extends BaseArrayPayload implements Immutable
     @Override
     public List<? extends Number> getArrayElements() {
         return elements;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getOpcode(), getElementWidth(), getArrayElements());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof ArrayPayload other
+                && Objects.equals(getOpcode(), other.getOpcode())
+                && getElementWidth() == other.getElementWidth()
+                && Objects.equals(getArrayElements(), other.getArrayElements());
     }
 }

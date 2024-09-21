@@ -24,4 +24,16 @@ public class ImmutableEndLocal extends BaseEndLocal implements ImmutableDebugIte
     public int getRegister() {
         return register;
     }
+
+    @Override
+    public int hashCode() {
+        return getRegister();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof EndLocal other
+                && getRegister() == other.getRegister();
+    }
 }

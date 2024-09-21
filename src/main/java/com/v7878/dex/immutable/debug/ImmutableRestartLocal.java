@@ -24,4 +24,16 @@ public class ImmutableRestartLocal extends BaseRestartLocal implements Immutable
     public int getRegister() {
         return register;
     }
+
+    @Override
+    public int hashCode() {
+        return getRegister();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof RestartLocal other
+                && getRegister() == other.getRegister();
+    }
 }

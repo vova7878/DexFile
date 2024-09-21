@@ -6,6 +6,7 @@ import com.v7878.dex.iface.Annotation;
 import com.v7878.dex.iface.AnnotationElement;
 import com.v7878.dex.iface.TypeId;
 import com.v7878.dex.iface.value.EncodedAnnotation;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 
 import java.util.NavigableSet;
@@ -51,5 +52,25 @@ public class ImmutableAnnotation extends BaseAnnotation {
     @Override
     public NavigableSet<? extends ImmutableAnnotationElement> getElements() {
         return elements;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getVisibility(), getType(), getElements());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof Annotation other
+                && Objects.equals(getVisibility(), other.getVisibility())
+                && Objects.equals(getType(), other.getType())
+                && Objects.equals(getElements(), other.getElements());
+    }
+
+    @Override
+    public int compareTo(Annotation other) {
+        if (other == this) return 0;
+        return CollectionUtils.compareNonNull(getType(), other.getType());
     }
 }

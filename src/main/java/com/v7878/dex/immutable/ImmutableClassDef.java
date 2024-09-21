@@ -11,6 +11,7 @@ import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.NavigableSet;
+import java.util.Objects;
 
 public class ImmutableClassDef extends BaseClassDef {
     private final ImmutableTypeId type;
@@ -113,5 +114,24 @@ public class ImmutableClassDef extends BaseClassDef {
     @Override
     public NavigableSet<? extends ImmutableAnnotation> getAnnotations() {
         return annotations;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getType(), getAccessFlags(), getSuperclass(),
+                getInterfaces(), getSourceFile(), getFields(), getMethods());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof ClassDef other
+                && getAccessFlags() == other.getAccessFlags()
+                && Objects.equals(getType(), other.getType())
+                && Objects.equals(getSuperclass(), other.getSuperclass())
+                && Objects.equals(getSourceFile(), other.getSourceFile())
+                && Objects.equals(getInterfaces(), other.getInterfaces())
+                && Objects.equals(getFields(), other.getFields())
+                && Objects.equals(getMethods(), other.getMethods());
     }
 }

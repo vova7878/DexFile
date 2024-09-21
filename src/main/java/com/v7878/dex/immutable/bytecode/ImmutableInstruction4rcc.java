@@ -1,10 +1,14 @@
 package com.v7878.dex.immutable.bytecode;
 
+import static com.v7878.dex.Format.Format4rcc;
+
 import com.v7878.dex.Opcode;
 import com.v7878.dex.base.bytecode.BaseInstruction4rcc;
 import com.v7878.dex.iface.bytecode.formats.Instruction4rcc;
 import com.v7878.dex.immutable.ImmutableReferenceFactory;
 import com.v7878.dex.util.Preconditions;
+
+import java.util.Objects;
 
 public class ImmutableInstruction4rcc extends BaseInstruction4rcc implements ImmutableInstruction {
     private final int start_register;
@@ -14,7 +18,7 @@ public class ImmutableInstruction4rcc extends BaseInstruction4rcc implements Imm
 
     protected ImmutableInstruction4rcc(Opcode opcode, int start_register, int register_count,
                                        Object reference1, Object reference2) {
-        super(opcode);
+        super(Preconditions.checkFormat(opcode, Format4rcc));
         this.start_register = Preconditions.checkShortRegister(start_register);
         this.register_count = Preconditions.checkRegisterRangeCount(register_count);
         this.reference1 = ImmutableReferenceFactory.of(opcode.getReferenceType1(), reference1);
@@ -51,5 +55,22 @@ public class ImmutableInstruction4rcc extends BaseInstruction4rcc implements Imm
     @Override
     public Object getReference2() {
         return reference2;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getOpcode(), getRegisterCount(),
+                getStartRegister(), getReference1(), getReference2());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof Instruction4rcc other
+                && Objects.equals(getOpcode(), other.getOpcode())
+                && getRegisterCount() == other.getRegisterCount()
+                && getStartRegister() == other.getStartRegister()
+                && Objects.equals(getReference1(), other.getReference1())
+                && Objects.equals(getReference2(), other.getReference2());
     }
 }

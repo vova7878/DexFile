@@ -24,4 +24,16 @@ public class ImmutableAdvancePC extends BaseAdvancePC implements ImmutableDebugI
     public int getAddrDiff() {
         return addr_diff;
     }
+
+    @Override
+    public int hashCode() {
+        return getAddrDiff();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof AdvancePC other
+                && getAddrDiff() == other.getAddrDiff();
+    }
 }

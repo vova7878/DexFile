@@ -1,16 +1,20 @@
 package com.v7878.dex.immutable.bytecode;
 
+import static com.v7878.dex.Format.Format31i;
+
 import com.v7878.dex.Opcode;
 import com.v7878.dex.base.bytecode.BaseInstruction31i;
 import com.v7878.dex.iface.bytecode.formats.Instruction31i;
 import com.v7878.dex.util.Preconditions;
+
+import java.util.Objects;
 
 public class ImmutableInstruction31i extends BaseInstruction31i implements ImmutableInstruction {
     private final int register1;
     private final int literal;
 
     protected ImmutableInstruction31i(Opcode opcode, int register1, int literal) {
-        super(opcode);
+        super(Preconditions.checkFormat(opcode, Format31i));
         this.register1 = Preconditions.checkByteRegister(register1);
         this.literal = literal;
     }
@@ -33,5 +37,19 @@ public class ImmutableInstruction31i extends BaseInstruction31i implements Immut
     @Override
     public int getLiteral() {
         return literal;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getOpcode(), getRegister1(), getLiteral());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof Instruction31i other
+                && Objects.equals(getOpcode(), other.getOpcode())
+                && getRegister1() == other.getRegister1()
+                && getLiteral() == other.getLiteral();
     }
 }

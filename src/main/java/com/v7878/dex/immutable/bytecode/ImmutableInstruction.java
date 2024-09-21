@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable.bytecode;
 
 import com.v7878.dex.Format;
+import com.v7878.dex.Opcode;
 import com.v7878.dex.iface.bytecode.Instruction;
 import com.v7878.dex.iface.bytecode.formats.ArrayPayload;
 import com.v7878.dex.iface.bytecode.formats.Instruction10t;
@@ -33,9 +34,20 @@ import com.v7878.dex.iface.bytecode.formats.Instruction51l;
 import com.v7878.dex.iface.bytecode.formats.PackedSwitchPayload;
 import com.v7878.dex.iface.bytecode.formats.SparseSwitchPayload;
 
-public interface ImmutableInstruction extends Instruction {
+public class ImmutableInstruction implements Instruction {
+    private final Opcode opcode;
+
+    public ImmutableInstruction(Opcode opcode) {
+        this.opcode = opcode;
+    }
+
+    @Override
+    public final Opcode getOpcode() {
+        return opcode;
+    }
+
     static ImmutableInstruction of(Instruction other) {
-        throw new UnsupportedOperationException("TODO");
+        return of(other.getOpcode().format(), other);
     }
 
     static ImmutableInstruction of(Format format, Instruction other) {

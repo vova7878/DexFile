@@ -6,6 +6,8 @@ import com.v7878.dex.iface.FieldDef;
 import com.v7878.dex.iface.TypeId;
 import com.v7878.dex.iface.value.EncodedValue;
 import com.v7878.dex.immutable.value.ImmutableEncodedValue;
+import com.v7878.dex.util.AccessFlagUtils;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 
@@ -75,5 +77,33 @@ public class ImmutableFieldDef extends BaseFieldDef {
     @Override
     public NavigableSet<? extends ImmutableAnnotation> getAnnotations() {
         return annotations;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getName(), getAccessFlags(),
+                getHiddenApiFlags(), getType(), getInitialValue());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof FieldDef other
+                && getAccessFlags() == other.getAccessFlags()
+                && getHiddenApiFlags() == other.getHiddenApiFlags()
+                && Objects.equals(getName(), other.getName())
+                && Objects.equals(getType(), other.getType())
+                && Objects.equals(getInitialValue(), other.getInitialValue());
+    }
+
+    @Override
+    public int compareTo(FieldDef other) {
+        if (other == this) return 0;
+        int out = Boolean.compare(AccessFlagUtils.isStatic(getAccessFlags()),
+                AccessFlagUtils.isStatic(other.getAccessFlags()));
+        if (out != 0) return out;
+        out = CollectionUtils.compareNonNull(getName(), other.getName());
+        if (out != 0) return out;
+        return CollectionUtils.compareNonNull(getType(), other.getType());
     }
 }

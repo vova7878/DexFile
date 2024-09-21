@@ -12,6 +12,7 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Objects;
 
 public class ImmutableMethodImplementation extends BaseMethodImplementation {
     private final int register_count;
@@ -62,5 +63,20 @@ public class ImmutableMethodImplementation extends BaseMethodImplementation {
     @Override
     public List<? extends ImmutableDebugItem> getDebugItems() {
         return debug_items;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getRegisterCount(), getInstructions(), getTryBlocks(), getDebugItems());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof MethodImplementation other
+                && getRegisterCount() == other.getRegisterCount()
+                && Objects.equals(getInstructions(), other.getInstructions())
+                && Objects.equals(getTryBlocks(), other.getTryBlocks())
+                && Objects.equals(getDebugItems(), other.getDebugItems());
     }
 }
