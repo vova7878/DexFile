@@ -11,19 +11,19 @@ import java.util.List;
 import java.util.Objects;
 
 public class PackedSwitchPayload extends Instruction implements SwitchPayloadInstruction {
-    private final List<? extends SwitchElement> elements;
+    private final List<SwitchElement> elements;
 
-    protected PackedSwitchPayload(Iterable<? extends SwitchElement> elements) {
+    protected PackedSwitchPayload(Iterable<SwitchElement> elements) {
         super(Preconditions.checkFormat(PACKED_SWITCH_PAYLOAD, Format.PackedSwitchPayload));
         this.elements = Preconditions.checkSequentialOrderedKeys(ItemConverter.toList(elements));
     }
 
-    public static PackedSwitchPayload of(Iterable<? extends SwitchElement> elements) {
+    public static PackedSwitchPayload of(Iterable<SwitchElement> elements) {
         return new PackedSwitchPayload(elements);
     }
 
     @Override
-    public List<? extends SwitchElement> getSwitchElements() {
+    public List<SwitchElement> getSwitchElements() {
         return elements;
     }
 

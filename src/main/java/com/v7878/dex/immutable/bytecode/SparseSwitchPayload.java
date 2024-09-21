@@ -11,19 +11,19 @@ import java.util.List;
 import java.util.Objects;
 
 public class SparseSwitchPayload extends Instruction implements SwitchPayloadInstruction {
-    private final List<? extends SwitchElement> elements;
+    private final List<SwitchElement> elements;
 
-    protected SparseSwitchPayload(Iterable<? extends SwitchElement> elements) {
+    protected SparseSwitchPayload(Iterable<SwitchElement> elements) {
         super(Preconditions.checkFormat(SPARSE_SWITCH_PAYLOAD, Format.SparseSwitchPayload));
         this.elements = ItemConverter.toList(elements);
     }
 
-    public static SparseSwitchPayload of(Iterable<? extends SwitchElement> elements) {
+    public static SparseSwitchPayload of(Iterable<SwitchElement> elements) {
         return new SparseSwitchPayload(elements);
     }
 
     @Override
-    public List<? extends SwitchElement> getSwitchElements() {
+    public List<SwitchElement> getSwitchElements() {
         return elements;
     }
 

@@ -12,16 +12,16 @@ import java.util.Objects;
 
 public class ArrayPayload extends Instruction implements ArrayPayloadInstruction {
     private final int element_width;
-    private final List<? extends Number> elements;
+    private final List<Number> elements;
 
-    protected ArrayPayload(int element_width, Iterable<? extends Number> elements) {
+    protected ArrayPayload(int element_width, Iterable<Number> elements) {
         super(Preconditions.checkFormat(ARRAY_PAYLOAD, Format.ArrayPayload));
         this.element_width = Preconditions.checkArrayPayloadElementWidth(element_width);
-        this.elements = Preconditions.checkArrayPayloadElements(element_width,
-                ItemConverter.toList(Objects::requireNonNull, Objects::nonNull, elements));
+        this.elements = Preconditions.checkArrayPayloadElements(
+                element_width, ItemConverter.toList(elements));
     }
 
-    public static ArrayPayload of(int element_width, Iterable<? extends Number> elements) {
+    public static ArrayPayload of(int element_width, Iterable<Number> elements) {
         return new ArrayPayload(element_width, elements);
     }
 
@@ -31,7 +31,7 @@ public class ArrayPayload extends Instruction implements ArrayPayloadInstruction
     }
 
     @Override
-    public List<? extends Number> getArrayElements() {
+    public List<Number> getArrayElements() {
         return elements;
     }
 

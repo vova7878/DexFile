@@ -5,5 +5,5 @@ import com.v7878.dex.immutable.bytecode.SwitchElement;
 import java.util.List;
 
 public interface SwitchPayloadInstruction extends PayloadInstruction {
-    List<? extends SwitchElement> getSwitchElements();
+    List<SwitchElement> getSwitchElements();
 }

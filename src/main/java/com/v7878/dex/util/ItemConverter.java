@@ -10,6 +10,7 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
+//TODO: null-checks
 public class ItemConverter {
     public static <T> List<T> toList(Iterable<T> iterable) {
         if (iterable == null) {
@@ -56,7 +57,7 @@ public class ItemConverter {
     }
 
     public static <T> NavigableSet<T> toNavigableSet(
-            Comparator<T> comparator, Iterable<T> iterable) {
+            Comparator<? super T> comparator, Iterable<T> iterable) {
         if (iterable == null) {
             return Collections.emptyNavigableSet();
         }

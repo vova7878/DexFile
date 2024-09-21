@@ -1,7 +1,7 @@
 package com.v7878.dex.immutable;
 
-import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.NavigableSet;
@@ -64,11 +64,11 @@ public class ClassDef implements Annotatable {
     }
 
     public NavigableSet<FieldDef> getStaticFields() {
-        return CollectionUtils.getStaticFieldsSubset(getFields());
+        return MemberUtils.getStaticFieldsSubset(getFields());
     }
 
     public NavigableSet<FieldDef> getInstanceFields() {
-        return CollectionUtils.getInstanceFieldsSubset(getFields());
+        return MemberUtils.getInstanceFieldsSubset(getFields());
     }
 
     public NavigableSet<MethodDef> getMethods() {
@@ -76,11 +76,11 @@ public class ClassDef implements Annotatable {
     }
 
     public NavigableSet<MethodDef> getDirectMethods() {
-        return CollectionUtils.getDirectMethodsSubset(getMethods());
+        return MemberUtils.getDirectMethodsSubset(getMethods());
     }
 
     public NavigableSet<MethodDef> getVirtualMethods() {
-        return CollectionUtils.getVirtualMethodsSubset(getMethods());
+        return MemberUtils.getVirtualMethodsSubset(getMethods());
     }
 
     public NavigableSet<Annotation> getAnnotations() {

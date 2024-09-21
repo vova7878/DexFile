@@ -5,5 +5,5 @@ import java.util.List;
 public interface ArrayPayloadInstruction extends PayloadInstruction {
     int getElementWidth();
 
-    List<? extends Number> getArrayElements();
+    List<Number> getArrayElements();
 }

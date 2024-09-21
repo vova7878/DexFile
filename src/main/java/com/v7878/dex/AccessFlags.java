@@ -48,6 +48,7 @@ public enum AccessFlags {
     DECLARED_SYNCHRONIZED(ACC_DECLARED_SYNCHRONIZED, false, true, false, false, "declared-synchronized");
 
     private final int value;
+    //TODO validForInnerClass
     private final boolean validForClass;
     private final boolean validForMethod;
     private final boolean validForParameter;
