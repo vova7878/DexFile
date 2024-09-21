@@ -23,7 +23,7 @@ public final class EncodedArray extends EncodedValue {
         return ValueType.ARRAY;
     }
 
-    public List<? extends EncodedValue> getValue() {
+    public List<EncodedValue> getValue() {
         return value;
     }
 

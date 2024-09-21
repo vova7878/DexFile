@@ -9,6 +9,16 @@ public final class DexOffsets {
     public static final int DEXCONTAINER_HEADER_SIZE = BASE_HEADER_SIZE + 4 * 2;
     public static final int COMPACT_HEADER_SIZE = BASE_HEADER_SIZE + 4 * 6;
 
+    // header element sizes
+    public static final int STRING_ID_SIZE = 4;
+    public static final int TYPE_ID_SIZE = 4;
+    public static final int FIELD_ID_SIZE = 8;
+    public static final int PROTO_ID_SIZE = 12;
+    public static final int METHOD_ID_SIZE = 8;
+    public static final int METHOD_HANDLE_ID_SIZE = 8;
+    public static final int CALL_SITE_ID_SIZE = 4;
+    public static final int CLASS_DEF_SIZE = 32;
+
     // header offsets
     public static final int CHECKSUM_OFFSET = 8;
     public static final int CHECKSUM_DATA_START_OFFSET = 12;

@@ -1,9 +1,9 @@
 package com.v7878.dex.immutable;
 
 public abstract sealed class MemberDef implements Annotatable permits MethodDef, FieldDef {
-    abstract String getName();
+    public abstract String getName();
 
-    abstract int getAccessFlags();
+    public abstract int getAccessFlags();
 
-    abstract int getHiddenApiFlags();
+    public abstract int getHiddenApiFlags();
 }

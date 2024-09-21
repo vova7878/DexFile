@@ -18,7 +18,7 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
         EncodedChar, EncodedDouble, EncodedEnum, EncodedField, EncodedFloat,
         EncodedInt, EncodedLong, EncodedMethod, EncodedMethodHandle, EncodedMethodType,
         EncodedNull, EncodedShort, EncodedString, EncodedType {
-    abstract ValueType getValueType();
+    public abstract ValueType getValueType();
 
     public static EncodedValue defaultValue(TypeId type) {
         return switch (type.getShorty()) {
@@ -36,9 +36,9 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
         };
     }
 
-    public static EncodedValue of(Object obj) {
+    public static EncodedValue ofValue(Object obj) {
         if (obj == null) return EncodedNull.INSTANCE;
-        if (obj instanceof EncodedValue value) return of(value);
+        if (obj instanceof EncodedValue value) return value;
         if (obj instanceof Boolean value) EncodedBoolean.of(value);
         if (obj instanceof Byte value) return EncodedByte.of(value);
         if (obj instanceof Short value) return EncodedShort.of(value);

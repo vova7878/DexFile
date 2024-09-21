@@ -10,8 +10,8 @@ public final class AnnotationElement implements Comparable<AnnotationElement> {
     private final EncodedValue value;
 
     private AnnotationElement(String name, EncodedValue value) {
-        this.name = name;
-        this.value = EncodedValue.of(value);
+        this.name = Objects.requireNonNull(name);
+        this.value = Objects.requireNonNull(value);
     }
 
     public static AnnotationElement of(String name, EncodedValue value) {
