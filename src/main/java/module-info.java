@@ -16,4 +16,5 @@ module com.v7878.dex {
     exports com.v7878.dex.immutable.bytecode;
 
     requires com.v7878.misc;
+    requires java.rmi;
 }
