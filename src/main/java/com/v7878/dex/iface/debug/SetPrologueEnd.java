@@ -1,4 +1,0 @@
-package com.v7878.dex.iface.debug;
-
-public interface SetPrologueEnd extends DebugItem {
-}

@@ -1,6 +1,6 @@
 package com.v7878.dex.util;
 
-import com.v7878.dex.iface.TypeId;
+import com.v7878.dex.immutable.TypeId;
 
 public class ShortyUtils {
     public static char getTypeShorty(String descriptor) {

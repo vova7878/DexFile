@@ -37,7 +37,7 @@ public class CollectionUtils {
         return Boolean.compare(i1.hasNext(), i2.hasNext());
     }
 
-    public static <T> Comparator<? super T> naturalOrder() {
+    public static <T extends Comparable<? super T>> Comparator<? super T> naturalOrder() {
         //noinspection unchecked
         return (Comparator<? super T>) NaturalOrder.INSTANCE;
     }

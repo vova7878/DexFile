@@ -2,7 +2,7 @@ package com.v7878.dex.util;
 
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
-import com.v7878.dex.iface.bytecode.SwitchElement;
+import com.v7878.dex.immutable.bytecode.SwitchElement;
 
 import java.util.List;
 
@@ -189,7 +189,7 @@ public class Preconditions {
         return index;
     }
 
-    public static <C extends SwitchElement> List<C> checkSequentialOrderedKeys(List<C> elements) {
+    public static List<SwitchElement> checkSequentialOrderedKeys(List<SwitchElement> elements) {
         Integer previousKey = null;
         for (SwitchElement element : elements) {
             int key = element.getKey();

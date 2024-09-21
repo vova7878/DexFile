@@ -1,0 +1,44 @@
+package com.v7878.dex.immutable.value;
+
+import com.v7878.dex.ValueType;
+
+public class EncodedLong extends EncodedValue {
+    private final long value;
+
+    protected EncodedLong(long value) {
+        this.value = value;
+    }
+
+    public static EncodedLong of(long value) {
+        return new EncodedLong(value);
+    }
+
+    @Override
+    public ValueType getValueType() {
+        return ValueType.LONG;
+    }
+
+    public long getValue() {
+        return value;
+    }
+
+    @Override
+    public int hashCode() {
+        return Long.hashCode(getValue());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof EncodedLong other
+                && getValue() == other.getValue();
+    }
+
+    @Override
+    public int compareTo(EncodedValue other) {
+        if (other == this) return 0;
+        int out = ValueType.compare(getValueType(), other.getValueType());
+        if (out != 0) return out;
+        return Long.compare(getValue(), ((EncodedLong) other).getValue());
+    }
+}

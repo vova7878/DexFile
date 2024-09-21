@@ -1,0 +1,44 @@
+package com.v7878.dex.immutable.value;
+
+import com.v7878.dex.ValueType;
+
+public class EncodedByte extends EncodedValue {
+    private final byte value;
+
+    protected EncodedByte(byte value) {
+        this.value = value;
+    }
+
+    public static EncodedByte of(byte value) {
+        return new EncodedByte(value);
+    }
+
+    @Override
+    public ValueType getValueType() {
+        return ValueType.BYTE;
+    }
+
+    public byte getValue() {
+        return value;
+    }
+
+    @Override
+    public int hashCode() {
+        return Byte.hashCode(getValue());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        return obj instanceof EncodedByte other
+                && getValue() == other.getValue();
+    }
+
+    @Override
+    public int compareTo(EncodedValue other) {
+        if (other == this) return 0;
+        int out = ValueType.compare(getValueType(), other.getValueType());
+        if (out != 0) return out;
+        return Byte.compare(getValue(), ((EncodedByte) other).getValue());
+    }
+}
