@@ -10,11 +10,11 @@ import com.v7878.dex.util.ItemConverter;
 import java.util.NavigableSet;
 import java.util.Objects;
 
-public class EncodedAnnotation extends EncodedValue {
+public final class EncodedAnnotation extends EncodedValue implements CommonAnnotation {
     private final TypeId type;
     private final NavigableSet<AnnotationElement> elements;
 
-    protected EncodedAnnotation(TypeId type, Iterable<AnnotationElement> elements) {
+    private EncodedAnnotation(TypeId type, Iterable<AnnotationElement> elements) {
         this.type = Objects.requireNonNull(type);
         this.elements = ItemConverter.toNavigableSet(elements);
     }
@@ -24,7 +24,7 @@ public class EncodedAnnotation extends EncodedValue {
     }
 
     public static EncodedAnnotation of(CommonAnnotation other) {
-        if (other instanceof EncodedAnnotation immutable) return immutable;
+        if (other instanceof EncodedAnnotation encoded) return encoded;
         return new EncodedAnnotation(other.getType(), other.getElements());
     }
 

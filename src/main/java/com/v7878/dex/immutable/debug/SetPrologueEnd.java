@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.debug;
 
 import java.util.Objects;
 
-public class SetPrologueEnd extends DebugItem {
+public final class SetPrologueEnd extends DebugItem {
     public static final SetPrologueEnd INSTANCE = new SetPrologueEnd();
 
-    protected SetPrologueEnd() {
+    private SetPrologueEnd() {
     }
 
     public static SetPrologueEnd of(SetPrologueEnd other) {

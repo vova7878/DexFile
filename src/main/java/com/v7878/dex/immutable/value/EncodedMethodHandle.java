@@ -6,10 +6,10 @@ import com.v7878.dex.util.CollectionUtils;
 
 import java.util.Objects;
 
-public class EncodedMethodHandle extends EncodedValue {
+public final class EncodedMethodHandle extends EncodedValue {
     private final MethodHandleId value;
 
-    protected EncodedMethodHandle(MethodHandleId value) {
+    private EncodedMethodHandle(MethodHandleId value) {
         this.value = Objects.requireNonNull(value);
     }
 

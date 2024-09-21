@@ -9,12 +9,12 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction21t extends Instruction
+public final class Instruction21t extends Instruction
         implements OneRegisterInstruction, BranchOffsetInstruction {
     private final int register1;
     private final int branch_offset;
 
-    protected Instruction21t(Opcode opcode, int register1, int branch_offset) {
+    private Instruction21t(Opcode opcode, int register1, int branch_offset) {
         super(Preconditions.checkFormat(opcode, Format21t));
         this.register1 = Preconditions.checkByteRegister(register1);
         this.branch_offset = Preconditions.checkShortCodeOffset(branch_offset);

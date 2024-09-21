@@ -13,7 +13,11 @@ import java.lang.invoke.MethodType;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Field;
 
-public abstract class EncodedValue implements Comparable<EncodedValue> {
+public abstract sealed class EncodedValue implements Comparable<EncodedValue>
+        permits EncodedAnnotation, EncodedArray, EncodedBoolean, EncodedByte,
+        EncodedChar, EncodedDouble, EncodedEnum, EncodedField, EncodedFloat,
+        EncodedInt, EncodedLong, EncodedMethod, EncodedMethodHandle, EncodedMethodType,
+        EncodedNull, EncodedShort, EncodedString, EncodedType {
     abstract ValueType getValueType();
 
     public static EncodedValue defaultValue(TypeId type) {

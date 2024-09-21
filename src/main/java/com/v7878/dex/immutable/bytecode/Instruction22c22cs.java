@@ -9,13 +9,13 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction22c22cs extends Instruction
+public final class Instruction22c22cs extends Instruction
         implements TwoRegisterInstruction, SingleReferenceInstruction {
     private final int register1;
     private final int register2;
     private final Object reference1;
 
-    protected Instruction22c22cs(
+    private Instruction22c22cs(
             Opcode opcode, int register1, int register2, Object reference1) {
         super(Preconditions.checkFormat(opcode, Format22c22cs));
         this.register1 = Preconditions.checkNibbleRegister(register1);

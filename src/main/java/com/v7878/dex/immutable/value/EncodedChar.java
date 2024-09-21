@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.value;
 
 import com.v7878.dex.ValueType;
 
-public class EncodedChar extends EncodedValue {
+public final class EncodedChar extends EncodedValue {
     private final char value;
 
-    protected EncodedChar(char value) {
+    private EncodedChar(char value) {
         this.value = value;
     }
 

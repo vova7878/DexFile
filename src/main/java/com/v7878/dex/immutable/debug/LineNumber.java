@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.debug;
 
 import com.v7878.dex.util.Preconditions;
 
-public class LineNumber extends DebugItem {
+public final class LineNumber extends DebugItem {
     private final int line;
 
-    protected LineNumber(int line) {
+    private LineNumber(int line) {
         this.line = Preconditions.checkDebugLine(line);
     }
 

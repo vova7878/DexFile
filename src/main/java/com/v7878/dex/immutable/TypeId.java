@@ -5,7 +5,7 @@ import com.v7878.dex.util.ShortyUtils;
 
 import java.util.Objects;
 
-public class TypeId implements Comparable<TypeId> {
+public final class TypeId implements Comparable<TypeId> {
     public static final TypeId V = of("V");
     public static final TypeId Z = of("Z");
     public static final TypeId B = of("B");
@@ -19,7 +19,7 @@ public class TypeId implements Comparable<TypeId> {
 
     private final String descriptor;
 
-    protected TypeId(String descriptor) {
+    private TypeId(String descriptor) {
         this.descriptor = Objects.requireNonNull(descriptor);
     }
 

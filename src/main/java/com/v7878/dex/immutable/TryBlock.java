@@ -7,15 +7,15 @@ import com.v7878.dex.util.Preconditions;
 import java.util.List;
 import java.util.Objects;
 
-public class TryBlock implements Comparable<TryBlock> {
+public final class TryBlock implements Comparable<TryBlock> {
     private final int start_address;
     private final int unit_count;
     private final List<ExceptionHandler> handlers;
     private final Integer catch_all_address;
 
-    protected TryBlock(int start_addres, int unit_count,
-                       Iterable<ExceptionHandler> handlers,
-                       Integer catch_all_address) {
+    private TryBlock(int start_addres, int unit_count,
+                     Iterable<ExceptionHandler> handlers,
+                     Integer catch_all_address) {
         this.start_address = Preconditions.checkCodeAddress(start_addres);
         this.unit_count = Preconditions.checkUnitCount(unit_count);
         this.handlers = ItemConverter.toList(handlers);

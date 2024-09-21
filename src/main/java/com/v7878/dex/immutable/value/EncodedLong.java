@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.value;
 
 import com.v7878.dex.ValueType;
 
-public class EncodedLong extends EncodedValue {
+public final class EncodedLong extends EncodedValue {
     private final long value;
 
-    protected EncodedLong(long value) {
+    private EncodedLong(long value) {
         this.value = value;
     }
 

@@ -7,8 +7,8 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction10x extends Instruction {
-    protected Instruction10x(Opcode opcode) {
+public final class Instruction10x extends Instruction {
+    private Instruction10x(Opcode opcode) {
         super(Preconditions.checkFormat(opcode, Format10x));
     }
 

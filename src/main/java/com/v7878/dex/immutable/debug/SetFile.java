@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.debug;
 
 import java.util.Objects;
 
-public class SetFile extends DebugItem {
+public final class SetFile extends DebugItem {
     private final String name;
 
-    protected SetFile(String name) {
+    private SetFile(String name) {
         this.name = name; // may be null
     }
 

@@ -5,10 +5,10 @@ import com.v7878.dex.util.CollectionUtils;
 
 import java.util.Objects;
 
-public class EncodedString extends EncodedValue {
+public final class EncodedString extends EncodedValue {
     private final String value;
 
-    protected EncodedString(String value) {
+    private EncodedString(String value) {
         this.value = Objects.requireNonNull(value);
     }
 

@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable.bytecode.iface;
 
-public interface PayloadInstruction extends InstructionI {
+public sealed interface PayloadInstruction extends InstructionI
+        permits ArrayPayloadInstruction, SwitchPayloadInstruction {
     @Override
     int getUnitCount();
 }

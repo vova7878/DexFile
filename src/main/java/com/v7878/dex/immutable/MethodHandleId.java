@@ -5,11 +5,11 @@ import com.v7878.dex.util.CollectionUtils;
 
 import java.util.Objects;
 
-public class MethodHandleId implements Comparable<MethodHandleId> {
+public final class MethodHandleId implements Comparable<MethodHandleId> {
     private final MethodHandleType handle_type;
     private final MemberId member;
 
-    protected MethodHandleId(MethodHandleType handle_type, MemberId member) {
+    private MethodHandleId(MethodHandleType handle_type, MemberId member) {
         this.handle_type = Objects.requireNonNull(handle_type);
         this.member = Objects.requireNonNull(member);
     }

@@ -6,10 +6,10 @@ import com.v7878.dex.util.CollectionUtils;
 
 import java.util.Objects;
 
-public class EncodedType extends EncodedValue {
+public final class EncodedType extends EncodedValue {
     private final TypeId value;
 
-    protected EncodedType(TypeId value) {
+    private EncodedType(TypeId value) {
         this.value = Objects.requireNonNull(value);
     }
 

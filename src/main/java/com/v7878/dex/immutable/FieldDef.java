@@ -9,7 +9,7 @@ import com.v7878.dex.util.Preconditions;
 import java.util.NavigableSet;
 import java.util.Objects;
 
-public class FieldDef extends MemberDef implements Comparable<FieldDef> {
+public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
     private final String name;
     private final TypeId type;
     private final int access_flags;
@@ -17,7 +17,7 @@ public class FieldDef extends MemberDef implements Comparable<FieldDef> {
     private final EncodedValue initial_value;
     private final NavigableSet<Annotation> annotations;
 
-    protected FieldDef(
+    private FieldDef(
             String name, TypeId type, int access_flags, int hiddenapi_flags,
             EncodedValue initial_value, Iterable<Annotation> annotations) {
         this.name = Objects.requireNonNull(name);

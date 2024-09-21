@@ -7,10 +7,10 @@ import com.v7878.dex.util.ItemConverter;
 import java.util.List;
 import java.util.Objects;
 
-public class EncodedArray extends EncodedValue {
+public final class EncodedArray extends EncodedValue {
     private final List<EncodedValue> value;
 
-    protected EncodedArray(Iterable<EncodedValue> values) {
+    private EncodedArray(Iterable<EncodedValue> values) {
         this.value = ItemConverter.toList(values);
     }
 

@@ -5,13 +5,13 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class StartLocal extends DebugItem {
+public final class StartLocal extends DebugItem {
     private final int register;
     private final String name;
     private final TypeId type;
     private final String signature;
 
-    protected StartLocal(int register, String name, TypeId type, String signature) {
+    private StartLocal(int register, String name, TypeId type, String signature) {
         this.register = Preconditions.checkShortRegister(register);
         this.name = name; // may be null
         this.type = type; // may be null

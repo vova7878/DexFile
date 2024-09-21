@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.debug;
 
 import com.v7878.dex.util.Preconditions;
 
-public class EndLocal extends DebugItem {
+public final class EndLocal extends DebugItem {
     private final int register;
 
-    protected EndLocal(int register) {
+    private EndLocal(int register) {
         this.register = Preconditions.checkShortRegister(register);
     }
 

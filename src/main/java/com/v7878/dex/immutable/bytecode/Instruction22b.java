@@ -9,13 +9,13 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction22b extends Instruction
+public final class Instruction22b extends Instruction
         implements TwoRegisterInstruction, LiteralInstruction {
     private final int register1;
     private final int register2;
     private final int literal;
 
-    protected Instruction22b(Opcode opcode, int register1, int register2, int literal) {
+    private Instruction22b(Opcode opcode, int register1, int register2, int literal) {
         super(Preconditions.checkFormat(opcode, Format22b));
         this.register1 = Preconditions.checkByteRegister(register1);
         this.register2 = Preconditions.checkByteRegister(register2);

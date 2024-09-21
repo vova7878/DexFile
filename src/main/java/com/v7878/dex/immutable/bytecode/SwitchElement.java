@@ -2,11 +2,11 @@ package com.v7878.dex.immutable.bytecode;
 
 import java.util.Objects;
 
-public class SwitchElement {
+public final class SwitchElement {
     private final int key;
     private final int offset;
 
-    protected SwitchElement(int key, int offset) {
+    private SwitchElement(int key, int offset) {
         this.key = key;
         this.offset = offset;
     }

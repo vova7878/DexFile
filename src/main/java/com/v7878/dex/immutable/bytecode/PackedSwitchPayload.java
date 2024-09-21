@@ -10,10 +10,10 @@ import com.v7878.dex.util.Preconditions;
 import java.util.List;
 import java.util.Objects;
 
-public class PackedSwitchPayload extends Instruction implements SwitchPayloadInstruction {
+public final class PackedSwitchPayload extends Instruction implements SwitchPayloadInstruction {
     private final List<SwitchElement> elements;
 
-    protected PackedSwitchPayload(Iterable<SwitchElement> elements) {
+    private PackedSwitchPayload(Iterable<SwitchElement> elements) {
         super(Preconditions.checkFormat(PACKED_SWITCH_PAYLOAD, Format.PackedSwitchPayload));
         this.elements = Preconditions.checkSequentialOrderedKeys(ItemConverter.toList(elements));
     }

@@ -9,12 +9,12 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction21c extends Instruction
+public final class Instruction21c extends Instruction
         implements OneRegisterInstruction, SingleReferenceInstruction {
     private final int register1;
     private final Object reference1;
 
-    protected Instruction21c(Opcode opcode, int register1, Object reference1) {
+    private Instruction21c(Opcode opcode, int register1, Object reference1) {
         super(Preconditions.checkFormat(opcode, Format21c));
         this.register1 = Preconditions.checkByteRegister(register1);
         this.reference1 = opcode.getReferenceType1().validate(reference1);

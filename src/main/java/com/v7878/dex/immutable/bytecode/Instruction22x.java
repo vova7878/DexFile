@@ -8,11 +8,11 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction22x extends Instruction implements TwoRegisterInstruction {
+public final class Instruction22x extends Instruction implements TwoRegisterInstruction {
     private final int register1;
     private final int register2;
 
-    protected Instruction22x(Opcode opcode, int register1, int register2) {
+    private Instruction22x(Opcode opcode, int register1, int register2) {
         super(Preconditions.checkFormat(opcode, Format22x));
         this.register1 = Preconditions.checkByteRegister(register1);
         this.register2 = Preconditions.checkShortRegister(register2);

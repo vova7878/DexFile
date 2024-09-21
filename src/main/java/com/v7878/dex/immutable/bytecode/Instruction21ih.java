@@ -9,12 +9,12 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction21ih extends Instruction
+public final class Instruction21ih extends Instruction
         implements OneRegisterInstruction, LiteralInstruction {
     private final int register1;
     private final int literal;
 
-    protected Instruction21ih(Opcode opcode, int register1, int literal) {
+    private Instruction21ih(Opcode opcode, int register1, int literal) {
         super(Preconditions.checkFormat(opcode, Format21ih));
         this.register1 = Preconditions.checkByteRegister(register1);
         this.literal = Preconditions.checkIntegerHatLiteral(literal);

@@ -9,12 +9,12 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction11n extends Instruction
+public final class Instruction11n extends Instruction
         implements OneRegisterInstruction, LiteralInstruction {
     private final int register1;
     private final int literal;
 
-    protected Instruction11n(Opcode opcode, int register1, int literal) {
+    private Instruction11n(Opcode opcode, int register1, int literal) {
         super(Preconditions.checkFormat(opcode, Format11n));
         this.register1 = Preconditions.checkNibbleRegister(register1);
         this.literal = Preconditions.checkNibbleLiteral(literal);

@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.debug;
 
 import java.util.Objects;
 
-public class SetEpilogueBegin extends DebugItem {
+public final class SetEpilogueBegin extends DebugItem {
     public static final SetEpilogueBegin INSTANCE = new SetEpilogueBegin();
 
-    protected SetEpilogueBegin() {
+    private SetEpilogueBegin() {
     }
 
     public static SetEpilogueBegin of(SetEpilogueBegin other) {

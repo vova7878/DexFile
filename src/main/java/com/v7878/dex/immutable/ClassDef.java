@@ -7,7 +7,7 @@ import com.v7878.dex.util.Preconditions;
 import java.util.NavigableSet;
 import java.util.Objects;
 
-public class ClassDef implements Annotatable {
+public final class ClassDef implements Annotatable {
     private final TypeId type;
     private final int access_flags;
     private final TypeId superclass;
@@ -17,7 +17,7 @@ public class ClassDef implements Annotatable {
     private final NavigableSet<MethodDef> methods;
     private final NavigableSet<Annotation> annotations;
 
-    protected ClassDef(
+    private ClassDef(
             TypeId type, int access_flags, TypeId superclass, Iterable<TypeId> interfaces,
             String source_file, Iterable<FieldDef> fields,
             Iterable<MethodDef> methods, Iterable<Annotation> annotations) {

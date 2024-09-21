@@ -7,14 +7,14 @@ import com.v7878.dex.util.ItemConverter;
 import java.util.List;
 import java.util.Objects;
 
-public class CallSiteId implements Comparable<CallSiteId> {
+public final class CallSiteId implements Comparable<CallSiteId> {
     private final MethodHandleId method_handle;
     private final String method_name;
     private final ProtoId method_proto;
     private final List<EncodedValue> extra_arguments;
 
-    protected CallSiteId(MethodHandleId method_handle, String method_name,
-                         ProtoId method_proto, Iterable<EncodedValue> extra_arguments) {
+    private CallSiteId(MethodHandleId method_handle, String method_name,
+                       ProtoId method_proto, Iterable<EncodedValue> extra_arguments) {
         this.method_handle = Objects.requireNonNull(method_handle);
         this.method_name = Objects.requireNonNull(method_name);
         this.method_proto = Objects.requireNonNull(method_proto);

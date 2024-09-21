@@ -8,10 +8,10 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction20t extends Instruction implements BranchOffsetInstruction {
+public final class Instruction20t extends Instruction implements BranchOffsetInstruction {
     private final int branch_offset;
 
-    protected Instruction20t(Opcode opcode, int branch_offset) {
+    private Instruction20t(Opcode opcode, int branch_offset) {
         super(Preconditions.checkFormat(opcode, Format20t));
         this.branch_offset = Preconditions.checkShortCodeOffset(branch_offset);
     }

@@ -2,7 +2,7 @@ package com.v7878.dex;
 
 import static com.v7878.misc.Version.CORRECT_SDK_INT;
 
-public abstract class DexOptions<D extends DexOptions<D>> {
+public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOptions, WriteOptions {
     private static final int MIN_TARGET_API = 1;
     private static final int MAX_TARGET_API = 35;
     private static final int FIRST_ART_TARGET = 19;

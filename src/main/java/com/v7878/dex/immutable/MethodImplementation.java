@@ -9,13 +9,13 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 
-public class MethodImplementation {
+public final class MethodImplementation {
     private final int register_count;
     private final List<Instruction> instructions;
     private final NavigableSet<TryBlock> try_blocks;
     private final List<DebugItem> debug_items;
 
-    protected MethodImplementation(
+    private MethodImplementation(
             int register_count, Iterable<Instruction> instructions,
             Iterable<TryBlock> try_blocks, Iterable<DebugItem> debug_items) {
         this.register_count = Preconditions.checkMethodRegisterCount(register_count);

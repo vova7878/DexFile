@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.value;
 
 import com.v7878.dex.ValueType;
 
-public class EncodedBoolean extends EncodedValue {
+public final class EncodedBoolean extends EncodedValue {
     private final boolean value;
 
-    protected EncodedBoolean(boolean value) {
+    private EncodedBoolean(boolean value) {
         this.value = value;
     }
 

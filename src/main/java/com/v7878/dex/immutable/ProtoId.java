@@ -6,11 +6,11 @@ import com.v7878.dex.util.ItemConverter;
 import java.util.List;
 import java.util.Objects;
 
-public class ProtoId implements Comparable<ProtoId> {
+public final class ProtoId implements Comparable<ProtoId> {
     private final TypeId returnType;
     private final List<TypeId> parameters;
 
-    protected ProtoId(TypeId returnType, Iterable<TypeId> parameters) {
+    private ProtoId(TypeId returnType, Iterable<TypeId> parameters) {
         this.returnType = Objects.requireNonNull(returnType);
         this.parameters = ItemConverter.toList(parameters);
     }

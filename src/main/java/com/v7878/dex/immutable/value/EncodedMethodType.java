@@ -6,10 +6,10 @@ import com.v7878.dex.util.CollectionUtils;
 
 import java.util.Objects;
 
-public class EncodedMethodType extends EncodedValue {
+public final class EncodedMethodType extends EncodedValue {
     private final ProtoId value;
 
-    protected EncodedMethodType(ProtoId value) {
+    private EncodedMethodType(ProtoId value) {
         this.value = Objects.requireNonNull(value);
     }
 

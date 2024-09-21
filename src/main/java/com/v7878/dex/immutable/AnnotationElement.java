@@ -5,11 +5,11 @@ import com.v7878.dex.util.CollectionUtils;
 
 import java.util.Objects;
 
-public class AnnotationElement implements Comparable<AnnotationElement> {
+public final class AnnotationElement implements Comparable<AnnotationElement> {
     private final String name;
     private final EncodedValue value;
 
-    protected AnnotationElement(String name, EncodedValue value) {
+    private AnnotationElement(String name, EncodedValue value) {
         this.name = name;
         this.value = EncodedValue.of(value);
     }

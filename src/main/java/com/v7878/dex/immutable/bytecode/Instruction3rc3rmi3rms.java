@@ -9,14 +9,14 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction3rc3rmi3rms extends Instruction
+public final class Instruction3rc3rmi3rms extends Instruction
         implements RegisterRangeInstruction, SingleReferenceInstruction {
     private final int start_register;
     private final int register_count;
     private final Object reference1;
 
-    protected Instruction3rc3rmi3rms(Opcode opcode, int start_register,
-                                     int register_count, Object reference1) {
+    private Instruction3rc3rmi3rms(Opcode opcode, int start_register,
+                                   int register_count, Object reference1) {
         super(Preconditions.checkFormat(opcode, Format3rc3rmi3rms));
         this.start_register = Preconditions.checkShortRegister(start_register);
         this.register_count = Preconditions.checkRegisterRangeCount(register_count);

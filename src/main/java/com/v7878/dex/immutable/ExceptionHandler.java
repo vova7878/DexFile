@@ -4,11 +4,11 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class ExceptionHandler {
+public final class ExceptionHandler {
     private final TypeId exception_type;
     private final int address;
 
-    protected ExceptionHandler(TypeId exception_type, int address) {
+    private ExceptionHandler(TypeId exception_type, int address) {
         this.exception_type = Objects.requireNonNull(exception_type);
         this.address = Preconditions.checkCodeAddress(address);
     }

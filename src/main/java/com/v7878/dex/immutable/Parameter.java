@@ -5,12 +5,12 @@ import com.v7878.dex.util.ItemConverter;
 import java.util.NavigableSet;
 import java.util.Objects;
 
-public class Parameter implements Annotatable {
+public final class Parameter implements Annotatable {
     private final TypeId type;
     private final String name;
     private final NavigableSet<Annotation> annotations;
 
-    protected Parameter(TypeId type, String name, Iterable<Annotation> annotations) {
+    private Parameter(TypeId type, String name, Iterable<Annotation> annotations) {
         this.type = Objects.requireNonNull(type);
         this.name = name; // may be null
         this.annotations = ItemConverter.toNavigableSet(annotations);

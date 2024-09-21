@@ -10,10 +10,10 @@ import com.v7878.dex.util.Preconditions;
 import java.util.List;
 import java.util.Objects;
 
-public class SparseSwitchPayload extends Instruction implements SwitchPayloadInstruction {
+public final class SparseSwitchPayload extends Instruction implements SwitchPayloadInstruction {
     private final List<SwitchElement> elements;
 
-    protected SparseSwitchPayload(Iterable<SwitchElement> elements) {
+    private SparseSwitchPayload(Iterable<SwitchElement> elements) {
         super(Preconditions.checkFormat(SPARSE_SWITCH_PAYLOAD, Format.SparseSwitchPayload));
         this.elements = ItemConverter.toList(elements);
     }

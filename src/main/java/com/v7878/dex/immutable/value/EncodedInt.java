@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.value;
 
 import com.v7878.dex.ValueType;
 
-public class EncodedInt extends EncodedValue {
+public final class EncodedInt extends EncodedValue {
     private final int value;
 
-    protected EncodedInt(int value) {
+    private EncodedInt(int value) {
         this.value = value;
     }
 

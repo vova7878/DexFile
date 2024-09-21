@@ -8,12 +8,12 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction23x extends Instruction implements ThreeRegisterInstruction {
+public final class Instruction23x extends Instruction implements ThreeRegisterInstruction {
     private final int register1;
     private final int register2;
     private final int register3;
 
-    protected Instruction23x(
+    private Instruction23x(
             Opcode opcode, int register1, int register2, int register3) {
         super(Preconditions.checkFormat(opcode, Format23x));
         this.register1 = Preconditions.checkByteRegister(register1);

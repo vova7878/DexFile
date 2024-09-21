@@ -4,10 +4,10 @@ import com.v7878.dex.ValueType;
 
 import java.util.Objects;
 
-public class EncodedNull extends EncodedValue {
+public final class EncodedNull extends EncodedValue {
     public static final EncodedNull INSTANCE = new EncodedNull();
 
-    protected EncodedNull() {
+    private EncodedNull() {
     }
 
     public static EncodedNull of(EncodedNull other) {

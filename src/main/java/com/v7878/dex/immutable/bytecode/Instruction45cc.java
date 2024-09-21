@@ -9,7 +9,7 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction45cc extends Instruction
+public final class Instruction45cc extends Instruction
         implements VariableFiveRegisterInstruction, DualReferenceInstruction {
     private final int register_count;
     private final int register1;
@@ -20,9 +20,9 @@ public class Instruction45cc extends Instruction
     private final Object reference1;
     private final Object reference2;
 
-    protected Instruction45cc(Opcode opcode, int register_count, int register1,
-                              int register2, int register3, int register4, int register5,
-                              Object reference1, Object reference2) {
+    private Instruction45cc(Opcode opcode, int register_count, int register1,
+                            int register2, int register3, int register4, int register5,
+                            Object reference1, Object reference2) {
         super(Preconditions.checkFormat(opcode, Format45cc));
         this.register_count = Preconditions.check35cAnd45ccRegisterCount(register_count);
         this.register1 = (register_count > 0) ? Preconditions.checkNibbleRegister(register1) : 0;

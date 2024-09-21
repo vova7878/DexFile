@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.value;
 
 import com.v7878.dex.ValueType;
 
-public class EncodedFloat extends EncodedValue {
+public final class EncodedFloat extends EncodedValue {
     private final float value;
 
-    protected EncodedFloat(float value) {
+    private EncodedFloat(float value) {
         this.value = value;
     }
 

@@ -10,11 +10,11 @@ import com.v7878.dex.util.Preconditions;
 import java.util.List;
 import java.util.Objects;
 
-public class ArrayPayload extends Instruction implements ArrayPayloadInstruction {
+public final class ArrayPayload extends Instruction implements ArrayPayloadInstruction {
     private final int element_width;
     private final List<Number> elements;
 
-    protected ArrayPayload(int element_width, Iterable<Number> elements) {
+    private ArrayPayload(int element_width, Iterable<Number> elements) {
         super(Preconditions.checkFormat(ARRAY_PAYLOAD, Format.ArrayPayload));
         this.element_width = Preconditions.checkArrayPayloadElementWidth(element_width);
         this.elements = Preconditions.checkArrayPayloadElements(

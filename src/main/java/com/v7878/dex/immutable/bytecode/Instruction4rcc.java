@@ -9,15 +9,15 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction4rcc extends Instruction
+public final class Instruction4rcc extends Instruction
         implements RegisterRangeInstruction, DualReferenceInstruction {
     private final int start_register;
     private final int register_count;
     private final Object reference1;
     private final Object reference2;
 
-    protected Instruction4rcc(Opcode opcode, int start_register, int register_count,
-                              Object reference1, Object reference2) {
+    private Instruction4rcc(Opcode opcode, int start_register, int register_count,
+                            Object reference1, Object reference2) {
         super(Preconditions.checkFormat(opcode, Format4rcc));
         this.start_register = Preconditions.checkShortRegister(start_register);
         this.register_count = Preconditions.checkRegisterRangeCount(register_count);

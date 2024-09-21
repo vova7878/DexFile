@@ -2,10 +2,10 @@ package com.v7878.dex.immutable.debug;
 
 import com.v7878.dex.util.Preconditions;
 
-public class AdvancePC extends DebugItem {
+public final class AdvancePC extends DebugItem {
     private final int addr_diff;
 
-    protected AdvancePC(int addr_diff) {
+    private AdvancePC(int addr_diff) {
         this.addr_diff = Preconditions.checkDebugAddrDiff(addr_diff);
     }
 

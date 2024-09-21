@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 
-public class MethodDef extends MemberDef implements Comparable<MethodDef> {
+public final class MethodDef extends MemberDef implements Comparable<MethodDef> {
     private final String name;
     private final TypeId return_type;
     private final List<Parameter> parameters;
@@ -19,7 +19,7 @@ public class MethodDef extends MemberDef implements Comparable<MethodDef> {
     private final MethodImplementation implementation;
     private final NavigableSet<Annotation> annotations;
 
-    protected MethodDef(
+    private MethodDef(
             String name, TypeId return_type, Iterable<Parameter> parameters,
             int access_flags, int hiddenapi_flags, MethodImplementation implementation,
             Iterable<Annotation> annotations) {

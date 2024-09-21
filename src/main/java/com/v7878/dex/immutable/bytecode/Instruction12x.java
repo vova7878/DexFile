@@ -8,11 +8,11 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public class Instruction12x extends Instruction implements TwoRegisterInstruction {
+public final class Instruction12x extends Instruction implements TwoRegisterInstruction {
     private final int register1;
     private final int register2;
 
-    protected Instruction12x(Opcode opcode, int register1, int register2) {
+    private Instruction12x(Opcode opcode, int register1, int register2) {
         super(Preconditions.checkFormat(opcode, Format12x));
         this.register1 = Preconditions.checkNibbleRegister(register1);
         this.register2 = Preconditions.checkNibbleRegister(register2);

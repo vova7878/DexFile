@@ -1,6 +1,6 @@
 package com.v7878.dex;
 
-public class DexOffsets {
+public final class DexOffsets {
     private DexOffsets() {
     }
 

@@ -6,10 +6,10 @@ import com.v7878.dex.util.CollectionUtils;
 
 import java.util.Objects;
 
-public class EncodedField extends EncodedValue {
+public final class EncodedField extends EncodedValue {
     private final FieldId value;
 
-    protected EncodedField(FieldId value) {
+    private EncodedField(FieldId value) {
         this.value = Objects.requireNonNull(value);
     }
 

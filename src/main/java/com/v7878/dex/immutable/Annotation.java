@@ -8,13 +8,13 @@ import com.v7878.dex.util.ItemConverter;
 import java.util.NavigableSet;
 import java.util.Objects;
 
-public class Annotation implements CommonAnnotation, Comparable<Annotation> {
+public final class Annotation implements CommonAnnotation, Comparable<Annotation> {
     private final AnnotationVisibility visibility;
     private final TypeId type;
     private final NavigableSet<AnnotationElement> elements;
 
-    protected Annotation(AnnotationVisibility visibility, TypeId type,
-                         Iterable<AnnotationElement> elements) {
+    private Annotation(AnnotationVisibility visibility, TypeId type,
+                       Iterable<AnnotationElement> elements) {
         this.visibility = Objects.requireNonNull(visibility);
         this.type = Objects.requireNonNull(type);
         this.elements = ItemConverter.toNavigableSet(elements);
