@@ -1,4 +1,4 @@
-package com.v7878.dex.reader;
+package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
@@ -23,10 +23,14 @@ import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.ClassDef;
+import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MemberId;
+import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.MethodHandleId;
 import com.v7878.dex.immutable.MethodId;
+import com.v7878.dex.immutable.MethodImplementation;
+import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
@@ -51,10 +55,9 @@ import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.io.ByteArrayInput;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.ValueCoder;
-import com.v7878.dex.raw.AnnotationDirectory;
-import com.v7878.dex.raw.MapItem;
 import com.v7878.dex.util.CachedFixedSizeList;
 import com.v7878.dex.util.FixedSizeSet;
+import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.SparseArray;
 
 import java.util.ArrayList;
@@ -62,6 +65,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.IntFunction;
+import java.util.function.IntSupplier;
 
 public class DexReader {
     private final RandomInput main_buffer;
@@ -88,7 +92,7 @@ public class DexReader {
 
     private final List<MapItem> map_items;
 
-    //private final HiddenApiData hiddenapi_section;
+    private final IntFunction<IntSupplier> hiddenapi_section;
 
     public DexReader(ReadOptions options, byte[] buf, int offset, int header_offset) {
         this.options = options;
@@ -166,9 +170,9 @@ public class DexReader {
                 CALL_SITE_ID_SIZE, this::readCallSiteId
         );
 
-        /*MapItem hiddenapi = getMapItemForSection(DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM);
-        hiddenapi_section = new HiddenApiData(this,
-                hiddenapi != null ? hiddenapi.getOffset() : NO_OFFSET);*/
+        MapItem hiddenapi = getMapItemForSection(DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM);
+        hiddenapi_section = readHiddenApiSection(
+                hiddenapi != null ? hiddenapi.offset() : NO_OFFSET);
 
         class_section = makeSection(
                 mainAt(header_offset + DexOffsets.CLASS_COUNT_OFFSET).readSmallUInt(),
@@ -376,14 +380,52 @@ public class DexReader {
         return out;
     }
 
-    /*public AnnotationDirectory getAnnotationDirectory(int offset) {
+    private SparseArray<Set<Annotation>> readAnnotationSetMap(RandomInput in, int size) {
+        var out = new SparseArray<Set<Annotation>>(size);
+        for (int i = 0; i < size; i++) {
+            int id = in.readSmallUInt();
+            var set = getAnnotationSet(in.readSmallUInt());
+            out.put(id, set);
+        }
+        return out;
+    }
+
+    private SparseArray<List<Set<Annotation>>> readAnnotationSetListMap(RandomInput in, int size) {
+        var out = new SparseArray<List<Set<Annotation>>>(size);
+        for (int i = 0; i < size; i++) {
+            int id = in.readSmallUInt();
+            var list = getAnnotationSetList(in.readSmallUInt());
+            out.put(id, list);
+        }
+        return out;
+    }
+
+    private AnnotationDirectory readAnnotationDirectory(int offset) {
+        var in = dataAt(offset);
+        int class_annotations_off = in.readSmallUInt();
+        var class_annotations = class_annotations_off == NO_OFFSET ?
+                null : getAnnotationSet(class_annotations_off);
+        int annotated_fields_size = in.readSmallUInt();
+        int annotated_methods_size = in.readSmallUInt();
+        int annotated_parameters_size = in.readSmallUInt();
+        var field_annotations = annotated_fields_size == 0 ?
+                null : readAnnotationSetMap(in, annotated_fields_size);
+        var method_annotations = annotated_methods_size == 0 ?
+                null : readAnnotationSetMap(in, annotated_methods_size);
+        var parameter_annotations = annotated_parameters_size == 0 ?
+                null : readAnnotationSetListMap(in, annotated_parameters_size);
+        return AnnotationDirectory.of(class_annotations, field_annotations,
+                method_annotations, parameter_annotations);
+    }
+
+    public AnnotationDirectory getAnnotationDirectory(int offset) {
         var section = annotation_directory_cache;
-        AnnotationDirectory out = section.get(offset);
+        var out = section.get(offset);
         if (out != null) return out;
-        out = new AnnotationDirectory(this, offset);
+        out = readAnnotationDirectory(offset);
         section.put(offset, out);
         return out;
-    }*/
+    }
 
     private void checkIndex(int index, int size, String name) {
         if (index < 0 || index >= size) {
@@ -392,17 +434,21 @@ public class DexReader {
         }
     }
 
-    private <T> List<T> makeSection(int section_size, int offset, int element_size, IntFunction<T> readeer) {
+    private interface SectionReader<T> {
+        T read(int index, int offset);
+    }
+
+    private <T> List<T> makeSection(int section_size, int offset, int element_size, SectionReader<T> reader) {
         if (section_size == 0) return List.of();
         return new CachedFixedSizeList<>(section_size) {
             @Override
             protected T compute(int index) {
-                return readeer.apply(offset + index * element_size);
+                return reader.read(index, offset + index * element_size);
             }
         };
     }
 
-    private String readString(int offset) {
+    private String readString(int index, int offset) {
         int data_offset = mainAt(offset).readSmallUInt();
         return dataAt(data_offset).readMUTF8();
     }
@@ -413,7 +459,7 @@ public class DexReader {
         return section.get(index);
     }
 
-    private TypeId readTypeId(int offset) {
+    private TypeId readTypeId(int index, int offset) {
         var descriptor = getString(mainAt(offset).readSmallUInt());
         return TypeId.of(descriptor);
     }
@@ -424,7 +470,7 @@ public class DexReader {
         return section.get(index);
     }
 
-    private FieldId readFieldId(int offset) {
+    private FieldId readFieldId(int index, int offset) {
         var in = mainAt(offset);
         var declaring_class = getTypeId(in.readUShort());
         var type = getTypeId(in.readUShort());
@@ -438,12 +484,13 @@ public class DexReader {
         return section.get(index);
     }
 
-    private ProtoId readProtoId(int offset) {
+    private ProtoId readProtoId(int index, int offset) {
         var in = mainAt(offset);
         in.readSmallUInt(); // shorty
         var return_type = getTypeId(in.readSmallUInt());
         int parameters_off = in.readSmallUInt();
-        var parameters = parameters_off == 0 ? null : getTypeList(parameters_off);
+        var parameters = parameters_off == NO_OFFSET ?
+                null : getTypeList(parameters_off);
         return ProtoId.of(return_type, parameters);
     }
 
@@ -453,7 +500,7 @@ public class DexReader {
         return section.get(index);
     }
 
-    private MethodId readMethodId(int offset) {
+    private MethodId readMethodId(int index, int offset) {
         var in = mainAt(offset);
         var declaring_class = getTypeId(in.readUShort());
         var proto = getProtoId(in.readUShort());
@@ -468,7 +515,7 @@ public class DexReader {
         return section.get(index);
     }
 
-    private MethodHandleId readMethodHandleId(int offset) {
+    private MethodHandleId readMethodHandleId(int index, int offset) {
         var in = mainAt(offset);
         MethodHandleType type = MethodHandleType.of(in.readUShort());
         in.readUShort(); // padding
@@ -484,8 +531,7 @@ public class DexReader {
         return section.get(index);
     }
 
-    private CallSiteId readCallSiteId(int offset) {
-        int index = 0; // FIXME
+    private CallSiteId readCallSiteId(int index, int offset) {
         var in = mainAt(offset);
         var array = getEncodedArray(in.readSmallUInt()).getValue();
         if (array.size() < 3) {
@@ -534,17 +580,140 @@ public class DexReader {
         return section.get(index);
     }
 
-    private ClassDef readClassDef(int offset) {
-        //TODO
-        throw new UnsupportedOperationException("Not supported yet!");
+    private List<FieldDef> readFieldDefList(
+            RandomInput in, int count, IntSupplier hiddenapi,
+            SparseArray<Set<Annotation>> annotations_map,
+            List<EncodedValue> static_values, boolean static_list) {
+        List<FieldDef> out = new ArrayList<>(count);
+        int index = 0;
+        for (int i = 0; i < count; i++) {
+            index += in.readULeb128();
+            var id = getFieldId(index);
+            int access_flags = in.readULeb128();
+            EncodedValue initial_value = null;
+            if (static_list) {
+                initial_value = (static_values != null && i < static_values.size()) ?
+                        static_values.get(i) : EncodedValue.defaultValue(id.getType());
+            }
+            out.add(FieldDef.of(id.getName(), id.getType(), access_flags,
+                    hiddenapi.getAsInt(), initial_value, annotations_map.get(index)));
+        }
+        return out;
+    }
+
+    private List<Parameter> toParamaterList(
+            List<TypeId> types, List<Set<Annotation>> annotations_map) {
+        int types_size = types.size();
+        int annotations_size = annotations_map.size();
+        List<Parameter> out = new ArrayList<>(types.size());
+        for (int i = 0; i < types_size; i++) {
+            var type = types.get(i);
+            String name = null; // TODO
+            var annotations = i < annotations_size ? annotations_map.get(i) : null;
+            out.add(Parameter.of(type, name, annotations));
+        }
+        return out;
+    }
+
+    private List<MethodDef> readMethodDefList(
+            RandomInput in, int count, IntSupplier hiddenapi,
+            SparseArray<Set<Annotation>> method_annotations,
+            SparseArray<List<Set<Annotation>>> parameter_annotations) {
+        List<MethodDef> out = new ArrayList<>(count);
+        int index = 0;
+        for (int i = 0; i < count; i++) {
+            index += in.readULeb128();
+            var id = getMethodId(index);
+            int access_flags = in.readULeb128();
+            int code_off = in.readULeb128();
+            List<Parameter> parameters = toParamaterList(id.getParameterTypes(),
+                    parameter_annotations.get(index, List.of()));
+            MethodImplementation code = null; // TODO
+            out.add(MethodDef.of(id.getName(), id.getReturnType(), parameters,
+                    access_flags, hiddenapi.getAsInt(), code, method_annotations.get(index)));
+        }
+        return out;
+    }
+
+    private ClassDef readClassDef(int index, int offset) {
+        var in = mainAt(offset);
+
+        TypeId clazz = getTypeId(in.readSmallUInt());
+        int access_flags = in.readInt();
+        int superclass_idx = in.readSmallUInt();
+        TypeId superclass = null;
+        if (superclass_idx != DexConstants.NO_INDEX) {
+            superclass = getTypeId(superclass_idx);
+        }
+        int interfaces_off = in.readSmallUInt();
+        List<TypeId> interfaces = null;
+        if (interfaces_off != NO_OFFSET) {
+            interfaces = getTypeList(interfaces_off);
+        }
+        int source_file_idx = in.readSmallUInt();
+        String source_file = null;
+        if (source_file_idx != DexConstants.NO_INDEX) {
+            source_file = getString(source_file_idx);
+        }
+        int annotations_off = in.readSmallUInt();
+        AnnotationDirectory annotations = annotations_off == NO_OFFSET ?
+                AnnotationDirectory.EMPTY : getAnnotationDirectory(annotations_off);
+        int class_data_off = in.readSmallUInt();
+        int static_values_off = in.readSmallUInt();
+        List<EncodedValue> static_values = null;
+        if (static_values_off != NO_OFFSET) {
+            static_values = getEncodedArray(static_values_off).getValue();
+        }
+
+        List<FieldDef> static_fields = null;
+        List<FieldDef> instance_fields = null;
+        List<MethodDef> direct_methods = null;
+        List<MethodDef> virtual_methods = null;
+
+        if (class_data_off != NO_OFFSET) {
+            RandomInput class_data = dataAt(class_data_off);
+            int static_fields_size = class_data.readSmallULeb128();
+            int instance_fields_size = class_data.readSmallULeb128();
+            int direct_methods_size = class_data.readSmallULeb128();
+            int virtual_methods_size = class_data.readSmallULeb128();
+            var hiddenapi = getHiddenApiIterator(index);
+            static_fields = readFieldDefList(class_data, static_fields_size,
+                    hiddenapi, annotations.field_annotations(), static_values, true);
+            instance_fields = readFieldDefList(class_data, instance_fields_size,
+                    hiddenapi, annotations.field_annotations(), null, false);
+            direct_methods = readMethodDefList(class_data, direct_methods_size, hiddenapi,
+                    annotations.method_annotations(), annotations.parameter_annotations());
+            virtual_methods = readMethodDefList(class_data, virtual_methods_size, hiddenapi,
+                    annotations.method_annotations(), annotations.parameter_annotations());
+        }
+
+        return ClassDef.of(clazz, access_flags, superclass, interfaces, source_file,
+                MemberUtils.mergeFields(static_fields, instance_fields),
+                MemberUtils.mergeMethods(direct_methods, virtual_methods),
+                annotations.class_annotations());
     }
 
     public List<ClassDef> getClasses() {
         return class_section;
     }
 
-    /*public IntSupplier getHiddenApiIterator(int class_idx) {
+    public IntFunction<IntSupplier> readHiddenApiSection(int offset) {
+        final IntSupplier zero = () -> 0;
+        return offset == NO_OFFSET ? ignored -> zero : class_idx -> {
+            var in = dataAt(offset);
+            in.addPosition(Integer.BYTES); // section size
+            in.addPosition(class_idx * Integer.BYTES);
+            int flags_offset = in.readSmallUInt();
+            if (flags_offset == NO_OFFSET) {
+                return zero;
+            }
+            in = dataAt(offset + flags_offset);
+            return in::readULeb128;
+        };
+    }
+
+    public IntSupplier getHiddenApiIterator(int class_idx) {
         checkIndex(class_idx, class_section.size(), "class def");
-        return hiddenapi_section.iterator(class_idx);
-    }*/
+        return hiddenapi_section.apply(class_idx);
+    }
 }

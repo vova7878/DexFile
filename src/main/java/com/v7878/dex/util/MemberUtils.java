@@ -8,6 +8,7 @@ import com.v7878.dex.immutable.TypeId;
 
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.TreeSet;
 
 public class MemberUtils {
     private static final FieldDef LAST_STATIC_FIELD = FieldDef.of(
@@ -30,5 +31,19 @@ public class MemberUtils {
 
     public static NavigableSet<MethodDef> getVirtualMethodsSubset(NavigableSet<MethodDef> set) {
         return set.headSet(LAST_DIRECT_METHOD, false);
+    }
+
+    public static NavigableSet<FieldDef> mergeFields(List<FieldDef> static_, List<FieldDef> instance) {
+        var out = new TreeSet<FieldDef>(CollectionUtils.naturalOrder());
+        if (static_ != null) out.addAll(static_);
+        if (instance != null) out.addAll(instance);
+        return out;
+    }
+
+    public static NavigableSet<MethodDef> mergeMethods(List<MethodDef> direct, List<MethodDef> virtual) {
+        var out = new TreeSet<MethodDef>(CollectionUtils.naturalOrder());
+        if (direct != null) out.addAll(direct);
+        if (virtual != null) out.addAll(virtual);
+        return out;
     }
 }

@@ -1,6 +1,7 @@
 package com.v7878.dex;
 
 import com.v7878.dex.immutable.Dex;
+import com.v7878.dex.raw.DexReader;
 
 public final class DexFactory {
     private DexFactory() {
@@ -40,8 +41,10 @@ public final class DexFactory {
         }
     }
 
+    //TODO: public static Dex loadDex(ReadOptions options, byte[] data, int[] ids) {}
+
     public static Dex loadDex(ReadOptions options, byte[] data) {
-        //TODO
-        throw new UnsupportedOperationException("Not implemented yet!");
+        DexReader reader = new DexReader(options, data);
+        return Dex.of(reader.getClasses());
     }
 }
