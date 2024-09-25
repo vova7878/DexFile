@@ -74,12 +74,12 @@ public class DexReader {
     private final ReadOptions options;
     private final DexVersion version;
 
-    private final SparseArray<List<TypeId>> typelist_cache;
-    private final SparseArray<EncodedArray> encoded_array_cache;
-    private final SparseArray<Annotation> annotation_cache;
-    private final SparseArray<List<Annotation>> annotation_list_cache;
-    private final SparseArray<List<Set<Annotation>>> annotation_set_list_cache;
-    private final SparseArray<AnnotationDirectory> annotation_directory_cache;
+    private final IntFunction<List<TypeId>> typelist_cache;
+    private final IntFunction<EncodedArray> encoded_array_cache;
+    private final IntFunction<Annotation> annotation_cache;
+    private final IntFunction<List<Annotation>> annotation_list_cache;
+    private final IntFunction<List<Set<Annotation>>> annotation_set_list_cache;
+    private final IntFunction<AnnotationDirectory> annotation_directory_cache;
 
     private final List<String> string_section;
     private final List<TypeId> type_section;
@@ -121,12 +121,12 @@ public class DexReader {
         }
         data_buffer = main_buffer.slice(data_off);
 
-        typelist_cache = new SparseArray<>();
-        encoded_array_cache = new SparseArray<>();
-        annotation_cache = new SparseArray<>();
-        annotation_list_cache = new SparseArray<>();
-        annotation_set_list_cache = new SparseArray<>();
-        annotation_directory_cache = new SparseArray<>();
+        typelist_cache = makeOffsetCache(this::readTypeList);
+        encoded_array_cache = makeOffsetCache(this::readEncodedArray);
+        annotation_cache = makeOffsetCache(this::readAnnotation);
+        annotation_list_cache = makeOffsetCache(this::readAnnotationList);
+        annotation_set_list_cache = makeOffsetCache(this::readAnnotationSetList);
+        annotation_directory_cache = makeOffsetCache(this::readAnnotationDirectory);
 
         string_section = makeSection(
                 mainAt(header_offset + DexOffsets.STRING_COUNT_OFFSET).readSmallUInt(),
@@ -204,8 +204,8 @@ public class DexReader {
     private MapItem readMapItem(RandomInput in) {
         int type = in.readUShort();
         in.addPosition(2); // padding
-        int size = in.readInt();
-        int offset = in.readInt();
+        int size = in.readSmallUInt();
+        int offset = in.readSmallUInt();
         return new MapItem(type, size, offset);
     }
 
@@ -243,13 +243,19 @@ public class DexReader {
         return out;
     }
 
+    private static <T> IntFunction<T> makeOffsetCache(IntFunction<T> reader) {
+        var cache = new SparseArray<T>();
+        return offset -> {
+            var out = cache.get(offset);
+            if (out != null) return out;
+            out = reader.apply(offset);
+            cache.put(offset, out);
+            return out;
+        };
+    }
+
     public List<TypeId> getTypeList(int offset) {
-        var section = typelist_cache;
-        var out = section.get(offset);
-        if (out != null) return out;
-        out = readTypeList(offset);
-        section.put(offset, out);
-        return out;
+        return typelist_cache.apply(offset);
     }
 
     private EncodedArray readEncodedArray(RandomInput in) {
@@ -261,15 +267,19 @@ public class DexReader {
         return EncodedArray.of(value);
     }
 
+    private EncodedArray readEncodedArray(int offset) {
+        return readEncodedArray(dataAt(offset));
+    }
+
     private AnnotationElement readAnnotationElement(RandomInput in) {
-        var name = getString(in.readULeb128());
+        var name = getString(in.readSmallULeb128());
         var value = readEncodedValue(in);
         return AnnotationElement.of(name, value);
     }
 
     private EncodedAnnotation readEncodedAnnotation(RandomInput in) {
-        TypeId type = getTypeId(in.readULeb128());
-        int size = in.readULeb128();
+        TypeId type = getTypeId(in.readSmallULeb128());
+        int size = in.readSmallULeb128();
         var elements = new HashSet<AnnotationElement>(size);
         for (int i = 0; i < size; i++) {
             elements.add(readAnnotationElement(in));
@@ -314,12 +324,7 @@ public class DexReader {
     }
 
     public EncodedArray getEncodedArray(int offset) {
-        var section = encoded_array_cache;
-        var out = section.get(offset);
-        if (out != null) return out;
-        out = readEncodedArray(dataAt(offset));
-        section.put(offset, out);
-        return out;
+        return encoded_array_cache.apply(offset);
     }
 
     private Annotation readAnnotation(int offset) {
@@ -330,12 +335,7 @@ public class DexReader {
     }
 
     public Annotation getAnnotation(int offset) {
-        var section = annotation_cache;
-        var out = section.get(offset);
-        if (out != null) return out;
-        out = readAnnotation(offset);
-        section.put(offset, out);
-        return out;
+        return annotation_cache.apply(offset);
     }
 
     private List<Annotation> readAnnotationList(int offset) {
@@ -349,12 +349,7 @@ public class DexReader {
     }
 
     public List<Annotation> getAnnotationList(int offset) {
-        var section = annotation_list_cache;
-        var out = section.get(offset);
-        if (out != null) return out;
-        out = readAnnotationList(offset);
-        section.put(offset, out);
-        return out;
+        return annotation_list_cache.apply(offset);
     }
 
     public Set<Annotation> getAnnotationSet(int offset) {
@@ -366,18 +361,16 @@ public class DexReader {
         int size = in.readSmallUInt();
         var out = new ArrayList<Set<Annotation>>(size);
         for (int i = 0; i < size; i++) {
-            out.add(i, getAnnotationSet(in.readSmallUInt()));
+            int annotations_off = in.readSmallUInt();
+            var annotations = annotations_off == NO_OFFSET ?
+                    Set.<Annotation>of() : getAnnotationSet(in.readSmallUInt());
+            out.add(i, annotations);
         }
         return out;
     }
 
     public List<Set<Annotation>> getAnnotationSetList(int offset) {
-        var section = annotation_set_list_cache;
-        var out = section.get(offset);
-        if (out != null) return out;
-        out = readAnnotationSetList(offset);
-        section.put(offset, out);
-        return out;
+        return annotation_set_list_cache.apply(offset);
     }
 
     private SparseArray<Set<Annotation>> readAnnotationSetMap(RandomInput in, int size) {
@@ -419,12 +412,7 @@ public class DexReader {
     }
 
     public AnnotationDirectory getAnnotationDirectory(int offset) {
-        var section = annotation_directory_cache;
-        var out = section.get(offset);
-        if (out != null) return out;
-        out = readAnnotationDirectory(offset);
-        section.put(offset, out);
-        return out;
+        return annotation_directory_cache.apply(offset);
     }
 
     private void checkIndex(int index, int size, String name) {
