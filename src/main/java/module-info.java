@@ -8,5 +8,4 @@ module com.v7878.dex {
     exports com.v7878.dex.immutable.bytecode.iface;
 
     requires com.v7878.misc;
-    requires java.rmi;
 }
