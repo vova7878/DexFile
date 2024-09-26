@@ -663,7 +663,7 @@ public class DexReader implements ReferenceIndexer {
         int registers_size;
         int ins_size;
         int outs_size;
-        int tries_size; // TODO
+        int tries_size;
         int insns_count; // 2-byte code units
 
         if (isCompact()) {
