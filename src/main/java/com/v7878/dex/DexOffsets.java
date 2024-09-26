@@ -9,7 +9,7 @@ public final class DexOffsets {
     public static final int DEXCONTAINER_HEADER_SIZE = BASE_HEADER_SIZE + 4 * 2;
     public static final int COMPACT_HEADER_SIZE = BASE_HEADER_SIZE + 4 * 6;
 
-    // header element sizes
+    // dex element sizes
     public static final int STRING_ID_SIZE = 4;
     public static final int TYPE_ID_SIZE = 4;
     public static final int FIELD_ID_SIZE = 8;

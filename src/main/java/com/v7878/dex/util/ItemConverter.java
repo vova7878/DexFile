@@ -17,9 +17,9 @@ public class ItemConverter {
             return Collections.emptyList();
         }
 
-        if (iterable instanceof List<T> list) {
-            return Collections.unmodifiableList(list);
-        }
+        //if (iterable instanceof List<T> list) {
+        //    return Collections.unmodifiableList(list);
+        //}
 
         ArrayList<T> list;
         if (iterable instanceof Collection<T> collection) {
@@ -39,9 +39,9 @@ public class ItemConverter {
             return Collections.emptySet();
         }
 
-        if (iterable instanceof Set<T> list) {
-            return Collections.unmodifiableSet(list);
-        }
+        //if (iterable instanceof Set<T> list) {
+        //    return Collections.unmodifiableSet(list);
+        //}
 
         Set<T> set;
         if (iterable instanceof Collection<T> collection) {
@@ -62,10 +62,10 @@ public class ItemConverter {
             return Collections.emptyNavigableSet();
         }
 
-        if (iterable instanceof NavigableSet<T> ns
-                && comparator.equals(ns.comparator())) {
-            return Collections.unmodifiableNavigableSet(ns);
-        }
+        //if (iterable instanceof NavigableSet<T> ns
+        //        && comparator.equals(ns.comparator())) {
+        //    return Collections.unmodifiableNavigableSet(ns);
+        //}
 
         NavigableSet<T> set;
         set = new TreeSet<>(comparator);

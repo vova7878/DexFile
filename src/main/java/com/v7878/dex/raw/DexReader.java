@@ -17,7 +17,9 @@ import com.v7878.dex.DexFactory;
 import com.v7878.dex.DexOffsets;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.MethodHandleType;
+import com.v7878.dex.Opcodes;
 import com.v7878.dex.ReadOptions;
+import com.v7878.dex.ReferenceType.ReferenceIndexer;
 import com.v7878.dex.ValueType;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
@@ -67,12 +69,13 @@ import java.util.Set;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
-public class DexReader {
+public class DexReader implements ReferenceIndexer {
     private final RandomInput main_buffer;
     private final RandomInput data_buffer;
 
     private final ReadOptions options;
     private final DexVersion version;
+    private final Opcodes opcodes;
 
     private final IntFunction<List<TypeId>> typelist_cache;
     private final IntFunction<EncodedArray> encoded_array_cache;
@@ -80,6 +83,7 @@ public class DexReader {
     private final IntFunction<List<Annotation>> annotation_list_cache;
     private final IntFunction<List<Set<Annotation>>> annotation_set_list_cache;
     private final IntFunction<AnnotationDirectory> annotation_directory_cache;
+    private final IntFunction<CodeItem> code_cache;
 
     private final List<String> string_section;
     private final List<TypeId> type_section;
@@ -105,6 +109,9 @@ public class DexReader {
         version = DexVersion.forMagic(mainAt(0).readLong());
         //TODO: check version min api
 
+        opcodes = Opcodes.of(version, options.getTargetApi(),
+                options.isTargetForArt(), options.hasOdexInstructions());
+
         //TODO: check endian tag
 
         int container_off = 0;
@@ -127,6 +134,7 @@ public class DexReader {
         annotation_list_cache = makeOffsetCache(this::readAnnotationList);
         annotation_set_list_cache = makeOffsetCache(this::readAnnotationSetList);
         annotation_directory_cache = makeOffsetCache(this::readAnnotationDirectory);
+        code_cache = makeOffsetCache(this::readCodeItem);
 
         string_section = makeSection(
                 mainAt(header_offset + DexOffsets.STRING_COUNT_OFFSET).readSmallUInt(),
@@ -193,12 +201,20 @@ public class DexReader {
         return data_buffer.duplicateAt(offset);
     }
 
+    public Opcodes opcodes() {
+        return opcodes;
+    }
+
     public ReadOptions options() {
         return options;
     }
 
     public DexVersion version() {
         return version;
+    }
+
+    public boolean isCompact() {
+        return version().isCompact();
     }
 
     private MapItem readMapItem(RandomInput in) {
@@ -589,6 +605,89 @@ public class DexReader {
         return out;
     }
 
+    private static final int kRegistersSizeShift = 12;
+    private static final int kInsSizeShift = 8;
+    private static final int kOutsSizeShift = 4;
+    private static final int kTriesSizeSizeShift = 0;
+    private static final int kInsnsSizeShift = 5;
+
+    private static final int kFlagPreHeaderRegistersSize = 0b00001;
+    private static final int kFlagPreHeaderInsSize = 0b00010;
+    private static final int kFlagPreHeaderOutsSize = 0b00100;
+    private static final int kFlagPreHeaderTriesSize = 0b01000;
+    private static final int kFlagPreHeaderInsnsSize = 0b10000;
+
+    private static int readUShortBackward(RandomInput in) {
+        in.addPosition(-2);
+        int out = in.readUShort();
+        in.addPosition(-2);
+        return out;
+    }
+
+    private CodeItem readCodeItem(int offset) {
+        var in = dataAt(offset);
+
+        int registers_size;
+        int ins_size;
+        int outs_size;
+        int tries_size; // TODO
+        int insns_count; // 2-byte code units
+
+        if (isCompact()) {
+            RandomInput preheader = in.duplicate();
+
+            int fields = in.readUShort();
+            int insns_count_and_flags = in.readUShort();
+
+            insns_count = insns_count_and_flags >> kInsnsSizeShift;
+            registers_size = (fields >> kRegistersSizeShift) & 0xF;
+            ins_size = (fields >> kInsSizeShift) & 0xF;
+            outs_size = (fields >> kOutsSizeShift) & 0xF;
+            tries_size = (fields >> kTriesSizeSizeShift) & 0xF;
+
+            if ((insns_count_and_flags & kFlagPreHeaderInsnsSize) != 0) {
+                insns_count += readUShortBackward(preheader) +
+                        (readUShortBackward(preheader) << 16);
+            }
+            if ((insns_count_and_flags & kFlagPreHeaderRegistersSize) != 0) {
+                registers_size += readUShortBackward(preheader);
+            }
+            if ((insns_count_and_flags & kFlagPreHeaderInsSize) != 0) {
+                ins_size += readUShortBackward(preheader);
+            }
+            if ((insns_count_and_flags & kFlagPreHeaderOutsSize) != 0) {
+                outs_size += readUShortBackward(preheader);
+            }
+            if ((insns_count_and_flags & kFlagPreHeaderTriesSize) != 0) {
+                tries_size += readUShortBackward(preheader);
+            }
+
+            registers_size += ins_size;
+        } else {
+            registers_size = in.readUShort();
+            ins_size = in.readUShort();
+            outs_size = in.readUShort();
+            tries_size = in.readUShort();
+            int debug_info_off = in.readSmallUInt(); // TODO
+            insns_count = in.readSmallUInt();
+        }
+
+        var instructions = InstructionReader.readArray(this, in, insns_count);
+
+        return new CodeItem(registers_size, ins_size, outs_size,
+                instructions, null);
+    }
+
+    public CodeItem getCodeItem(int offset) {
+        return code_cache.apply(offset);
+    }
+
+    private MethodImplementation toImplementation(CodeItem code) {
+        if (code == null) return null;
+        return MethodImplementation.of(code.registers(),
+                code.instructions(), code.tries(), null);
+    }
+
     private List<Parameter> toParamaterList(
             List<TypeId> types, List<Set<Annotation>> annotations_map) {
         int types_size = types.size();
@@ -616,9 +715,11 @@ public class DexReader {
             int code_off = in.readULeb128();
             List<Parameter> parameters = toParamaterList(id.getParameterTypes(),
                     parameter_annotations.get(index, List.of()));
-            MethodImplementation code = null; // TODO
-            out.add(MethodDef.of(id.getName(), id.getReturnType(), parameters,
-                    access_flags, hiddenapi.getAsInt(), code, method_annotations.get(index)));
+            var code = code_off == NO_OFFSET ? null : getCodeItem(code_off);
+            MethodImplementation implementation = toImplementation(code);
+            out.add(MethodDef.of(id.getName(), id.getReturnType(),
+                    parameters, access_flags, hiddenapi.getAsInt(),
+                    implementation, method_annotations.get(index)));
         }
         return out;
     }

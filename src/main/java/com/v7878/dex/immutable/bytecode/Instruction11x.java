@@ -13,7 +13,7 @@ public final class Instruction11x extends Instruction implements OneRegisterInst
 
     private Instruction11x(Opcode opcode, int register1) {
         super(Preconditions.checkFormat(opcode, Format11x));
-        this.register1 = Preconditions.checkNibbleRegister(register1);
+        this.register1 = Preconditions.checkByteRegister(register1);
     }
 
     public static Instruction11x of(Opcode opcode, int register1) {
