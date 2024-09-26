@@ -18,6 +18,10 @@ public final class DexOffsets {
     public static final int METHOD_HANDLE_ID_SIZE = 8;
     public static final int CALL_SITE_ID_SIZE = 4;
     public static final int CLASS_DEF_SIZE = 32;
+    public static final int TRY_ITEM_SIZE = 8;
+
+    // dex element alignments
+    public static final int TRY_ITEM_ALIGNMENT = 4;
 
     // header offsets
     public static final int CHECKSUM_OFFSET = 8;

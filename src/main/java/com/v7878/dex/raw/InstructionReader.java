@@ -60,9 +60,9 @@ public class InstructionReader {
         var insns = new ArrayList<Instruction>(insns_count);
 
         int insns_bytes = insns_count * 2;
-        long start = in.position();
+        int start = in.position();
 
-        long readed;
+        int readed;
         while ((readed = in.position() - start) < insns_bytes) {
             if ((readed & 1) != 0) {
                 throw new IllegalStateException("Unaligned code unit");
@@ -326,9 +326,7 @@ public class InstructionReader {
             default -> throw new IllegalStateException(
                     "Invalid element width:" + element_width);
         }
-        if ((in.position() & 1) != 0) {
-            in.addPosition(1); // padding
-        }
+        in.alignPosition(2); // code unit
         return ArrayPayload.of(element_width, data);
     }
 }

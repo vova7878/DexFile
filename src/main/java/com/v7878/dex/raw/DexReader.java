@@ -9,6 +9,8 @@ import static com.v7878.dex.DexOffsets.METHOD_HANDLE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.METHOD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.PROTO_ID_SIZE;
 import static com.v7878.dex.DexOffsets.STRING_ID_SIZE;
+import static com.v7878.dex.DexOffsets.TRY_ITEM_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 
 import com.v7878.dex.AnnotationVisibility;
@@ -25,6 +27,7 @@ import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.ClassDef;
+import com.v7878.dex.immutable.ExceptionHandler;
 import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MemberId;
@@ -34,6 +37,7 @@ import com.v7878.dex.immutable.MethodId;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
+import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
 import com.v7878.dex.immutable.value.EncodedArray;
@@ -591,7 +595,7 @@ public class DexReader implements ReferenceIndexer {
         List<FieldDef> out = new ArrayList<>(count);
         int index = 0;
         for (int i = 0; i < count; i++) {
-            index += in.readULeb128();
+            index += in.readSmallULeb128();
             var id = getFieldId(index);
             int access_flags = in.readULeb128();
             EncodedValue initial_value = null;
@@ -603,6 +607,35 @@ public class DexReader implements ReferenceIndexer {
                     hiddenapi.getAsInt(), initial_value, annotations_map.get(index)));
         }
         return out;
+    }
+
+    private CatchHandler readCatchHandler(RandomInput in) {
+        int size = in.readSLeb128();
+        int handlersCount = Math.abs(size);
+        var handlers = new ArrayList<ExceptionHandler>(handlersCount);
+        for (int i = 0; i < handlersCount; i++) {
+            var type = getTypeId(in.readSmallULeb128());
+            int address = in.readSmallULeb128();
+            handlers.add(ExceptionHandler.of(type, address));
+        }
+        Integer catch_all_addr = null;
+        if (size <= 0) {
+            catch_all_addr = in.readSmallULeb128();
+        }
+        return new CatchHandler(handlers, catch_all_addr);
+    }
+
+    private TryBlock readTryBlock(RandomInput in, SparseArray<CatchHandler> handlers) {
+        int start_addr = in.readSmallUInt(); // code units
+        int unit_count = in.readUShort(); // code units
+
+        int handler_off = in.readUShort();
+        CatchHandler handler = handlers.get(handler_off);
+        if (handler == null) {
+            throw new IllegalStateException(
+                    "Unable to find catch handler with offset " + handler_off);
+        }
+        return TryBlock.of(start_addr, unit_count, handler.elements(), handler.catch_all_addr());
     }
 
     private static final int kRegistersSizeShift = 12;
@@ -673,9 +706,31 @@ public class DexReader implements ReferenceIndexer {
         }
 
         var instructions = InstructionReader.readArray(this, in, insns_count);
+        var tries = new ArrayList<TryBlock>(tries_size);
 
-        return new CodeItem(registers_size, ins_size, outs_size,
-                instructions, null);
+        if (tries_size > 0) {
+            in.alignPosition(TRY_ITEM_ALIGNMENT);
+
+            int tries_pos = in.position();
+            in.addPosition(tries_size * TRY_ITEM_SIZE);
+
+            int handlers_start = in.position();
+            int handlers_size = in.readSmallULeb128();
+
+            var handlers = new SparseArray<CatchHandler>(handlers_size);
+            for (int i = 0; i < handlers_size; i++) {
+                int handler_offset = in.position() - handlers_start;
+                handlers.put(handler_offset, readCatchHandler(in));
+            }
+
+            in.position(tries_pos);
+            for (int i = 0; i < tries_size; i++) {
+                tries.add(readTryBlock(in, handlers));
+            }
+        }
+
+        return new CodeItem(registers_size, ins_size,
+                outs_size, instructions, tries);
     }
 
     public CodeItem getCodeItem(int offset) {
@@ -709,10 +764,10 @@ public class DexReader implements ReferenceIndexer {
         List<MethodDef> out = new ArrayList<>(count);
         int index = 0;
         for (int i = 0; i < count; i++) {
-            index += in.readULeb128();
+            index += in.readSmallULeb128();
             var id = getMethodId(index);
             int access_flags = in.readULeb128();
-            int code_off = in.readULeb128();
+            int code_off = in.readSmallULeb128();
             List<Parameter> parameters = toParamaterList(id.getParameterTypes(),
                     parameter_annotations.get(index, List.of()));
             var code = code_off == NO_OFFSET ? null : getCodeItem(code_off);
