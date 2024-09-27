@@ -1,6 +1,8 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexConstants.NO_OFFSET;
+import static com.v7878.dex.DexIO.InvalidDexFile;
+import static com.v7878.dex.DexIO.NotADexFile;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
@@ -15,7 +17,6 @@ import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.DexConstants;
-import com.v7878.dex.DexFactory;
 import com.v7878.dex.DexOffsets;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.MethodHandleType;
@@ -108,7 +109,7 @@ public class DexReader implements ReferenceIndexer {
         main_buffer = new ByteArrayInput(buf).slice(offset);
 
         if (main_buffer.size() < BASE_HEADER_SIZE) {
-            throw new DexFactory.NotADexFile("File is too short");
+            throw new NotADexFile("File is too short");
         }
         version = DexVersion.forMagic(mainAt(0).readLong());
         //TODO: check version min api
@@ -123,7 +124,7 @@ public class DexReader implements ReferenceIndexer {
             container_off = mainAt(header_offset + DexOffsets.CONTAINER_OFF_OFFSET).readSmallUInt();
         }
         if (container_off != header_offset) {
-            throw new DexFactory.InvalidDexFile("Unexpected container offset in header");
+            throw new InvalidDexFile("Unexpected container offset in header");
         }
 
         int data_off = 0;

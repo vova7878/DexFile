@@ -3,8 +3,8 @@ package com.v7878.dex;
 import com.v7878.dex.immutable.Dex;
 import com.v7878.dex.raw.DexReader;
 
-public final class DexFactory {
-    private DexFactory() {
+public final class DexIO {
+    private DexIO() {
     }
 
     public static class InvalidDexFile extends RuntimeException {
@@ -41,10 +41,16 @@ public final class DexFactory {
         }
     }
 
-    //TODO: public static Dex loadDex(ReadOptions options, byte[] data, int[] ids) {}
+    //TODO: public static Dex read(ReadOptions options, byte[] data, int[] ids) {}
 
-    public static Dex loadDex(ReadOptions options, byte[] data) {
+    public static Dex read(ReadOptions options, byte[] data) {
         DexReader reader = new DexReader(options, data);
         return Dex.of(reader.getClasses());
     }
+
+    public static Dex read(byte[] data) {
+        return read(ReadOptions.defaultOptions(), data);
+    }
+
+    //TODO: public static byte[] write(WriteOptions options, Dex data) {
 }
