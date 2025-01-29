@@ -20,6 +20,7 @@ public final class MethodImplementation {
             Iterable<TryBlock> try_blocks, Iterable<DebugItem> debug_items) {
         this.register_count = Preconditions.checkMethodRegisterCount(register_count);
         this.instructions = ItemConverter.toList(instructions);
+        // TODO: try blocks must not overlap
         this.try_blocks = ItemConverter.toNavigableSet(try_blocks);
         // TODO: deduplicate and remove unused AdvancePC items
         this.debug_items = ItemConverter.toList(debug_items);

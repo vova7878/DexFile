@@ -11,6 +11,7 @@ public record AnnotationDirectory(Set<Annotation> class_annotations,
                                   SparseArray<Set<Annotation>> method_annotations,
                                   SparseArray<List<Set<Annotation>>> parameter_annotations) {
     @SuppressWarnings("rawtypes")
+    //TODO: unmodifiable
     private static final SparseArray EMPTY_ARRAY = new SparseArray();
     @SuppressWarnings("unchecked")
     public static final AnnotationDirectory EMPTY = new AnnotationDirectory(

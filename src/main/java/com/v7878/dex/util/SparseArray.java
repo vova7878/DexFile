@@ -22,17 +22,12 @@
 
 package com.v7878.dex.util;
 
-import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Objects;
 
+//TODO: refactor
 public class SparseArray<E> implements Cloneable {
     private static final Object DELETED = new Object();
-
-    //TODO: delete
-    private static int unpadded_length(int min_length) {
-        return (min_length & 1) == 0 ? min_length + 1 : min_length;
-    }
 
     private boolean garbage = false;
     private int[] keys;
@@ -44,8 +39,8 @@ public class SparseArray<E> implements Cloneable {
     }
 
     public SparseArray(int initialCapacity) {
-        values = new Object[unpadded_length(initialCapacity)];
-        keys = new int[values.length];
+        values = new Object[initialCapacity];
+        keys = new int[initialCapacity];
         size = 0;
     }
 
@@ -56,10 +51,9 @@ public class SparseArray<E> implements Cloneable {
     }
 
     public void ensureCapacity(int minCapacity) {
-        int new_length = unpadded_length(minCapacity);
-        if (new_length > keys.length) {
-            keys = Arrays.copyOf(keys, new_length);
-            values = Arrays.copyOf(values, new_length);
+        if (minCapacity > keys.length) {
+            keys = Arrays.copyOf(keys, minCapacity);
+            values = Arrays.copyOf(values, minCapacity);
         }
     }
 
@@ -160,15 +154,13 @@ public class SparseArray<E> implements Cloneable {
         return currentSize <= 4 ? 8 : currentSize + currentSize / 2;
     }
 
-    private static <T> T[] insert(T[] array, int currentSize, int index, T value) {
+    private static Object[] insert(Object[] array, int currentSize, int index, Object value) {
         if (currentSize + 1 <= array.length) {
             System.arraycopy(array, index, array, index + 1, currentSize - index);
             array[index] = value;
             return array;
         }
-        @SuppressWarnings("unchecked")
-        T[] newArray = (T[]) Array.newInstance(array.getClass().componentType(),
-                unpadded_length(growSize(currentSize)));
+        Object[] newArray = new Object[growSize(currentSize)];
         System.arraycopy(array, 0, newArray, 0, index);
         newArray[index] = value;
         System.arraycopy(array, index, newArray, index + 1, array.length - index);
@@ -181,7 +173,7 @@ public class SparseArray<E> implements Cloneable {
             array[index] = value;
             return array;
         }
-        int[] newArray = new int[unpadded_length(growSize(currentSize))];
+        int[] newArray = new int[growSize(currentSize)];
         System.arraycopy(array, 0, newArray, 0, index);
         newArray[index] = value;
         System.arraycopy(array, index, newArray, index + 1, array.length - index);
@@ -376,7 +368,7 @@ public class SparseArray<E> implements Cloneable {
     }
 
     public void trimToSize() {
-        int length = unpadded_length(size());
+        int length = size();
         // size() call above took care about gc() compaction.
         keys = Arrays.copyOf(keys, length);
         values = Arrays.copyOf(values, length);

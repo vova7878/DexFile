@@ -1,7 +1,7 @@
 package com.v7878.dex.raw;
 
 import com.v7878.dex.Opcode;
-import com.v7878.dex.ReferenceType.ReferenceIndexer;
+import com.v7878.dex.ReferenceType.ReferenceStorage;
 import com.v7878.dex.immutable.bytecode.ArrayPayload;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.Instruction10t;
@@ -143,13 +143,13 @@ public class InstructionReader {
     }
 
     public static Instruction21c read_21c(
-            Opcode opcode, RandomInput in, ReferenceIndexer context, int AA) {
+            Opcode opcode, RandomInput in, ReferenceStorage context, int AA) {
         int BBBB = in.readUShort();
         return Instruction21c.of(opcode, AA, opcode.getReferenceType1().indexToRef(context, BBBB));
     }
 
     public static Instruction22c22cs read_22c2cs(
-            Opcode opcode, RandomInput in, ReferenceIndexer context, int BA) {
+            Opcode opcode, RandomInput in, ReferenceStorage context, int BA) {
         int CCCC = in.readUShort();
         return Instruction22c22cs.of(opcode, BA & 0xf, BA >> 4,
                 opcode.getReferenceType1().indexToRef(context, CCCC));
@@ -205,7 +205,7 @@ public class InstructionReader {
     }
 
     public static Instruction31c read_31c(
-            Opcode opcode, RandomInput in, ReferenceIndexer context, int AA) {
+            Opcode opcode, RandomInput in, ReferenceStorage context, int AA) {
         int BBBBlo = in.readUShort();
         int BBBBhi = in.readUShort();
         int BBBBBBBB = BBBBlo | (BBBBhi << 16);
@@ -213,7 +213,7 @@ public class InstructionReader {
     }
 
     public static Instruction35c35mi35ms read_35c_35ms_35mi(
-            Opcode opcode, RandomInput in, ReferenceIndexer context, int AG) {
+            Opcode opcode, RandomInput in, ReferenceStorage context, int AG) {
         int A = AG >> 4;
         int G = AG & 0xf;
         int BBBB = in.readUShort();
@@ -227,7 +227,7 @@ public class InstructionReader {
     }
 
     public static Instruction3rc3rmi3rms read_3rc_3rms_3rmi(
-            Opcode opcode, RandomInput in, ReferenceIndexer context, int AA) {
+            Opcode opcode, RandomInput in, ReferenceStorage context, int AA) {
         int BBBB = in.readUShort();
         int CCCC = in.readUShort();
         return Instruction3rc3rmi3rms.of(opcode, CCCC, AA,
@@ -235,7 +235,7 @@ public class InstructionReader {
     }
 
     public static Instruction45cc read_45cc(
-            Opcode opcode, RandomInput in, ReferenceIndexer context, int AG) {
+            Opcode opcode, RandomInput in, ReferenceStorage context, int AG) {
         int A = AG >> 4;
         int G = AG & 0xf;
         int BBBB = in.readUShort();
@@ -251,7 +251,7 @@ public class InstructionReader {
     }
 
     public static Instruction4rcc read_4rcc(
-            Opcode opcode, RandomInput in, ReferenceIndexer context, int AA) {
+            Opcode opcode, RandomInput in, ReferenceStorage context, int AA) {
         int BBBB = in.readUShort();
         int CCCC = in.readUShort();
         int HHHH = in.readUShort();

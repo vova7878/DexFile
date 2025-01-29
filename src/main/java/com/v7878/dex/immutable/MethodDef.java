@@ -51,7 +51,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
         return return_type;
     }
 
-    public List<? extends Parameter> getParameters() {
+    public List<Parameter> getParameters() {
         return parameters;
     }
 

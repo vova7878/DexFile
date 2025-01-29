@@ -18,8 +18,13 @@ public enum ReferenceType {
         }
 
         @Override
-        public String indexToRef(ReferenceIndexer indexer, int index) {
-            return indexer.getString(index);
+        public String indexToRef(ReferenceStorage storage, int index) {
+            return storage.getString(index);
+        }
+
+        @Override
+        public void collect(ReferenceCollector colleactor, Object value) {
+            colleactor.add(validate(value));
         }
     }, TYPE {
         @Override
@@ -28,8 +33,13 @@ public enum ReferenceType {
         }
 
         @Override
-        public TypeId indexToRef(ReferenceIndexer indexer, int index) {
-            return indexer.getTypeId(index);
+        public TypeId indexToRef(ReferenceStorage storage, int index) {
+            return storage.getTypeId(index);
+        }
+
+        @Override
+        public void collect(ReferenceCollector colleactor, Object value) {
+            colleactor.add(validate(value));
         }
     }, FIELD {
         @Override
@@ -38,8 +48,13 @@ public enum ReferenceType {
         }
 
         @Override
-        public FieldId indexToRef(ReferenceIndexer indexer, int index) {
-            return indexer.getFieldId(index);
+        public FieldId indexToRef(ReferenceStorage storage, int index) {
+            return storage.getFieldId(index);
+        }
+
+        @Override
+        public void collect(ReferenceCollector colleactor, Object value) {
+            colleactor.add(validate(value));
         }
     }, METHOD {
         @Override
@@ -48,8 +63,13 @@ public enum ReferenceType {
         }
 
         @Override
-        public MethodId indexToRef(ReferenceIndexer indexer, int index) {
-            return indexer.getMethodId(index);
+        public MethodId indexToRef(ReferenceStorage storage, int index) {
+            return storage.getMethodId(index);
+        }
+
+        @Override
+        public void collect(ReferenceCollector colleactor, Object value) {
+            colleactor.add(validate(value));
         }
     }, PROTO {
         @Override
@@ -58,8 +78,13 @@ public enum ReferenceType {
         }
 
         @Override
-        public ProtoId indexToRef(ReferenceIndexer indexer, int index) {
-            return indexer.getProtoId(index);
+        public ProtoId indexToRef(ReferenceStorage storage, int index) {
+            return storage.getProtoId(index);
+        }
+
+        @Override
+        public void collect(ReferenceCollector colleactor, Object value) {
+            colleactor.add(validate(value));
         }
     }, CALLSITE {
         @Override
@@ -68,8 +93,13 @@ public enum ReferenceType {
         }
 
         @Override
-        public CallSiteId indexToRef(ReferenceIndexer indexer, int index) {
-            return indexer.getCallSiteId(index);
+        public CallSiteId indexToRef(ReferenceStorage storage, int index) {
+            return storage.getCallSiteId(index);
+        }
+
+        @Override
+        public void collect(ReferenceCollector colleactor, Object value) {
+            colleactor.add(validate(value));
         }
     }, METHOD_HANDLE {
         @Override
@@ -78,8 +108,13 @@ public enum ReferenceType {
         }
 
         @Override
-        public MethodHandleId indexToRef(ReferenceIndexer indexer, int index) {
-            return indexer.getMethodHandleId(index);
+        public MethodHandleId indexToRef(ReferenceStorage storage, int index) {
+            return storage.getMethodHandleId(index);
+        }
+
+        @Override
+        public void collect(ReferenceCollector colleactor, Object value) {
+            colleactor.add(validate(value));
         }
     }, RAW_INDEX {
         @Override
@@ -88,14 +123,19 @@ public enum ReferenceType {
         }
 
         @Override
-        public Integer indexToRef(ReferenceIndexer indexer, int index) {
+        public Integer indexToRef(ReferenceStorage storage, int index) {
             return index;
+        }
+
+        @Override
+        public void collect(ReferenceCollector colleactor, Object value) {
+            // nop
         }
     };
 
     public abstract Object validate(Object ref);
 
-    public interface ReferenceIndexer {
+    public interface ReferenceStorage {
         String getString(int index);
 
         TypeId getTypeId(int index);
@@ -111,17 +151,23 @@ public enum ReferenceType {
         CallSiteId getCallSiteId(int index);
     }
 
-    public abstract Object indexToRef(ReferenceIndexer indexer, int index);
+    public abstract Object indexToRef(ReferenceStorage storage, int index);
 
-    public static ReferenceType of(Object reference) {
-        if (reference instanceof String) return STRING;
-        if (reference instanceof Integer) return RAW_INDEX;
-        if (reference instanceof TypeId) return TYPE;
-        if (reference instanceof FieldId) return FIELD;
-        if (reference instanceof MethodId) return METHOD;
-        if (reference instanceof ProtoId) return PROTO;
-        if (reference instanceof MethodHandleId) return METHOD_HANDLE;
-        if (reference instanceof CallSiteId) return CALLSITE;
-        throw new IllegalArgumentException("Invalid reference type");
+    public interface ReferenceCollector {
+        void add(String value);
+
+        void add(TypeId value);
+
+        void add(FieldId value);
+
+        void add(ProtoId value);
+
+        void add(MethodId value);
+
+        void add(MethodHandleId value);
+
+        void add(CallSiteId value);
     }
+
+    public abstract void collect(ReferenceCollector colleactor, Object value);
 }
