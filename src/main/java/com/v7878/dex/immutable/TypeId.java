@@ -24,6 +24,7 @@ public final class TypeId implements Comparable<TypeId> {
     }
 
     public static TypeId of(String descriptor) {
+        // TODO: cache primitives and java.lang.Object
         return new TypeId(descriptor);
     }
 

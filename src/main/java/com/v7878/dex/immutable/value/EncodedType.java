@@ -14,6 +14,7 @@ public final class EncodedType extends EncodedValue {
     }
 
     public static EncodedType of(TypeId value) {
+        // TODO: cache primitives and java.lang.Object
         return new EncodedType(value);
     }
 

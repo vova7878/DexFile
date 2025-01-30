@@ -10,6 +10,7 @@ public final class EncodedByte extends EncodedValue {
     }
 
     public static EncodedByte of(byte value) {
+        // TODO: cache values
         return new EncodedByte(value);
     }
 

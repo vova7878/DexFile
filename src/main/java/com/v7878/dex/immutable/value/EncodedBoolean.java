@@ -3,6 +3,9 @@ package com.v7878.dex.immutable.value;
 import com.v7878.dex.ValueType;
 
 public final class EncodedBoolean extends EncodedValue {
+    public static final EncodedBoolean TRUE = new EncodedBoolean(true);
+    public static final EncodedBoolean FALSE = new EncodedBoolean(false);
+
     private final boolean value;
 
     private EncodedBoolean(boolean value) {
@@ -10,7 +13,7 @@ public final class EncodedBoolean extends EncodedValue {
     }
 
     public static EncodedBoolean of(boolean value) {
-        return new EncodedBoolean(value);
+        return value ? TRUE : FALSE;
     }
 
     @Override

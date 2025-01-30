@@ -10,6 +10,7 @@ public final class EncodedInt extends EncodedValue {
     }
 
     public static EncodedInt of(int value) {
+        // TODO: cache values
         return new EncodedInt(value);
     }
 

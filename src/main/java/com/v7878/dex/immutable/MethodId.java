@@ -1,7 +1,6 @@
 package com.v7878.dex.immutable;
 
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
 
 import java.util.List;
 import java.util.Objects;
@@ -9,20 +8,21 @@ import java.util.Objects;
 public final class MethodId extends MemberId implements Comparable<MethodId> {
     private final TypeId declaring_class;
     private final String name;
-    private final TypeId returnType;
-    private final List<TypeId> parameters;
+    private final ProtoId proto;
 
-    private MethodId(TypeId declaring_class, String name,
-                     TypeId returnType, Iterable<TypeId> parameters) {
+    private MethodId(TypeId declaring_class, String name, ProtoId proto) {
         this.declaring_class = Objects.requireNonNull(declaring_class);
         this.name = Objects.requireNonNull(name);
-        this.returnType = Objects.requireNonNull(returnType);
-        this.parameters = ItemConverter.toList(parameters);
+        this.proto = Objects.requireNonNull(proto);
+    }
+
+    public static MethodId of(TypeId declaring_class, String name, ProtoId proto) {
+        return new MethodId(declaring_class, name, proto);
     }
 
     public static MethodId of(TypeId declaring_class, String name,
                               TypeId returnType, Iterable<TypeId> parameters) {
-        return new MethodId(declaring_class, name, returnType, parameters);
+        return of(declaring_class, name, ProtoId.of(returnType, parameters));
     }
 
     @Override
@@ -35,12 +35,16 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         return name;
     }
 
+    public ProtoId getProto() {
+        return proto;
+    }
+
     public TypeId getReturnType() {
-        return returnType;
+        return proto.getReturnType();
     }
 
     public List<TypeId> getParameterTypes() {
-        return parameters;
+        return proto.getParameterTypes();
     }
 
     @Override
@@ -54,8 +58,7 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         return obj instanceof MethodId other
                 && Objects.equals(getDeclaringClass(), other.getDeclaringClass())
                 && Objects.equals(getName(), other.getName())
-                && Objects.equals(getReturnType(), other.getReturnType())
-                && Objects.equals(getParameterTypes(), other.getParameterTypes());
+                && Objects.equals(getProto(), other.getProto());
     }
 
     @Override
@@ -65,8 +68,6 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         if (out != 0) return out;
         out = CollectionUtils.compareNonNull(getName(), other.getName());
         if (out != 0) return out;
-        out = CollectionUtils.compareNonNull(getReturnType(), other.getReturnType());
-        if (out != 0) return out;
-        return CollectionUtils.compareLexicographically(getParameterTypes(), other.getParameterTypes());
+        return CollectionUtils.compareNonNull(getProto(), other.getProto());
     }
 }

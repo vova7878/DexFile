@@ -50,6 +50,10 @@ public class SparseArray<E> implements Cloneable {
         putAll(sparseArray);
     }
 
+    public static <T> SparseArray<T> empty() {
+        return new SparseArray<>();
+    }
+
     public void ensureCapacity(int minCapacity) {
         if (minCapacity > keys.length) {
             keys = Arrays.copyOf(keys, minCapacity);

@@ -13,20 +13,20 @@ public final class TryBlock implements Comparable<TryBlock> {
     private final List<ExceptionHandler> handlers;
     private final Integer catch_all_address;
 
-    private TryBlock(int start_addres, int unit_count,
+    private TryBlock(int start_address, int unit_count,
                      Iterable<ExceptionHandler> handlers,
                      Integer catch_all_address) {
-        this.start_address = Preconditions.checkCodeAddress(start_addres);
+        this.start_address = Preconditions.checkCodeAddress(start_address);
         this.unit_count = Preconditions.checkUnitCount(unit_count);
         this.handlers = ItemConverter.toList(handlers);
         this.catch_all_address = catch_all_address == null ? null :
                 Preconditions.checkCodeAddress(catch_all_address);
     }
 
-    public static TryBlock of(int start_addres, int unit_count,
+    public static TryBlock of(int start_address, int unit_count,
                               Iterable<ExceptionHandler> handlers,
                               Integer catch_all_address) {
-        return new TryBlock(start_addres, unit_count, handlers, catch_all_address);
+        return new TryBlock(start_address, unit_count, handlers, catch_all_address);
     }
 
     public int getStartAddress() {

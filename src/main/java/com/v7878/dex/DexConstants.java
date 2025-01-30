@@ -15,6 +15,7 @@ public final class DexConstants {
     public static final int ACC_STATIC = 0x8;
     public static final int ACC_FINAL = 0x10;
     public static final int ACC_SYNCHRONIZED = 0x20;
+    public static final int ACC_SUPER = 0x20;
     public static final int ACC_VOLATILE = 0x40;
     public static final int ACC_BRIDGE = 0x40;
     public static final int ACC_TRANSIENT = 0x80;

@@ -10,6 +10,7 @@ public final class EncodedLong extends EncodedValue {
     }
 
     public static EncodedLong of(long value) {
+        // TODO: cache values
         return new EncodedLong(value);
     }
 

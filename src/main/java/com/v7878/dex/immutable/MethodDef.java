@@ -30,7 +30,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
         // TODO: check number of registers (at least as many as required for parameters)
         // TODO: check that abstract and native methods should not have implementation
-        this.implementation = implementation;
+        this.implementation = implementation; // may be null
         this.annotations = ItemConverter.toNavigableSet(annotations);
     }
 

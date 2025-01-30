@@ -15,6 +15,7 @@ import static com.v7878.dex.DexConstants.ACC_PROTECTED;
 import static com.v7878.dex.DexConstants.ACC_PUBLIC;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 import static com.v7878.dex.DexConstants.ACC_STRICTFP;
+import static com.v7878.dex.DexConstants.ACC_SUPER;
 import static com.v7878.dex.DexConstants.ACC_SYNCHRONIZED;
 import static com.v7878.dex.DexConstants.ACC_SYNTHETIC;
 import static com.v7878.dex.DexConstants.ACC_TRANSIENT;
@@ -26,30 +27,32 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public enum AccessFlags {
-    PUBLIC(ACC_PUBLIC, true, true, false, true, "public"),
-    PRIVATE(ACC_PRIVATE, true, true, false, true, "private"),
-    PROTECTED(ACC_PROTECTED, true, true, false, true, "protected"),
-    STATIC(ACC_STATIC, true, true, false, true, "static"),
-    FINAL(ACC_FINAL, true, true, true, true, "final"),
-    SYNCHRONIZED(ACC_SYNCHRONIZED, false, true, false, false, "synchronized"),
-    VOLATILE(ACC_VOLATILE, false, false, false, true, "volatile"),
-    BRIDGE(ACC_BRIDGE, false, true, false, false, "bridge"),
-    TRANSIENT(ACC_TRANSIENT, false, false, false, true, "transient"),
-    VARARGS(ACC_VARARGS, false, true, false, false, "varargs"),
-    NATIVE(ACC_NATIVE, false, true, false, false, "native"),
-    INTERFACE(ACC_INTERFACE, true, false, false, false, "interface"),
-    ABSTRACT(ACC_ABSTRACT, true, true, false, false, "abstract"),
-    STRICTFP(ACC_STRICTFP, false, true, false, false, "strictfp"),
-    SYNTHETIC(ACC_SYNTHETIC, true, true, true, true, "synthetic"),
-    ANNOTATION(ACC_ANNOTATION, true, false, false, false, "annotation"),
-    ENUM(ACC_ENUM, true, false, false, true, "enum"),
-    MANDATED(ACC_MANDATED, false, false, true, false, "mandated"),
-    CONSTRUCTOR(ACC_CONSTRUCTOR, false, true, false, false, "constructor"),
-    DECLARED_SYNCHRONIZED(ACC_DECLARED_SYNCHRONIZED, false, true, false, false, "declared-synchronized");
+    PUBLIC(ACC_PUBLIC, "public", true, true, true, false, true),
+    PRIVATE(ACC_PRIVATE, "private", false, true, true, false, true),
+    PROTECTED(ACC_PROTECTED, "protected", false, true, true, false, true),
+    STATIC(ACC_STATIC, "static", false, true, true, false, true),
+    FINAL(ACC_FINAL, "final", true, true, true, true, true),
+    SYNCHRONIZED(ACC_SYNCHRONIZED, "synchronized", false, false, true, false, false),
+    // unused legacy flag
+    SUPER(ACC_SUPER, "super", true, true, false, false, false),
+    VOLATILE(ACC_VOLATILE, "volatile", false, false, false, false, true),
+    BRIDGE(ACC_BRIDGE, "bridge", false, false, true, false, false),
+    TRANSIENT(ACC_TRANSIENT, "transient", false, false, false, false, true),
+    VARARGS(ACC_VARARGS, "varargs", false, false, true, false, false),
+    NATIVE(ACC_NATIVE, "native", false, false, true, false, false),
+    INTERFACE(ACC_INTERFACE, "interface", true, true, false, false, false),
+    ABSTRACT(ACC_ABSTRACT, "abstract", true, true, true, false, false),
+    STRICTFP(ACC_STRICTFP, "strictfp", false, false, true, false, false),
+    SYNTHETIC(ACC_SYNTHETIC, "synthetic", true, true, true, true, true),
+    ANNOTATION(ACC_ANNOTATION, "annotation", true, true, false, false, false),
+    ENUM(ACC_ENUM, "enum", true, true, false, false, true),
+    MANDATED(ACC_MANDATED, "mandated", false, false, false, true, false),
+    CONSTRUCTOR(ACC_CONSTRUCTOR, "constructor", false, false, true, false, false),
+    DECLARED_SYNCHRONIZED(ACC_DECLARED_SYNCHRONIZED, "declared-synchronized", false, false, true, false, false);
 
     private final int value;
-    //TODO validForInnerClass
     private final boolean validForClass;
+    private final boolean validForInnerClass;
     private final boolean validForMethod;
     private final boolean validForParameter;
     private final boolean validForField;
@@ -61,38 +64,42 @@ public enum AccessFlags {
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForClass)
             .toArray(AccessFlags[]::new);
-
     public static final int VALID_CLASS_FLAGS_MASK = combine(CACHED_CLASS_FLAGS);
+
+    private static final AccessFlags[] CACHED_INNER_CLASS_FLAGS = Arrays
+            .stream(CACHED_ALL_FLAGS)
+            .filter(flag -> flag.validForInnerClass)
+            .toArray(AccessFlags[]::new);
+    public static final int VALID_INNER_CLASS_FLAGS_MASK = combine(CACHED_INNER_CLASS_FLAGS);
 
     public static final AccessFlags[] CACHED_METHOD_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForMethod)
             .toArray(AccessFlags[]::new);
-
     public static final int VALID_METHOD_FLAGS_MASK = combine(CACHED_METHOD_FLAGS);
 
     public static final AccessFlags[] CACHED_PARAMETER_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForParameter)
             .toArray(AccessFlags[]::new);
-
     public static final int VALID_PARAMETER_FLAGS_MASK = combine(CACHED_PARAMETER_FLAGS);
 
     public static final AccessFlags[] CACHED_FIELD_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForField)
             .toArray(AccessFlags[]::new);
-
     public static final int VALID_FIELD_FLAGS_MASK = combine(CACHED_FIELD_FLAGS);
 
-    AccessFlags(int value, boolean validForClass, boolean validForMethod,
-                boolean validForParameter, boolean validForField, String name) {
+    AccessFlags(int value, String name, boolean validForClass,
+                boolean validForInnerClass, boolean validForMethod,
+                boolean validForParameter, boolean validForField) {
         this.value = value;
+        this.name = name;
         this.validForClass = validForClass;
+        this.validForInnerClass = validForInnerClass;
         this.validForMethod = validForMethod;
         this.validForParameter = validForParameter;
         this.validForField = validForField;
-        this.name = name;
     }
 
     public static int combine(AccessFlags[] flags) {
@@ -105,6 +112,10 @@ public enum AccessFlags {
 
     public static boolean isValidForClass(int flags) {
         return flags == (flags & VALID_CLASS_FLAGS_MASK);
+    }
+
+    public static boolean isValidForInnerClass(int flags) {
+        return flags == (flags & VALID_INNER_CLASS_FLAGS_MASK);
     }
 
     public static boolean isValidForMethod(int flags) {
@@ -132,6 +143,16 @@ public enum AccessFlags {
 
     public static String formatAccessFlagsForClass(int flags) {
         return formatAccessFlags(getAccessFlagsForClass(flags));
+    }
+
+    public static AccessFlags[] getAccessFlagsForInnerClass(int flags) {
+        return Arrays.stream(CACHED_INNER_CLASS_FLAGS)
+                .filter(flag -> flag.isSet(flags))
+                .toArray(AccessFlags[]::new);
+    }
+
+    public static String formatAccessFlagsForInnerClass(int flags) {
+        return formatAccessFlags(getAccessFlagsForInnerClass(flags));
     }
 
     public static AccessFlags[] getAccessFlagsForMethod(int flags) {
@@ -175,4 +196,6 @@ public enum AccessFlags {
     public String toString() {
         return name;
     }
+
+    // TODO: valueof(String name)
 }

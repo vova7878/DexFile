@@ -6,6 +6,7 @@ public final class RestartLocal extends DebugItem {
     private final int register;
 
     private RestartLocal(int register) {
+        // TODO: cache values
         this.register = Preconditions.checkShortRegister(register);
     }
 

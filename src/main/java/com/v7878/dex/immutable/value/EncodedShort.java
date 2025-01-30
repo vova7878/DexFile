@@ -10,6 +10,7 @@ public final class EncodedShort extends EncodedValue {
     }
 
     public static EncodedShort of(short value) {
+        // TODO: cache values
         return new EncodedShort(value);
     }
 

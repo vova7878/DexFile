@@ -10,6 +10,7 @@ public final class EncodedDouble extends EncodedValue {
     }
 
     public static EncodedDouble of(double value) {
+        // TODO: cache values
         return new EncodedDouble(value);
     }
 

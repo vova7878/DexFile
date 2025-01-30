@@ -40,6 +40,7 @@ import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
 import com.v7878.dex.immutable.value.EncodedArray;
 import com.v7878.dex.immutable.value.EncodedBoolean;
@@ -75,6 +76,20 @@ import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
 public class DexReader implements ReferenceStorage {
+    private record AnnotationDirectory(Set<Annotation> class_annotations,
+                                       SparseArray<Set<Annotation>> field_annotations,
+                                       SparseArray<Set<Annotation>> method_annotations,
+                                       SparseArray<List<Set<Annotation>>> parameter_annotations) {
+        public static AnnotationDirectory empty() {
+            return new AnnotationDirectory(Set.of(), SparseArray.empty(),
+                    SparseArray.empty(), SparseArray.empty());
+        }
+    }
+
+    private record CodeItem(int registers, int ins, int outs,
+                            List<Instruction> instructions, List<TryBlock> tries) {
+    }
+
     private final RandomInput main_buffer;
     private final RandomInput data_buffer;
 
@@ -103,10 +118,10 @@ public class DexReader implements ReferenceStorage {
 
     private final IntFunction<IntSupplier> hiddenapi_section;
 
-    public DexReader(ReadOptions options, byte[] buf, int offset, int header_offset) {
+    public DexReader(ReadOptions options, byte[] buf, int buf_offset, int header_offset) {
         this.options = options;
 
-        main_buffer = new ByteArrayInput(buf).slice(offset);
+        main_buffer = new ByteArrayInput(buf).slice(buf_offset);
 
         if (main_buffer.size() < BASE_HEADER_SIZE) {
             throw new NotADexFile("File is too short");
@@ -417,18 +432,18 @@ public class DexReader implements ReferenceStorage {
     private AnnotationDirectory readAnnotationDirectory(int offset) {
         var in = dataAt(offset);
         int class_annotations_off = in.readSmallUInt();
-        var class_annotations = class_annotations_off == NO_OFFSET ?
-                null : getAnnotationSet(class_annotations_off);
-        int annotated_fields_size = in.readSmallUInt();
-        int annotated_methods_size = in.readSmallUInt();
-        int annotated_parameters_size = in.readSmallUInt();
-        var field_annotations = annotated_fields_size == 0 ?
-                null : readAnnotationSetMap(in, annotated_fields_size);
-        var method_annotations = annotated_methods_size == 0 ?
-                null : readAnnotationSetMap(in, annotated_methods_size);
-        var parameter_annotations = annotated_parameters_size == 0 ?
-                null : readAnnotationSetListMap(in, annotated_parameters_size);
-        return AnnotationDirectory.of(class_annotations, field_annotations,
+        int fields_size = in.readSmallUInt();
+        int methods_size = in.readSmallUInt();
+        int parameters_size = in.readSmallUInt();
+        Set<Annotation> class_annotations = class_annotations_off == NO_OFFSET ?
+                Set.of() : getAnnotationSet(class_annotations_off);
+        SparseArray<Set<Annotation>> field_annotations = fields_size == 0 ?
+                SparseArray.empty() : readAnnotationSetMap(in, fields_size);
+        SparseArray<Set<Annotation>> method_annotations = methods_size == 0 ?
+                SparseArray.empty() : readAnnotationSetMap(in, methods_size);
+        SparseArray<List<Set<Annotation>>> parameter_annotations = parameters_size == 0 ?
+                SparseArray.empty() : readAnnotationSetListMap(in, parameters_size);
+        return new AnnotationDirectory(class_annotations, field_annotations,
                 method_annotations, parameter_annotations);
     }
 
@@ -514,7 +529,7 @@ public class DexReader implements ReferenceStorage {
         var declaring_class = getTypeId(in.readUShort());
         var proto = getProtoId(in.readUShort());
         var name = getString(in.readSmallUInt());
-        return MethodId.of(declaring_class, name, proto.getReturnType(), proto.getParameterTypes());
+        return MethodId.of(declaring_class, name, proto);
     }
 
 
@@ -803,7 +818,7 @@ public class DexReader implements ReferenceStorage {
         }
         int annotations_off = in.readSmallUInt();
         AnnotationDirectory annotations = annotations_off == NO_OFFSET ?
-                AnnotationDirectory.EMPTY : getAnnotationDirectory(annotations_off);
+                AnnotationDirectory.empty() : getAnnotationDirectory(annotations_off);
         int class_data_off = in.readSmallUInt();
         int static_values_off = in.readSmallUInt();
         List<EncodedValue> static_values = null;

@@ -10,6 +10,7 @@ public final class EncodedFloat extends EncodedValue {
     }
 
     public static EncodedFloat of(float value) {
+        // TODO: cache values
         return new EncodedFloat(value);
     }
 

@@ -52,7 +52,11 @@ public final class DexIO {
         return read(ReadOptions.defaultOptions(), data);
     }
 
-    //TODO: public static byte[] write(WriteOptions options, Dex data) {
+    //TODO: public static Dex[] readDexContainer(ReadOptions options, byte[] data) {}
 
-    //TODO: public static byte[] write(Dex data) {
+    //TODO: public static byte[] write(WriteOptions options, Dex data) {}
+
+    //TODO: public static byte[] write(Dex data) {}
+
+    //TODO: public static byte[] writeDexContainer(WriteOptions options, Dex[] data) {}
 }

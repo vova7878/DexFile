@@ -6,6 +6,7 @@ public final class LineNumber extends DebugItem {
     private final int line;
 
     private LineNumber(int line) {
+        // TODO: cache values
         this.line = Preconditions.checkDebugLine(line);
     }
 

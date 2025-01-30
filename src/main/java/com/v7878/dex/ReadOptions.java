@@ -18,6 +18,5 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
         return new ReadOptions();
     }
 
-    //TODO: MERGE_DEX_CONTAINERS option;
     //TODO: verify checksum/signature option
 }

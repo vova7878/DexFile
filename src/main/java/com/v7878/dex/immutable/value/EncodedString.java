@@ -6,6 +6,8 @@ import com.v7878.dex.util.CollectionUtils;
 import java.util.Objects;
 
 public final class EncodedString extends EncodedValue {
+    public static final EncodedString EMPTY = new EncodedString("");
+
     private final String value;
 
     private EncodedString(String value) {
@@ -13,7 +15,7 @@ public final class EncodedString extends EncodedValue {
     }
 
     public static EncodedString of(String value) {
-        return new EncodedString(value);
+        return value.isEmpty() ? EMPTY : new EncodedString(value);
     }
 
     @Override

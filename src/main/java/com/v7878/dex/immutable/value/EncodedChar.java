@@ -10,6 +10,7 @@ public final class EncodedChar extends EncodedValue {
     }
 
     public static EncodedChar of(char value) {
+        // TODO: cache values
         return new EncodedChar(value);
     }
 

@@ -6,6 +6,7 @@ public final class AdvancePC extends DebugItem {
     private final int addr_diff;
 
     private AdvancePC(int addr_diff) {
+        // TODO: cache values
         this.addr_diff = Preconditions.checkDebugAddrDiff(addr_diff);
     }
 

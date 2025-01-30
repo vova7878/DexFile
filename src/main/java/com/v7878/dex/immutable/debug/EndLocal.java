@@ -6,6 +6,7 @@ public final class EndLocal extends DebugItem {
     private final int register;
 
     private EndLocal(int register) {
+        // TODO: cache values
         this.register = Preconditions.checkShortRegister(register);
     }
 
