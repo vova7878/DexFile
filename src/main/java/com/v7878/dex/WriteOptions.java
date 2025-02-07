@@ -32,4 +32,5 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
     }
 
     //TODO: withCDEXFlags(int flags)
+    //TODO: skip hiddenapi writing option
 }

@@ -1,7 +1,10 @@
 package com.v7878.dex;
 
 import com.v7878.dex.immutable.Dex;
+import com.v7878.dex.io.ByteArrayIO;
+import com.v7878.dex.io.ByteArrayInput;
 import com.v7878.dex.raw.DexReader;
+import com.v7878.dex.raw.DexWriter;
 
 public final class DexIO {
     private DexIO() {
@@ -43,20 +46,28 @@ public final class DexIO {
 
     //TODO: public static Dex read(ReadOptions options, byte[] data, int[] ids) {}
 
-    public static Dex read(ReadOptions options, byte[] data) {
-        DexReader reader = new DexReader(options, data);
+    public static Dex read(ReadOptions options, byte[] data, int data_offset) {
+        var input = new ByteArrayInput(data).slice(data_offset);
+        DexReader reader = new DexReader(options, input, 0);
         return Dex.of(reader.getClasses());
     }
 
     public static Dex read(byte[] data) {
-        return read(ReadOptions.defaultOptions(), data);
+        return read(ReadOptions.defaultOptions(), data, 0);
     }
 
     //TODO: public static Dex[] readDexContainer(ReadOptions options, byte[] data) {}
 
-    //TODO: public static byte[] write(WriteOptions options, Dex data) {}
+    public static byte[] write(WriteOptions options, Dex data) {
+        var io = new ByteArrayIO();
+        DexWriter writer = new DexWriter(options, io, data, 0);
+        writer.finalizeHeader(0);
+        return io.toByteArray();
+    }
 
-    //TODO: public static byte[] write(Dex data) {}
+    public static byte[] write(Dex data) {
+        return write(WriteOptions.defaultOptions(), data);
+    }
 
     //TODO: public static byte[] writeDexContainer(WriteOptions options, Dex[] data) {}
 }

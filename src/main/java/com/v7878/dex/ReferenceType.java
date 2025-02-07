@@ -26,6 +26,11 @@ public enum ReferenceType {
         public void collect(ReferenceCollector colleactor, Object value) {
             colleactor.add(validate(value));
         }
+
+        @Override
+        public int refToIndex(ReferenceIndexer indexer, Object value) {
+            return indexer.getStringIndex(validate(value));
+        }
     }, TYPE {
         @Override
         public TypeId validate(Object ref) {
@@ -40,6 +45,11 @@ public enum ReferenceType {
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
             colleactor.add(validate(value));
+        }
+
+        @Override
+        public int refToIndex(ReferenceIndexer indexer, Object value) {
+            return indexer.getTypeIndex(validate(value));
         }
     }, FIELD {
         @Override
@@ -56,6 +66,11 @@ public enum ReferenceType {
         public void collect(ReferenceCollector colleactor, Object value) {
             colleactor.add(validate(value));
         }
+
+        @Override
+        public int refToIndex(ReferenceIndexer indexer, Object value) {
+            return indexer.getFieldIndex(validate(value));
+        }
     }, METHOD {
         @Override
         public MethodId validate(Object ref) {
@@ -70,6 +85,11 @@ public enum ReferenceType {
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
             colleactor.add(validate(value));
+        }
+
+        @Override
+        public int refToIndex(ReferenceIndexer indexer, Object value) {
+            return indexer.getMethodIndex(validate(value));
         }
     }, PROTO {
         @Override
@@ -86,6 +106,11 @@ public enum ReferenceType {
         public void collect(ReferenceCollector colleactor, Object value) {
             colleactor.add(validate(value));
         }
+
+        @Override
+        public int refToIndex(ReferenceIndexer indexer, Object value) {
+            return indexer.getProtoIndex(validate(value));
+        }
     }, CALLSITE {
         @Override
         public CallSiteId validate(Object ref) {
@@ -100,6 +125,11 @@ public enum ReferenceType {
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
             colleactor.add(validate(value));
+        }
+
+        @Override
+        public int refToIndex(ReferenceIndexer indexer, Object value) {
+            return indexer.getCallSiteIndex(validate(value));
         }
     }, METHOD_HANDLE {
         @Override
@@ -116,6 +146,11 @@ public enum ReferenceType {
         public void collect(ReferenceCollector colleactor, Object value) {
             colleactor.add(validate(value));
         }
+
+        @Override
+        public int refToIndex(ReferenceIndexer indexer, Object value) {
+            return indexer.getMethodHandleIndex(validate(value));
+        }
     }, RAW_INDEX {
         @Override
         public Integer validate(Object ref) {
@@ -130,6 +165,11 @@ public enum ReferenceType {
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
             // nop
+        }
+
+        @Override
+        public int refToIndex(ReferenceIndexer indexer, Object value) {
+            return validate(value);
         }
     };
 
@@ -170,4 +210,22 @@ public enum ReferenceType {
     }
 
     public abstract void collect(ReferenceCollector colleactor, Object value);
+
+    public interface ReferenceIndexer {
+        int getStringIndex(String value);
+
+        int getTypeIndex(TypeId value);
+
+        int getFieldIndex(FieldId value);
+
+        int getProtoIndex(ProtoId value);
+
+        int getMethodIndex(MethodId value);
+
+        int getMethodHandleIndex(MethodHandleId value);
+
+        int getCallSiteIndex(CallSiteId value);
+    }
+
+    public abstract int refToIndex(ReferenceIndexer indexer, Object value);
 }

@@ -5,19 +5,35 @@ import static com.v7878.dex.DexIO.InvalidDexFile;
 import static com.v7878.dex.DexIO.NotADexFile;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
+import static com.v7878.dex.DexOffsets.CLASS_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
+import static com.v7878.dex.DexOffsets.CLASS_START_OFFSET;
+import static com.v7878.dex.DexOffsets.CONTAINER_OFF_OFFSET;
+import static com.v7878.dex.DexOffsets.DATA_START_OFFSET;
+import static com.v7878.dex.DexOffsets.FIELD_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
+import static com.v7878.dex.DexOffsets.FIELD_START_OFFSET;
+import static com.v7878.dex.DexOffsets.FILE_SIZE_OFFSET;
+import static com.v7878.dex.DexOffsets.MAGIC_OFFSET;
+import static com.v7878.dex.DexOffsets.MAP_OFFSET;
+import static com.v7878.dex.DexOffsets.METHOD_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.METHOD_HANDLE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.METHOD_ID_SIZE;
+import static com.v7878.dex.DexOffsets.METHOD_START_OFFSET;
+import static com.v7878.dex.DexOffsets.PROTO_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.PROTO_ID_SIZE;
+import static com.v7878.dex.DexOffsets.PROTO_START_OFFSET;
+import static com.v7878.dex.DexOffsets.STRING_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.STRING_ID_SIZE;
+import static com.v7878.dex.DexOffsets.STRING_START_OFFSET;
 import static com.v7878.dex.DexOffsets.TRY_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
+import static com.v7878.dex.DexOffsets.TYPE_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
+import static com.v7878.dex.DexOffsets.TYPE_START_OFFSET;
 
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.DexConstants;
-import com.v7878.dex.DexOffsets;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.MethodHandleType;
 import com.v7878.dex.Opcodes;
@@ -60,7 +76,6 @@ import com.v7878.dex.immutable.value.EncodedShort;
 import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
-import com.v7878.dex.io.ByteArrayInput;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.util.CachedFixedSizeList;
@@ -118,25 +133,32 @@ public class DexReader implements ReferenceStorage {
 
     private final IntFunction<IntSupplier> hiddenapi_section;
 
-    public DexReader(ReadOptions options, byte[] buf, int buf_offset, int header_offset) {
-        this.options = options;
+    private final int file_size;
 
-        main_buffer = new ByteArrayInput(buf).slice(buf_offset);
+    public DexReader(ReadOptions options, RandomInput input, int header_offset) {
+        assert input.position() == 0;
+        this.options = options;
+        main_buffer = input;
 
         if (main_buffer.size() < BASE_HEADER_SIZE) {
             throw new NotADexFile("File is too short");
         }
-        version = DexVersion.forMagic(mainAt(0).readLong());
-        //TODO: check version min api
+        // ??? version = DexVersion.forMagic(mainAt(MAGIC_OFFSET).readLong());
+        version = DexVersion.forMagic(mainAt(header_offset + MAGIC_OFFSET).readLong());
+        // TODO: check full header size
+        // TODO: check version min api
+
+        // TODO: check file size
+        file_size = mainAt(header_offset + FILE_SIZE_OFFSET).readSmallUInt();
 
         opcodes = Opcodes.of(version, options.getTargetApi(),
                 options.isTargetForArt(), options.hasOdexInstructions());
 
-        //TODO: check endian tag
+        // TODO: check endian tag
 
         int container_off = 0;
         if (version.isDexContainer()) {
-            container_off = mainAt(header_offset + DexOffsets.CONTAINER_OFF_OFFSET).readSmallUInt();
+            container_off = mainAt(header_offset + CONTAINER_OFF_OFFSET).readSmallUInt();
         }
         if (container_off != header_offset) {
             throw new InvalidDexFile("Unexpected container offset in header");
@@ -144,7 +166,7 @@ public class DexReader implements ReferenceStorage {
 
         int data_off = 0;
         if (version.isCompact()) {
-            data_off = mainAt(header_offset + DexOffsets.DATA_START_OFFSET).readSmallUInt();
+            data_off = mainAt(header_offset + DATA_START_OFFSET).readSmallUInt();
         }
         data_buffer = main_buffer.slice(data_off);
 
@@ -157,32 +179,32 @@ public class DexReader implements ReferenceStorage {
         code_cache = makeOffsetCache(this::readCodeItem);
 
         string_section = makeSection(
-                mainAt(header_offset + DexOffsets.STRING_COUNT_OFFSET).readSmallUInt(),
-                mainAt(header_offset + DexOffsets.STRING_START_OFFSET).readSmallUInt(),
+                mainAt(header_offset + STRING_COUNT_OFFSET).readSmallUInt(),
+                mainAt(header_offset + STRING_START_OFFSET).readSmallUInt(),
                 STRING_ID_SIZE, this::readString
         );
         type_section = makeSection(
-                mainAt(header_offset + DexOffsets.TYPE_COUNT_OFFSET).readSmallUInt(),
-                mainAt(header_offset + DexOffsets.TYPE_START_OFFSET).readSmallUInt(),
+                mainAt(header_offset + TYPE_COUNT_OFFSET).readSmallUInt(),
+                mainAt(header_offset + TYPE_START_OFFSET).readSmallUInt(),
                 TYPE_ID_SIZE, this::readTypeId
         );
         field_section = makeSection(
-                mainAt(header_offset + DexOffsets.FIELD_COUNT_OFFSET).readSmallUInt(),
-                mainAt(header_offset + DexOffsets.FIELD_START_OFFSET).readSmallUInt(),
+                mainAt(header_offset + FIELD_COUNT_OFFSET).readSmallUInt(),
+                mainAt(header_offset + FIELD_START_OFFSET).readSmallUInt(),
                 FIELD_ID_SIZE, this::readFieldId
         );
         proto_section = makeSection(
-                mainAt(header_offset + DexOffsets.PROTO_COUNT_OFFSET).readSmallUInt(),
-                mainAt(header_offset + DexOffsets.PROTO_START_OFFSET).readSmallUInt(),
+                mainAt(header_offset + PROTO_COUNT_OFFSET).readSmallUInt(),
+                mainAt(header_offset + PROTO_START_OFFSET).readSmallUInt(),
                 PROTO_ID_SIZE, this::readProtoId
         );
         method_section = makeSection(
-                mainAt(header_offset + DexOffsets.METHOD_COUNT_OFFSET).readSmallUInt(),
-                mainAt(header_offset + DexOffsets.METHOD_START_OFFSET).readSmallUInt(),
+                mainAt(header_offset + METHOD_COUNT_OFFSET).readSmallUInt(),
+                mainAt(header_offset + METHOD_START_OFFSET).readSmallUInt(),
                 METHOD_ID_SIZE, this::readMethodId
         );
 
-        map_items = readMapItemsList(mainAt(header_offset + DexOffsets.MAP_OFFSET).readSmallUInt());
+        map_items = readMapItemsList(mainAt(header_offset + MAP_OFFSET).readSmallUInt());
 
         MapItem method_handles = getMapItemForSection(DexConstants.TYPE_METHOD_HANDLE_ITEM);
         method_handle_section = makeSection(
@@ -203,14 +225,10 @@ public class DexReader implements ReferenceStorage {
                 hiddenapi != null ? hiddenapi.offset() : NO_OFFSET);
 
         class_section = makeSection(
-                mainAt(header_offset + DexOffsets.CLASS_COUNT_OFFSET).readSmallUInt(),
-                mainAt(header_offset + DexOffsets.CLASS_START_OFFSET).readSmallUInt(),
+                mainAt(header_offset + CLASS_COUNT_OFFSET).readSmallUInt(),
+                mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt(),
                 CLASS_DEF_SIZE, this::readClassDef
         );
-    }
-
-    public DexReader(ReadOptions options, byte[] buf) {
-        this(options, buf, 0, 0);
     }
 
     public RandomInput mainAt(int offset) {
@@ -219,6 +237,10 @@ public class DexReader implements ReferenceStorage {
 
     public RandomInput dataAt(int offset) {
         return data_buffer.duplicateAt(offset);
+    }
+
+    public int getFileSize() {
+        return file_size;
     }
 
     public Opcodes opcodes() {

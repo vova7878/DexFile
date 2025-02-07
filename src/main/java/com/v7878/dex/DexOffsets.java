@@ -21,9 +21,13 @@ public final class DexOffsets {
     public static final int TRY_ITEM_SIZE = 8;
 
     // dex element alignments
+    public static final int MAP_ALIGNMENT = 4;
+    public static final int DATA_SECTION_ALIGNMENT = 8;
+    public static final int TYPE_LIST_ALIGNMENT = 4;
     public static final int TRY_ITEM_ALIGNMENT = 4;
 
     // header offsets
+    public static final int MAGIC_OFFSET = 0;
     public static final int CHECKSUM_OFFSET = 8;
     public static final int CHECKSUM_DATA_START_OFFSET = 12;
     public static final int SIGNATURE_OFFSET = 12;

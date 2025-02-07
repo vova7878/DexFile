@@ -19,4 +19,5 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
     }
 
     //TODO: verify checksum/signature option
+    //TODO: skip hiddenapi reading option
 }

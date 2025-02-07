@@ -1,0 +1,685 @@
+package com.v7878.dex.raw;
+
+import static com.v7878.dex.DexConstants.ENDIAN_CONSTANT;
+import static com.v7878.dex.DexConstants.NO_INDEX;
+import static com.v7878.dex.DexConstants.NO_OFFSET;
+import static com.v7878.dex.DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_ANNOTATION_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_ANNOTATION_SET_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_ANNOTATION_SET_REF_LIST;
+import static com.v7878.dex.DexConstants.TYPE_CALL_SITE_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_CLASS_DATA_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_CLASS_DEF_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_CODE_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_DEBUG_INFO_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_ENCODED_ARRAY_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_FIELD_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_HEADER_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_MAP_LIST;
+import static com.v7878.dex.DexConstants.TYPE_METHOD_HANDLE_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_METHOD_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_PROTO_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_STRING_DATA_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_STRING_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_TYPE_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_TYPE_LIST;
+import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
+import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
+import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
+import static com.v7878.dex.DexOffsets.COMPACT_HEADER_SIZE;
+import static com.v7878.dex.DexOffsets.DATA_SECTION_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.DEXCONTAINER_HEADER_SIZE;
+import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
+import static com.v7878.dex.DexOffsets.MAGIC_OFFSET;
+import static com.v7878.dex.DexOffsets.MAP_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.METHOD_HANDLE_ID_SIZE;
+import static com.v7878.dex.DexOffsets.METHOD_ID_SIZE;
+import static com.v7878.dex.DexOffsets.PROTO_ID_SIZE;
+import static com.v7878.dex.DexOffsets.STRING_ID_SIZE;
+import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
+import static com.v7878.dex.DexOffsets.TYPE_LIST_ALIGNMENT;
+import static com.v7878.misc.Math.roundUp;
+
+import com.v7878.dex.DexVersion;
+import com.v7878.dex.Opcodes;
+import com.v7878.dex.ReferenceType.ReferenceIndexer;
+import com.v7878.dex.WriteOptions;
+import com.v7878.dex.immutable.CallSiteId;
+import com.v7878.dex.immutable.Dex;
+import com.v7878.dex.immutable.FieldId;
+import com.v7878.dex.immutable.MethodHandleId;
+import com.v7878.dex.immutable.MethodId;
+import com.v7878.dex.immutable.ProtoId;
+import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.io.RandomIO;
+import com.v7878.dex.raw.DexCollector.CallSiteIdContainer;
+import com.v7878.dex.raw.DexCollector.ClassDefContainer;
+import com.v7878.dex.util.CollectionUtils;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+
+public class DexWriter implements ReferenceIndexer {
+    private static class FileMap {
+        public int header_size;
+        public int file_size;
+
+        public int map_list_off;
+
+        public int string_ids_size;
+        public int string_ids_off;
+        public int type_ids_size;
+        public int type_ids_off;
+        public int proto_ids_size;
+        public int proto_ids_off;
+        public int field_ids_size;
+        public int field_ids_off;
+        public int method_ids_size;
+        public int method_ids_off;
+        public int class_defs_size;
+        public int class_defs_off;
+        public int call_site_ids_size;
+        public int call_site_ids_off;
+        public int method_handles_size;
+        public int method_handles_off;
+
+        public int data_size;
+        public int data_off;
+
+        public int type_lists_size;
+        public int type_lists_off;
+        public int annotation_set_refs_size;
+        public int annotation_set_refs_off;
+        public int annotation_sets_size;
+        public int annotation_sets_off;
+        public int class_data_items_size;
+        public int class_data_items_off;
+        public int code_items_size;
+        public int code_items_off;
+        public int string_data_items_size;
+        public int string_data_items_off;
+        public int debug_info_items_size;
+        public int debug_info_items_off;
+        public int annotations_size;
+        public int annotations_off;
+        public int encoded_arrays_size;
+        public int encoded_arrays_off;
+        public int annotations_directories_size;
+        public int annotations_directories_off;
+
+        public int hiddenapi_class_data_items_off;
+
+        public int compact_feature_flags;
+        public int compact_debug_info_offsets_pos;
+        public int compact_debug_info_offsets_table_offset;
+        public int compact_debug_info_base;
+    }
+
+    private final RandomIO main_buffer;
+    private final RandomIO data_buffer;
+
+    private final WriteOptions options;
+    private final Opcodes opcodes;
+
+    private final FileMap map;
+
+    private final String[] strings;
+    private final TypeId[] types;
+    private final ProtoId[] protos;
+    private final FieldId[] fields;
+    private final MethodId[] methods;
+    private final CallSiteIdContainer[] call_sites;
+    private final MethodHandleId[] method_handles;
+
+    private final Map<List<TypeId>, Integer> type_lists;
+    //private final Map<EncodedArray, Integer> encoded_arrays;
+    //private final Map<AnnotationItem, Integer> annotations;
+    //private final Map<AnnotationSet, Integer> annotation_sets;
+    //private final Map<AnnotationSetList, Integer> annotation_set_lists;
+    //private final Map<TypeId, Integer> annotations_directories;
+    //private final Map<CodeItem, Integer> code_items;
+    //private final Map<DebugInfo, Integer> debug_infos;
+
+    //private final Map<ClassData, Integer> class_data_items;
+
+    private final ClassDefContainer[] class_defs;
+
+    public DexWriter(WriteOptions options, RandomIO io, Dex dexfile, int header_offset) {
+        assert io.position() == 0;
+        this.options = options;
+        main_buffer = io;
+
+        opcodes = Opcodes.of(options.getDexVersion(), options.getTargetApi(),
+                options.isTargetForArt(), options.hasOdexInstructions());
+
+        map = new FileMap();
+
+        var collector = new DexCollector();
+        collector.fill(dexfile);
+
+        // TODO: cache zero-size arrays
+        strings = collector.strings.toArray(new String[0]);
+        types = collector.types.toArray(new TypeId[0]);
+        protos = collector.protos.toArray(new ProtoId[0]);
+        fields = collector.fields.toArray(new FieldId[0]);
+        methods = collector.methods.toArray(new MethodId[0]);
+        call_sites = collector.call_sites.toArray(new CallSiteIdContainer[0]);
+        method_handles = collector.method_handles.toArray(new MethodHandleId[0]);
+
+        class_defs = collector.class_defs.toArray(new ClassDefContainer[0]);
+
+        type_lists = collector.type_lists;
+        //encoded_arrays = collector.encoded_arrays;
+
+        initMap();
+
+        // Note: for compact dex, offsets are calculated from the data section, not the header
+        data_buffer = isCompact() ? io.slice(map.data_off) : io.duplicate(map.data_off);
+
+        // We want offset 0 to be reserved
+        if (isCompact()) {
+            data_buffer.addPosition(DATA_SECTION_ALIGNMENT);
+        }
+
+        writeTypeListSection();
+        //writeAnnotationItemSection();
+        //writeAnnotationSetSection();
+        //writeAnnotationSetListSection();
+        //writeAnnotationsDirectorySection();
+        //writeDebugInfoSection();
+        //writeCodeItemSection();
+        //writeEncodedArraySection();
+        //
+        writeTypeSection();
+        writeFieldSection();
+        writeProtoSection();
+        writeMethodSection();
+        //writeCallSiteSection();
+        writeMethodHandleSection();
+
+        // string id + string data
+        writeStringSections();
+        //// class def + class data
+        //ClassDef.writeSections();
+        //
+        //HiddenApi.writeSection();
+
+        writeMap();
+
+        data_buffer.alignPosition(DATA_SECTION_ALIGNMENT);
+        // Note: for compact dex, data section is placed
+        // after the entire file and isn`t included in its size
+        if (isCompact()) {
+            map.file_size = map.data_off;
+            map.data_size = data_buffer.position();
+        } else {
+            map.file_size = data_buffer.position();
+            map.data_size = map.file_size - map.data_off;
+        }
+
+        writeHeader();
+    }
+
+    private static int getHeaderSize(DexVersion version) {
+        return switch (version) {
+            case CDEX001 -> COMPACT_HEADER_SIZE;
+            case DEX041 -> DEXCONTAINER_HEADER_SIZE;
+            default -> BASE_HEADER_SIZE;
+        };
+    }
+
+    private void initMap() {
+        int offset;
+
+        map.header_size = offset = getHeaderSize(version());
+
+        map.string_ids_off = offset;
+        map.string_ids_size = strings.length;
+        offset += map.string_ids_size * STRING_ID_SIZE;
+
+        map.type_ids_off = offset;
+        map.type_ids_size = types.length;
+        offset += map.type_ids_size * TYPE_ID_SIZE;
+
+        map.proto_ids_off = offset;
+        map.proto_ids_size = protos.length;
+        offset += map.proto_ids_size * PROTO_ID_SIZE;
+
+        map.field_ids_off = offset;
+        map.field_ids_size = fields.length;
+        offset += map.field_ids_size * FIELD_ID_SIZE;
+
+        map.method_ids_off = offset;
+        map.method_ids_size = methods.length;
+        offset += map.method_ids_size * METHOD_ID_SIZE;
+
+        map.class_defs_off = offset;
+        map.class_defs_size = class_defs.length;
+        offset += map.class_defs_size * CLASS_DEF_SIZE;
+
+        map.call_site_ids_off = offset;
+        map.call_site_ids_size = call_sites.length;
+        offset += map.call_site_ids_size * CALL_SITE_ID_SIZE;
+
+        map.method_handles_off = offset;
+        map.method_handles_size = method_handles.length;
+        offset += map.method_handles_size * METHOD_HANDLE_ID_SIZE;
+
+        map.data_off = roundUp(offset, DATA_SECTION_ALIGNMENT);
+    }
+
+    @Override
+    public int getStringIndex(String value) {
+        int out = Arrays.binarySearch(strings, value, CollectionUtils.naturalOrder());
+        if (out < 0) {
+            throw new IllegalArgumentException(
+                    "unable to find string \"" + value + "\"");
+        }
+        return out;
+    }
+
+    @Override
+    public int getTypeIndex(TypeId value) {
+        int out = Arrays.binarySearch(types, value, CollectionUtils.naturalOrder());
+        if (out < 0) {
+            throw new IllegalArgumentException(
+                    "unable to find type \"" + value + "\"");
+        }
+        return out;
+    }
+
+    @Override
+    public int getProtoIndex(ProtoId value) {
+        int out = Arrays.binarySearch(protos, value, CollectionUtils.naturalOrder());
+        if (out < 0) {
+            throw new IllegalArgumentException(
+                    "unable to find proto \"" + value + "\"");
+        }
+        return out;
+    }
+
+    @Override
+    public int getFieldIndex(FieldId value) {
+        int out = Arrays.binarySearch(fields, value, CollectionUtils.naturalOrder());
+        if (out < 0) {
+            throw new IllegalArgumentException(
+                    "unable to find field \"" + value + "\"");
+        }
+        return out;
+    }
+
+    @Override
+    public int getMethodIndex(MethodId value) {
+        int out = Arrays.binarySearch(methods, value, CollectionUtils.naturalOrder());
+        if (out < 0) {
+            throw new IllegalArgumentException(
+                    "unable to find method \"" + value + "\"");
+        }
+        return out;
+    }
+
+    @Override
+    public int getCallSiteIndex(CallSiteId value) {
+        int out = Arrays.<Object>binarySearch(call_sites, value,
+                (a, b) -> ((CallSiteIdContainer) a).value().compareTo((CallSiteId) b));
+        if (out < 0) {
+            throw new IllegalArgumentException(
+                    "unable to find call site \"" + value + "\"");
+        }
+        return out;
+    }
+
+    @Override
+    public int getMethodHandleIndex(MethodHandleId value) {
+        int out = Arrays.binarySearch(method_handles, value, CollectionUtils.naturalOrder());
+        if (out < 0) {
+            throw new IllegalArgumentException(
+                    "unable to find method handle \"" + value + "\"");
+        }
+        return out;
+    }
+
+    public int getTypeListOffset(List<TypeId> value) {
+        Integer out = type_lists.get(value);
+        if (out == null) {
+            throw new IllegalArgumentException(
+                    "unable to find type list \"" + value + "\"");
+        }
+        return out;
+    }
+
+    public void finalizeHeader(int container_size) {
+        //if (isCompact()) {
+        //    // TODO: How are the checksum and signature fields calculated for compact dex?
+        //} else {
+        //    out.position(SIGNATURE_OFFSET);
+        //    MessageDigest md;
+        //    try {
+        //        md = MessageDigest.getInstance("SHA-1");
+        //    } catch (NoSuchAlgorithmException e) {
+        //        throw new RuntimeException("unable to find SHA-1 MessageDigest", e);
+        //    }
+        //    byte[] signature = md.digest(out.duplicate(FILE_SIZE_OFFSET)
+        //            .readByteArray(file_size - FILE_SIZE_OFFSET));
+        //    out.writeByteArray(signature);
+        //
+        //    out.position(CHECKSUM_OFFSET);
+        //    Adler32 adler = new Adler32();
+        //    int adler_length = file_size - SIGNATURE_OFFSET;
+        //    adler.update(out.duplicate(SIGNATURE_OFFSET)
+        //            .readByteArray(adler_length), 0, adler_length);
+        //    out.writeInt((int) adler.getValue());
+        //}
+    }
+
+    public int getFileSize() {
+        return map.file_size;
+    }
+
+    public Opcodes opcodes() {
+        return opcodes;
+    }
+
+    public WriteOptions options() {
+        return options;
+    }
+
+    public DexVersion version() {
+        return options().getDexVersion();
+    }
+
+    public boolean isCompact() {
+        return version().isCompact();
+    }
+
+    public boolean isDexContainer() {
+        return version().isDexContainer();
+    }
+
+    public void writeHeader() {
+        main_buffer.position(MAGIC_OFFSET);
+        main_buffer.writeLong(version().getMagic()); // little-endian
+        main_buffer.addPosition(4); // checksum
+        main_buffer.addPosition(20); // signature
+        main_buffer.writeInt(map.file_size);
+        main_buffer.writeInt(map.header_size);
+        main_buffer.writeInt(ENDIAN_CONSTANT);
+        main_buffer.writeInt(0); // link_size
+        main_buffer.writeInt(0); // link_off
+
+        main_buffer.writeInt(map.map_list_off);
+        main_buffer.writeInt(map.string_ids_size);
+        main_buffer.writeInt(map.string_ids_size > 0 ? map.string_ids_off : 0);
+        main_buffer.writeInt(map.type_ids_size);
+        main_buffer.writeInt(map.type_ids_size > 0 ? map.type_ids_off : 0);
+        main_buffer.writeInt(map.proto_ids_size);
+        main_buffer.writeInt(map.proto_ids_size > 0 ? map.proto_ids_off : 0);
+        main_buffer.writeInt(map.field_ids_size);
+        main_buffer.writeInt(map.field_ids_size > 0 ? map.field_ids_off : 0);
+        main_buffer.writeInt(map.method_ids_size);
+        main_buffer.writeInt(map.method_ids_size > 0 ? map.method_ids_off : 0);
+        main_buffer.writeInt(map.class_defs_size);
+        main_buffer.writeInt(map.class_defs_size > 0 ? map.class_defs_off : 0);
+        main_buffer.writeInt(map.data_size);
+        main_buffer.writeInt(map.data_size > 0 ? map.data_off : 0);
+
+        if (isCompact()) {
+            //TODO
+            main_buffer.writeInt(0x1 /* kDefaultMethods */); // compact_feature_flags
+            main_buffer.writeInt(0); // compact_debug_info_offsets_pos
+            main_buffer.writeInt(0); // compact_debug_info_offsets_table_offset
+            main_buffer.writeInt(0); // compact_debug_info_base
+            main_buffer.writeInt(0); // owned_data_begin
+            main_buffer.writeInt(map.data_size); // owned_data_end
+        } else if (isDexContainer()) {
+            //TODO
+            main_buffer.writeInt(0); // container_size
+            main_buffer.writeInt(0); // container_offset
+        }
+    }
+
+    public void writeMap() {
+        data_buffer.alignPosition(MAP_ALIGNMENT);
+        map.map_list_off = data_buffer.position();
+        var list = new ArrayList<MapItem>();
+
+        // main section
+        list.add(new MapItem(TYPE_HEADER_ITEM, 0, 1));
+        if (map.string_ids_size > 0) {
+            list.add(new MapItem(TYPE_STRING_ID_ITEM,
+                    map.string_ids_off, map.string_ids_size));
+        }
+        if (map.type_ids_size > 0) {
+            list.add(new MapItem(TYPE_TYPE_ID_ITEM,
+                    map.type_ids_off, map.type_ids_size));
+        }
+        if (map.proto_ids_size > 0) {
+            list.add(new MapItem(TYPE_PROTO_ID_ITEM,
+                    map.proto_ids_off, map.proto_ids_size));
+        }
+        if (map.field_ids_size > 0) {
+            list.add(new MapItem(TYPE_FIELD_ID_ITEM,
+                    map.field_ids_off, map.field_ids_size));
+        }
+        if (map.method_ids_size > 0) {
+            list.add(new MapItem(TYPE_METHOD_ID_ITEM,
+                    map.method_ids_off, map.method_ids_size));
+        }
+        if (map.class_defs_size > 0) {
+            list.add(new MapItem(TYPE_CLASS_DEF_ITEM,
+                    map.class_defs_off, map.class_defs_size));
+        }
+        if (map.call_site_ids_size > 0) {
+            list.add(new MapItem(TYPE_CALL_SITE_ID_ITEM,
+                    map.call_site_ids_off, map.call_site_ids_size));
+        }
+        if (map.method_handles_size > 0) {
+            list.add(new MapItem(TYPE_METHOD_HANDLE_ITEM,
+                    map.method_handles_off, map.method_handles_size));
+        }
+
+        // data section
+        if (map.type_lists_size > 0) {
+            list.add(new MapItem(TYPE_TYPE_LIST,
+                    map.type_lists_off, map.type_lists_size));
+        }
+        if (map.annotation_set_refs_size > 0) {
+            list.add(new MapItem(TYPE_ANNOTATION_SET_REF_LIST,
+                    map.annotation_set_refs_off, map.annotation_set_refs_size));
+        }
+        if (map.annotation_sets_size > 0) {
+            list.add(new MapItem(TYPE_ANNOTATION_SET_ITEM,
+                    map.annotation_sets_off, map.annotation_sets_size));
+        }
+        if (map.class_data_items_size > 0) {
+            list.add(new MapItem(TYPE_CLASS_DATA_ITEM,
+                    map.class_data_items_off, map.class_data_items_size));
+        }
+        if (map.code_items_size > 0) {
+            list.add(new MapItem(TYPE_CODE_ITEM,
+                    map.code_items_off, map.code_items_size));
+        }
+        if (map.string_data_items_size > 0) {
+            list.add(new MapItem(TYPE_STRING_DATA_ITEM,
+                    map.string_data_items_off, map.string_data_items_size));
+        }
+        if (map.debug_info_items_size > 0) {
+            list.add(new MapItem(TYPE_DEBUG_INFO_ITEM,
+                    map.debug_info_items_off, map.debug_info_items_size));
+        }
+        if (map.annotations_size > 0) {
+            list.add(new MapItem(TYPE_ANNOTATION_ITEM,
+                    map.annotations_off, map.annotations_size));
+        }
+        if (map.encoded_arrays_size > 0) {
+            list.add(new MapItem(TYPE_ENCODED_ARRAY_ITEM,
+                    map.encoded_arrays_off, map.encoded_arrays_size));
+        }
+        if (map.annotations_directories_size > 0) {
+            list.add(new MapItem(TYPE_ANNOTATIONS_DIRECTORY_ITEM,
+                    map.annotations_directories_off, map.annotations_directories_size));
+        }
+        if (map.hiddenapi_class_data_items_off > 0) {
+            list.add(new MapItem(TYPE_HIDDENAPI_CLASS_DATA_ITEM,
+                    map.hiddenapi_class_data_items_off, 1));
+        }
+
+        list.add(new MapItem(TYPE_MAP_LIST, map.map_list_off, 1));
+
+        list.sort(Comparator.comparingInt(MapItem::offset));
+
+        data_buffer.writeInt(list.size());
+        for (MapItem tmp : list) {
+            data_buffer.writeShort(tmp.type());
+            data_buffer.writeShort(0);
+            data_buffer.writeInt(tmp.size());
+            data_buffer.writeInt(tmp.offset());
+        }
+    }
+
+    public void writeString(String value) {
+        main_buffer.writeInt(data_buffer.position());
+        data_buffer.writeMUtf8(value);
+    }
+
+    public void writeStringSections() {
+        if (strings.length != 0) {
+            map.string_data_items_off = data_buffer.position();
+            map.string_data_items_size = map.string_ids_size;
+        }
+        main_buffer.position(map.string_ids_off);
+        for (var value : strings) {
+            writeString(value);
+        }
+    }
+
+    public void writeType(TypeId value) {
+        main_buffer.writeInt(getStringIndex(value.getDescriptor()));
+    }
+
+    public void writeTypeSection() {
+        main_buffer.position(map.type_ids_off);
+        for (var value : types) {
+            writeType(value);
+        }
+    }
+
+    public void writeField(FieldId value) {
+        main_buffer.writeShort(getTypeIndex(value.getDeclaringClass()));
+        main_buffer.writeShort(getTypeIndex(value.getType()));
+        main_buffer.writeInt(getStringIndex(value.getName()));
+    }
+
+    public void writeFieldSection() {
+        main_buffer.position(map.field_ids_off);
+        for (var value : fields) {
+            writeField(value);
+        }
+    }
+
+    public void writeProto(ProtoId value) {
+        main_buffer.writeInt(getStringIndex(value.getShorty()));
+        main_buffer.writeInt(getTypeIndex(value.getReturnType()));
+        var parameters = value.getParameterTypes();
+        main_buffer.writeInt(parameters.isEmpty() ? 0
+                : getTypeListOffset(parameters));
+    }
+
+    public void writeProtoSection() {
+        main_buffer.position(map.proto_ids_off);
+        for (var value : protos) {
+            writeProto(value);
+        }
+    }
+
+    public void writeMethod(MethodId value) {
+        main_buffer.writeShort(getTypeIndex(value.getDeclaringClass()));
+        main_buffer.writeShort(getProtoIndex(value.getProto()));
+        main_buffer.writeInt(getStringIndex(value.getName()));
+    }
+
+    public void writeMethodSection() {
+        main_buffer.position(map.method_ids_off);
+        for (var value : methods) {
+            writeMethod(value);
+        }
+    }
+
+    //public void writeCallSite(CallSiteIdContainer value) {
+    //    main_buffer.writeInt(getEncodedArrayOffset(value.array()));
+    //}
+    //public void writeCallSiteSection() {
+    //    main_buffer.position(map.call_site_ids_off);
+    //    for (var value : call_sites) {
+    //        writeCallSite(value);
+    //    }
+    //}
+
+    public void writeMethodHandle(MethodHandleId value) {
+        main_buffer.writeShort(value.getHandleType().value());
+        main_buffer.writeShort(0);
+        main_buffer.writeShort(value.getHandleType().isMethodAccess()
+                ? getMethodIndex((MethodId) value.getMember())
+                : getFieldIndex((FieldId) value.getMember()));
+        main_buffer.writeShort(0);
+    }
+
+    public void writeMethodHandleSection() {
+        main_buffer.position(map.method_handles_off);
+        for (var value : method_handles) {
+            writeMethodHandle(value);
+        }
+    }
+
+    public void writeClassDef(ClassDefContainer value) {
+        main_buffer.writeInt(getTypeIndex(value.value().getType()));
+        main_buffer.writeInt(value.value().getAccessFlags());
+        var superclass = value.value().getSuperclass();
+        main_buffer.writeInt(superclass == null ? NO_INDEX : getTypeIndex(superclass));
+        var interfaces = value.interfaces();
+        main_buffer.writeInt(interfaces.isEmpty() ? 0 : getTypeListOffset(interfaces));
+        var source_file = value.value().getSourceFile();
+        main_buffer.writeInt(source_file == null ? NO_INDEX : getStringIndex(source_file));
+        // TODO: getAnnotationsDirectoryOffset(value.annotations())
+        main_buffer.writeInt(NO_OFFSET);
+        // TODO: class_data.isEmpty() ? NO_OFFSET : getClassDataOffset(class_data)
+        main_buffer.writeInt(NO_OFFSET);
+        var static_values = value.static_values();
+        // TODO static_values.containsOnlyDefaults() ? 0
+        //                : getEncodedArrayOffset(static_values)
+        main_buffer.writeInt(NO_OFFSET);
+    }
+
+    public void writeClassDefSection() {
+        main_buffer.position(map.class_defs_off);
+        for (var value : class_defs) {
+            writeClassDef(value);
+        }
+    }
+
+    public void writeTypeList(List<TypeId> value) {
+        data_buffer.alignPosition(TYPE_LIST_ALIGNMENT);
+        int start = data_buffer.position();
+        data_buffer.writeInt(value.size());
+        for (var tmp : value) {
+            data_buffer.writeShort(getTypeIndex(tmp));
+        }
+        type_lists.replace(value, start);
+    }
+
+    public void writeTypeListSection() {
+        var size = type_lists.size();
+        if (size != 0) {
+            data_buffer.alignPosition(TYPE_LIST_ALIGNMENT);
+            map.type_lists_off = data_buffer.position();
+            map.type_lists_size = size;
+        }
+        for (var tmp : type_lists.keySet()) {
+            writeTypeList(tmp);
+        }
+    }
+}
