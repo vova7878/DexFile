@@ -45,14 +45,35 @@ import com.v7878.dex.DexVersion;
 import com.v7878.dex.Opcodes;
 import com.v7878.dex.ReferenceType.ReferenceIndexer;
 import com.v7878.dex.WriteOptions;
+import com.v7878.dex.immutable.AnnotationElement;
 import com.v7878.dex.immutable.CallSiteId;
+import com.v7878.dex.immutable.CommonAnnotation;
 import com.v7878.dex.immutable.Dex;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MethodHandleId;
 import com.v7878.dex.immutable.MethodId;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.immutable.value.EncodedAnnotation;
+import com.v7878.dex.immutable.value.EncodedArray;
+import com.v7878.dex.immutable.value.EncodedBoolean;
+import com.v7878.dex.immutable.value.EncodedByte;
+import com.v7878.dex.immutable.value.EncodedChar;
+import com.v7878.dex.immutable.value.EncodedDouble;
+import com.v7878.dex.immutable.value.EncodedEnum;
+import com.v7878.dex.immutable.value.EncodedField;
+import com.v7878.dex.immutable.value.EncodedFloat;
+import com.v7878.dex.immutable.value.EncodedInt;
+import com.v7878.dex.immutable.value.EncodedLong;
+import com.v7878.dex.immutable.value.EncodedMethod;
+import com.v7878.dex.immutable.value.EncodedMethodHandle;
+import com.v7878.dex.immutable.value.EncodedMethodType;
+import com.v7878.dex.immutable.value.EncodedShort;
+import com.v7878.dex.immutable.value.EncodedString;
+import com.v7878.dex.immutable.value.EncodedType;
+import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.io.RandomIO;
+import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.raw.DexCollector.CallSiteIdContainer;
 import com.v7878.dex.raw.DexCollector.ClassDefContainer;
 import com.v7878.dex.util.CollectionUtils;
@@ -136,7 +157,7 @@ public class DexWriter implements ReferenceIndexer {
     private final MethodHandleId[] method_handles;
 
     private final Map<List<TypeId>, Integer> type_lists;
-    //private final Map<EncodedArray, Integer> encoded_arrays;
+    private final Map<EncodedArray, Integer> encoded_arrays;
     //private final Map<AnnotationItem, Integer> annotations;
     //private final Map<AnnotationSet, Integer> annotation_sets;
     //private final Map<AnnotationSetList, Integer> annotation_set_lists;
@@ -173,7 +194,7 @@ public class DexWriter implements ReferenceIndexer {
         class_defs = collector.class_defs.toArray(new ClassDefContainer[0]);
 
         type_lists = collector.type_lists;
-        //encoded_arrays = collector.encoded_arrays;
+        encoded_arrays = collector.encoded_arrays;
 
         initMap();
 
@@ -192,7 +213,7 @@ public class DexWriter implements ReferenceIndexer {
         //writeAnnotationsDirectorySection();
         //writeDebugInfoSection();
         //writeCodeItemSection();
-        //writeEncodedArraySection();
+        writeEncodedArraySection();
         //
         writeTypeSection();
         writeFieldSection();
@@ -348,6 +369,15 @@ public class DexWriter implements ReferenceIndexer {
         if (out == null) {
             throw new IllegalArgumentException(
                     "unable to find type list \"" + value + "\"");
+        }
+        return out;
+    }
+
+    public int getEncodedArrayOffset(EncodedArray value) {
+        Integer out = encoded_arrays.get(value);
+        if (out == null) {
+            throw new IllegalArgumentException(
+                    "unable to find encoded array \"" + value + "\"");
         }
         return out;
     }
@@ -609,15 +639,16 @@ public class DexWriter implements ReferenceIndexer {
         }
     }
 
-    //public void writeCallSite(CallSiteIdContainer value) {
-    //    main_buffer.writeInt(getEncodedArrayOffset(value.array()));
-    //}
-    //public void writeCallSiteSection() {
-    //    main_buffer.position(map.call_site_ids_off);
-    //    for (var value : call_sites) {
-    //        writeCallSite(value);
-    //    }
-    //}
+    public void writeCallSite(CallSiteIdContainer value) {
+        main_buffer.writeInt(getEncodedArrayOffset(value.array()));
+    }
+
+    public void writeCallSiteSection() {
+        main_buffer.position(map.call_site_ids_off);
+        for (var value : call_sites) {
+            writeCallSite(value);
+        }
+    }
 
     public void writeMethodHandle(MethodHandleId value) {
         main_buffer.writeShort(value.getHandleType().value());
@@ -680,6 +711,101 @@ public class DexWriter implements ReferenceIndexer {
         }
         for (var tmp : type_lists.keySet()) {
             writeTypeList(tmp);
+        }
+    }
+
+    public void writeEncodedArray(EncodedArray value) {
+        List<EncodedValue> array = value.getValue();
+        int start = data_buffer.position();
+        data_buffer.writeULeb128(array.size());
+        for (EncodedValue tmp : array) {
+            writeEncodedValue(tmp);
+        }
+        encoded_arrays.replace(value, start);
+    }
+
+    public void writeEncodedArraySection() {
+        var size = encoded_arrays.size();
+        if (size != 0) {
+            map.encoded_arrays_off = data_buffer.position();
+            map.encoded_arrays_size = size;
+        }
+        for (var tmp : encoded_arrays.keySet()) {
+            writeEncodedArray(tmp);
+        }
+    }
+
+    public void writeAnnotationElement(AnnotationElement value) {
+        data_buffer.writeULeb128(getStringIndex(value.getName()));
+        writeEncodedValue(value.getValue());
+    }
+
+    public void writeCommonAnnotation(CommonAnnotation value) {
+        var elements = value.getElements();
+        data_buffer.writeULeb128(getTypeIndex(value.getType()));
+        data_buffer.writeULeb128(elements.size());
+        for (var tmp : elements) {
+            writeAnnotationElement(tmp);
+        }
+    }
+
+    //public void writeAnnotation(Annotation value) {
+    //}
+    //
+    //public void writeAnnotationSection() {
+    //    var size = annotations.size();
+    //    if (size != 0) {
+    //        map.annotations_off = data_buffer.position();
+    //        map.annotations_size = size;
+    //    }
+    //    for (var tmp : encoded_arrays.keySet()) {
+    //        writeAnnotation(tmp);
+    //    }
+    //}
+
+    public void writeEncodedValue(EncodedValue value) {
+        var type = value.getValueType();
+        var type_int = type.value();
+        switch (type) {
+            case BOOLEAN -> data_buffer.writeByte(
+                    type_int | (((EncodedBoolean) value).getValue() ? 1 : 0) << 5);
+            case BYTE -> ValueCoder.writeSignedIntegralValue(
+                    data_buffer, type, ((EncodedByte) value).getValue());
+            case SHORT -> ValueCoder.writeSignedIntegralValue(
+                    data_buffer, type, ((EncodedShort) value).getValue());
+            case CHAR -> ValueCoder.writeUnsignedIntegralValue(
+                    data_buffer, type, ((EncodedChar) value).getValue());
+            case INT -> ValueCoder.writeSignedIntegralValue(
+                    data_buffer, type, ((EncodedInt) value).getValue());
+            case FLOAT -> ValueCoder.writeRightZeroExtendedValue(data_buffer, type,
+                    ((long) Float.floatToRawIntBits(((EncodedFloat) value).getValue())) << 32);
+            case LONG -> ValueCoder.writeSignedIntegralValue(
+                    data_buffer, type, ((EncodedLong) value).getValue());
+            case DOUBLE -> ValueCoder.writeRightZeroExtendedValue(data_buffer, type,
+                    Double.doubleToRawLongBits(((EncodedDouble) value).getValue()));
+            case NULL -> data_buffer.writeByte(type_int);
+            case STRING -> ValueCoder.writeUnsignedIntegralValue(data_buffer, type,
+                    getStringIndex(((EncodedString) value).getValue()));
+            case TYPE -> ValueCoder.writeUnsignedIntegralValue(data_buffer, type,
+                    getTypeIndex(((EncodedType) value).getValue()));
+            case FIELD -> ValueCoder.writeUnsignedIntegralValue(data_buffer, type,
+                    getFieldIndex(((EncodedField) value).getValue()));
+            case ENUM -> ValueCoder.writeUnsignedIntegralValue(data_buffer, type,
+                    getFieldIndex(((EncodedEnum) value).getValue()));
+            case METHOD -> ValueCoder.writeUnsignedIntegralValue(data_buffer, type,
+                    getMethodIndex(((EncodedMethod) value).getValue()));
+            case METHOD_TYPE -> ValueCoder.writeUnsignedIntegralValue(data_buffer, type,
+                    getProtoIndex(((EncodedMethodType) value).getValue()));
+            case METHOD_HANDLE -> ValueCoder.writeUnsignedIntegralValue(data_buffer, type,
+                    getMethodHandleIndex(((EncodedMethodHandle) value).getValue()));
+            case ARRAY -> {
+                data_buffer.writeByte(type_int);
+                writeEncodedArray((EncodedArray) value);
+            }
+            case ANNOTATION -> {
+                data_buffer.writeByte(type_int);
+                writeCommonAnnotation((EncodedAnnotation) value);
+            }
         }
     }
 }

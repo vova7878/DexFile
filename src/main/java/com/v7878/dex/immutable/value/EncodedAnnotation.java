@@ -33,10 +33,12 @@ public final class EncodedAnnotation extends EncodedValue implements CommonAnnot
         return ValueType.ANNOTATION;
     }
 
+    @Override
     public TypeId getType() {
         return type;
     }
 
+    @Override
     public NavigableSet<AnnotationElement> getElements() {
         return elements;
     }
