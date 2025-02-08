@@ -25,6 +25,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             Iterable<Annotation> annotations) {
         this.name = Objects.requireNonNull(name);
         this.return_type = Objects.requireNonNull(return_type);
+        // TODO: check that parameters do not contain names if implementation is null
         this.parameters = ItemConverter.toList(parameters);
         this.access_flags = Preconditions.checkMethodAccessFlags(access_flags);
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);

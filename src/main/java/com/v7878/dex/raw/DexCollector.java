@@ -140,11 +140,11 @@ public class DexCollector implements ReferenceCollector {
 
     public record ClassDefContainer(ClassDef value,
                                     List<TypeId> interfaces,
-                                    List<FieldDefContainer> static_fields,
+                                    FieldDefContainer[] static_fields,
                                     EncodedArray static_values,
-                                    List<FieldDefContainer> instance_fields,
-                                    List<MethodDefContainer> direct_methods,
-                                    List<MethodDefContainer> virtual_methods) {
+                                    FieldDefContainer[] instance_fields,
+                                    MethodDefContainer[] direct_methods,
+                                    MethodDefContainer[] virtual_methods) {
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
@@ -157,10 +157,11 @@ public class DexCollector implements ReferenceCollector {
             return value.hashCode();
         }
 
-        private static List<FieldDefContainer> toFieldsList(
+        private static FieldDefContainer[] toFieldsArray(
                 TypeId declaring_class, NavigableSet<FieldDef> fields) {
             return fields.stream().map(value ->
-                    FieldDefContainer.of(declaring_class, value)).toList();
+                            FieldDefContainer.of(declaring_class, value))
+                    .toArray(FieldDefContainer[]::new);
         }
 
         private static EncodedArray toStaticValuesList(NavigableSet<FieldDef> fields) {
@@ -168,10 +169,16 @@ public class DexCollector implements ReferenceCollector {
             return EncodedArray.of(fields.stream().map(FieldDef::getInitialValue).toList());
         }
 
-        private static List<MethodDefContainer> toMethodsList(
+        private static MethodDefContainer[] toMethodsArray(
                 TypeId declaring_class, NavigableSet<MethodDef> methods) {
             return methods.stream().map(value ->
-                    MethodDefContainer.of(declaring_class, value)).toList();
+                            MethodDefContainer.of(declaring_class, value))
+                    .toArray(MethodDefContainer[]::new);
+        }
+
+        public boolean isEmptyClassData() {
+            return static_fields.length == 0 && instance_fields.length == 0
+                    && direct_methods.length == 0 && virtual_methods.length == 0;
         }
 
         public static ClassDefContainer of(ClassDef value) {
@@ -179,11 +186,11 @@ public class DexCollector implements ReferenceCollector {
             var static_fields = value.getStaticFields();
             return new ClassDefContainer(value,
                     ItemConverter.toList(value.getInterfaces()),
-                    toFieldsList(type, static_fields),
+                    toFieldsArray(type, static_fields),
                     toStaticValuesList(static_fields),
-                    toFieldsList(type, value.getInstanceFields()),
-                    toMethodsList(type, value.getDirectMethods()),
-                    toMethodsList(type, value.getVirtualMethods()));
+                    toFieldsArray(type, value.getInstanceFields()),
+                    toMethodsArray(type, value.getDirectMethods()),
+                    toMethodsArray(type, value.getVirtualMethods()));
         }
     }
 

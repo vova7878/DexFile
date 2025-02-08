@@ -76,6 +76,8 @@ import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.raw.DexCollector.CallSiteIdContainer;
 import com.v7878.dex.raw.DexCollector.ClassDefContainer;
+import com.v7878.dex.raw.DexCollector.FieldDefContainer;
+import com.v7878.dex.raw.DexCollector.MethodDefContainer;
 import com.v7878.dex.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -83,6 +85,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public class DexWriter implements ReferenceIndexer {
     private static class FileMap {
@@ -221,19 +224,19 @@ public class DexWriter implements ReferenceIndexer {
         //writeDebugInfoSection();
         //writeCodeItemSection();
         writeEncodedArraySection();
-        //
+
         writeTypeSection();
         writeFieldSection();
         writeProtoSection();
         writeMethodSection();
-        //writeCallSiteSection();
+        writeCallSiteSection();
         writeMethodHandleSection();
 
         // string id + string data
         writeStringSections();
-        //// class def + class data
-        //ClassDef.writeSections();
-        //
+        // class def + class data
+        writeClassDefSections();
+
         //HiddenApi.writeSection();
 
         writeMap();
@@ -678,6 +681,49 @@ public class DexWriter implements ReferenceIndexer {
         }
     }
 
+    public void writeFieldDef(FieldDefContainer value) {
+        data_buffer.writeULeb128(value.value().getAccessFlags());
+    }
+
+    public void writeFieldDefArray(FieldDefContainer[] array) {
+        int index = 0;
+        for (var tmp : array) {
+            int diff = getFieldIndex(tmp.id()) - index;
+            index += diff;
+            data_buffer.writeULeb128(diff);
+            writeFieldDef(tmp);
+        }
+    }
+
+    public void writeMethodDef(MethodDefContainer value) {
+        data_buffer.writeULeb128(value.value().getAccessFlags());
+        // TODO: code == null ? NO_OFFSET : getCodeItemOffset(code)
+        data_buffer.writeULeb128(NO_OFFSET);
+    }
+
+    public void writeMethodDefArray(MethodDefContainer[] array) {
+        int index = 0;
+        for (var tmp : array) {
+            int diff = getMethodIndex(tmp.id()) - index;
+            index += diff;
+            data_buffer.writeULeb128(diff);
+            writeMethodDef(tmp);
+        }
+    }
+
+    public int writeClassData(ClassDefContainer value) {
+        int start = data_buffer.position();
+        data_buffer.writeULeb128(value.static_fields().length);
+        data_buffer.writeULeb128(value.instance_fields().length);
+        data_buffer.writeULeb128(value.direct_methods().length);
+        data_buffer.writeULeb128(value.virtual_methods().length);
+        writeFieldDefArray(value.static_fields());
+        writeFieldDefArray(value.instance_fields());
+        writeMethodDefArray(value.direct_methods());
+        writeMethodDefArray(value.virtual_methods());
+        return start;
+    }
+
     public void writeClassDef(ClassDefContainer value) {
         main_buffer.writeInt(getTypeIndex(value.value().getType()));
         main_buffer.writeInt(value.value().getAccessFlags());
@@ -692,14 +738,19 @@ public class DexWriter implements ReferenceIndexer {
                 NO_INDEX : getStringIndex(source_file));
         // TODO: getAnnotationsDirectoryOffset(value.annotations())
         main_buffer.writeInt(NO_OFFSET);
-        // TODO: class_data.isEmpty() ? NO_OFFSET : getClassDataOffset(class_data)
-        main_buffer.writeInt(NO_OFFSET);
+        main_buffer.writeInt(value.isEmptyClassData() ?
+                NO_OFFSET : writeClassData(value));
         var static_values = value.static_values();
         main_buffer.writeInt(static_values == null ?
                 NO_OFFSET : getEncodedArrayOffset(static_values));
     }
 
-    public void writeClassDefSection() {
+    public void writeClassDefSections() {
+        map.class_data_items_size = Stream.of(class_defs)
+                .mapToInt(def -> def.isEmptyClassData() ? 0 : 1).sum();
+        if (map.class_data_items_size != 0) {
+            map.class_data_items_off = data_buffer.position();
+        }
         main_buffer.position(map.class_defs_off);
         for (var value : class_defs) {
             writeClassDef(value);
