@@ -138,6 +138,8 @@ public class DexWriter implements ReferenceIndexer {
         public int compact_debug_info_offsets_pos;
         public int compact_debug_info_offsets_table_offset;
         public int compact_debug_info_base;
+        public int compact_owned_data_begin;
+        public int compact_owned_data_end;
     }
 
     private final RandomIO main_buffer;
@@ -178,6 +180,11 @@ public class DexWriter implements ReferenceIndexer {
                 options.isTargetForArt(), options.hasOdexInstructions());
 
         map = new FileMap();
+
+        if (isCompact()) {
+            // TODO
+            map.compact_feature_flags = /* kDefaultMethods */ 0x1;
+        }
 
         var collector = new DexCollector();
         collector.fill(dexfile);
@@ -237,6 +244,8 @@ public class DexWriter implements ReferenceIndexer {
         if (isCompact()) {
             map.file_size = map.data_off;
             map.data_size = data_buffer.position();
+            map.compact_owned_data_begin = 0;
+            map.compact_owned_data_end = map.data_size;
         } else {
             map.file_size = data_buffer.position();
             map.data_size = map.file_size - map.data_off;
@@ -382,30 +391,6 @@ public class DexWriter implements ReferenceIndexer {
         return out;
     }
 
-    public void finalizeHeader(int container_size) {
-        //if (isCompact()) {
-        //    // TODO: How are the checksum and signature fields calculated for compact dex?
-        //} else {
-        //    out.position(SIGNATURE_OFFSET);
-        //    MessageDigest md;
-        //    try {
-        //        md = MessageDigest.getInstance("SHA-1");
-        //    } catch (NoSuchAlgorithmException e) {
-        //        throw new RuntimeException("unable to find SHA-1 MessageDigest", e);
-        //    }
-        //    byte[] signature = md.digest(out.duplicate(FILE_SIZE_OFFSET)
-        //            .readByteArray(file_size - FILE_SIZE_OFFSET));
-        //    out.writeByteArray(signature);
-        //
-        //    out.position(CHECKSUM_OFFSET);
-        //    Adler32 adler = new Adler32();
-        //    int adler_length = file_size - SIGNATURE_OFFSET;
-        //    adler.update(out.duplicate(SIGNATURE_OFFSET)
-        //            .readByteArray(adler_length), 0, adler_length);
-        //    out.writeInt((int) adler.getValue());
-        //}
-    }
-
     public int getFileSize() {
         return map.file_size;
     }
@@ -432,7 +417,7 @@ public class DexWriter implements ReferenceIndexer {
 
     public void writeHeader() {
         main_buffer.position(MAGIC_OFFSET);
-        main_buffer.writeLong(version().getMagic()); // little-endian
+        main_buffer.writeLong(version().getMagic()); // TODO: only little-endian
         main_buffer.addPosition(4); // checksum
         main_buffer.addPosition(20); // signature
         main_buffer.writeInt(map.file_size);
@@ -458,18 +443,48 @@ public class DexWriter implements ReferenceIndexer {
         main_buffer.writeInt(map.data_size > 0 ? map.data_off : 0);
 
         if (isCompact()) {
-            //TODO
-            main_buffer.writeInt(0x1 /* kDefaultMethods */); // compact_feature_flags
-            main_buffer.writeInt(0); // compact_debug_info_offsets_pos
-            main_buffer.writeInt(0); // compact_debug_info_offsets_table_offset
-            main_buffer.writeInt(0); // compact_debug_info_base
-            main_buffer.writeInt(0); // owned_data_begin
-            main_buffer.writeInt(map.data_size); // owned_data_end
+            main_buffer.writeInt(map.compact_feature_flags);
+            main_buffer.writeInt(map.compact_debug_info_offsets_pos);
+            main_buffer.writeInt(map.compact_debug_info_offsets_table_offset);
+            main_buffer.writeInt(map.compact_debug_info_base);
+            main_buffer.writeInt(map.compact_owned_data_begin);
+            main_buffer.writeInt(map.compact_owned_data_end);
         } else if (isDexContainer()) {
             //TODO
             main_buffer.writeInt(0); // container_size
             main_buffer.writeInt(0); // container_offset
         }
+    }
+
+    public void finalizeHeader(int container_size) {
+        //if (isCompact()) {
+        //    // TODO: How are the checksum and signature fields calculated for compact dex?
+        //} else {
+        //    out.position(SIGNATURE_OFFSET);
+        //    MessageDigest md;
+        //    try {
+        //        md = MessageDigest.getInstance("SHA-1");
+        //    } catch (NoSuchAlgorithmException e) {
+        //        throw new RuntimeException("unable to find SHA-1 MessageDigest", e);
+        //    }
+        //    byte[] signature = md.digest(out.duplicate(FILE_SIZE_OFFSET)
+        //            .readByteArray(file_size - FILE_SIZE_OFFSET));
+        //    out.writeByteArray(signature);
+        //
+        //    out.position(CHECKSUM_OFFSET);
+        //    Adler32 adler = new Adler32();
+        //    int adler_length = file_size - SIGNATURE_OFFSET;
+        //    adler.update(out.duplicate(SIGNATURE_OFFSET)
+        //            .readByteArray(adler_length), 0, adler_length);
+        //    out.writeInt((int) adler.getValue());
+        //}
+    }
+
+    public void writeMapItem(MapItem value) {
+        data_buffer.writeShort(value.type());
+        data_buffer.writeShort(0);
+        data_buffer.writeInt(value.size());
+        data_buffer.writeInt(value.offset());
     }
 
     public void writeMap() {
@@ -564,10 +579,7 @@ public class DexWriter implements ReferenceIndexer {
 
         data_buffer.writeInt(list.size());
         for (MapItem tmp : list) {
-            data_buffer.writeShort(tmp.type());
-            data_buffer.writeShort(0);
-            data_buffer.writeInt(tmp.size());
-            data_buffer.writeInt(tmp.offset());
+            writeMapItem(tmp);
         }
     }
 
@@ -670,19 +682,21 @@ public class DexWriter implements ReferenceIndexer {
         main_buffer.writeInt(getTypeIndex(value.value().getType()));
         main_buffer.writeInt(value.value().getAccessFlags());
         var superclass = value.value().getSuperclass();
-        main_buffer.writeInt(superclass == null ? NO_INDEX : getTypeIndex(superclass));
+        main_buffer.writeInt(superclass == null ?
+                NO_INDEX : getTypeIndex(superclass));
         var interfaces = value.interfaces();
-        main_buffer.writeInt(interfaces.isEmpty() ? 0 : getTypeListOffset(interfaces));
+        main_buffer.writeInt(interfaces.isEmpty() ?
+                NO_OFFSET : getTypeListOffset(interfaces));
         var source_file = value.value().getSourceFile();
-        main_buffer.writeInt(source_file == null ? NO_INDEX : getStringIndex(source_file));
+        main_buffer.writeInt(source_file == null ?
+                NO_INDEX : getStringIndex(source_file));
         // TODO: getAnnotationsDirectoryOffset(value.annotations())
         main_buffer.writeInt(NO_OFFSET);
         // TODO: class_data.isEmpty() ? NO_OFFSET : getClassDataOffset(class_data)
         main_buffer.writeInt(NO_OFFSET);
         var static_values = value.static_values();
-        // TODO static_values.containsOnlyDefaults() ? 0
-        //                : getEncodedArrayOffset(static_values)
-        main_buffer.writeInt(NO_OFFSET);
+        main_buffer.writeInt(static_values == null ?
+                NO_OFFSET : getEncodedArrayOffset(static_values));
     }
 
     public void writeClassDefSection() {

@@ -164,7 +164,7 @@ public class DexCollector implements ReferenceCollector {
         }
 
         private static EncodedArray toStaticValuesList(NavigableSet<FieldDef> fields) {
-            //TODO: trim default values
+            //TODO: trim default values, null if contains only defaults
             return EncodedArray.of(fields.stream().map(FieldDef::getInitialValue).toList());
         }
 
