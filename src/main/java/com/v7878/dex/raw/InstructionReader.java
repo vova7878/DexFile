@@ -52,7 +52,40 @@ public class InstructionReader {
         }
         var opcode = reader.opcodes().getOpcodeByValue(raw_opcode);
 
-        return opcode.format().read(opcode, in, arg, reader);
+        return switch (opcode.format()) {
+            case Format10t -> read_10t(opcode, arg);
+            case Format10x -> read_10x(opcode, arg);
+            case Format11n -> read_11n(opcode, arg);
+            case Format11x -> read_11x(opcode, arg);
+            case Format12x -> read_12x(opcode, arg);
+            // TODO
+            case Format20bc -> throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format20t -> read_20t(opcode, in, arg);
+            case Format21c -> read_21c(opcode, in, reader, arg);
+            case Format21ih -> read_21ih(opcode, in, arg);
+            case Format21lh -> read_21lh(opcode, in, arg);
+            case Format21s -> read_21s(opcode, in, arg);
+            case Format21t -> read_21t(opcode, in, arg);
+            case Format22b -> read_22b(opcode, in, arg);
+            case Format22c22cs -> read_22c2cs(opcode, in, reader, arg);
+            case Format22s -> read_22s(opcode, in, arg);
+            case Format22t -> read_22t(opcode, in, arg);
+            case Format22x -> read_22x(opcode, in, arg);
+            case Format23x -> read_23x(opcode, in, arg);
+            case Format30t -> read_30t(opcode, in, arg);
+            case Format31c -> read_31c(opcode, in, reader, arg);
+            case Format31i -> read_31i(opcode, in, arg);
+            case Format31t -> read_31t(opcode, in, arg);
+            case Format32x -> read_32x(opcode, in, arg);
+            case Format35c35mi35ms -> read_35c_35ms_35mi(opcode, in, reader, arg);
+            case Format3rc3rmi3rms -> read_3rc_3rms_3rmi(opcode, in, reader, arg);
+            case Format45cc -> read_45cc(opcode, in, reader, arg);
+            case Format4rcc -> read_4rcc(opcode, in, reader, arg);
+            case Format51l -> read_51l(opcode, in, arg);
+            case ArrayPayload -> read_array_payload(opcode, in, arg);
+            case PackedSwitchPayload -> read_packed_switch_payload(opcode, in, arg);
+            case SparseSwitchPayload -> read_sparse_switch_payload(opcode, in, arg);
+        };
     }
 
     //TODO: find a way to read code with incorrect instructions (which used to protect dex from reading)

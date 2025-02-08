@@ -1,168 +1,37 @@
 package com.v7878.dex;
 
-import com.v7878.dex.ReferenceType.ReferenceStorage;
-import com.v7878.dex.immutable.bytecode.Instruction;
-import com.v7878.dex.io.RandomInput;
-import com.v7878.dex.raw.InstructionReader;
-
 public enum Format {
-    Format10t(1) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_10t(opcode, arg);
-        }
-    }, Format10x(1) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_10x(opcode, arg);
-        }
-    }, Format11n(1) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_11n(opcode, arg);
-        }
-    }, Format11x(1) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_11x(opcode, arg);
-        }
-    }, Format12x(1) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_12x(opcode, arg);
-        }
-    }, Format20bc(2, true, false) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            //TODO
-            throw new UnsupportedOperationException("Unimplemented yet!");
-        }
-    }, Format20t(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_20t(opcode, in, arg);
-        }
-    }, Format21c(2, true, false) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_21c(opcode, in, indexer, arg);
-        }
-    }, Format21ih(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_21ih(opcode, in, arg);
-        }
-    }, Format21lh(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_21lh(opcode, in, arg);
-        }
-    }, Format21s(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_21s(opcode, in, arg);
-        }
-    }, Format21t(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_21t(opcode, in, arg);
-        }
-    }, Format22b(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_22b(opcode, in, arg);
-        }
-    }, Format22c22cs(2, true, false) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_22c2cs(opcode, in, indexer, arg);
-        }
-    }, Format22s(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_22s(opcode, in, arg);
-        }
-    }, Format22t(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_22t(opcode, in, arg);
-        }
-    }, Format22x(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_22x(opcode, in, arg);
-        }
-    }, Format23x(2) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_23x(opcode, in, arg);
-        }
-    }, Format30t(3) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_30t(opcode, in, arg);
-        }
-    }, Format31c(3, true, false) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_31c(opcode, in, indexer, arg);
-        }
-    }, Format31i(3) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_31i(opcode, in, arg);
-        }
-    }, Format31t(3) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_31t(opcode, in, arg);
-        }
-    }, Format32x(3) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_32x(opcode, in, arg);
-        }
-    }, Format35c35mi35ms(3, true, false) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_35c_35ms_35mi(opcode, in, indexer, arg);
-        }
-    }, Format3rc3rmi3rms(3, true, false) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_3rc_3rms_3rmi(opcode, in, indexer, arg);
-        }
-    }, Format45cc(4, true, true) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_45cc(opcode, in, indexer, arg);
-        }
-    }, Format4rcc(4, true, true) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_4rcc(opcode, in, indexer, arg);
-        }
-    }, Format51l(5) {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_51l(opcode, in, arg);
-        }
-    }, ArrayPayload() {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_array_payload(opcode, in, arg);
-        }
-    }, PackedSwitchPayload() {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_packed_switch_payload(opcode, in, arg);
-        }
-    }, SparseSwitchPayload() {
-        @Override
-        public Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer) {
-            return InstructionReader.read_sparse_switch_payload(opcode, in, arg);
-        }
-    };
+    Format10t(1),
+    Format10x(1),
+    Format11n(1),
+    Format11x(1),
+    Format12x(1),
+    Format20bc(2, true, false),
+    Format20t(2),
+    Format21c(2, true, false),
+    Format21ih(2),
+    Format21lh(2),
+    Format21s(2),
+    Format21t(2),
+    Format22b(2),
+    Format22c22cs(2, true, false),
+    Format22s(2),
+    Format22t(2),
+    Format22x(2),
+    Format23x(2),
+    Format30t(3),
+    Format31c(3, true, false),
+    Format31i(3),
+    Format31t(3),
+    Format32x(3),
+    Format35c35mi35ms(3, true, false),
+    Format3rc3rmi3rms(3, true, false),
+    Format45cc(4, true, true),
+    Format4rcc(4, true, true),
+    Format51l(5),
+    ArrayPayload(),
+    PackedSwitchPayload(),
+    SparseSwitchPayload();
 
     private final int units;
     private final boolean payload;
@@ -207,5 +76,4 @@ public enum Format {
         return reference2;
     }
 
-    public abstract Instruction read(Opcode opcode, RandomInput in, int arg, ReferenceStorage indexer);
 }
