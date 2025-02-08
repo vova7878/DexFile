@@ -2,7 +2,7 @@ package com.v7878.dex.immutable.bytecode;
 
 import java.util.Objects;
 
-public final class SwitchElement {
+public final class SwitchElement implements Comparable<SwitchElement> {
     private final int key;
     private final int offset;
 
@@ -34,5 +34,11 @@ public final class SwitchElement {
         return obj instanceof SwitchElement other
                 && getKey() == other.getKey()
                 && getOffset() == other.getOffset();
+    }
+
+    @Override
+    public int compareTo(SwitchElement other) {
+        if (other == this) return 0;
+        return Integer.compare(getKey(), other.getKey());
     }
 }

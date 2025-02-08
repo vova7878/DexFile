@@ -7,15 +7,15 @@ import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 
-import java.util.List;
+import java.util.NavigableSet;
 import java.util.Objects;
 
 public final class SparseSwitchPayload extends Instruction implements SwitchPayloadInstruction {
-    private final List<SwitchElement> elements;
+    private final NavigableSet<SwitchElement> elements;
 
     private SparseSwitchPayload(Iterable<SwitchElement> elements) {
         super(Preconditions.checkFormat(SPARSE_SWITCH_PAYLOAD, Format.SparseSwitchPayload));
-        this.elements = ItemConverter.toList(elements);
+        this.elements = ItemConverter.toNavigableSet(elements);
     }
 
     public static SparseSwitchPayload of(Iterable<SwitchElement> elements) {
@@ -23,7 +23,7 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
     }
 
     @Override
-    public List<SwitchElement> getSwitchElements() {
+    public NavigableSet<SwitchElement> getSwitchElements() {
         return elements;
     }
 

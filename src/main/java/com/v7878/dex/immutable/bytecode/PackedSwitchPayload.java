@@ -7,11 +7,11 @@ import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 
-import java.util.List;
+import java.util.NavigableSet;
 import java.util.Objects;
 
 public final class PackedSwitchPayload extends Instruction implements SwitchPayloadInstruction {
-    private final List<SwitchElement> elements;
+    private final NavigableSet<SwitchElement> elements;
 
     private PackedSwitchPayload(Iterable<SwitchElement> elements) {
         super(Preconditions.checkFormat(PACKED_SWITCH_PAYLOAD, Format.PackedSwitchPayload));
@@ -23,7 +23,7 @@ public final class PackedSwitchPayload extends Instruction implements SwitchPayl
     }
 
     @Override
-    public List<SwitchElement> getSwitchElements() {
+    public NavigableSet<SwitchElement> getSwitchElements() {
         return elements;
     }
 

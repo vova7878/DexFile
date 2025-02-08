@@ -5,6 +5,7 @@ import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
 
 import java.util.List;
+import java.util.NavigableSet;
 
 public class Preconditions {
     public static int checkInnerClassAccessFlags(int access_flags) {
@@ -189,7 +190,7 @@ public class Preconditions {
         return index;
     }
 
-    public static List<SwitchElement> checkSequentialOrderedKeys(List<SwitchElement> elements) {
+    public static NavigableSet<SwitchElement> checkSequentialOrderedKeys(NavigableSet<SwitchElement> elements) {
         Integer previousKey = null;
         for (SwitchElement element : elements) {
             int key = element.getKey();
