@@ -254,6 +254,7 @@ public class DexCollector implements ReferenceCollector {
     @Override
     public void add(ProtoId value) {
         protos.add(value);
+        add(value.getShorty());
         add(value.getReturnType());
         add(value.getParameterTypes());
     }
@@ -288,11 +289,13 @@ public class DexCollector implements ReferenceCollector {
         var container = ClassDefContainer.of(value);
         class_defs.add(container);
         add(value.getType());
+        var superclass = value.getSuperclass();
+        if (superclass != null) add(superclass);
         var interfaces = container.interfaces();
         if (interfaces != null) add(interfaces);
         add(container.interfaces());
-        var superclass = value.getSuperclass();
-        if (superclass != null) add(superclass);
+        var source_file = value.getSourceFile();
+        if (source_file != null) add(source_file);
         add(container.static_values());
         for (var field : container.static_fields()) {
             fill(field);
