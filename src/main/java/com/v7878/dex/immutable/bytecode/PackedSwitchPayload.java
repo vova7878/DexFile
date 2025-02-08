@@ -15,7 +15,7 @@ public final class PackedSwitchPayload extends Instruction implements SwitchPayl
 
     private PackedSwitchPayload(Iterable<SwitchElement> elements) {
         super(Preconditions.checkFormat(PACKED_SWITCH_PAYLOAD, Format.PackedSwitchPayload));
-        this.elements = Preconditions.checkSequentialOrderedKeys(ItemConverter.toList(elements));
+        this.elements = Preconditions.checkSequentialOrderedKeys(ItemConverter.toNavigableSet(elements));
     }
 
     public static PackedSwitchPayload of(Iterable<SwitchElement> elements) {
