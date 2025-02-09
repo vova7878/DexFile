@@ -677,6 +677,7 @@ public class DexReader implements ReferenceStorage {
         return TryBlock.of(start_addr, unit_count, handler.elements(), handler.catch_all_addr());
     }
 
+    // TODO: merge with DexWriter
     private static final int kRegistersSizeShift = 12;
     private static final int kInsSizeShift = 8;
     private static final int kOutsSizeShift = 4;

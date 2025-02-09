@@ -27,6 +27,8 @@ import static com.v7878.dex.DexConstants.TYPE_TYPE_LIST;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
+import static com.v7878.dex.DexOffsets.CODE_ITEM_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.COMPACT_CODE_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.COMPACT_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.DATA_SECTION_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.DEXCONTAINER_HEADER_SIZE;
@@ -37,6 +39,8 @@ import static com.v7878.dex.DexOffsets.METHOD_HANDLE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.METHOD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.PROTO_ID_SIZE;
 import static com.v7878.dex.DexOffsets.STRING_ID_SIZE;
+import static com.v7878.dex.DexOffsets.TRY_ITEM_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_LIST_ALIGNMENT;
 import static com.v7878.misc.Math.roundUp;
@@ -54,6 +58,7 @@ import com.v7878.dex.immutable.MethodHandleId;
 import com.v7878.dex.immutable.MethodId;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
 import com.v7878.dex.immutable.value.EncodedArray;
 import com.v7878.dex.immutable.value.EncodedBoolean;
@@ -73,16 +78,20 @@ import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.io.RandomIO;
+import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.raw.DexCollector.CallSiteIdContainer;
 import com.v7878.dex.raw.DexCollector.ClassDefContainer;
+import com.v7878.dex.raw.DexCollector.CodeContainer;
 import com.v7878.dex.raw.DexCollector.FieldDefContainer;
 import com.v7878.dex.raw.DexCollector.MethodDefContainer;
+import com.v7878.dex.raw.DexCollector.TryBlockContainer;
 import com.v7878.dex.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -163,14 +172,12 @@ public class DexWriter implements ReferenceIndexer {
 
     private final Map<List<TypeId>, Integer> type_lists;
     private final Map<EncodedArray, Integer> encoded_arrays;
+    private final Map<CodeContainer, Integer> code_items;
     //private final Map<AnnotationItem, Integer> annotations;
     //private final Map<AnnotationSet, Integer> annotation_sets;
     //private final Map<AnnotationSetList, Integer> annotation_set_lists;
     //private final Map<TypeId, Integer> annotations_directories;
-    //private final Map<CodeItem, Integer> code_items;
     //private final Map<DebugInfo, Integer> debug_infos;
-
-    //private final Map<ClassData, Integer> class_data_items;
 
     private final ClassDefContainer[] class_defs;
 
@@ -205,6 +212,7 @@ public class DexWriter implements ReferenceIndexer {
 
         type_lists = collector.type_lists;
         encoded_arrays = collector.encoded_arrays;
+        code_items = collector.code_items;
 
         initMap();
 
@@ -217,13 +225,13 @@ public class DexWriter implements ReferenceIndexer {
         }
 
         writeTypeListSection();
+        writeEncodedArraySection();
+        //writeDebugInfoSection();
+        writeCodeItemSection();
         //writeAnnotationItemSection();
         //writeAnnotationSetSection();
         //writeAnnotationSetListSection();
         //writeAnnotationsDirectorySection();
-        //writeDebugInfoSection();
-        //writeCodeItemSection();
-        writeEncodedArraySection();
 
         writeTypeSection();
         writeFieldSection();
@@ -390,6 +398,15 @@ public class DexWriter implements ReferenceIndexer {
         if (out == null) {
             throw new IllegalArgumentException(
                     "unable to find encoded array \"" + value + "\"");
+        }
+        return out;
+    }
+
+    public int getCodeItemOffset(CodeContainer value) {
+        Integer out = code_items.get(value);
+        if (out == null) {
+            throw new IllegalArgumentException(
+                    "unable to find code item \"" + value + "\"");
         }
         return out;
     }
@@ -697,8 +714,8 @@ public class DexWriter implements ReferenceIndexer {
 
     public void writeMethodDef(MethodDefContainer value) {
         data_buffer.writeULeb128(value.value().getAccessFlags());
-        // TODO: code == null ? NO_OFFSET : getCodeItemOffset(code)
-        data_buffer.writeULeb128(NO_OFFSET);
+        var code = value.code();
+        data_buffer.writeULeb128(code == null ? NO_OFFSET : getCodeItemOffset(code));
     }
 
     public void writeMethodDefArray(MethodDefContainer[] array) {
@@ -731,7 +748,7 @@ public class DexWriter implements ReferenceIndexer {
         main_buffer.writeInt(superclass == null ?
                 NO_INDEX : getTypeIndex(superclass));
         var interfaces = value.interfaces();
-        main_buffer.writeInt(interfaces.isEmpty() ?
+        main_buffer.writeInt(interfaces == null ?
                 NO_OFFSET : getTypeListOffset(interfaces));
         var source_file = value.value().getSourceFile();
         main_buffer.writeInt(source_file == null ?
@@ -776,6 +793,198 @@ public class DexWriter implements ReferenceIndexer {
         }
         for (var tmp : type_lists.keySet()) {
             writeTypeList(tmp);
+        }
+    }
+
+    private int countCodeUnits(List<Instruction> insns) {
+        boolean has_payloads = false;
+        int out = 0;
+        for (var tmp : insns) {
+            out += tmp.getUnitCount();
+            if (!has_payloads) {
+                has_payloads = tmp.getOpcode().isPayload();
+            }
+        }
+        return has_payloads ? ~out : out;
+    }
+
+    // TODO: merge with DexReader
+    private static final int kRegistersSizeShift = 12;
+    private static final int kInsSizeShift = 8;
+    private static final int kOutsSizeShift = 4;
+    private static final int kTriesSizeSizeShift = 0;
+    private static final int kInsnsSizeShift = 5;
+
+    private static final int kInsnsSizeMask = 0xffff >>> kInsnsSizeShift;
+
+    private static final int kFlagPreHeaderRegistersSize = 0b00001;
+    private static final int kFlagPreHeaderInsSize = 0b00010;
+    private static final int kFlagPreHeaderOutsSize = 0b00100;
+    private static final int kFlagPreHeaderTriesSize = 0b01000;
+    private static final int kFlagPreHeaderInsnsSize = 0b10000;
+
+    private int writePreHeader(int registers_size, int ins_size,
+                               int outs_size, int tries_size,
+                               int insns_count, boolean has_payloads) {
+        registers_size -= ins_size;
+        int fields = (registers_size & 0xF) << kRegistersSizeShift
+                | (ins_size & 0xF) << kInsSizeShift
+                | (outs_size & 0xF) << kOutsSizeShift
+                | (tries_size & 0xF) << kTriesSizeSizeShift;
+        registers_size &= ~0xF;
+        ins_size &= ~0xF;
+        outs_size &= ~0xF;
+        tries_size &= ~0xF;
+
+        int insns_count_and_flags = (insns_count & kInsnsSizeMask) << kInsnsSizeShift;
+        insns_count &= ~kInsnsSizeMask;
+
+        if (has_payloads) {
+            boolean odd_shorts = (tries_size != 0) ^ (outs_size != 0) ^ (ins_size != 0)
+                    ^ (registers_size != 0) ^ ((data_buffer.position() & 0b10) != 0);
+            if (odd_shorts) {
+                data_buffer.addPosition(2);
+            }
+        }
+
+        if (tries_size != 0) {
+            data_buffer.writeShort(tries_size);
+            insns_count_and_flags |= kFlagPreHeaderTriesSize;
+        }
+        if (outs_size != 0) {
+            data_buffer.writeShort(outs_size);
+            insns_count_and_flags |= kFlagPreHeaderOutsSize;
+        }
+        if (ins_size != 0) {
+            data_buffer.writeShort(ins_size);
+            insns_count_and_flags |= kFlagPreHeaderInsSize;
+        }
+        if (registers_size != 0) {
+            data_buffer.writeShort(registers_size);
+            insns_count_and_flags |= kFlagPreHeaderRegistersSize;
+        }
+        if (insns_count != 0) {
+            insns_count_and_flags |= kFlagPreHeaderInsnsSize;
+            data_buffer.writeShort(insns_count >> 16);
+            data_buffer.writeShort(insns_count);
+        }
+
+        int code_item_start = data_buffer.position();
+
+        data_buffer.writeShort(fields);
+        data_buffer.writeShort(insns_count_and_flags);
+
+        return code_item_start;
+    }
+
+    public void writeCatchHandler(CatchHandler value) {
+        var catch_all_addr = value.catch_all_addr();
+        var elements = value.elements();
+        if (elements.isEmpty() && catch_all_addr == null) {
+            throw new IllegalStateException("Unable to write empty catch handler");
+        }
+        data_buffer.writeSLeb128(catch_all_addr == null ? elements.size() : -elements.size());
+        for (var tmp : elements) {
+            data_buffer.writeULeb128(getTypeIndex(tmp.getExceptionType()));
+            data_buffer.writeULeb128(tmp.getAddress());
+        }
+        if (catch_all_addr != null) {
+            data_buffer.writeULeb128(catch_all_addr);
+        }
+    }
+
+    public void writeTryBlock(TryBlockContainer value, RandomOutput out,
+                              HashMap<CatchHandler, Integer> handlers) {
+        out.writeInt(value.value().getStartAddress());
+        out.writeShort(value.value().getUnitCount());
+        Integer offset = handlers.get(value.handler());
+        if (offset == null) {
+            throw new IllegalStateException(
+                    "Unable to find offset for catch handler");
+        }
+        out.writeShort(offset);
+    }
+
+    public void writeCodeItem(CodeContainer value) {
+        data_buffer.alignPosition(isCompact() ? COMPACT_CODE_ITEM_ALIGNMENT : CODE_ITEM_ALIGNMENT);
+
+        var insns = value.value().getInstructions();
+        var tries = value.tries();
+
+        int registers_size = value.value().getRegisterCount();
+        int ins_size = value.ins();
+        int outs_size = value.outs();
+        int tries_size = value.value().getTryBlocks().size();
+        int insns_count = countCodeUnits(insns);
+        boolean has_payloads = insns_count < 0;
+        insns_count = has_payloads ? ~insns_count : insns_count;
+
+        int code_item_start;
+
+        if (isCompact()) {
+            code_item_start = writePreHeader(registers_size, ins_size,
+                    outs_size, tries_size, insns_count, has_payloads);
+        } else {
+            code_item_start = data_buffer.position();
+
+            data_buffer.writeShort(registers_size);
+            data_buffer.writeShort(ins_size);
+            data_buffer.writeShort(outs_size);
+            data_buffer.writeShort(tries_size);
+            //TODO debug_info.isEmpty() ? NO_OFFSET : context.getDebugInfoOffset(debug_info)
+            data_buffer.writeInt(NO_OFFSET);
+            data_buffer.writeInt(insns_count);
+        }
+
+        int insns_start = data_buffer.position();
+        for (var tmp : insns) {
+            InstructionWriter.writeInstruction(tmp, this, data_buffer);
+        }
+        int insns_size = data_buffer.position() - insns_start;
+
+        if (insns_size != insns_count * 2) {
+            throw new IllegalStateException(String.format(
+                    "Calculated instructions size(%s) != written bytes(%s)",
+                    insns_count * 2, insns_size));
+        }
+
+        if (tries_size != 0) {
+            data_buffer.fillZerosToAlignment(TRY_ITEM_ALIGNMENT);
+
+            var tries_buffer = data_buffer.duplicate();
+            data_buffer.addPosition(TRY_ITEM_SIZE * tries_size);
+
+            HashMap<CatchHandler, Integer> handlers = new HashMap<>(tries_size);
+            for (var tmp : tries) {
+                handlers.put(tmp.handler(), null);
+            }
+
+            int handlers_start = data_buffer.position();
+            data_buffer.writeULeb128(handlers.size());
+
+            for (CatchHandler tmp : handlers.keySet()) {
+                int handler_offset = data_buffer.position() - handlers_start;
+                writeCatchHandler(tmp);
+                handlers.replace(tmp, handler_offset);
+            }
+
+            for (var tmp : tries) {
+                writeTryBlock(tmp, tries_buffer, handlers);
+            }
+        }
+
+        code_items.replace(value, code_item_start);
+    }
+
+    public void writeCodeItemSection() {
+        var size = code_items.size();
+        if (size != 0) {
+            data_buffer.alignPosition(isCompact() ? COMPACT_CODE_ITEM_ALIGNMENT : CODE_ITEM_ALIGNMENT);
+            map.code_items_off = data_buffer.position();
+            map.code_items_size = size;
+        }
+        for (var tmp : code_items.keySet()) {
+            writeCodeItem(tmp);
         }
     }
 

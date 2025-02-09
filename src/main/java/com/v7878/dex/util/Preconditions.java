@@ -210,7 +210,7 @@ public class Preconditions {
         };
     }
 
-    public static <L extends List<? extends Number>> L checkArrayPayloadElements(int elementWidth, L elements) {
+    public static <L extends Number> List<L> checkArrayPayloadElements(int elementWidth, List<L> elements) {
         // TODO: check by type
         return elements;
     }
