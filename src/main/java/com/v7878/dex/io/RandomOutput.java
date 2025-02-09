@@ -94,6 +94,12 @@ public interface RandomOutput {
         }
     }
 
+    default void writeLongArray(long[] ints) {
+        for (long value : ints) {
+            writeLong(value);
+        }
+    }
+
     default void writeBoolean(boolean value) {
         writeByte(value ? 1 : 0);
     }

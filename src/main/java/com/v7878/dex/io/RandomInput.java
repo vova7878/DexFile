@@ -103,6 +103,14 @@ public interface RandomInput {
         return result;
     }
 
+    default long[] readLongArray(int length) {
+        long[] result = new long[length];
+        for (int i = 0; i < length; i++) {
+            result[i] = readLong();
+        }
+        return result;
+    }
+
     default boolean readBoolean() {
         return readByte() != 0;
     }
