@@ -513,87 +513,87 @@ public class DexWriter implements ReferenceIndexer {
         var list = new ArrayList<MapItem>();
 
         // main section
-        list.add(new MapItem(TYPE_HEADER_ITEM, 0, 1));
+        list.add(new MapItem(TYPE_HEADER_ITEM, 1, 0));
         if (map.string_ids_size > 0) {
             list.add(new MapItem(TYPE_STRING_ID_ITEM,
-                    map.string_ids_off, map.string_ids_size));
+                    map.string_ids_size, map.string_ids_off));
         }
         if (map.type_ids_size > 0) {
             list.add(new MapItem(TYPE_TYPE_ID_ITEM,
-                    map.type_ids_off, map.type_ids_size));
+                    map.type_ids_size, map.type_ids_off));
         }
         if (map.proto_ids_size > 0) {
             list.add(new MapItem(TYPE_PROTO_ID_ITEM,
-                    map.proto_ids_off, map.proto_ids_size));
+                    map.proto_ids_size, map.proto_ids_off));
         }
         if (map.field_ids_size > 0) {
             list.add(new MapItem(TYPE_FIELD_ID_ITEM,
-                    map.field_ids_off, map.field_ids_size));
+                    map.field_ids_size, map.field_ids_off));
         }
         if (map.method_ids_size > 0) {
             list.add(new MapItem(TYPE_METHOD_ID_ITEM,
-                    map.method_ids_off, map.method_ids_size));
+                    map.method_ids_size, map.method_ids_off));
         }
         if (map.class_defs_size > 0) {
             list.add(new MapItem(TYPE_CLASS_DEF_ITEM,
-                    map.class_defs_off, map.class_defs_size));
+                    map.class_defs_size, map.class_defs_off));
         }
         if (map.call_site_ids_size > 0) {
             list.add(new MapItem(TYPE_CALL_SITE_ID_ITEM,
-                    map.call_site_ids_off, map.call_site_ids_size));
+                    map.call_site_ids_size, map.call_site_ids_off));
         }
         if (map.method_handles_size > 0) {
             list.add(new MapItem(TYPE_METHOD_HANDLE_ITEM,
-                    map.method_handles_off, map.method_handles_size));
+                    map.method_handles_size, map.method_handles_off));
         }
 
         // data section
         if (map.type_lists_size > 0) {
             list.add(new MapItem(TYPE_TYPE_LIST,
-                    map.type_lists_off, map.type_lists_size));
+                    map.type_lists_size, map.type_lists_off));
         }
         if (map.annotation_set_refs_size > 0) {
             list.add(new MapItem(TYPE_ANNOTATION_SET_REF_LIST,
-                    map.annotation_set_refs_off, map.annotation_set_refs_size));
+                    map.annotation_set_refs_size, map.annotation_set_refs_off));
         }
         if (map.annotation_sets_size > 0) {
             list.add(new MapItem(TYPE_ANNOTATION_SET_ITEM,
-                    map.annotation_sets_off, map.annotation_sets_size));
+                    map.annotation_sets_size, map.annotation_sets_off));
         }
         if (map.class_data_items_size > 0) {
             list.add(new MapItem(TYPE_CLASS_DATA_ITEM,
-                    map.class_data_items_off, map.class_data_items_size));
+                    map.class_data_items_size, map.class_data_items_off));
         }
         if (map.code_items_size > 0) {
             list.add(new MapItem(TYPE_CODE_ITEM,
-                    map.code_items_off, map.code_items_size));
+                    map.code_items_size, map.code_items_off));
         }
         if (map.string_data_items_size > 0) {
             list.add(new MapItem(TYPE_STRING_DATA_ITEM,
-                    map.string_data_items_off, map.string_data_items_size));
+                    map.string_data_items_size, map.string_data_items_off));
         }
         if (map.debug_info_items_size > 0) {
             list.add(new MapItem(TYPE_DEBUG_INFO_ITEM,
-                    map.debug_info_items_off, map.debug_info_items_size));
+                    map.debug_info_items_size, map.debug_info_items_off));
         }
         if (map.annotations_size > 0) {
             list.add(new MapItem(TYPE_ANNOTATION_ITEM,
-                    map.annotations_off, map.annotations_size));
+                    map.annotations_size, map.annotations_off));
         }
         if (map.encoded_arrays_size > 0) {
             list.add(new MapItem(TYPE_ENCODED_ARRAY_ITEM,
-                    map.encoded_arrays_off, map.encoded_arrays_size));
+                    map.encoded_arrays_size, map.encoded_arrays_off));
         }
         if (map.annotations_directories_size > 0) {
             list.add(new MapItem(TYPE_ANNOTATIONS_DIRECTORY_ITEM,
-                    map.annotations_directories_off, map.annotations_directories_size));
+                    map.annotations_directories_size, map.annotations_directories_off));
         }
         if (map.hiddenapi_class_data_items_off > 0) {
             list.add(new MapItem(TYPE_HIDDENAPI_CLASS_DATA_ITEM,
-                    map.hiddenapi_class_data_items_off, 1));
+                    1, map.hiddenapi_class_data_items_off));
         }
 
-        list.add(new MapItem(TYPE_MAP_LIST, map.map_list_off, 1));
+        list.add(new MapItem(TYPE_MAP_LIST, 1, map.map_list_off));
 
         list.sort(Comparator.comparingInt(MapItem::offset));
 
