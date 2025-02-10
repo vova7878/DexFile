@@ -375,8 +375,8 @@ public class InstructionWriter {
     }
 
     public static void write_3rc_3rms_3rmi(Instruction3rc3rmi3rms value, ReferenceIndexer indexer, RandomOutput out, int opcode) {
-        write_3rc_3rms_3rmi(out, opcode, value.getRegisterCount(), value.getStartRegister(),
-                value.getOpcode().getReferenceType1().refToIndex(indexer, value.getReference1()));
+        write_3rc_3rms_3rmi(out, opcode, value.getRegisterCount(), value.getOpcode()
+                .getReferenceType1().refToIndex(indexer, value.getReference1()), value.getStartRegister());
     }
 
     public static void write_45cc(RandomOutput out, int opcode, int A,
@@ -416,8 +416,8 @@ public class InstructionWriter {
     }
 
     public static void write_4rcc(Instruction4rcc value, ReferenceIndexer indexer, RandomOutput out, int opcode) {
-        write_4rcc(out, opcode, value.getRegisterCount(), value.getStartRegister(),
-                value.getOpcode().getReferenceType1().refToIndex(indexer, value.getReference1()),
+        write_4rcc(out, opcode, value.getRegisterCount(), value.getOpcode().getReferenceType1()
+                        .refToIndex(indexer, value.getReference1()), value.getStartRegister(),
                 value.getOpcode().getReferenceType2().refToIndex(indexer, value.getReference2()));
     }
 
