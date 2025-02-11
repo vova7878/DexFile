@@ -7,26 +7,24 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
-//TODO: null-checks
 public class ItemConverter {
     public static <T> List<T> toList(Iterable<T> iterable) {
         if (iterable == null) {
             return Collections.emptyList();
         }
 
-        //if (iterable instanceof List<T> list) {
-        //    return Collections.unmodifiableList(list);
-        //}
-
         ArrayList<T> list;
         if (iterable instanceof Collection<T> collection) {
             list = new ArrayList<>(collection);
+            list.forEach(Objects::requireNonNull);
         } else {
             list = new ArrayList<>();
             for (T tmp : iterable) {
+                Objects.requireNonNull(tmp);
                 list.add(tmp);
             }
         }
@@ -39,18 +37,15 @@ public class ItemConverter {
             return Collections.emptySet();
         }
 
-        //if (iterable instanceof Set<T> list) {
-        //    return Collections.unmodifiableSet(list);
-        //}
-
         Set<T> set;
         if (iterable instanceof Collection<T> collection) {
-            set = new HashSet<>(collection);
+            set = new HashSet<>(collection.size());
         } else {
             set = new HashSet<>();
-            for (T tmp : iterable) {
-                set.add(tmp);
-            }
+        }
+        for (T tmp : iterable) {
+            Objects.requireNonNull(tmp);
+            set.add(tmp);
         }
 
         return Collections.unmodifiableSet(set);
@@ -62,14 +57,10 @@ public class ItemConverter {
             return Collections.emptyNavigableSet();
         }
 
-        //if (iterable instanceof NavigableSet<T> ns
-        //        && comparator.equals(ns.comparator())) {
-        //    return Collections.unmodifiableNavigableSet(ns);
-        //}
-
         NavigableSet<T> set;
         set = new TreeSet<>(comparator);
         for (T tmp : iterable) {
+            Objects.requireNonNull(tmp);
             set.add(tmp);
         }
 

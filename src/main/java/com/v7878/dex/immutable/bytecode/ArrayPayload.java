@@ -16,9 +16,10 @@ public final class ArrayPayload extends Instruction implements ArrayPayloadInstr
 
     private ArrayPayload(int element_width, Iterable<Number> elements) {
         super(Preconditions.checkFormat(ARRAY_PAYLOAD, Format.ArrayPayload));
-        this.element_width = Preconditions.checkArrayPayloadElementWidth(element_width);
         this.elements = Preconditions.checkArrayPayloadElements(
                 element_width, ItemConverter.toList(elements));
+        // Already checked in checkArrayPayloadElements
+        this.element_width = element_width;
     }
 
     public static ArrayPayload of(int element_width, Iterable<Number> elements) {

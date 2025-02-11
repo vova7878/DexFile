@@ -57,7 +57,7 @@ public class Preconditions {
     public static int checkDebugAddrDiff(int addr_diff) {
         if (addr_diff < 0) {
             throw new IllegalArgumentException(
-                    String.format("Invalid addr_diff: %d. Must be greater than zero", addr_diff));
+                    String.format("Invalid address difference: %d. Must be greater than zero", addr_diff));
         }
         return addr_diff;
     }
@@ -202,16 +202,47 @@ public class Preconditions {
         return elements;
     }
 
-    public static int checkArrayPayloadElementWidth(int elementWidth) {
-        return switch (elementWidth) {
-            case 1, 2, 4, 8 -> elementWidth;
+    public static <L extends Number> List<L> checkArrayPayloadElements(int elementWidth, List<L> elements) {
+        switch (elementWidth) {
+            case 1 -> {
+                for (Number element : elements) {
+                    if (!(element instanceof Byte)) {
+                        throw new IllegalArgumentException(
+                                String.format("Invalid array payload element type for width %d: %s. Must be byte",
+                                        elementWidth, element.getClass()));
+                    }
+                }
+            }
+            case 2 -> {
+                for (Number element : elements) {
+                    if (!(element instanceof Short)) {
+                        throw new IllegalArgumentException(
+                                String.format("Invalid array payload element type for width %d: %s. Must be short",
+                                        elementWidth, element.getClass()));
+                    }
+                }
+            }
+            case 4 -> {
+                for (Number element : elements) {
+                    if (!(element instanceof Integer || element instanceof Float)) {
+                        throw new IllegalArgumentException(
+                                String.format("Invalid array payload element type for width %d: %s. Must be int or float",
+                                        elementWidth, element.getClass()));
+                    }
+                }
+            }
+            case 8 -> {
+                for (Number element : elements) {
+                    if (!(element instanceof Long || element instanceof Double)) {
+                        throw new IllegalArgumentException(
+                                String.format("Invalid array payload element type for width %d: %s. Must be long or double",
+                                        elementWidth, element.getClass()));
+                    }
+                }
+            }
             default -> throw new IllegalArgumentException(
                     String.format("Not a valid element width: %d", elementWidth));
-        };
-    }
-
-    public static <L extends Number> List<L> checkArrayPayloadElements(int elementWidth, List<L> elements) {
-        // TODO: check by type
+        }
         return elements;
     }
 }

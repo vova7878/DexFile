@@ -2,6 +2,7 @@ package com.v7878.dex.immutable;
 
 import com.v7878.dex.util.CollectionUtils;
 
+import java.lang.reflect.Field;
 import java.util.Objects;
 
 public final class FieldId extends MemberId implements Comparable<FieldId> {
@@ -10,13 +11,27 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
     private final TypeId type;
 
     private FieldId(TypeId declaring_class, String name, TypeId type) {
-        this.declaring_class = Objects.requireNonNull(declaring_class);
-        this.name = Objects.requireNonNull(name);
-        this.type = Objects.requireNonNull(type);
+        this.declaring_class = declaring_class;
+        this.name = name;
+        this.type = type;
     }
 
     public static FieldId of(TypeId declaring_class, String name, TypeId type) {
-        return new FieldId(declaring_class, name, type);
+        return new FieldId(Objects.requireNonNull(declaring_class),
+                Objects.requireNonNull(name), Objects.requireNonNull(type));
+    }
+
+    public static FieldId of(Field field) {
+        Objects.requireNonNull(field);
+        return new FieldId(TypeId.of(field.getDeclaringClass()),
+                field.getName(), TypeId.of(field.getType()));
+    }
+
+    public static FieldId of(Enum<?> e) {
+        Objects.requireNonNull(e);
+        TypeId declaring_class = TypeId.of(e.getDeclaringClass());
+        // TODO: Is this really true?
+        return new FieldId(declaring_class, e.name(), declaring_class);
     }
 
     @Override

@@ -24,8 +24,19 @@ public final class TypeId implements Comparable<TypeId> {
     }
 
     public static TypeId of(String descriptor) {
-        // TODO: cache primitives and java.lang.Object
-        return new TypeId(descriptor);
+        return switch (descriptor) {
+            case "V" -> V;
+            case "Z" -> Z;
+            case "B" -> B;
+            case "S" -> S;
+            case "C" -> C;
+            case "I" -> I;
+            case "F" -> F;
+            case "J" -> J;
+            case "D" -> D;
+            case "Ljava/lang/Object;" -> OBJECT;
+            default -> new TypeId(descriptor);
+        };
     }
 
     public static TypeId of(Class<?> clazz) {

@@ -14,13 +14,14 @@ public final class EncodedAnnotation extends EncodedValue implements CommonAnnot
     private final TypeId type;
     private final NavigableSet<AnnotationElement> elements;
 
-    private EncodedAnnotation(TypeId type, Iterable<AnnotationElement> elements) {
-        this.type = Objects.requireNonNull(type);
-        this.elements = ItemConverter.toNavigableSet(elements);
+    private EncodedAnnotation(TypeId type, NavigableSet<AnnotationElement> elements) {
+        this.type = type;
+        this.elements = elements;
     }
 
     public static EncodedAnnotation of(TypeId type, Iterable<AnnotationElement> elements) {
-        return new EncodedAnnotation(type, elements);
+        return new EncodedAnnotation(Objects.requireNonNull(type),
+                ItemConverter.toNavigableSet(elements));
     }
 
     public static EncodedAnnotation of(CommonAnnotation other) {

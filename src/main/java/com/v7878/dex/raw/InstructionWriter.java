@@ -502,13 +502,12 @@ public class InstructionWriter {
                 out.writeInt(raw_data.length);
                 out.writeLongArray(raw_data);
             }
-            default -> throw new IllegalStateException(
-                    "Unsupported element width: " + element_width);
+            default -> throw new AssertionError();
         }
         out.fillZerosToAlignment(2); // unit size
     }
 
-    // TODO: refactor code
+    // TODO: simplify
     public static void write_array_payload(ArrayPayload value, RandomOutput out, int opcode) {
         var elements = value.getArrayElements();
         var element_width = value.getElementWidth();
@@ -517,21 +516,24 @@ public class InstructionWriter {
             case 1 -> {
                 byte[] raw_data = new byte[elements.size()];
                 for (int i = 0; i < raw_data.length; i++) {
-                    raw_data[i] = elements.get(i).byteValue();
+                    raw_data[i] = (Byte) elements.get(i);
                 }
                 data = raw_data;
             }
             case 2 -> {
                 short[] raw_data = new short[elements.size()];
                 for (int i = 0; i < raw_data.length; i++) {
-                    raw_data[i] = elements.get(i).shortValue();
+                    raw_data[i] = (Short) elements.get(i);
                 }
                 data = raw_data;
             }
-            case 4 -> data = elements.stream().mapToInt(Number::intValue).toArray();
-            case 8 -> data = elements.stream().mapToLong(Number::longValue).toArray();
-            default -> throw new IllegalStateException(
-                    "Unsupported element width: " + element_width);
+            case 4 -> data = elements.stream().mapToInt(
+                    element -> element instanceof Integer i ? i :
+                            Float.floatToRawIntBits((Float) element)).toArray();
+            case 8 -> data = elements.stream().mapToLong(
+                    element -> element instanceof Long l ? l :
+                            Double.doubleToRawLongBits((Double) element)).toArray();
+            default -> throw new AssertionError();
         }
         write_array_payload(out, opcode, element_width, data);
     }

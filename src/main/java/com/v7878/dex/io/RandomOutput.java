@@ -183,7 +183,7 @@ public interface RandomOutput {
     default void requireAlignment(int alignment) {
         int pos = position();
         if (!isAligned(pos, alignment)) {
-            throw new IllegalStateException("position " + pos + " not aligned by " + alignment);
+            throw new IllegalStateException("Position " + pos + " not aligned by " + alignment);
         }
     }
 

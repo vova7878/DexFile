@@ -2,6 +2,10 @@ package com.v7878.dex.immutable;
 
 import com.v7878.dex.util.CollectionUtils;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Executable;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -11,18 +15,44 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
     private final ProtoId proto;
 
     private MethodId(TypeId declaring_class, String name, ProtoId proto) {
-        this.declaring_class = Objects.requireNonNull(declaring_class);
-        this.name = Objects.requireNonNull(name);
-        this.proto = Objects.requireNonNull(proto);
+        this.declaring_class = declaring_class;
+        this.name = name;
+        this.proto = proto;
     }
 
     public static MethodId of(TypeId declaring_class, String name, ProtoId proto) {
-        return new MethodId(declaring_class, name, proto);
+        return new MethodId(Objects.requireNonNull(declaring_class),
+                Objects.requireNonNull(name), Objects.requireNonNull(proto));
     }
 
     public static MethodId of(TypeId declaring_class, String name,
                               TypeId returnType, Iterable<TypeId> parameters) {
-        return of(declaring_class, name, ProtoId.of(returnType, parameters));
+        return new MethodId(Objects.requireNonNull(declaring_class),
+                Objects.requireNonNull(name), ProtoId.of(returnType, parameters));
+    }
+
+    public static MethodId constructor(TypeId declaring_class, Iterable<TypeId> parameters) {
+        return of(declaring_class, "<init>", TypeId.V, parameters);
+    }
+
+    public static MethodId constructor(TypeId declaring_class, TypeId... parameters) {
+        return constructor(declaring_class, Arrays.asList(parameters));
+    }
+
+    public static MethodId static_constructor(TypeId declaring_class) {
+        return of(declaring_class, "<clinit>", ProtoId.of(TypeId.V));
+    }
+
+    private static String getName(Executable ex) {
+        if (ex instanceof Constructor) {
+            return (ex.getModifiers() & Modifier.STATIC) == 0 ? "<init>" : "<clinit>";
+        }
+        return ex.getName();
+    }
+
+    public static MethodId of(Executable ex) {
+        Objects.requireNonNull(ex);
+        return new MethodId(TypeId.of(ex.getDeclaringClass()), getName(ex), ProtoId.of(ex));
     }
 
     @Override
