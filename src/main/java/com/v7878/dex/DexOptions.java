@@ -4,7 +4,7 @@ import static com.v7878.misc.Version.CORRECT_SDK_INT;
 
 public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOptions, WriteOptions {
     private static final int MIN_TARGET_API = 1;
-    private static final int MAX_TARGET_API = 35;
+    private static final int MAX_TARGET_API = 36;
     private static final int FIRST_ART_TARGET = 19;
     private static final int LAST_DALVIK_TARGET = 20;
 
@@ -14,10 +14,10 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
 
     DexOptions(int targetApi, boolean targetForArt, boolean allowOdexInstructions) {
         if (targetApi < MIN_TARGET_API || targetApi > MAX_TARGET_API) {
-            throw new IllegalArgumentException("unsupported target api: " + targetApi);
+            throw new IllegalArgumentException("Unsupported target api: " + targetApi);
         }
         if ((targetForArt && targetApi < FIRST_ART_TARGET) || (!targetForArt && targetApi > LAST_DALVIK_TARGET)) {
-            throw new IllegalArgumentException("unsupported " + targetForArt + " targetArt option with targetApi: " + targetApi);
+            throw new IllegalArgumentException("Unsupported " + targetForArt + " targetArt option with targetApi: " + targetApi);
         }
         this.targetApi = targetApi;
         this.targetForArt = targetForArt;

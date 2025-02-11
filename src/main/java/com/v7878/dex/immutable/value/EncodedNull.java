@@ -2,17 +2,10 @@ package com.v7878.dex.immutable.value;
 
 import com.v7878.dex.ValueType;
 
-import java.util.Objects;
-
 public final class EncodedNull extends EncodedValue {
     public static final EncodedNull INSTANCE = new EncodedNull();
 
     private EncodedNull() {
-    }
-
-    public static EncodedNull of(EncodedNull other) {
-        Objects.requireNonNull(other);
-        return INSTANCE;
     }
 
     @Override

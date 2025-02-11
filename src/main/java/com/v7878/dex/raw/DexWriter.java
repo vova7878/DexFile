@@ -229,7 +229,9 @@ public class DexWriter implements ReferenceIndexer {
 
         // TODO: cache zero-size arrays
         strings = collector.strings.toArray(new String[0]);
+        // TODO: at most 65535
         types = collector.types.toArray(new TypeId[0]);
+        // TODO: at most 65535
         protos = collector.protos.toArray(new ProtoId[0]);
         fields = collector.fields.toArray(new FieldId[0]);
         methods = collector.methods.toArray(new MethodId[0]);
@@ -252,7 +254,7 @@ public class DexWriter implements ReferenceIndexer {
         initMap();
 
         // Note: for compact dex, offsets are calculated from the data section, not the header
-        data_buffer = isCompact() ? io.slice(map.data_off) : io.duplicate(map.data_off);
+        data_buffer = isCompact() ? io.sliceAt(map.data_off) : io.duplicateAt(map.data_off);
 
         // We want offset 0 to be reserved
         if (isCompact()) {
@@ -562,14 +564,14 @@ public class DexWriter implements ReferenceIndexer {
             } catch (NoSuchAlgorithmException e) {
                 throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
             }
-            byte[] signature = md.digest(main_buffer.duplicate(FILE_SIZE_OFFSET)
+            byte[] signature = md.digest(main_buffer.duplicateAt(FILE_SIZE_OFFSET)
                     .readByteArray(map.file_size - FILE_SIZE_OFFSET));
             main_buffer.writeByteArray(signature);
 
             main_buffer.position(CHECKSUM_OFFSET);
             Adler32 adler = new Adler32();
             int adler_length = map.file_size - SIGNATURE_OFFSET;
-            adler.update(main_buffer.duplicate(SIGNATURE_OFFSET)
+            adler.update(main_buffer.duplicateAt(SIGNATURE_OFFSET)
                     .readByteArray(adler_length), 0, adler_length);
             main_buffer.writeInt((int) adler.getValue());
         }

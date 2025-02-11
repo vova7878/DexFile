@@ -41,7 +41,7 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
     public static EncodedValue ofValue(Object obj) {
         if (obj == null) return EncodedNull.INSTANCE;
         if (obj instanceof EncodedValue value) return value;
-        if (obj instanceof Boolean value) EncodedBoolean.of(value);
+        if (obj instanceof Boolean value) return EncodedBoolean.of(value);
         if (obj instanceof Byte value) return EncodedByte.of(value);
         if (obj instanceof Short value) return EncodedShort.of(value);
         if (obj instanceof Character value) return EncodedChar.of(value);

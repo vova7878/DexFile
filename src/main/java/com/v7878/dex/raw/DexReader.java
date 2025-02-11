@@ -178,7 +178,7 @@ public class DexReader implements ReferenceStorage {
         if (version.isCompact()) {
             data_off = mainAt(header_offset + DATA_START_OFFSET).readSmallUInt();
         }
-        data_buffer = main_buffer.slice(data_off);
+        data_buffer = main_buffer.sliceAt(data_off);
 
         typelist_cache = makeOffsetCache(this::readTypeList);
         encoded_array_cache = makeOffsetCache(this::readEncodedArray);

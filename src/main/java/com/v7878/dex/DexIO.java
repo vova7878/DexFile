@@ -47,7 +47,7 @@ public final class DexIO {
     //TODO: public static Dex read(ReadOptions options, byte[] data, int[] ids) {}
 
     public static Dex read(ReadOptions options, byte[] data, int data_offset) {
-        var input = new ByteArrayInput(data).slice(data_offset);
+        var input = new ByteArrayInput(data).sliceAt(data_offset);
         DexReader reader = new DexReader(options, input, 0);
         return Dex.of(reader.getClasses());
     }

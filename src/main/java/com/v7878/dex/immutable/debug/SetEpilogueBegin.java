@@ -1,16 +1,9 @@
 package com.v7878.dex.immutable.debug;
 
-import java.util.Objects;
-
 public final class SetEpilogueBegin extends DebugItem {
     public static final SetEpilogueBegin INSTANCE = new SetEpilogueBegin();
 
     private SetEpilogueBegin() {
-    }
-
-    public static SetEpilogueBegin of(SetEpilogueBegin other) {
-        Objects.requireNonNull(other);
-        return INSTANCE;
     }
 
     @Override

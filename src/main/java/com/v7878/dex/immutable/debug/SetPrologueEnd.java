@@ -1,16 +1,9 @@
 package com.v7878.dex.immutable.debug;
 
-import java.util.Objects;
-
 public final class SetPrologueEnd extends DebugItem {
     public static final SetPrologueEnd INSTANCE = new SetPrologueEnd();
 
     private SetPrologueEnd() {
-    }
-
-    public static SetPrologueEnd of(SetPrologueEnd other) {
-        Objects.requireNonNull(other);
-        return INSTANCE;
     }
 
     @Override
