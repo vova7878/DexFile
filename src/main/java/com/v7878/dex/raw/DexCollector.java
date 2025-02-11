@@ -199,6 +199,11 @@ public class DexCollector implements ReferenceCollector {
             return value.hashCode();
         }
 
+        public boolean isEmptyClassData() {
+            return static_fields.length == 0 && instance_fields.length == 0
+                    && direct_methods.length == 0 && virtual_methods.length == 0;
+        }
+
         private static FieldDefContainer[] toFieldsArray(
                 TypeId declaring_class, NavigableSet<FieldDef> fields) {
             return fields.stream().map(value ->
@@ -216,11 +221,6 @@ public class DexCollector implements ReferenceCollector {
             return methods.stream().map(value ->
                             MethodDefContainer.of(declaring_class, value))
                     .toArray(MethodDefContainer[]::new);
-        }
-
-        public boolean isEmptyClassData() {
-            return static_fields.length == 0 && instance_fields.length == 0
-                    && direct_methods.length == 0 && virtual_methods.length == 0;
         }
 
         public static ClassDefContainer of(ClassDef value) {

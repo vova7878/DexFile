@@ -36,6 +36,7 @@ import static com.v7878.dex.DexOffsets.COMPACT_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.DATA_SECTION_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.DEXCONTAINER_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
+import static com.v7878.dex.DexOffsets.HIDDENAPI_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.MAGIC_OFFSET;
 import static com.v7878.dex.DexOffsets.MAP_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.METHOD_HANDLE_ID_SIZE;
@@ -186,6 +187,8 @@ public class DexWriter implements ReferenceIndexer {
 
     private final ClassDefContainer[] class_defs;
 
+    private final int[][] hiddenapi_flags;
+
     public DexWriter(WriteOptions options, RandomIO io, Dex dexfile, int header_offset) {
         assert io.position() == 0;
         this.options = options;
@@ -223,6 +226,9 @@ public class DexWriter implements ReferenceIndexer {
         annotation_set_lists = collector.annotation_set_lists;
         annotation_directories = collector.annotation_directories;
 
+        // TODO: only api 29+
+        hiddenapi_flags = getHiddenApiFlags();
+
         initMap();
 
         // Note: for compact dex, offsets are calculated from the data section, not the header
@@ -254,7 +260,7 @@ public class DexWriter implements ReferenceIndexer {
         // class def + class data
         writeClassDefSections();
 
-        //writeHiddenApiSection();
+        writeHiddenApiSection();
 
         writeMap();
 
@@ -1220,5 +1226,64 @@ public class DexWriter implements ReferenceIndexer {
                 writeCommonAnnotation((EncodedAnnotation) value);
             }
         }
+    }
+
+    private int[][] getHiddenApiFlags() {
+        boolean section_empty = true;
+        int[][] out = new int[class_defs.length][];
+        for (int i = 0; i < out.length; i++) {
+            boolean def_empty = true;
+            var def = class_defs[i];
+            int[] arr = new int[def.static_fields().length + def.instance_fields().length +
+                    def.direct_methods().length + def.virtual_methods().length];
+            int index = 0;
+            for (var tmp : def.static_fields()) {
+                int flags = tmp.value().getHiddenApiFlags();
+                def_empty &= flags == 0;
+                arr[index++] = flags;
+            }
+            for (var tmp : def.instance_fields()) {
+                int flags = tmp.value().getHiddenApiFlags();
+                def_empty &= flags == 0;
+                arr[index++] = flags;
+            }
+            for (var tmp : def.direct_methods()) {
+                int flags = tmp.value().getHiddenApiFlags();
+                def_empty &= flags == 0;
+                arr[index++] = flags;
+            }
+            for (var tmp : def.virtual_methods()) {
+                int flags = tmp.value().getHiddenApiFlags();
+                def_empty &= flags == 0;
+                arr[index++] = flags;
+            }
+            out[i] = def_empty ? null : arr;
+            section_empty &= def_empty;
+        }
+        return section_empty ? null : out;
+    }
+
+    public void writeHiddenApiSection() {
+        if (hiddenapi_flags == null) return;
+        data_buffer.alignPosition(HIDDENAPI_ALIGNMENT);
+        int start = data_buffer.position();
+        data_buffer.addPosition(4); // size
+        RandomOutput offsets = data_buffer.duplicate();
+        int offsets_size = hiddenapi_flags.length * 4;
+        data_buffer.addPosition(offsets_size);
+        for (int[] tmp : hiddenapi_flags) {
+            if (tmp == null) {
+                offsets.writeInt(0);
+                continue;
+            }
+
+            offsets.writeInt(data_buffer.position() - start);
+            for (int flag : tmp) {
+                data_buffer.writeULeb128(flag);
+            }
+        }
+        offsets.position(start);
+        offsets.writeInt(data_buffer.position() - start);
+        map.hiddenapi_class_data_items_off = start;
     }
 }
