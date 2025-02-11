@@ -38,39 +38,40 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
     }
 
     public static Annotation of(AnnotationVisibility visibility, EncodedAnnotation annotation) {
-        return new Annotation(visibility, annotation.getType(), annotation.getElements());
+        return new Annotation(Objects.requireNonNull(visibility),
+                annotation.getType(), annotation.getElements());
     }
 
     public static Annotation FastNative() {
-        return Annotation.of(AnnotationVisibility.BUILD, TypeId.of(
+        return Annotation.of(AnnotationVisibility.BUILD, TypeId.ofName(
                 "dalvik.annotation.optimization.FastNative"));
     }
 
     public static Annotation CriticalNative() {
-        return Annotation.of(AnnotationVisibility.BUILD, TypeId.of(
+        return Annotation.of(AnnotationVisibility.BUILD, TypeId.ofName(
                 "dalvik.annotation.optimization.CriticalNative"));
     }
 
     public static Annotation AnnotationDefault(CommonAnnotation annotation) {
-        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.of(
+        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                         "dalvik.annotation.AnnotationDefault"),
                 AnnotationElement.of("value", EncodedAnnotation.of(annotation)));
     }
 
     public static Annotation EnclosingClass(TypeId clazz) {
-        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.of(
+        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                         "dalvik.annotation.EnclosingClass"),
                 AnnotationElement.of("value", EncodedType.of(clazz)));
     }
 
     public static Annotation EnclosingMethod(MethodId method) {
-        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.of(
+        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                         "dalvik.annotation.EnclosingMethod"),
                 AnnotationElement.of("value", EncodedMethod.of(method)));
     }
 
     public static Annotation InnerClass(String name, int access_flags) {
-        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.of(
+        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                         "dalvik.annotation.InnerClass"),
                 AnnotationElement.of("name", EncodedString.of(name)),
                 // TODO: check access flags
@@ -78,13 +79,13 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
     }
 
     public static Annotation MemberClasses(TypeId... classes) {
-        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.of(
+        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                 "dalvik.annotation.MemberClasses"), AnnotationElement.of(
                 "value", EncodedValue.ofValue(classes)));
     }
 
     public static Annotation MethodParameters(String[] names, int[] access_flags) {
-        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.of(
+        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                         "dalvik.annotation.MethodParameters"),
                 // TODO: check names
                 AnnotationElement.of("names", EncodedValue.ofValue(names)),
@@ -93,13 +94,13 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
     }
 
     public static Annotation Signature(String... value) {
-        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.of(
+        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                 "dalvik.annotation.Signature"), AnnotationElement.of(
                 "value", EncodedValue.ofValue(value)));
     }
 
     public static Annotation Throws(TypeId... exceptions) {
-        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.of(
+        return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                 "dalvik.annotation.Throws"), AnnotationElement.of(
                 "value", EncodedValue.ofValue(exceptions)));
     }
