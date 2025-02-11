@@ -22,6 +22,11 @@ public final class EncodedMethod extends EncodedValue {
         return ValueType.METHOD;
     }
 
+    @Override
+    public boolean isDefault() {
+        return false;
+    }
+
     public MethodId getValue() {
         return value;
     }

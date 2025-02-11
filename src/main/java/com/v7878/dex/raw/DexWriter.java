@@ -29,6 +29,7 @@ import static com.v7878.dex.DexOffsets.ANNOTATION_SET_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.ANNOTATION_SET_LIST_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
+import static com.v7878.dex.DexOffsets.CHECKSUM_OFFSET;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.CODE_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.COMPACT_CODE_ITEM_ALIGNMENT;
@@ -36,17 +37,30 @@ import static com.v7878.dex.DexOffsets.COMPACT_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.DATA_SECTION_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.DEXCONTAINER_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
+import static com.v7878.dex.DexOffsets.FILE_SIZE_OFFSET;
 import static com.v7878.dex.DexOffsets.HIDDENAPI_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.MAGIC_OFFSET;
 import static com.v7878.dex.DexOffsets.MAP_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.METHOD_HANDLE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.METHOD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.PROTO_ID_SIZE;
+import static com.v7878.dex.DexOffsets.SIGNATURE_OFFSET;
 import static com.v7878.dex.DexOffsets.STRING_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TRY_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_LIST_ALIGNMENT;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderInsSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderInsnsSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderOutsSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderRegistersSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderTriesSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kInsSizeShift;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kInsnsSizeMask;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kInsnsSizeShift;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kOutsSizeShift;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kRegistersSizeShift;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kTriesSizeSizeShift;
 import static com.v7878.misc.Math.roundUp;
 
 import com.v7878.dex.DexVersion;
@@ -93,6 +107,8 @@ import com.v7878.dex.raw.DexCollector.FieldDefContainer;
 import com.v7878.dex.raw.DexCollector.MethodDefContainer;
 import com.v7878.dex.raw.DexCollector.TryBlockContainer;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -101,6 +117,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.stream.Stream;
+import java.util.zip.Adler32;
 
 public class DexWriter implements ReferenceIndexer {
     private static class FileMap {
@@ -183,7 +200,7 @@ public class DexWriter implements ReferenceIndexer {
     private final Map<NavigableSet<Annotation>, Integer> annotation_sets;
     private final Map<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
     private final Map<AnnotationDirectory, Integer> annotation_directories;
-    //private final Map<DebugInfo, Integer> debug_infos;
+    // TODO: private final Map<DebugInfo, Integer> debug_infos;
 
     private final ClassDefContainer[] class_defs;
 
@@ -193,6 +210,9 @@ public class DexWriter implements ReferenceIndexer {
         assert io.position() == 0;
         this.options = options;
         main_buffer = io;
+
+        //TODO
+        assert header_offset == 0;
 
         opcodes = Opcodes.of(options.getDexVersion(), options.getTargetApi(),
                 options.isTargetForArt(), options.hasOdexInstructions());
@@ -241,7 +261,7 @@ public class DexWriter implements ReferenceIndexer {
 
         writeTypeListSection();
         writeEncodedArraySection();
-        //writeDebugInfoSection();
+        // TODO: writeDebugInfoSection();
         writeCodeItemSection();
         writeAnnotationSection();
         writeAnnotationSetSection();
@@ -380,7 +400,7 @@ public class DexWriter implements ReferenceIndexer {
 
     @Override
     public int getCallSiteIndex(CallSiteId value) {
-        // TODO
+        // TODO: simplify
         int out = Arrays.<Object>binarySearch(call_sites, value,
                 (a, b) -> ((CallSiteIdContainer) a).value().compareTo((CallSiteId) b));
         if (out < 0) {
@@ -524,33 +544,35 @@ public class DexWriter implements ReferenceIndexer {
             main_buffer.writeInt(map.compact_owned_data_end);
         } else if (isDexContainer()) {
             //TODO
-            main_buffer.writeInt(0); // container_size
+            main_buffer.writeInt(map.file_size); // container_size
             main_buffer.writeInt(0); // container_offset
         }
     }
 
     public void finalizeHeader(int container_size) {
-        //if (isCompact()) {
-        //    // TODO: How are the checksum and signature fields calculated for compact dex?
-        //} else {
-        //    out.position(SIGNATURE_OFFSET);
-        //    MessageDigest md;
-        //    try {
-        //        md = MessageDigest.getInstance("SHA-1");
-        //    } catch (NoSuchAlgorithmException e) {
-        //        throw new RuntimeException("unable to find SHA-1 MessageDigest", e);
-        //    }
-        //    byte[] signature = md.digest(out.duplicate(FILE_SIZE_OFFSET)
-        //            .readByteArray(file_size - FILE_SIZE_OFFSET));
-        //    out.writeByteArray(signature);
-        //
-        //    out.position(CHECKSUM_OFFSET);
-        //    Adler32 adler = new Adler32();
-        //    int adler_length = file_size - SIGNATURE_OFFSET;
-        //    adler.update(out.duplicate(SIGNATURE_OFFSET)
-        //            .readByteArray(adler_length), 0, adler_length);
-        //    out.writeInt((int) adler.getValue());
-        //}
+        //TODO
+        assert container_size == map.file_size;
+        if (isCompact()) {
+            // TODO: How are the checksum and signature fields calculated for compact dex?
+        } else {
+            main_buffer.position(SIGNATURE_OFFSET);
+            MessageDigest md;
+            try {
+                md = MessageDigest.getInstance("SHA-1");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
+            }
+            byte[] signature = md.digest(main_buffer.duplicate(FILE_SIZE_OFFSET)
+                    .readByteArray(map.file_size - FILE_SIZE_OFFSET));
+            main_buffer.writeByteArray(signature);
+
+            main_buffer.position(CHECKSUM_OFFSET);
+            Adler32 adler = new Adler32();
+            int adler_length = map.file_size - SIGNATURE_OFFSET;
+            adler.update(main_buffer.duplicate(SIGNATURE_OFFSET)
+                    .readByteArray(adler_length), 0, adler_length);
+            main_buffer.writeInt((int) adler.getValue());
+        }
     }
 
     public void writeMapItem(MapItem value) {
@@ -861,21 +883,6 @@ public class DexWriter implements ReferenceIndexer {
         }
         return has_payloads ? ~out : out;
     }
-
-    // TODO: merge with DexReader
-    private static final int kRegistersSizeShift = 12;
-    private static final int kInsSizeShift = 8;
-    private static final int kOutsSizeShift = 4;
-    private static final int kTriesSizeSizeShift = 0;
-    private static final int kInsnsSizeShift = 5;
-
-    private static final int kInsnsSizeMask = 0xffff >>> kInsnsSizeShift;
-
-    private static final int kFlagPreHeaderRegistersSize = 0b00001;
-    private static final int kFlagPreHeaderInsSize = 0b00010;
-    private static final int kFlagPreHeaderOutsSize = 0b00100;
-    private static final int kFlagPreHeaderTriesSize = 0b01000;
-    private static final int kFlagPreHeaderInsnsSize = 0b10000;
 
     private int writePreHeader(int registers_size, int ins_size,
                                int outs_size, int tries_size,

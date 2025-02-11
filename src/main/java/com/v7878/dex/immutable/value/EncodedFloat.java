@@ -19,6 +19,11 @@ public final class EncodedFloat extends EncodedValue {
         return ValueType.FLOAT;
     }
 
+    @Override
+    public boolean isDefault() {
+        return Float.floatToRawIntBits(value) == 0;
+    }
+
     public float getValue() {
         return value;
     }

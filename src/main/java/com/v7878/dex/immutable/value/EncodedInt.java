@@ -19,6 +19,11 @@ public final class EncodedInt extends EncodedValue {
         return ValueType.INT;
     }
 
+    @Override
+    public boolean isDefault() {
+        return value == 0;
+    }
+
     public int getValue() {
         return value;
     }

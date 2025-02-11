@@ -19,6 +19,11 @@ public final class EncodedChar extends EncodedValue {
         return ValueType.CHAR;
     }
 
+    @Override
+    public boolean isDefault() {
+        return value == 0;
+    }
+
     public char getValue() {
         return value;
     }

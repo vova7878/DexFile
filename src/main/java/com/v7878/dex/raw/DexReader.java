@@ -31,6 +31,16 @@ import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_START_OFFSET;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderInsSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderInsnsSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderOutsSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderRegistersSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderTriesSize;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kInsSizeShift;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kInsnsSizeShift;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kOutsSizeShift;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kRegistersSizeShift;
+import static com.v7878.dex.raw.CompactCodeItemConstants.kTriesSizeSizeShift;
 
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.DexConstants;
@@ -220,6 +230,7 @@ public class DexReader implements ReferenceStorage {
                 CALL_SITE_ID_SIZE, this::readCallSiteId
         );
 
+        // TODO: only api 29+
         MapItem hiddenapi = getMapItemForSection(DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM);
         hiddenapi_section = readHiddenApiSection(
                 hiddenapi != null ? hiddenapi.offset() : NO_OFFSET);
@@ -676,19 +687,6 @@ public class DexReader implements ReferenceStorage {
         }
         return TryBlock.of(start_addr, unit_count, handler.elements(), handler.catch_all_addr());
     }
-
-    // TODO: merge with DexWriter
-    private static final int kRegistersSizeShift = 12;
-    private static final int kInsSizeShift = 8;
-    private static final int kOutsSizeShift = 4;
-    private static final int kTriesSizeSizeShift = 0;
-    private static final int kInsnsSizeShift = 5;
-
-    private static final int kFlagPreHeaderRegistersSize = 0b00001;
-    private static final int kFlagPreHeaderInsSize = 0b00010;
-    private static final int kFlagPreHeaderOutsSize = 0b00100;
-    private static final int kFlagPreHeaderTriesSize = 0b01000;
-    private static final int kFlagPreHeaderInsnsSize = 0b10000;
 
     private static int readUShortBackward(RandomInput in) {
         in.addPosition(-2);

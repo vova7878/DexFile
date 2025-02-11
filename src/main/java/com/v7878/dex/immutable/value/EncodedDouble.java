@@ -19,6 +19,11 @@ public final class EncodedDouble extends EncodedValue {
         return ValueType.DOUBLE;
     }
 
+    @Override
+    public boolean isDefault() {
+        return Double.doubleToRawLongBits(value) == 0;
+    }
+
     public double getValue() {
         return value;
     }

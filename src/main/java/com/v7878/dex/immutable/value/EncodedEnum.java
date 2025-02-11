@@ -22,6 +22,11 @@ public final class EncodedEnum extends EncodedValue {
         return ValueType.ENUM;
     }
 
+    @Override
+    public boolean isDefault() {
+        return false;
+    }
+
     public FieldId getValue() {
         return value;
     }

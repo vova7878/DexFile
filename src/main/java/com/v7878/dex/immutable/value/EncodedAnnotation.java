@@ -34,6 +34,11 @@ public final class EncodedAnnotation extends EncodedValue implements CommonAnnot
     }
 
     @Override
+    public boolean isDefault() {
+        return false;
+    }
+
+    @Override
     public TypeId getType() {
         return type;
     }

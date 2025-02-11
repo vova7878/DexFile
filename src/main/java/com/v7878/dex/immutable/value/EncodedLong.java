@@ -19,6 +19,11 @@ public final class EncodedLong extends EncodedValue {
         return ValueType.LONG;
     }
 
+    @Override
+    public boolean isDefault() {
+        return value == 0;
+    }
+
     public long getValue() {
         return value;
     }

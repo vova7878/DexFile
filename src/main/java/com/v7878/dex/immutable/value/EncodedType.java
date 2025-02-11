@@ -23,6 +23,11 @@ public final class EncodedType extends EncodedValue {
         return ValueType.TYPE;
     }
 
+    @Override
+    public boolean isDefault() {
+        return false;
+    }
+
     public TypeId getValue() {
         return value;
     }

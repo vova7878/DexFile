@@ -119,14 +119,15 @@ public class DexCollector implements ReferenceCollector {
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
-            // TODO: what if implementations are equal but inputs are not?
-            return obj instanceof CodeContainer that
+            // The number of input registers is external parameter, it should also be checked
+            return obj instanceof CodeContainer that && ins == that.ins
                     && Objects.equals(value, that.value);
         }
 
         @Override
         public int hashCode() {
-            return value.hashCode();
+            // The number of input registers is external parameter, it should also be checked
+            return Objects.hash(value, ins);
         }
 
         private static TryBlockContainer[] toTriesArray(NavigableSet<TryBlock> tries) {
@@ -211,9 +212,23 @@ public class DexCollector implements ReferenceCollector {
                     .toArray(FieldDefContainer[]::new);
         }
 
-        private static EncodedArray toStaticValuesList(NavigableSet<FieldDef> fields) {
-            //TODO: trim default values, null if contains only defaults
-            return EncodedArray.of(fields.stream().map(FieldDef::getInitialValue).toList());
+        // TODO: simplify
+        private static EncodedArray toStaticValuesList(FieldDefContainer[] fields) {
+            int size = fields.length;
+            for (; size > 0; size--) {
+                var value = fields[size - 1].value().getInitialValue();
+                if (value != null && !value.isDefault()) break;
+            }
+            if (size == 0) {
+                return null;
+            }
+            var out = new ArrayList<EncodedValue>(size);
+            for (int i = 0; i < size; i++) {
+                var value = fields[i].value().getInitialValue();
+                out.add(value != null ? value : EncodedValue
+                        .defaultValue(fields[i].value().getType()));
+            }
+            return EncodedArray.of(out);
         }
 
         private static MethodDefContainer[] toMethodsArray(
@@ -225,9 +240,8 @@ public class DexCollector implements ReferenceCollector {
 
         public static ClassDefContainer of(ClassDef value) {
             var type = value.getType();
-            var raw_static_fields = value.getStaticFields();
             var interfaces = value.getInterfaces();
-            var static_fields = toFieldsArray(type, raw_static_fields);
+            var static_fields = toFieldsArray(type, value.getStaticFields());
             var instance_fields = toFieldsArray(type, value.getInstanceFields());
             var direct_methods = toMethodsArray(type, value.getDirectMethods());
             var virtual_methods = toMethodsArray(type, value.getVirtualMethods());
@@ -235,7 +249,7 @@ public class DexCollector implements ReferenceCollector {
                     instance_fields, direct_methods, virtual_methods);
             return new ClassDefContainer(value,
                     interfaces.isEmpty() ? null : ItemConverter.toList(interfaces),
-                    static_fields, toStaticValuesList(raw_static_fields),
+                    static_fields, toStaticValuesList(static_fields),
                     instance_fields, direct_methods, virtual_methods,
                     annotations.isEmpty() ? null : annotations);
         }
@@ -272,24 +286,43 @@ public class DexCollector implements ReferenceCollector {
                     parameter_annotations.isEmpty();
         }
 
-        //TODO: trim empty values
+        // TODO: simplify
         private static List<NavigableSet<Annotation>> toAnnotationsList(List<Parameter> parameters) {
-            return parameters.stream().map(Parameter::getAnnotations).toList();
+            int size = parameters.size();
+            for (; size > 0; size--) {
+                var annotations = parameters.get(size - 1).getAnnotations();
+                if (!annotations.isEmpty()) break;
+            }
+            if (size == 0) {
+                return null;
+            }
+            var out = new ArrayList<NavigableSet<Annotation>>(size);
+            for (int i = 0; i < size; i++) {
+                var annotations = parameters.get(i).getAnnotations();
+                out.add(annotations.isEmpty() ? null : annotations);
+            }
+            return out;
         }
 
-        //TODO: trim empty values
         private static void fill(AnnotationDirectory dir, FieldDefContainer[] fields) {
             for (var field : fields) {
-                dir.field_annotations.put(field.id(), field.value().getAnnotations());
+                var annotations = field.value().getAnnotations();
+                if (!annotations.isEmpty()) {
+                    dir.field_annotations.put(field.id(), annotations);
+                }
             }
         }
 
-        //TODO: trim empty values
         private static void fill(AnnotationDirectory dir, MethodDefContainer[] methods) {
             for (var method : methods) {
-                dir.method_annotations.put(method.id(), method.value().getAnnotations());
-                dir.parameter_annotations.put(method.id(),
-                        toAnnotationsList(method.value().getParameters()));
+                var method_annotations = method.value().getAnnotations();
+                if (!method_annotations.isEmpty()) {
+                    dir.method_annotations.put(method.id(), method_annotations);
+                }
+                var parameter_annotations = toAnnotationsList(method.value().getParameters());
+                if (parameter_annotations != null) {
+                    dir.parameter_annotations.put(method.id(), parameter_annotations);
+                }
             }
         }
 

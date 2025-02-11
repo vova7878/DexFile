@@ -23,6 +23,11 @@ public final class EncodedString extends EncodedValue {
         return ValueType.STRING;
     }
 
+    @Override
+    public boolean isDefault() {
+        return false;
+    }
+
     public String getValue() {
         return value;
     }

@@ -20,6 +20,8 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
         EncodedNull, EncodedShort, EncodedString, EncodedType {
     public abstract ValueType getValueType();
 
+    public abstract boolean isDefault();
+
     public static EncodedValue defaultValue(TypeId type) {
         return switch (type.getShorty()) {
             case 'Z' -> EncodedBoolean.of(false);

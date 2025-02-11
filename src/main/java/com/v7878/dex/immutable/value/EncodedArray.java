@@ -23,6 +23,11 @@ public final class EncodedArray extends EncodedValue {
         return ValueType.ARRAY;
     }
 
+    @Override
+    public boolean isDefault() {
+        return false;
+    }
+
     public List<EncodedValue> getValue() {
         return value;
     }

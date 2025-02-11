@@ -22,6 +22,11 @@ public final class EncodedMethodType extends EncodedValue {
         return ValueType.METHOD_TYPE;
     }
 
+    @Override
+    public boolean isDefault() {
+        return false;
+    }
+
     public ProtoId getValue() {
         return value;
     }

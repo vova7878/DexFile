@@ -22,6 +22,11 @@ public final class EncodedField extends EncodedValue {
         return ValueType.FIELD;
     }
 
+    @Override
+    public boolean isDefault() {
+        return false;
+    }
+
     public FieldId getValue() {
         return value;
     }

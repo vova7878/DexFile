@@ -12,6 +12,11 @@ public final class EncodedBoolean extends EncodedValue {
         this.value = value;
     }
 
+    @Override
+    public boolean isDefault() {
+        return !value;
+    }
+
     public static EncodedBoolean of(boolean value) {
         return value ? TRUE : FALSE;
     }

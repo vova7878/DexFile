@@ -19,6 +19,11 @@ public final class EncodedByte extends EncodedValue {
         return ValueType.BYTE;
     }
 
+    @Override
+    public boolean isDefault() {
+        return value == 0;
+    }
+
     public byte getValue() {
         return value;
     }

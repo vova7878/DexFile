@@ -21,6 +21,11 @@ public final class EncodedNull extends EncodedValue {
     }
 
     @Override
+    public boolean isDefault() {
+        return true;
+    }
+
+    @Override
     public int hashCode() {
         return 0;
     }

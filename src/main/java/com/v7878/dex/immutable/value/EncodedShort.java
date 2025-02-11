@@ -19,6 +19,11 @@ public final class EncodedShort extends EncodedValue {
         return ValueType.SHORT;
     }
 
+    @Override
+    public boolean isDefault() {
+        return value == 0;
+    }
+
     public short getValue() {
         return value;
     }
