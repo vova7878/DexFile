@@ -24,6 +24,9 @@ import static com.v7878.dex.DexConstants.TYPE_STRING_DATA_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_STRING_ID_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_TYPE_ID_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_TYPE_LIST;
+import static com.v7878.dex.DexOffsets.ANNOTATION_DIRECTORY_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.ANNOTATION_SET_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.ANNOTATION_SET_LIST_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
@@ -49,6 +52,7 @@ import com.v7878.dex.DexVersion;
 import com.v7878.dex.Opcodes;
 import com.v7878.dex.ReferenceType.ReferenceIndexer;
 import com.v7878.dex.WriteOptions;
+import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.CommonAnnotation;
@@ -80,13 +84,13 @@ import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.io.ValueCoder;
+import com.v7878.dex.raw.DexCollector.AnnotationDirectory;
 import com.v7878.dex.raw.DexCollector.CallSiteIdContainer;
 import com.v7878.dex.raw.DexCollector.ClassDefContainer;
 import com.v7878.dex.raw.DexCollector.CodeContainer;
 import com.v7878.dex.raw.DexCollector.FieldDefContainer;
 import com.v7878.dex.raw.DexCollector.MethodDefContainer;
 import com.v7878.dex.raw.DexCollector.TryBlockContainer;
-import com.v7878.dex.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -94,6 +98,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.stream.Stream;
 
 public class DexWriter implements ReferenceIndexer {
@@ -125,8 +130,8 @@ public class DexWriter implements ReferenceIndexer {
 
         public int type_lists_size;
         public int type_lists_off;
-        public int annotation_set_refs_size;
-        public int annotation_set_refs_off;
+        public int annotation_set_lists_size;
+        public int annotation_set_lists_off;
         public int annotation_sets_size;
         public int annotation_sets_off;
         public int class_data_items_size;
@@ -141,8 +146,8 @@ public class DexWriter implements ReferenceIndexer {
         public int annotations_off;
         public int encoded_arrays_size;
         public int encoded_arrays_off;
-        public int annotations_directories_size;
-        public int annotations_directories_off;
+        public int annotation_directories_size;
+        public int annotation_directories_off;
 
         public int hiddenapi_class_data_items_off;
 
@@ -173,10 +178,10 @@ public class DexWriter implements ReferenceIndexer {
     private final Map<List<TypeId>, Integer> type_lists;
     private final Map<EncodedArray, Integer> encoded_arrays;
     private final Map<CodeContainer, Integer> code_items;
-    //private final Map<AnnotationItem, Integer> annotations;
-    //private final Map<AnnotationSet, Integer> annotation_sets;
-    //private final Map<AnnotationSetList, Integer> annotation_set_lists;
-    //private final Map<TypeId, Integer> annotations_directories;
+    private final Map<Annotation, Integer> annotations;
+    private final Map<NavigableSet<Annotation>, Integer> annotation_sets;
+    private final Map<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
+    private final Map<AnnotationDirectory, Integer> annotation_directories;
     //private final Map<DebugInfo, Integer> debug_infos;
 
     private final ClassDefContainer[] class_defs;
@@ -197,7 +202,7 @@ public class DexWriter implements ReferenceIndexer {
         }
 
         var collector = new DexCollector();
-        collector.fill(dexfile);
+        collector.fillDex(dexfile);
 
         // TODO: cache zero-size arrays
         strings = collector.strings.toArray(new String[0]);
@@ -213,6 +218,10 @@ public class DexWriter implements ReferenceIndexer {
         type_lists = collector.type_lists;
         encoded_arrays = collector.encoded_arrays;
         code_items = collector.code_items;
+        annotations = collector.annotations;
+        annotation_sets = collector.annotation_sets;
+        annotation_set_lists = collector.annotation_set_lists;
+        annotation_directories = collector.annotation_directories;
 
         initMap();
 
@@ -228,10 +237,10 @@ public class DexWriter implements ReferenceIndexer {
         writeEncodedArraySection();
         //writeDebugInfoSection();
         writeCodeItemSection();
-        //writeAnnotationItemSection();
-        //writeAnnotationSetSection();
-        //writeAnnotationSetListSection();
-        //writeAnnotationsDirectorySection();
+        writeAnnotationSection();
+        writeAnnotationSetSection();
+        writeAnnotationSetListSection();
+        writeAnnotationDirectorySection();
 
         writeTypeSection();
         writeFieldSection();
@@ -245,7 +254,7 @@ public class DexWriter implements ReferenceIndexer {
         // class def + class data
         writeClassDefSections();
 
-        //HiddenApi.writeSection();
+        //writeHiddenApiSection();
 
         writeMap();
 
@@ -315,71 +324,72 @@ public class DexWriter implements ReferenceIndexer {
 
     @Override
     public int getStringIndex(String value) {
-        int out = Arrays.binarySearch(strings, value, CollectionUtils.naturalOrder());
+        int out = Arrays.binarySearch(strings, value);
         if (out < 0) {
             throw new IllegalArgumentException(
-                    "unable to find string \"" + value + "\"");
+                    "Unable to find string \"" + value + "\"");
         }
         return out;
     }
 
     @Override
     public int getTypeIndex(TypeId value) {
-        int out = Arrays.binarySearch(types, value, CollectionUtils.naturalOrder());
+        int out = Arrays.binarySearch(types, value);
         if (out < 0) {
             throw new IllegalArgumentException(
-                    "unable to find type \"" + value + "\"");
+                    "Unable to find type \"" + value + "\"");
         }
         return out;
     }
 
     @Override
     public int getProtoIndex(ProtoId value) {
-        int out = Arrays.binarySearch(protos, value, CollectionUtils.naturalOrder());
+        int out = Arrays.binarySearch(protos, value);
         if (out < 0) {
             throw new IllegalArgumentException(
-                    "unable to find proto \"" + value + "\"");
+                    "Unable to find proto \"" + value + "\"");
         }
         return out;
     }
 
     @Override
     public int getFieldIndex(FieldId value) {
-        int out = Arrays.binarySearch(fields, value, CollectionUtils.naturalOrder());
+        int out = Arrays.binarySearch(fields, value);
         if (out < 0) {
             throw new IllegalArgumentException(
-                    "unable to find field \"" + value + "\"");
+                    "Unable to find field \"" + value + "\"");
         }
         return out;
     }
 
     @Override
     public int getMethodIndex(MethodId value) {
-        int out = Arrays.binarySearch(methods, value, CollectionUtils.naturalOrder());
+        int out = Arrays.binarySearch(methods, value);
         if (out < 0) {
             throw new IllegalArgumentException(
-                    "unable to find method \"" + value + "\"");
+                    "Unable to find method \"" + value + "\"");
         }
         return out;
     }
 
     @Override
     public int getCallSiteIndex(CallSiteId value) {
+        // TODO
         int out = Arrays.<Object>binarySearch(call_sites, value,
                 (a, b) -> ((CallSiteIdContainer) a).value().compareTo((CallSiteId) b));
         if (out < 0) {
             throw new IllegalArgumentException(
-                    "unable to find call site \"" + value + "\"");
+                    "Unable to find call site \"" + value + "\"");
         }
         return out;
     }
 
     @Override
     public int getMethodHandleIndex(MethodHandleId value) {
-        int out = Arrays.binarySearch(method_handles, value, CollectionUtils.naturalOrder());
+        int out = Arrays.binarySearch(method_handles, value);
         if (out < 0) {
             throw new IllegalArgumentException(
-                    "unable to find method handle \"" + value + "\"");
+                    "Unable to find method handle \"" + value + "\"");
         }
         return out;
     }
@@ -388,7 +398,7 @@ public class DexWriter implements ReferenceIndexer {
         Integer out = type_lists.get(value);
         if (out == null) {
             throw new IllegalArgumentException(
-                    "unable to find type list \"" + value + "\"");
+                    "Unable to find type list \"" + value + "\"");
         }
         return out;
     }
@@ -397,7 +407,7 @@ public class DexWriter implements ReferenceIndexer {
         Integer out = encoded_arrays.get(value);
         if (out == null) {
             throw new IllegalArgumentException(
-                    "unable to find encoded array \"" + value + "\"");
+                    "Unable to find encoded array \"" + value + "\"");
         }
         return out;
     }
@@ -406,10 +416,47 @@ public class DexWriter implements ReferenceIndexer {
         Integer out = code_items.get(value);
         if (out == null) {
             throw new IllegalArgumentException(
-                    "unable to find code item \"" + value + "\"");
+                    "Unable to find code item \"" + value + "\"");
         }
         return out;
     }
+
+    public int getAnnotationOffset(Annotation value) {
+        Integer out = annotations.get(value);
+        if (out == null) {
+            throw new IllegalArgumentException(
+                    "Unable to find annotation \"" + value + "\"");
+        }
+        return out;
+    }
+
+    public int getAnnotationSetOffset(NavigableSet<Annotation> value) {
+        Integer out = annotation_sets.get(value);
+        if (out == null) {
+            throw new IllegalArgumentException(
+                    "Unable to find annotation set \"" + value + "\"");
+        }
+        return out;
+    }
+
+    public int getAnnotationSetListOffset(List<NavigableSet<Annotation>> value) {
+        Integer out = annotation_set_lists.get(value);
+        if (out == null) {
+            throw new IllegalArgumentException(
+                    "Unable to find annotation set list \"" + value + "\"");
+        }
+        return out;
+    }
+
+    public int getAnnotationDirectoryOffset(AnnotationDirectory value) {
+        Integer out = annotation_directories.get(value);
+        if (out == null) {
+            throw new IllegalArgumentException(
+                    "Unable to find annotations directory \"" + value + "\"");
+        }
+        return out;
+    }
+
 
     public int getFileSize() {
         return map.file_size;
@@ -552,9 +599,9 @@ public class DexWriter implements ReferenceIndexer {
             list.add(new MapItem(TYPE_TYPE_LIST,
                     map.type_lists_size, map.type_lists_off));
         }
-        if (map.annotation_set_refs_size > 0) {
+        if (map.annotation_set_lists_size > 0) {
             list.add(new MapItem(TYPE_ANNOTATION_SET_REF_LIST,
-                    map.annotation_set_refs_size, map.annotation_set_refs_off));
+                    map.annotation_set_lists_size, map.annotation_set_lists_off));
         }
         if (map.annotation_sets_size > 0) {
             list.add(new MapItem(TYPE_ANNOTATION_SET_ITEM,
@@ -584,9 +631,9 @@ public class DexWriter implements ReferenceIndexer {
             list.add(new MapItem(TYPE_ENCODED_ARRAY_ITEM,
                     map.encoded_arrays_size, map.encoded_arrays_off));
         }
-        if (map.annotations_directories_size > 0) {
+        if (map.annotation_directories_size > 0) {
             list.add(new MapItem(TYPE_ANNOTATIONS_DIRECTORY_ITEM,
-                    map.annotations_directories_size, map.annotations_directories_off));
+                    map.annotation_directories_size, map.annotation_directories_off));
         }
         if (map.hiddenapi_class_data_items_off > 0) {
             list.add(new MapItem(TYPE_HIDDENAPI_CLASS_DATA_ITEM,
@@ -753,8 +800,9 @@ public class DexWriter implements ReferenceIndexer {
         var source_file = value.value().getSourceFile();
         main_buffer.writeInt(source_file == null ?
                 NO_INDEX : getStringIndex(source_file));
-        // TODO: getAnnotationsDirectoryOffset(value.annotations())
-        main_buffer.writeInt(NO_OFFSET);
+        var annotations = value.annotations();
+        main_buffer.writeInt(annotations == null ?
+                NO_OFFSET : getAnnotationDirectoryOffset(annotations));
         main_buffer.writeInt(value.isEmptyClassData() ?
                 NO_OFFSET : writeClassData(value));
         var static_values = value.static_values();
@@ -1023,19 +1071,110 @@ public class DexWriter implements ReferenceIndexer {
         }
     }
 
-    //public void writeAnnotation(Annotation value) {
-    //}
-    //
-    //public void writeAnnotationSection() {
-    //    var size = annotations.size();
-    //    if (size != 0) {
-    //        map.annotations_off = data_buffer.position();
-    //        map.annotations_size = size;
-    //    }
-    //    for (var tmp : encoded_arrays.keySet()) {
-    //        writeAnnotation(tmp);
-    //    }
-    //}
+    public void writeAnnotation(Annotation value) {
+        int start = data_buffer.position();
+        data_buffer.writeByte(value.getVisibility().value());
+        writeCommonAnnotation(value);
+        annotations.replace(value, start);
+    }
+
+    public void writeAnnotationSection() {
+        var size = annotations.size();
+        if (size != 0) {
+            map.annotations_off = data_buffer.position();
+            map.annotations_size = size;
+        }
+        for (var tmp : annotations.keySet()) {
+            writeAnnotation(tmp);
+        }
+    }
+
+    public void writeAnnotationSet(NavigableSet<Annotation> value) {
+        data_buffer.alignPosition(ANNOTATION_SET_ALIGNMENT);
+        int start = data_buffer.position();
+        data_buffer.writeInt(value.size());
+        for (var tmp : value) {
+            data_buffer.writeInt(getAnnotationOffset(tmp));
+        }
+        annotation_sets.replace(value, start);
+    }
+
+    public void writeAnnotationSetSection() {
+        var size = annotation_sets.size();
+        if (size != 0) {
+            data_buffer.alignPosition(ANNOTATION_SET_ALIGNMENT);
+            map.annotation_sets_off = data_buffer.position();
+            map.annotation_sets_size = size;
+        }
+        for (var tmp : annotation_sets.keySet()) {
+            writeAnnotationSet(tmp);
+        }
+    }
+
+    public void writeAnnotationSetList(List<NavigableSet<Annotation>> value) {
+        data_buffer.alignPosition(ANNOTATION_SET_LIST_ALIGNMENT);
+        int start = data_buffer.position();
+        data_buffer.writeInt(value.size());
+        for (var tmp : value) {
+            data_buffer.writeInt(tmp == null ?
+                    NO_OFFSET : getAnnotationSetOffset(tmp));
+        }
+        annotation_set_lists.replace(value, start);
+    }
+
+    public void writeAnnotationSetListSection() {
+        var size = annotation_set_lists.size();
+        if (size != 0) {
+            data_buffer.alignPosition(ANNOTATION_SET_LIST_ALIGNMENT);
+            map.annotation_set_lists_off = data_buffer.position();
+            map.annotation_set_lists_size = size;
+        }
+        for (var tmp : annotation_set_lists.keySet()) {
+            writeAnnotationSetList(tmp);
+        }
+    }
+
+    public void writeAnnotationDirectory(AnnotationDirectory value) {
+        data_buffer.alignPosition(ANNOTATION_DIRECTORY_ALIGNMENT);
+        int start = data_buffer.position();
+
+        var class_annotations = value.class_annotations();
+        data_buffer.writeInt(class_annotations == null ? NO_OFFSET
+                : getAnnotationSetOffset(class_annotations));
+
+        data_buffer.writeInt(value.field_annotations().size());
+        data_buffer.writeInt(value.method_annotations().size());
+        data_buffer.writeInt(value.parameter_annotations().size());
+
+        for (var tmp : value.field_annotations().entrySet()) {
+            data_buffer.writeInt(getFieldIndex(tmp.getKey()));
+            data_buffer.writeInt(getAnnotationSetOffset(tmp.getValue()));
+        }
+
+        for (var tmp : value.method_annotations().entrySet()) {
+            data_buffer.writeInt(getMethodIndex(tmp.getKey()));
+            data_buffer.writeInt(getAnnotationSetOffset(tmp.getValue()));
+        }
+
+        for (var tmp : value.parameter_annotations().entrySet()) {
+            data_buffer.writeInt(getMethodIndex(tmp.getKey()));
+            data_buffer.writeInt(getAnnotationSetListOffset(tmp.getValue()));
+        }
+
+        annotation_directories.replace(value, start);
+    }
+
+    public void writeAnnotationDirectorySection() {
+        var size = annotation_directories.size();
+        if (size != 0) {
+            data_buffer.alignPosition(ANNOTATION_DIRECTORY_ALIGNMENT);
+            map.annotation_directories_off = data_buffer.position();
+            map.annotation_directories_size = size;
+        }
+        for (var tmp : annotation_directories.keySet()) {
+            writeAnnotationDirectory(tmp);
+        }
+    }
 
     public void writeEncodedValue(EncodedValue value) {
         var type = value.getValueType();

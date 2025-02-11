@@ -24,7 +24,7 @@ public enum ReferenceType {
 
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.add(validate(value));
+            colleactor.addString(validate(value));
         }
 
         @Override
@@ -44,7 +44,7 @@ public enum ReferenceType {
 
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.add(validate(value));
+            colleactor.addType(validate(value));
         }
 
         @Override
@@ -64,7 +64,7 @@ public enum ReferenceType {
 
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.add(validate(value));
+            colleactor.addField(validate(value));
         }
 
         @Override
@@ -84,7 +84,7 @@ public enum ReferenceType {
 
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.add(validate(value));
+            colleactor.addMethod(validate(value));
         }
 
         @Override
@@ -104,7 +104,7 @@ public enum ReferenceType {
 
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.add(validate(value));
+            colleactor.addProto(validate(value));
         }
 
         @Override
@@ -124,7 +124,7 @@ public enum ReferenceType {
 
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.add(validate(value));
+            colleactor.addCallSite(validate(value));
         }
 
         @Override
@@ -144,7 +144,7 @@ public enum ReferenceType {
 
         @Override
         public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.add(validate(value));
+            colleactor.addMethodHandle(validate(value));
         }
 
         @Override
@@ -194,19 +194,19 @@ public enum ReferenceType {
     public abstract Object indexToRef(ReferenceStorage storage, int index);
 
     public interface ReferenceCollector {
-        void add(String value);
+        void addString(String value);
 
-        void add(TypeId value);
+        void addType(TypeId value);
 
-        void add(FieldId value);
+        void addField(FieldId value);
 
-        void add(ProtoId value);
+        void addProto(ProtoId value);
 
-        void add(MethodId value);
+        void addMethod(MethodId value);
 
-        void add(MethodHandleId value);
+        void addMethodHandle(MethodHandleId value);
 
-        void add(CallSiteId value);
+        void addCallSite(CallSiteId value);
     }
 
     public abstract void collect(ReferenceCollector colleactor, Object value);

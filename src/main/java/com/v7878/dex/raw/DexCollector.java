@@ -33,15 +33,16 @@ import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CodeUtils;
-import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 public class DexCollector implements ReferenceCollector {
@@ -141,9 +142,8 @@ public class DexCollector implements ReferenceCollector {
     }
 
     public record MethodDefContainer(MethodDef value, MethodId id,
-                                     CodeContainer code,
                                      List<String> parameter_names,
-                                     List<NavigableSet<Annotation>> parameter_annotations)
+                                     CodeContainer code)
             implements Comparable<MethodDefContainer> {
         @Override
         public boolean equals(Object obj) {
@@ -170,16 +170,12 @@ public class DexCollector implements ReferenceCollector {
             return parameters.stream().map(Parameter::getName).toList();
         }
 
-        private static List<NavigableSet<Annotation>> toAnnotationsList(List<Parameter> parameters) {
-            return parameters.stream().map(Parameter::getAnnotations).toList();
-        }
-
         public static MethodDefContainer of(TypeId declaring_class, MethodDef value) {
             var parameters = value.getParameters();
             MethodId id = MethodId.of(declaring_class, value.getName(),
                     value.getReturnType(), toTypeList(parameters));
-            return new MethodDefContainer(value, id, CodeContainer.of(value.getImplementation(), id),
-                    toNamesList(parameters), toAnnotationsList(parameters));
+            return new MethodDefContainer(value, id, toNamesList(parameters),
+                    CodeContainer.of(value.getImplementation(), id));
         }
     }
 
@@ -189,7 +185,8 @@ public class DexCollector implements ReferenceCollector {
                                     EncodedArray static_values,
                                     FieldDefContainer[] instance_fields,
                                     MethodDefContainer[] direct_methods,
-                                    MethodDefContainer[] virtual_methods) {
+                                    MethodDefContainer[] virtual_methods,
+                                    AnnotationDirectory annotations) {
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
@@ -228,15 +225,88 @@ public class DexCollector implements ReferenceCollector {
 
         public static ClassDefContainer of(ClassDef value) {
             var type = value.getType();
-            var static_fields = value.getStaticFields();
+            var raw_static_fields = value.getStaticFields();
             var interfaces = value.getInterfaces();
+            var static_fields = toFieldsArray(type, raw_static_fields);
+            var instance_fields = toFieldsArray(type, value.getInstanceFields());
+            var direct_methods = toMethodsArray(type, value.getDirectMethods());
+            var virtual_methods = toMethodsArray(type, value.getVirtualMethods());
+            var annotations = AnnotationDirectory.of(value, static_fields,
+                    instance_fields, direct_methods, virtual_methods);
             return new ClassDefContainer(value,
                     interfaces.isEmpty() ? null : ItemConverter.toList(interfaces),
-                    toFieldsArray(type, static_fields),
-                    toStaticValuesList(static_fields),
-                    toFieldsArray(type, value.getInstanceFields()),
-                    toMethodsArray(type, value.getDirectMethods()),
-                    toMethodsArray(type, value.getVirtualMethods()));
+                    static_fields, toStaticValuesList(raw_static_fields),
+                    instance_fields, direct_methods, virtual_methods,
+                    annotations.isEmpty() ? null : annotations);
+        }
+    }
+
+    public record AnnotationDirectory(
+            NavigableSet<Annotation> class_annotations,
+            NavigableMap<FieldId, NavigableSet<Annotation>> field_annotations,
+            NavigableMap<MethodId, NavigableSet<Annotation>> method_annotations,
+            NavigableMap<MethodId, List<NavigableSet<Annotation>>> parameter_annotations
+    ) {
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            return obj instanceof AnnotationDirectory that
+                    && isEmptyExceptForClass() && that.isEmptyExceptForClass()
+                    && Objects.equals(class_annotations, that.class_annotations);
+        }
+
+        @Override
+        public int hashCode() {
+            return isEmptyExceptForClass() ?
+                    Objects.hashCode(class_annotations) :
+                    System.identityHashCode(this);
+        }
+
+        public boolean isEmpty() {
+            return class_annotations == null && isEmptyExceptForClass();
+        }
+
+        public boolean isEmptyExceptForClass() {
+            return field_annotations.isEmpty() &&
+                    method_annotations.isEmpty() &&
+                    parameter_annotations.isEmpty();
+        }
+
+        //TODO: trim empty values
+        private static List<NavigableSet<Annotation>> toAnnotationsList(List<Parameter> parameters) {
+            return parameters.stream().map(Parameter::getAnnotations).toList();
+        }
+
+        //TODO: trim empty values
+        private static void fill(AnnotationDirectory dir, FieldDefContainer[] fields) {
+            for (var field : fields) {
+                dir.field_annotations.put(field.id(), field.value().getAnnotations());
+            }
+        }
+
+        //TODO: trim empty values
+        private static void fill(AnnotationDirectory dir, MethodDefContainer[] methods) {
+            for (var method : methods) {
+                dir.method_annotations.put(method.id(), method.value().getAnnotations());
+                dir.parameter_annotations.put(method.id(),
+                        toAnnotationsList(method.value().getParameters()));
+            }
+        }
+
+        public static AnnotationDirectory of(ClassDef value,
+                                             FieldDefContainer[] static_fields,
+                                             FieldDefContainer[] instance_fields,
+                                             MethodDefContainer[] direct_methods,
+                                             MethodDefContainer[] virtual_methods) {
+            var class_annotations = value.getAnnotations();
+            var out = new AnnotationDirectory(
+                    class_annotations.isEmpty() ? null : class_annotations,
+                    new TreeMap<>(), new TreeMap<>(), new TreeMap<>());
+            fill(out, static_fields);
+            fill(out, instance_fields);
+            fill(out, direct_methods);
+            fill(out, virtual_methods);
+            return out;
         }
     }
 
@@ -251,131 +321,167 @@ public class DexCollector implements ReferenceCollector {
     public final Map<List<TypeId>, Integer> type_lists;
     public final Map<EncodedArray, Integer> encoded_arrays;
     public final Map<CodeContainer, Integer> code_items;
-    //public final Map<Annotation> annotations;
-    //public final Map<NavigableSet<Annotation>> annotation_sets;
-    //public final Map<List<NavigableSet<Annotation>>> annotation_set_lists;
-    //public final Map<AnnotationDirectory> annotations_directories;
+    public final Map<Annotation, Integer> annotations;
+    public final Map<NavigableSet<Annotation>, Integer> annotation_sets;
+    public final Map<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
+    public final Map<AnnotationDirectory, Integer> annotation_directories;
 
     public final List<ClassDefContainer> class_defs;
 
     public DexCollector() {
-        strings = new TreeSet<>(CollectionUtils.naturalOrder());
-        types = new TreeSet<>(CollectionUtils.naturalOrder());
-        protos = new TreeSet<>(CollectionUtils.naturalOrder());
-        fields = new TreeSet<>(CollectionUtils.naturalOrder());
-        methods = new TreeSet<>(CollectionUtils.naturalOrder());
-        method_handles = new TreeSet<>(CollectionUtils.naturalOrder());
-        call_sites = new TreeSet<>(CollectionUtils.naturalOrder());
+        strings = new TreeSet<>();
+        types = new TreeSet<>();
+        protos = new TreeSet<>();
+        fields = new TreeSet<>();
+        methods = new TreeSet<>();
+        method_handles = new TreeSet<>();
+        call_sites = new TreeSet<>();
 
         type_lists = new HashMap<>();
         encoded_arrays = new HashMap<>();
         code_items = new HashMap<>();
-        //annotations = new HashMap<>();
-        //annotation_sets = new HashMap<>();
-        //annotation_set_lists = new HashMap<>();
-        //annotations_directories = new HashMap<>();
+        annotations = new HashMap<>();
+        annotation_sets = new HashMap<>();
+        annotation_set_lists = new HashMap<>();
+        annotation_directories = new HashMap<>();
 
         class_defs = new ArrayList<>();
     }
 
     @Override
-    public void add(String value) {
+    public void addString(String value) {
         strings.add(value);
     }
 
     @Override
-    public void add(TypeId value) {
+    public void addType(TypeId value) {
         types.add(value);
-        add(value.getDescriptor());
+        addString(value.getDescriptor());
     }
 
     @Override
-    public void add(FieldId value) {
+    public void addField(FieldId value) {
         fields.add(value);
-        add(value.getDeclaringClass());
-        add(value.getName());
-        add(value.getType());
+        addType(value.getDeclaringClass());
+        addString(value.getName());
+        addType(value.getType());
     }
 
     @Override
-    public void add(ProtoId value) {
+    public void addProto(ProtoId value) {
         protos.add(value);
-        add(value.getShorty());
-        add(value.getReturnType());
-        add(value.getParameterTypes());
+        addString(value.getShorty());
+        addType(value.getReturnType());
+        addTypeList(value.getParameterTypes());
     }
 
     @Override
-    public void add(MethodId value) {
+    public void addMethod(MethodId value) {
         methods.add(value);
-        add(value.getDeclaringClass());
-        add(value.getName());
-        add(value.getProto());
+        addType(value.getDeclaringClass());
+        addString(value.getName());
+        addProto(value.getProto());
     }
 
     @Override
-    public void add(MethodHandleId value) {
+    public void addMethodHandle(MethodHandleId value) {
         method_handles.add(value);
         var member = value.getMember();
         if (value.getHandleType().isMethodAccess()) {
-            add((MethodId) member);
+            addMethod((MethodId) member);
         } else {
-            add((FieldId) member);
+            addField((FieldId) member);
         }
     }
 
     @Override
-    public void add(CallSiteId value) {
+    public void addCallSite(CallSiteId value) {
         var container = CallSiteIdContainer.of(value);
         call_sites.add(container);
-        add(container.array());
+        addEncodedArray(container.array());
     }
 
-    public void add(ClassDef value) {
+    public void addAnnotation(Annotation value) {
+        annotations.put(value, null);
+        fillCommonAnnotation(value);
+    }
+
+    public void addAnnotationSet(NavigableSet<Annotation> value) {
+        annotation_sets.put(value, null);
+        for (var tmp : value) {
+            addAnnotation(tmp);
+        }
+    }
+
+    public void addAnnotationSetList(List<NavigableSet<Annotation>> value) {
+        annotation_set_lists.put(value, null);
+        for (var tmp : value) {
+            if (tmp != null) addAnnotationSet(tmp);
+        }
+    }
+
+    public void addAnnotationDirectory(AnnotationDirectory value) {
+        annotation_directories.put(value, null);
+        var class_annotations = value.class_annotations();
+        if (class_annotations != null) addAnnotationSet(class_annotations);
+        for (var entry : value.field_annotations.entrySet()) {
+            addAnnotationSet(entry.getValue());
+        }
+        for (var entry : value.method_annotations.entrySet()) {
+            addAnnotationSet(entry.getValue());
+        }
+        for (var entry : value.parameter_annotations.entrySet()) {
+            addAnnotationSetList(entry.getValue());
+        }
+    }
+
+    public void addClassDef(ClassDef value) {
         var container = ClassDefContainer.of(value);
         class_defs.add(container);
-        add(value.getType());
+        addType(value.getType());
         var superclass = value.getSuperclass();
-        if (superclass != null) add(superclass);
+        if (superclass != null) addType(superclass);
         var interfaces = container.interfaces();
-        if (interfaces != null) add(interfaces);
+        if (interfaces != null) addTypeList(interfaces);
         var source_file = value.getSourceFile();
-        if (source_file != null) add(source_file);
-        add(container.static_values());
+        if (source_file != null) addString(source_file);
+        var static_values = container.static_values();
+        if (static_values != null) addEncodedArray(static_values);
         for (var field : container.static_fields()) {
-            fill(field);
+            fillFieldDef(field);
         }
         for (var field : container.instance_fields()) {
-            fill(field);
+            fillFieldDef(field);
         }
         for (var method : container.direct_methods()) {
-            fill(method);
+            fillMethodDef(method);
         }
         for (var method : container.virtual_methods()) {
-            fill(method);
+            fillMethodDef(method);
         }
-        // TODO: AnnotdtionDirectory
+        var annotations = container.annotations();
+        if (annotations != null) addAnnotationDirectory(annotations);
     }
 
-    public void fill(Dex value) {
+    public void fillDex(Dex value) {
         for (var tmp : value.getClasses()) {
-            add(tmp);
+            addClassDef(tmp);
         }
     }
 
-    public void add(List<TypeId> value) {
+    public void addTypeList(List<TypeId> value) {
         type_lists.put(value, null);
         for (var tmp : value) {
-            add(tmp);
+            addType(tmp);
         }
     }
 
-    public void add(EncodedArray value) {
+    public void addEncodedArray(EncodedArray value) {
         encoded_arrays.put(value, null);
-        fill(value);
+        fillEncodedArray(value);
     }
 
-    public void fill(Instruction value) {
+    public void fillInstruction(Instruction value) {
         if (value instanceof SingleReferenceInstruction ref1) {
             ref1.getOpcode().getReferenceType1().collect(this, ref1.getReference1());
         }
@@ -384,64 +490,64 @@ public class DexCollector implements ReferenceCollector {
         }
     }
 
-    public void fill(ExceptionHandler value) {
-        add(value.getExceptionType());
+    public void fillExceptionHandler(ExceptionHandler value) {
+        addType(value.getExceptionType());
     }
 
-    public void fill(TryBlock value) {
+    public void fillTryBlock(TryBlock value) {
         for (var tmp : value.getHandlers()) {
-            fill(tmp);
+            fillExceptionHandler(tmp);
         }
     }
 
-    public void add(CodeContainer value) {
+    public void addCodeItem(CodeContainer value) {
         code_items.put(value, null);
         for (var tmp : value.value().getInstructions()) {
-            fill(tmp);
+            fillInstruction(tmp);
         }
         for (var tmp : value.value().getTryBlocks()) {
-            fill(tmp);
+            fillTryBlock(tmp);
         }
     }
 
-    public void fill(FieldDefContainer value) {
-        add(value.id());
+    public void fillFieldDef(FieldDefContainer value) {
+        addField(value.id());
     }
 
-    public void fill(MethodDefContainer value) {
-        add(value.id());
+    public void fillMethodDef(MethodDefContainer value) {
+        addMethod(value.id());
         var code = value.code();
-        if (code != null) add(code);
+        if (code != null) addCodeItem(code);
         //TODO: debug info
     }
 
-    public void fill(EncodedArray value) {
+    public void fillEncodedArray(EncodedArray value) {
         for (var tmp : value.getValue()) {
             fillEncodedValue(tmp);
         }
     }
 
-    public void fill(AnnotationElement value) {
-        add(value.getName());
+    public void fillAnnotationElement(AnnotationElement value) {
+        addString(value.getName());
         fillEncodedValue(value.getValue());
     }
 
-    public void fill(CommonAnnotation value) {
-        add(value.getType());
+    public void fillCommonAnnotation(CommonAnnotation value) {
+        addType(value.getType());
         for (var element : value.getElements()) {
-            fill(element);
+            fillAnnotationElement(element);
         }
     }
 
     public void fillEncodedValue(EncodedValue raw) {
-        if (raw instanceof EncodedString value) add(value.getValue());
-        if (raw instanceof EncodedType value) add(value.getValue());
-        if (raw instanceof EncodedEnum value) add(value.getValue());
-        if (raw instanceof EncodedField value) add(value.getValue());
-        if (raw instanceof EncodedMethod value) add(value.getValue());
-        if (raw instanceof EncodedMethodHandle value) add(value.getValue());
-        if (raw instanceof EncodedMethodType value) add(value.getValue());
-        if (raw instanceof EncodedAnnotation value) fill(value);
-        if (raw instanceof EncodedArray value) fill(value);
+        if (raw instanceof EncodedString value) addString(value.getValue());
+        if (raw instanceof EncodedType value) addType(value.getValue());
+        if (raw instanceof EncodedEnum value) addField(value.getValue());
+        if (raw instanceof EncodedField value) addField(value.getValue());
+        if (raw instanceof EncodedMethodType value) addProto(value.getValue());
+        if (raw instanceof EncodedMethod value) addMethod(value.getValue());
+        if (raw instanceof EncodedMethodHandle value) addMethodHandle(value.getValue());
+        if (raw instanceof EncodedAnnotation value) fillCommonAnnotation(value);
+        if (raw instanceof EncodedArray value) fillEncodedArray(value);
     }
 }

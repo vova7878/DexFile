@@ -28,6 +28,9 @@ public final class DexOffsets {
     public static final int CODE_ITEM_ALIGNMENT = 4;
     public static final int COMPACT_CODE_ITEM_ALIGNMENT = 2;
     public static final int PAYLOAD_INSTRUCTION_ALIGNMENT = 4;
+    public static final int ANNOTATION_SET_ALIGNMENT = 4;
+    public static final int ANNOTATION_SET_LIST_ALIGNMENT = 4;
+    public static final int ANNOTATION_DIRECTORY_ALIGNMENT = 4;
 
     // header offsets
     public static final int MAGIC_OFFSET = 0;

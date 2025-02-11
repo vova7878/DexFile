@@ -1,7 +1,7 @@
 package com.v7878.dex.immutable;
 
-import java.util.Set;
+import java.util.NavigableSet;
 
 public sealed interface Annotatable permits ClassDef, MemberDef, Parameter {
-    Set<Annotation> getAnnotations();
+    NavigableSet<Annotation> getAnnotations();
 }

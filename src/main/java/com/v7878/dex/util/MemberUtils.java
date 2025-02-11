@@ -34,14 +34,14 @@ public class MemberUtils {
     }
 
     public static NavigableSet<FieldDef> mergeFields(List<FieldDef> static_, List<FieldDef> instance) {
-        var out = new TreeSet<FieldDef>(CollectionUtils.naturalOrder());
+        var out = new TreeSet<FieldDef>();
         if (static_ != null) out.addAll(static_);
         if (instance != null) out.addAll(instance);
         return out;
     }
 
     public static NavigableSet<MethodDef> mergeMethods(List<MethodDef> direct, List<MethodDef> virtual) {
-        var out = new TreeSet<MethodDef>(CollectionUtils.naturalOrder());
+        var out = new TreeSet<MethodDef>();
         if (direct != null) out.addAll(direct);
         if (virtual != null) out.addAll(virtual);
         return out;
