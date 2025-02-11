@@ -61,7 +61,7 @@ public final class DexIO {
     public static byte[] write(WriteOptions options, Dex data) {
         var io = new ByteArrayIO();
         DexWriter writer = new DexWriter(options, io, data, 0);
-        writer.finalizeHeader(0);
+        writer.finalizeHeader(writer.getFileSize());
         return io.toByteArray();
     }
 
