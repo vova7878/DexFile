@@ -1,5 +1,6 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.DexConstants.ACC_STATIC;
 import static com.v7878.dex.ReferenceType.ReferenceCollector;
 
 import com.v7878.dex.immutable.Annotation;
@@ -81,8 +82,7 @@ public class DexCollector implements ReferenceCollector {
         }
     }
 
-    public record FieldDefContainer(FieldDef value, FieldId id)
-            implements Comparable<FieldDefContainer> {
+    public record FieldDefContainer(FieldDef value, FieldId id) {
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
@@ -93,11 +93,6 @@ public class DexCollector implements ReferenceCollector {
         @Override
         public int hashCode() {
             return value.hashCode();
-        }
-
-        @Override
-        public int compareTo(FieldDefContainer other) {
-            return value.compareTo(other.value);
         }
 
         public static FieldDefContainer of(TypeId declaring_class, FieldDef value) {
@@ -134,18 +129,18 @@ public class DexCollector implements ReferenceCollector {
             return tries.stream().map(TryBlockContainer::of).toArray(TryBlockContainer[]::new);
         }
 
-        public static CodeContainer of(MethodImplementation value, MethodId id) {
+        public static CodeContainer of(MethodImplementation value, MethodId id, int flags) {
             if (value == null) return null;
             return new CodeContainer(value, toTriesArray(value.getTryBlocks()),
-                    id.getProto().getInputRegisterCount(),
+                    id.getProto().getInputRegisterCount() +
+                            /* this */ ((flags & ACC_STATIC) == 0 ? 1 : 0),
                     CodeUtils.getOutputRegisterCount(value.getInstructions()));
         }
     }
 
     public record MethodDefContainer(MethodDef value, MethodId id,
                                      List<String> parameter_names,
-                                     CodeContainer code)
-            implements Comparable<MethodDefContainer> {
+                                     CodeContainer code) {
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
@@ -156,11 +151,6 @@ public class DexCollector implements ReferenceCollector {
         @Override
         public int hashCode() {
             return value.hashCode();
-        }
-
-        @Override
-        public int compareTo(MethodDefContainer other) {
-            return value.compareTo(other.value);
         }
 
         private static List<TypeId> toTypeList(List<Parameter> parameters) {
@@ -176,7 +166,7 @@ public class DexCollector implements ReferenceCollector {
             MethodId id = MethodId.of(declaring_class, value.getName(),
                     value.getReturnType(), toTypeList(parameters));
             return new MethodDefContainer(value, id, toNamesList(parameters),
-                    CodeContainer.of(value.getImplementation(), id));
+                    CodeContainer.of(value.getImplementation(), id, value.getAccessFlags()));
         }
     }
 

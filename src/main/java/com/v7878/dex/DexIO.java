@@ -69,5 +69,22 @@ public final class DexIO {
         return write(WriteOptions.defaultOptions(), data);
     }
 
-    //TODO: public static byte[] writeDexContainer(WriteOptions options, Dex[] data) {}
+    public static byte[] writeDexContainer(WriteOptions options, Dex[] data) {
+        var version = options.getDexVersion();
+        if (!version.isDexContainer()) {
+            throw new IllegalArgumentException(
+                    "Illegal dex container version " + version);
+        }
+        var io = new ByteArrayIO();
+        var writers = new DexWriter[data.length];
+        int header_offset = 0;
+        for (int i = 0; i < data.length; i++) {
+            writers[i] = new DexWriter(options, io, data[i], header_offset);
+            header_offset += writers[i].getFileSize();
+        }
+        for (var writer : writers) {
+            writer.finalizeHeader(header_offset);
+        }
+        return io.toByteArray();
+    }
 }

@@ -2,6 +2,7 @@ package com.v7878.dex.immutable;
 
 import com.v7878.dex.util.ItemConverter;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -14,6 +15,10 @@ public final class Dex {
 
     public static Dex of(Iterable<ClassDef> classes) {
         return new Dex(classes);
+    }
+
+    public static Dex of(ClassDef... classes) {
+        return of(Arrays.asList(classes));
     }
 
     public List<ClassDef> getClasses() {
