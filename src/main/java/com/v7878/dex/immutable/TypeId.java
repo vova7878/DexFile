@@ -6,16 +6,16 @@ import com.v7878.dex.util.ShortyUtils;
 import java.util.Objects;
 
 public final class TypeId implements Comparable<TypeId> {
-    public static final TypeId V = of("V");
-    public static final TypeId Z = of("Z");
-    public static final TypeId B = of("B");
-    public static final TypeId S = of("S");
-    public static final TypeId C = of("C");
-    public static final TypeId I = of("I");
-    public static final TypeId F = of("F");
-    public static final TypeId J = of("J");
-    public static final TypeId D = of("D");
-    public static final TypeId OBJECT = of(Object.class);
+    public static final TypeId V = new TypeId("V");
+    public static final TypeId Z = new TypeId("Z");
+    public static final TypeId B = new TypeId("B");
+    public static final TypeId S = new TypeId("S");
+    public static final TypeId C = new TypeId("C");
+    public static final TypeId I = new TypeId("I");
+    public static final TypeId F = new TypeId("F");
+    public static final TypeId J = new TypeId("J");
+    public static final TypeId D = new TypeId("D");
+    public static final TypeId OBJECT = new TypeId("Ljava/lang/Object;");
 
     private final String descriptor;
 

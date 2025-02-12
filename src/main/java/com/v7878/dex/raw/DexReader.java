@@ -822,30 +822,24 @@ public class DexReader implements ReferenceStorage {
 
         TypeId clazz = getTypeId(in.readSmallUInt());
         int access_flags = in.readInt();
-        int superclass_idx = in.readSmallUInt();
-        TypeId superclass = null;
-        if (superclass_idx != DexConstants.NO_INDEX) {
-            superclass = getTypeId(superclass_idx);
-        }
+        int superclass_idx = in.readInt();
+        // TODO: readSmallUInt but with -1
+        TypeId superclass = superclass_idx == DexConstants.NO_INDEX ?
+                null : getTypeId(superclass_idx);
         int interfaces_off = in.readSmallUInt();
-        List<TypeId> interfaces = null;
-        if (interfaces_off != NO_OFFSET) {
-            interfaces = getTypeList(interfaces_off);
-        }
-        int source_file_idx = in.readSmallUInt();
-        String source_file = null;
-        if (source_file_idx != DexConstants.NO_INDEX) {
-            source_file = getString(source_file_idx);
-        }
+        List<TypeId> interfaces = interfaces_off == NO_OFFSET ?
+                null : getTypeList(interfaces_off);
+        // TODO: readSmallUInt but with -1
+        int source_file_idx = in.readInt();
+        String source_file = source_file_idx == DexConstants.NO_INDEX ?
+                null : getString(source_file_idx);
         int annotations_off = in.readSmallUInt();
         AnnotationDirectory annotations = annotations_off == NO_OFFSET ?
                 AnnotationDirectory.empty() : getAnnotationDirectory(annotations_off);
         int class_data_off = in.readSmallUInt();
         int static_values_off = in.readSmallUInt();
-        List<EncodedValue> static_values = null;
-        if (static_values_off != NO_OFFSET) {
-            static_values = getEncodedArray(static_values_off).getValue();
-        }
+        List<EncodedValue> static_values = static_values_off == NO_OFFSET ?
+                null : getEncodedArray(static_values_off).getValue();
 
         List<FieldDef> static_fields = null;
         List<FieldDef> instance_fields = null;
