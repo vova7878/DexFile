@@ -148,7 +148,7 @@ public class DexReader implements ReferenceStorage {
     public DexReader(ReadOptions options, RandomInput input, int header_offset) {
         assert input.position() == 0;
         this.options = options;
-        main_buffer = input;
+        main_buffer = input.duplicate();
 
         if (main_buffer.size() < BASE_HEADER_SIZE) {
             throw new NotADexFile("File is too short");
@@ -156,7 +156,7 @@ public class DexReader implements ReferenceStorage {
         // ??? version = DexVersion.forMagic(mainAt(MAGIC_OFFSET).readLong());
         version = DexVersion.forMagic(mainAt(header_offset + MAGIC_OFFSET).readLong());
         // TODO: check full header size
-        // TODO: check version min api
+        // TODO: check dex version min api
 
         // TODO: check file size
         file_size = mainAt(header_offset + FILE_SIZE_OFFSET).readSmallUInt();

@@ -202,6 +202,7 @@ public class Preconditions {
         return elements;
     }
 
+    // TODO: simplify
     public static <L extends Number> List<L> checkArrayPayloadElements(int elementWidth, List<L> elements) {
         switch (elementWidth) {
             case 1 -> {
@@ -224,18 +225,18 @@ public class Preconditions {
             }
             case 4 -> {
                 for (Number element : elements) {
-                    if (!(element instanceof Integer || element instanceof Float)) {
+                    if (!(element instanceof Integer)) {
                         throw new IllegalArgumentException(
-                                String.format("Invalid array payload element type for width %d: %s. Must be int or float",
+                                String.format("Invalid array payload element type for width %d: %s. Must be int",
                                         elementWidth, element.getClass()));
                     }
                 }
             }
             case 8 -> {
                 for (Number element : elements) {
-                    if (!(element instanceof Long || element instanceof Double)) {
+                    if (!(element instanceof Long)) {
                         throw new IllegalArgumentException(
-                                String.format("Invalid array payload element type for width %d: %s. Must be long or double",
+                                String.format("Invalid array payload element type for width %d: %s. Must be long",
                                         elementWidth, element.getClass()));
                     }
                 }

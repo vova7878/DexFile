@@ -33,4 +33,5 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
 
     //TODO: withCDEXFlags(int flags)
     //TODO: skip hiddenapi writing option
+    //TODO: setByteOrder (see https://android.googlesource.com/platform/dalvik/+/kitkat-mr2-release/libdex/DexSwapVerify.cpp)
 }

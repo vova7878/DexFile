@@ -29,6 +29,7 @@ import static com.v7878.dex.DexOffsets.ANNOTATION_SET_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.ANNOTATION_SET_LIST_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
+import static com.v7878.dex.DexOffsets.CHECKSUM_DATA_START_OFFSET;
 import static com.v7878.dex.DexOffsets.CHECKSUM_OFFSET;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.CODE_ITEM_ALIGNMENT;
@@ -37,12 +38,12 @@ import static com.v7878.dex.DexOffsets.COMPACT_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.DATA_SECTION_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.DEXCONTAINER_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
-import static com.v7878.dex.DexOffsets.FILE_SIZE_OFFSET;
 import static com.v7878.dex.DexOffsets.HIDDENAPI_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.MAP_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.METHOD_HANDLE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.METHOD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.PROTO_ID_SIZE;
+import static com.v7878.dex.DexOffsets.SIGNATURE_DATA_START_OFFSET;
 import static com.v7878.dex.DexOffsets.SIGNATURE_OFFSET;
 import static com.v7878.dex.DexOffsets.STRING_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TRY_ITEM_ALIGNMENT;
@@ -243,6 +244,8 @@ public class DexWriter implements ReferenceIndexer {
         call_sites = collector.call_sites.toArray(new CallSiteIdContainer[0]);
         method_handles = collector.method_handles.toArray(new MethodHandleId[0]);
 
+        // TODO: "The classes must be ordered such that a given class's superclass
+        //  and implemented interfaces appear in the list earlier than the referring class"
         class_defs = collector.class_defs.toArray(new ClassDefContainer[0]);
 
         type_lists = collector.type_lists;
@@ -574,15 +577,15 @@ public class DexWriter implements ReferenceIndexer {
                 throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
             }
             byte[] signature = md.digest(main_buffer
-                    .duplicateAt(map.header_off + FILE_SIZE_OFFSET)
-                    .readByteArray(map.file_size - FILE_SIZE_OFFSET));
+                    .duplicateAt(map.header_off + SIGNATURE_DATA_START_OFFSET)
+                    .readByteArray(map.file_size - SIGNATURE_DATA_START_OFFSET));
             main_buffer.writeByteArray(signature);
 
             main_buffer.position(map.header_off + CHECKSUM_OFFSET);
             Adler32 adler = new Adler32();
-            int adler_length = map.file_size - SIGNATURE_OFFSET;
+            int adler_length = map.file_size - CHECKSUM_DATA_START_OFFSET;
             adler.update(main_buffer
-                    .duplicateAt(map.header_off + SIGNATURE_OFFSET)
+                    .duplicateAt(map.header_off + CHECKSUM_DATA_START_OFFSET)
                     .readByteArray(adler_length), 0, adler_length);
             main_buffer.writeInt((int) adler.getValue());
         }

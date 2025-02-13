@@ -528,11 +528,9 @@ public class InstructionWriter {
                 data = raw_data;
             }
             case 4 -> data = elements.stream().mapToInt(
-                    element -> element instanceof Integer i ? i :
-                            Float.floatToRawIntBits((Float) element)).toArray();
+                    element -> (Integer) element).toArray();
             case 8 -> data = elements.stream().mapToLong(
-                    element -> element instanceof Long l ? l :
-                            Double.doubleToRawLongBits((Double) element)).toArray();
+                    element -> (Long) element).toArray();
             default -> throw new AssertionError();
         }
         write_array_payload(out, opcode, element_width, data);
