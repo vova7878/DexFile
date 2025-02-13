@@ -43,6 +43,8 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 access_flags, hiddenapi_flags, implementation, annotations);
     }
 
+    // TODO?: Add simpler constructor?
+
     @Override
     public String getName() {
         return name;

@@ -31,6 +31,8 @@ public final class MethodImplementation {
         return new MethodImplementation(register_count, instructions, try_blocks, debug_items);
     }
 
+    // TODO?: Add simpler constructor?
+
     public int getRegisterCount() {
         return register_count;
     }

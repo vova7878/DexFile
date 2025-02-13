@@ -9,6 +9,7 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Arrays;
 import java.util.NavigableSet;
@@ -37,7 +38,7 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
         return of(visibility, type, Arrays.asList(elements));
     }
 
-    public static Annotation of(AnnotationVisibility visibility, EncodedAnnotation annotation) {
+    public static Annotation of(AnnotationVisibility visibility, CommonAnnotation annotation) {
         return new Annotation(Objects.requireNonNull(visibility),
                 annotation.getType(), annotation.getElements());
     }
@@ -74,8 +75,8 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
         return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                         "dalvik.annotation.InnerClass"),
                 AnnotationElement.of("name", EncodedString.of(name)),
-                // TODO: check access flags
-                AnnotationElement.of("accessFlags", EncodedInt.of(access_flags)));
+                AnnotationElement.of("accessFlags", EncodedInt.of(
+                        Preconditions.checkInnerClassAccessFlags(access_flags))));
     }
 
     public static Annotation MemberClasses(TypeId... classes) {

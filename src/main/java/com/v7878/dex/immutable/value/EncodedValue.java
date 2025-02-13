@@ -67,11 +67,11 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
         if (obj instanceof Enum<?> value) return EncodedEnum.of(FieldId.of(value));
         if (obj instanceof MethodHandle) {
             //TODO
-            throw new UnsupportedOperationException("not implemented yet");
+            throw new UnsupportedOperationException("Not implemented yet");
         }
         if (obj.getClass().isAnnotation()) {
             //TODO
-            throw new UnsupportedOperationException("not implemented yet");
+            throw new UnsupportedOperationException("Not implemented yet");
         }
         if (obj instanceof boolean[] array) {
             var list = new ArrayList<EncodedValue>(array.length);

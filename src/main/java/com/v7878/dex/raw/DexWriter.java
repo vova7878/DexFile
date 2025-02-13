@@ -106,6 +106,7 @@ import com.v7878.dex.raw.DexCollector.CodeContainer;
 import com.v7878.dex.raw.DexCollector.FieldDefContainer;
 import com.v7878.dex.raw.DexCollector.MethodDefContainer;
 import com.v7878.dex.raw.DexCollector.TryBlockContainer;
+import com.v7878.dex.util.EmptyArrays;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -233,20 +234,19 @@ public class DexWriter implements ReferenceIndexer {
         var collector = new DexCollector();
         collector.fillDex(dexfile);
 
-        // TODO: cache zero-size arrays
-        strings = collector.strings.toArray(new String[0]);
+        strings = collector.strings.toArray(EmptyArrays.STRING);
         // TODO: at most 65535
-        types = collector.types.toArray(new TypeId[0]);
+        types = collector.types.toArray(EmptyArrays.TYPE_ID);
         // TODO: at most 65535
-        protos = collector.protos.toArray(new ProtoId[0]);
-        fields = collector.fields.toArray(new FieldId[0]);
-        methods = collector.methods.toArray(new MethodId[0]);
-        call_sites = collector.call_sites.toArray(new CallSiteIdContainer[0]);
-        method_handles = collector.method_handles.toArray(new MethodHandleId[0]);
+        protos = collector.protos.toArray(EmptyArrays.PROTO_ID);
+        fields = collector.fields.toArray(EmptyArrays.FIELD_ID);
+        methods = collector.methods.toArray(EmptyArrays.METHOD_ID);
+        call_sites = collector.call_sites.toArray(EmptyArrays.CALLSITE_ID_CONTAINER);
+        method_handles = collector.method_handles.toArray(EmptyArrays.METHOD_HANDLE_ID);
 
         // TODO: "The classes must be ordered such that a given class's superclass
         //  and implemented interfaces appear in the list earlier than the referring class"
-        class_defs = collector.class_defs.toArray(new ClassDefContainer[0]);
+        class_defs = collector.class_defs.toArray(EmptyArrays.CLASS_DEF_CONTAINER);
 
         type_lists = collector.type_lists;
         encoded_arrays = collector.encoded_arrays;
@@ -893,9 +893,7 @@ public class DexWriter implements ReferenceIndexer {
         int out = 0;
         for (var tmp : insns) {
             out += tmp.getUnitCount();
-            if (!has_payloads) {
-                has_payloads = tmp.getOpcode().isPayload();
-            }
+            has_payloads = has_payloads || tmp.getOpcode().isPayload();
         }
         return has_payloads ? ~out : out;
     }

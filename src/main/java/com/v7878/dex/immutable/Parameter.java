@@ -20,6 +20,14 @@ public final class Parameter implements Annotatable {
         return new Parameter(type, name, annotations);
     }
 
+    public static Parameter of(TypeId type, String name) {
+        return of(type, name, null);
+    }
+
+    public static Parameter of(TypeId type) {
+        return of(type, null, null);
+    }
+
     public TypeId getType() {
         return type;
     }

@@ -4,6 +4,7 @@ import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,6 +25,11 @@ public final class CallSiteId implements Comparable<CallSiteId> {
     public static CallSiteId of(MethodHandleId method_handle, String method_name,
                                 ProtoId method_proto, Iterable<EncodedValue> extra_arguments) {
         return new CallSiteId(method_handle, method_name, method_proto, extra_arguments);
+    }
+
+    public static CallSiteId of(MethodHandleId method_handle, String method_name,
+                                ProtoId method_proto, EncodedValue... extra_arguments) {
+        return of(method_handle, method_name, method_proto, Arrays.asList(extra_arguments));
     }
 
     public MethodHandleId getMethodHandle() {

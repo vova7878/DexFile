@@ -27,6 +27,7 @@ public class ItemConverter {
                 Objects.requireNonNull(tmp);
                 list.add(tmp);
             }
+            list.trimToSize();
         }
 
         return Collections.unmodifiableList(list);

@@ -39,6 +39,8 @@ public final class ClassDef implements Annotatable {
                 interfaces, source_file, fields, methods, annotations);
     }
 
+    // TODO?: Add simpler constructor?
+
     public TypeId getType() {
         return type;
     }

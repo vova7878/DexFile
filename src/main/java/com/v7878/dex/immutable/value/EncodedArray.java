@@ -4,18 +4,23 @@ import com.v7878.dex.ValueType;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 public final class EncodedArray extends EncodedValue {
+    public static final EncodedArray EMPTY = new EncodedArray(Collections.emptyList());
+
     private final List<EncodedValue> value;
 
-    private EncodedArray(Iterable<EncodedValue> values) {
-        this.value = ItemConverter.toList(values);
+    private EncodedArray(List<EncodedValue> value) {
+        this.value = value;
     }
 
     public static EncodedArray of(Iterable<EncodedValue> values) {
-        return new EncodedArray(values);
+        var value = ItemConverter.toList(values);
+        if (value.isEmpty()) return EMPTY;
+        return new EncodedArray(value);
     }
 
     @Override

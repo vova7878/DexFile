@@ -685,7 +685,7 @@ public class DexReader implements ReferenceStorage {
             throw new IllegalStateException(
                     "Unable to find catch handler with offset " + handler_off);
         }
-        return TryBlock.of(start_addr, unit_count, handler.elements(), handler.catch_all_addr());
+        return TryBlock.of(start_addr, unit_count, handler.catch_all_addr(), handler.elements());
     }
 
     private static int readUShortBackward(RandomInput in) {

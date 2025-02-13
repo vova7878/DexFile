@@ -22,7 +22,7 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
             EncodedValue initial_value, Iterable<Annotation> annotations) {
         this.name = Objects.requireNonNull(name);
         this.type = Objects.requireNonNull(type);
-        this.access_flags = Preconditions.checkMethodAccessFlags(access_flags);
+        this.access_flags = Preconditions.checkFieldAccessFlags(access_flags);
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
         // TODO: check that instance fields should not have initial_value
         this.initial_value = initial_value; // may be null
@@ -35,6 +35,8 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
         return new FieldDef(name, type, access_flags,
                 hiddenapi_flags, initial_value, annotations);
     }
+
+    // TODO?: Add simpler constructor?
 
     @Override
     public String getName() {

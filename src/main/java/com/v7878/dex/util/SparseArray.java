@@ -25,7 +25,6 @@ package com.v7878.dex.util;
 import java.util.Arrays;
 import java.util.Objects;
 
-//TODO: refactor
 public class SparseArray<E> implements Cloneable {
     private static final Object DELETED = new Object();
 
@@ -39,8 +38,8 @@ public class SparseArray<E> implements Cloneable {
     }
 
     public SparseArray(int initialCapacity) {
-        values = new Object[initialCapacity];
-        keys = new int[initialCapacity];
+        values = initialCapacity == 0 ? EmptyArrays.OBJECT : new Object[initialCapacity];
+        keys = initialCapacity == 0 ? EmptyArrays.INT : new int[initialCapacity];
         size = 0;
     }
 
@@ -154,17 +153,13 @@ public class SparseArray<E> implements Cloneable {
         }
     }
 
-    private static int growSize(int currentSize) {
-        return currentSize <= 4 ? 8 : currentSize + currentSize / 2;
-    }
-
     private static Object[] insert(Object[] array, int currentSize, int index, Object value) {
-        if (currentSize + 1 <= array.length) {
+        if (currentSize < array.length) {
             System.arraycopy(array, index, array, index + 1, currentSize - index);
             array[index] = value;
             return array;
         }
-        Object[] newArray = new Object[growSize(currentSize)];
+        Object[] newArray = new Object[currentSize * 2];
         System.arraycopy(array, 0, newArray, 0, index);
         newArray[index] = value;
         System.arraycopy(array, index, newArray, index + 1, array.length - index);
@@ -172,12 +167,12 @@ public class SparseArray<E> implements Cloneable {
     }
 
     private static int[] insert(int[] array, int currentSize, int index, int value) {
-        if (currentSize + 1 <= array.length) {
+        if (currentSize < array.length) {
             System.arraycopy(array, index, array, index + 1, currentSize - index);
             array[index] = value;
             return array;
         }
-        int[] newArray = new int[growSize(currentSize)];
+        int[] newArray = new int[currentSize * 2];
         System.arraycopy(array, 0, newArray, 0, index);
         newArray[index] = value;
         System.arraycopy(array, index, newArray, index + 1, array.length - index);
@@ -293,10 +288,7 @@ public class SparseArray<E> implements Cloneable {
     }
 
     public void clear() {
-        int count = size;
-        for (int i = 0; i < count; i++) {
-            values[i] = null;
-        }
+        Arrays.fill(values, 0, size, null);
         size = 0;
         garbage = false;
     }
