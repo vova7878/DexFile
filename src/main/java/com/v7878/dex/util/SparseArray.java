@@ -153,13 +153,17 @@ public class SparseArray<E> implements Cloneable {
         }
     }
 
+    private static int growSize(int currentSize) {
+        return Math.max(currentSize + 1, currentSize * 2);
+    }
+
     private static Object[] insert(Object[] array, int currentSize, int index, Object value) {
         if (currentSize < array.length) {
             System.arraycopy(array, index, array, index + 1, currentSize - index);
             array[index] = value;
             return array;
         }
-        Object[] newArray = new Object[currentSize * 2];
+        Object[] newArray = new Object[growSize(currentSize)];
         System.arraycopy(array, 0, newArray, 0, index);
         newArray[index] = value;
         System.arraycopy(array, index, newArray, index + 1, array.length - index);
@@ -172,7 +176,7 @@ public class SparseArray<E> implements Cloneable {
             array[index] = value;
             return array;
         }
-        int[] newArray = new int[currentSize * 2];
+        int[] newArray = new int[growSize(currentSize)];
         System.arraycopy(array, 0, newArray, 0, index);
         newArray[index] = value;
         System.arraycopy(array, index, newArray, index + 1, array.length - index);
