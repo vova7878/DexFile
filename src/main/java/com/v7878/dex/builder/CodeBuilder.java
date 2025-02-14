@@ -208,8 +208,9 @@ public class CodeBuilder {
                     ExceptionHandler.of(exception, handler_address);
 
             int start_index = Arrays.binarySearch(borders, item.start());
+            assert start_index >= 0;
             int end_index = Arrays.binarySearch(borders, item.end());
-            assert start_index >= 0 && end_index >= 0;
+            end_index = end_index < 0 ? ~end_index : end_index;
 
             for (int i = start_index; i < end_index; i++) {
                 var position = borders[i];
