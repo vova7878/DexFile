@@ -8,5 +8,5 @@ public sealed interface ArrayPayloadInstruction
         extends PayloadInstruction permits ArrayPayload {
     int getElementWidth();
 
-    List<Number> getArrayElements();
+    List<? extends Number> getArrayElements();
 }

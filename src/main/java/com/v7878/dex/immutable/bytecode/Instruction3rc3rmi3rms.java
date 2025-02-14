@@ -18,6 +18,7 @@ public final class Instruction3rc3rmi3rms extends Instruction
     private Instruction3rc3rmi3rms(Opcode opcode, int start_register,
                                    int register_count, Object reference1) {
         super(Preconditions.checkFormat(opcode, Format3rc3rmi3rms));
+        // TODO: check start_register + register_count not overflows
         this.start_register = Preconditions.checkShortRegister(start_register);
         this.register_count = Preconditions.checkRegisterRangeCount(register_count);
         this.reference1 = opcode.getReferenceType1().validate(reference1);
