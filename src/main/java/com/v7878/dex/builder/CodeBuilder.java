@@ -170,8 +170,8 @@ public class CodeBuilder {
     // <========><***><+++><--->
 
     private static class TryContainer {
-        Set<TypeId> exceptions = new HashSet<>();
-        List<ExceptionHandler> handlers = new ArrayList<>();
+        final Set<TypeId> exceptions = new HashSet<>();
+        final List<ExceptionHandler> handlers = new ArrayList<>();
         Integer catch_all_address = null;
     }
 
@@ -183,13 +183,14 @@ public class CodeBuilder {
             for (int i = 0; i < try_items.size(); ) {
                 BuilderTryItem block = try_items.get(i);
                 int start = block.start(), end = block.end();
-                if (start <= end) {
+                if (end <= start) {
                     assert start == end; // It`s always true, but I want to make it explicit
                     try_items.remove(i);
                     continue;
                 }
                 borders_set.add(start);
                 borders_set.add(end + 1);
+                i++;
             }
             borders = borders_set.stream().mapToInt(v -> v).toArray();
         }
@@ -243,7 +244,7 @@ public class CodeBuilder {
         return out;
     }
 
-    private MethodImplementation end() {
+    private MethodImplementation finish() {
         delayed_actions.forEach(Runnable::run);
 
         List<Instruction> insns = instructions.stream()
@@ -254,17 +255,20 @@ public class CodeBuilder {
         return MethodImplementation.of(regs_size, insns, try_blocks, null);
     }
 
-    public static MethodImplementation build(int regs_size, int ins_size,
-                                             boolean add_hidden_this, Consumer<CodeBuilder> consumer) {
+    public static MethodImplementation build(int regs_size, int ins_size, boolean add_hidden_this,
+                                             Consumer<CodeBuilder> consumer) {
         CodeBuilder builder = new CodeBuilder(regs_size, ins_size, add_hidden_this);
         consumer.accept(builder);
-        return builder.end();
+        return builder.finish();
     }
 
-    public static MethodImplementation build(int regs_size, int ins_size, Consumer<CodeBuilder> consumer) {
-        CodeBuilder builder = new CodeBuilder(regs_size, ins_size, false);
-        consumer.accept(builder);
-        return builder.end();
+    public static MethodImplementation build(int regs_size, int ins_size,
+                                             Consumer<CodeBuilder> consumer) {
+        return build(regs_size, 0, false, consumer);
+    }
+
+    public static MethodImplementation build(int regs_size, Consumer<CodeBuilder> consumer) {
+        return build(regs_size, 0, consumer);
     }
 
     public int v(int reg) {
@@ -402,7 +406,7 @@ public class CodeBuilder {
         return this;
     }
 
-    public void try_catch_all_internal(Object start, Object end, Object handler) {
+    private void try_catch_all_internal(Object start, Object end, Object handler) {
         addTryBlock(start, end, null, handler);
     }
 

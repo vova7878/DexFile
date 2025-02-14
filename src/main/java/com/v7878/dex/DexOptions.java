@@ -32,11 +32,11 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
             api = CORRECT_SDK_INT;
             is_android = true;
         } catch (Throwable th) {
-            api = FIRST_ART_TARGET;
+            api = 26;
             is_android = false;
         }
         this.targetApi = api;
-        this.targetForArt = api >= FIRST_ART_TARGET;
+        this.targetForArt = api > LAST_DALVIK_TARGET;
         this.allowOdexInstructions = is_android;
     }
 
