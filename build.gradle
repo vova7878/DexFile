@@ -1,5 +1,6 @@
 plugins {
-    id 'java-library'
+    alias(libs.plugins.java.library)
+    alias(libs.plugins.maven.publish)
 }
 
 java {
@@ -8,5 +9,17 @@ java {
 }
 
 dependencies {
-    implementation 'com.github.vova7878:AndroidMisc:v0.0.5'
+    implementation libs.androidmisc
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId project.group
+            artifactId project.name
+            version project.version
+
+            from components.java
+        }
+    }
 }

@@ -10,6 +10,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public final class ProtoId implements Comparable<ProtoId> {
     private final TypeId return_type;
@@ -33,13 +34,15 @@ public final class ProtoId implements Comparable<ProtoId> {
         Objects.requireNonNull(value);
         Class<?> return_type = value instanceof Method m ? m.getReturnType() : void.class;
         return new ProtoId(TypeId.of(return_type),
-                Arrays.stream(value.getParameterTypes()).map(TypeId::of).toList());
+                Arrays.stream(value.getParameterTypes()).map(TypeId::of)
+                        .collect(Collectors.toList()));
     }
 
     public static ProtoId of(MethodType value) {
         Objects.requireNonNull(value);
         return new ProtoId(TypeId.of(value.returnType()),
-                value.parameterList().stream().map(TypeId::of).toList());
+                value.parameterList().stream().map(TypeId::of)
+                        .collect(Collectors.toList()));
     }
 
     public TypeId getReturnType() {

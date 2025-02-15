@@ -45,6 +45,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 public class DexCollector implements ReferenceCollector {
     public record CallSiteIdContainer(CallSiteId value, EncodedArray array)
@@ -154,11 +155,13 @@ public class DexCollector implements ReferenceCollector {
         }
 
         private static List<TypeId> toTypeList(List<Parameter> parameters) {
-            return parameters.stream().map(Parameter::getType).toList();
+            return parameters.stream().map(Parameter::getType)
+                    .collect(Collectors.toList());
         }
 
         private static List<String> toNamesList(List<Parameter> parameters) {
-            return parameters.stream().map(Parameter::getName).toList();
+            return parameters.stream().map(Parameter::getName)
+                    .collect(Collectors.toList());
         }
 
         public static MethodDefContainer of(TypeId declaring_class, MethodDef value) {

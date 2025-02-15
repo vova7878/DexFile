@@ -1,0 +1,10 @@
+[versions]
+androidmisc = "v0.0.5"
+
+[libraries]
+androidmisc = { module = "com.github.vova7878:AndroidMisc", version.ref = "androidmisc" }
+
+[plugins]
+java-library = { id = 'java-library' }
+maven-publish = { id = 'maven-publish' }
+
