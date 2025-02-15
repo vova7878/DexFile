@@ -1,7 +1,7 @@
 package com.v7878.dex.io;
 
-import static com.v7878.misc.Math.isAligned;
-import static com.v7878.misc.Math.roundUp;
+import static com.v7878.dex.util.AlignmentUtils.isAligned;
+import static com.v7878.dex.util.AlignmentUtils.roundUp;
 
 import java.nio.ByteOrder;
 import java.util.Objects;

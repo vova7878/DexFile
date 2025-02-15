@@ -61,7 +61,7 @@ import static com.v7878.dex.raw.CompactCodeItemConstants.kInsnsSizeShift;
 import static com.v7878.dex.raw.CompactCodeItemConstants.kOutsSizeShift;
 import static com.v7878.dex.raw.CompactCodeItemConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactCodeItemConstants.kTriesSizeSizeShift;
-import static com.v7878.misc.Math.roundUp;
+import static com.v7878.dex.util.AlignmentUtils.roundUp;
 
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.Opcodes;
