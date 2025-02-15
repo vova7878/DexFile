@@ -48,6 +48,21 @@ public final class ClassBuilder {
         return build(b -> consumer.accept(b.withType(type)));
     }
 
+    public ClassBuilder if_(boolean value, Consumer<ClassBuilder> true_branch,
+                            Consumer<ClassBuilder> false_branch) {
+        if (value) {
+            true_branch.accept(this);
+        } else {
+            false_branch.accept(this);
+        }
+        return this;
+    }
+
+    public ClassBuilder commit(Consumer<ClassBuilder> branch) {
+        branch.accept(this);
+        return this;
+    }
+
     public ClassBuilder of(ClassDef def) {
         Objects.requireNonNull(def);
         return withType(def.getType())

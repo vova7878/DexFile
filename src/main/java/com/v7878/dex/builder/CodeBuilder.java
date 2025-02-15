@@ -271,6 +271,21 @@ public final class CodeBuilder {
         return build(regs_size, 0, consumer);
     }
 
+    public CodeBuilder if_(boolean value, Consumer<CodeBuilder> true_branch,
+                           Consumer<CodeBuilder> false_branch) {
+        if (value) {
+            true_branch.accept(this);
+        } else {
+            false_branch.accept(this);
+        }
+        return this;
+    }
+
+    public CodeBuilder commit(Consumer<CodeBuilder> branch) {
+        branch.accept(this);
+        return this;
+    }
+
     public int v(int reg) {
         //all registers
         return checkRange(reg, 0, regs_size);
@@ -419,21 +434,6 @@ public final class CodeBuilder {
         InternalLabel handler = new InternalLabel();
         try_catch_all_internal(start, end, handler);
         putLabel(handler);
-        return this;
-    }
-
-    public CodeBuilder if_(boolean value, Consumer<CodeBuilder> true_branch,
-                           Consumer<CodeBuilder> false_branch) {
-        if (value) {
-            true_branch.accept(this);
-        } else {
-            false_branch.accept(this);
-        }
-        return this;
-    }
-
-    public CodeBuilder commit(Consumer<CodeBuilder> branch) {
-        branch.accept(this);
         return this;
     }
 

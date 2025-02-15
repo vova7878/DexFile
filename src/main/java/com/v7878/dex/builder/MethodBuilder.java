@@ -4,6 +4,7 @@ import static com.v7878.dex.DexConstants.ACC_STATIC;
 
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.MethodDef;
+import com.v7878.dex.immutable.MethodId;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
@@ -45,6 +46,21 @@ public final class MethodBuilder {
         return builder.finish();
     }
 
+    public MethodBuilder if_(boolean value, Consumer<MethodBuilder> true_branch,
+                             Consumer<MethodBuilder> false_branch) {
+        if (value) {
+            true_branch.accept(this);
+        } else {
+            false_branch.accept(this);
+        }
+        return this;
+    }
+
+    public MethodBuilder commit(Consumer<MethodBuilder> branch) {
+        branch.accept(this);
+        return this;
+    }
+
     public MethodBuilder of(MethodDef def) {
         Objects.requireNonNull(def);
         return withName(def.getName())
@@ -54,6 +70,13 @@ public final class MethodBuilder {
                 .withHiddenApiFlags(def.getHiddenApiFlags())
                 .withCode(def.getImplementation())
                 .setAnnotationsInternal(def.getAnnotations());
+    }
+
+    public MethodBuilder of(MethodId id) {
+        Objects.requireNonNull(id);
+        return withName(id.getName())
+                .withReturnType(id.getReturnType())
+                .withParameterTypes(id.getParameterTypes());
     }
 
     public MethodBuilder withName(String name) {

@@ -2,6 +2,7 @@ package com.v7878.dex.builder;
 
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.FieldDef;
+import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.ItemConverter;
@@ -36,6 +37,21 @@ public final class FieldBuilder {
         return builder.finish();
     }
 
+    public FieldBuilder if_(boolean value, Consumer<FieldBuilder> true_branch,
+                            Consumer<FieldBuilder> false_branch) {
+        if (value) {
+            true_branch.accept(this);
+        } else {
+            false_branch.accept(this);
+        }
+        return this;
+    }
+
+    public FieldBuilder commit(Consumer<FieldBuilder> branch) {
+        branch.accept(this);
+        return this;
+    }
+
     public FieldBuilder of(FieldDef def) {
         Objects.requireNonNull(def);
         return withName(def.getName())
@@ -44,6 +60,12 @@ public final class FieldBuilder {
                 .withHiddenApiFlags(def.getHiddenApiFlags())
                 .withInitialValue(def.getInitialValue())
                 .setAnnotationsInternal(def.getAnnotations());
+    }
+
+    public FieldBuilder of(FieldId id) {
+        Objects.requireNonNull(id);
+        return withName(id.getName())
+                .withType(id.getType());
     }
 
     public FieldBuilder withName(String name) {
