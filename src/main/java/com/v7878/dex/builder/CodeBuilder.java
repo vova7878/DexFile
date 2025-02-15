@@ -64,7 +64,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 // TODO: debug info
-public class CodeBuilder {
+public final class CodeBuilder {
     private static class InternalLabel {
     }
 
@@ -117,7 +117,7 @@ public class CodeBuilder {
         }
     }
 
-    public static int checkRange(int value, int start, int length) {
+    private static int checkRange(int value, int start, int length) {
         if (length < 0 || value < start || value >= start + length) {
             throw new IndexOutOfBoundsException(
                     String.format("value %s out of range [%s, %<s + %s)",
@@ -203,7 +203,7 @@ public class CodeBuilder {
         }
 
         for (var item : try_items) {
-            var exception = item.exceptionType;
+            var exception = item.exceptionType();
             var handler_address = item.handler();
             var handler = exception == null ? null :
                     ExceptionHandler.of(exception, handler_address);
@@ -257,7 +257,7 @@ public class CodeBuilder {
 
     public static MethodImplementation build(int regs_size, int ins_size, boolean add_hidden_this,
                                              Consumer<CodeBuilder> consumer) {
-        CodeBuilder builder = new CodeBuilder(regs_size, ins_size, add_hidden_this);
+        var builder = new CodeBuilder(regs_size, ins_size, add_hidden_this);
         consumer.accept(builder);
         return builder.finish();
     }

@@ -1,10 +1,11 @@
 package com.v7878.dex.immutable;
 
+import static com.v7878.dex.DexConstants.ACC_STATIC;
+
 import com.v7878.dex.util.CollectionUtils;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
-import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -45,7 +46,7 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
 
     private static String getName(Executable ex) {
         if (ex instanceof Constructor) {
-            return (ex.getModifiers() & Modifier.STATIC) == 0 ? "<init>" : "<clinit>";
+            return (ex.getModifiers() & ACC_STATIC) == 0 ? "<init>" : "<clinit>";
         }
         return ex.getName();
     }
@@ -75,6 +76,14 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
 
     public List<TypeId> getParameterTypes() {
         return proto.getParameterTypes();
+    }
+
+    public String getShorty() {
+        return proto.getShorty();
+    }
+
+    public int getInputRegisterCount() {
+        return proto.getInputRegisterCount();
     }
 
     @Override

@@ -1,6 +1,9 @@
 package com.v7878.dex.util;
 
+import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.TypeId;
+
+import java.util.List;
 
 public class ShortyUtils {
     public static char getTypeShorty(String descriptor) {
@@ -34,5 +37,39 @@ public class ShortyUtils {
 
     public static int getRegisterCount(TypeId type) {
         return getRegisterCount(type.getDescriptor());
+    }
+
+    public static String getShorty(TypeId return_type, List<TypeId> parameters) {
+        var out = new StringBuilder(parameters.size() + 1);
+        out.append(return_type.getShorty());
+        for (var tmp : parameters) {
+            out.append(tmp.getShorty());
+        }
+        return out.toString();
+    }
+
+    public static String getDefShorty(TypeId return_type, List<Parameter> parameters) {
+        var out = new StringBuilder(parameters.size() + 1);
+        out.append(return_type.getShorty());
+        for (var tmp : parameters) {
+            out.append(tmp.getType().getShorty());
+        }
+        return out.toString();
+    }
+
+    public static int getInputRegisterCount(List<TypeId> parameters) {
+        int out = 0;
+        for (var tmp : parameters) {
+            out += tmp.getRegisterCount();
+        }
+        return out;
+    }
+
+    public static int getDefInputRegisterCount(List<Parameter> parameters) {
+        int out = 0;
+        for (var tmp : parameters) {
+            out += tmp.getType().getRegisterCount();
+        }
+        return out;
     }
 }

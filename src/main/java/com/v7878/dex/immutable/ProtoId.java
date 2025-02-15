@@ -2,6 +2,7 @@ package com.v7878.dex.immutable;
 
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.ShortyUtils;
 
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Executable;
@@ -11,21 +12,21 @@ import java.util.List;
 import java.util.Objects;
 
 public final class ProtoId implements Comparable<ProtoId> {
-    private final TypeId returnType;
+    private final TypeId return_type;
     private final List<TypeId> parameters;
 
-    private ProtoId(TypeId returnType, List<TypeId> parameters) {
-        this.returnType = returnType;
+    private ProtoId(TypeId return_type, List<TypeId> parameters) {
+        this.return_type = return_type;
         this.parameters = parameters;
     }
 
-    public static ProtoId of(TypeId returnType, Iterable<TypeId> parameters) {
-        return new ProtoId(Objects.requireNonNull(returnType),
+    public static ProtoId of(TypeId return_type, Iterable<TypeId> parameters) {
+        return new ProtoId(Objects.requireNonNull(return_type),
                 ItemConverter.toList(parameters));
     }
 
-    public static ProtoId of(TypeId returnType, TypeId... parameters) {
-        return of(returnType, Arrays.asList(parameters));
+    public static ProtoId of(TypeId return_type, TypeId... parameters) {
+        return of(return_type, Arrays.asList(parameters));
     }
 
     public static ProtoId of(Executable value) {
@@ -42,7 +43,7 @@ public final class ProtoId implements Comparable<ProtoId> {
     }
 
     public TypeId getReturnType() {
-        return returnType;
+        return return_type;
     }
 
     public List<TypeId> getParameterTypes() {
@@ -50,21 +51,11 @@ public final class ProtoId implements Comparable<ProtoId> {
     }
 
     public String getShorty() {
-        var parameters = getParameterTypes();
-        var out = new StringBuilder(parameters.size() + 1);
-        out.append(getReturnType().getShorty());
-        for (TypeId tmp : parameters) {
-            out.append(tmp.getShorty());
-        }
-        return out.toString();
+        return ShortyUtils.getShorty(return_type, parameters);
     }
 
     public int getInputRegisterCount() {
-        int out = 0;
-        for (TypeId tmp : getParameterTypes()) {
-            out += tmp.getRegisterCount();
-        }
-        return out;
+        return ShortyUtils.getInputRegisterCount(parameters);
     }
 
     @Override

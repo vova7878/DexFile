@@ -4,6 +4,7 @@ import com.v7878.dex.util.AccessFlagUtils;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
+import com.v7878.dex.util.ShortyUtils;
 
 import java.util.Comparator;
 import java.util.List;
@@ -56,6 +57,14 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
 
     public List<Parameter> getParameters() {
         return parameters;
+    }
+
+    public String getShorty() {
+        return ShortyUtils.getDefShorty(return_type, parameters);
+    }
+
+    public int getInputRegisterCount() {
+        return ShortyUtils.getDefInputRegisterCount(parameters);
     }
 
     @Override

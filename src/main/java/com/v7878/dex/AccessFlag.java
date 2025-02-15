@@ -26,7 +26,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public enum AccessFlags {
+public enum AccessFlag {
     PUBLIC(ACC_PUBLIC, "public", true, true, true, false, true),
     PRIVATE(ACC_PRIVATE, "private", false, true, true, false, true),
     PROTECTED(ACC_PROTECTED, "protected", false, true, true, false, true),
@@ -58,41 +58,41 @@ public enum AccessFlags {
     private final boolean validForField;
     private final String name;
 
-    private static final AccessFlags[] CACHED_ALL_FLAGS = AccessFlags.values();
+    private static final AccessFlag[] CACHED_ALL_FLAGS = AccessFlag.values();
 
-    private static final AccessFlags[] CACHED_CLASS_FLAGS = Arrays
+    private static final AccessFlag[] CACHED_CLASS_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForClass)
-            .toArray(AccessFlags[]::new);
+            .toArray(AccessFlag[]::new);
     public static final int VALID_CLASS_FLAGS_MASK = combine(CACHED_CLASS_FLAGS);
 
-    private static final AccessFlags[] CACHED_INNER_CLASS_FLAGS = Arrays
+    private static final AccessFlag[] CACHED_INNER_CLASS_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForInnerClass)
-            .toArray(AccessFlags[]::new);
+            .toArray(AccessFlag[]::new);
     public static final int VALID_INNER_CLASS_FLAGS_MASK = combine(CACHED_INNER_CLASS_FLAGS);
 
-    public static final AccessFlags[] CACHED_METHOD_FLAGS = Arrays
+    public static final AccessFlag[] CACHED_METHOD_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForMethod)
-            .toArray(AccessFlags[]::new);
+            .toArray(AccessFlag[]::new);
     public static final int VALID_METHOD_FLAGS_MASK = combine(CACHED_METHOD_FLAGS);
 
-    public static final AccessFlags[] CACHED_PARAMETER_FLAGS = Arrays
+    public static final AccessFlag[] CACHED_PARAMETER_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForParameter)
-            .toArray(AccessFlags[]::new);
+            .toArray(AccessFlag[]::new);
     public static final int VALID_PARAMETER_FLAGS_MASK = combine(CACHED_PARAMETER_FLAGS);
 
-    public static final AccessFlags[] CACHED_FIELD_FLAGS = Arrays
+    public static final AccessFlag[] CACHED_FIELD_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForField)
-            .toArray(AccessFlags[]::new);
+            .toArray(AccessFlag[]::new);
     public static final int VALID_FIELD_FLAGS_MASK = combine(CACHED_FIELD_FLAGS);
 
-    AccessFlags(int value, String name, boolean validForClass,
-                boolean validForInnerClass, boolean validForMethod,
-                boolean validForParameter, boolean validForField) {
+    AccessFlag(int value, String name, boolean validForClass,
+               boolean validForInnerClass, boolean validForMethod,
+               boolean validForParameter, boolean validForField) {
         this.value = value;
         this.name = name;
         this.validForClass = validForClass;
@@ -102,7 +102,7 @@ public enum AccessFlags {
         this.validForField = validForField;
     }
 
-    public static int combine(AccessFlags[] flags) {
+    public static int combine(AccessFlag[] flags) {
         int value = 0;
         for (var flag : flags) {
             value |= flag.value;
@@ -130,55 +130,55 @@ public enum AccessFlags {
         return flags == (flags & VALID_FIELD_FLAGS_MASK);
     }
 
-    private static String formatAccessFlags(AccessFlags[] flags) {
+    private static String formatAccessFlags(AccessFlag[] flags) {
         return Arrays.stream(flags).map(Objects::toString)
                 .collect(Collectors.joining(" "));
     }
 
-    public static AccessFlags[] getAccessFlagsForClass(int flags) {
+    public static AccessFlag[] getAccessFlagsForClass(int flags) {
         return Arrays.stream(CACHED_CLASS_FLAGS)
                 .filter(flag -> flag.isSet(flags))
-                .toArray(AccessFlags[]::new);
+                .toArray(AccessFlag[]::new);
     }
 
     public static String formatAccessFlagsForClass(int flags) {
         return formatAccessFlags(getAccessFlagsForClass(flags));
     }
 
-    public static AccessFlags[] getAccessFlagsForInnerClass(int flags) {
+    public static AccessFlag[] getAccessFlagsForInnerClass(int flags) {
         return Arrays.stream(CACHED_INNER_CLASS_FLAGS)
                 .filter(flag -> flag.isSet(flags))
-                .toArray(AccessFlags[]::new);
+                .toArray(AccessFlag[]::new);
     }
 
     public static String formatAccessFlagsForInnerClass(int flags) {
         return formatAccessFlags(getAccessFlagsForInnerClass(flags));
     }
 
-    public static AccessFlags[] getAccessFlagsForMethod(int flags) {
+    public static AccessFlag[] getAccessFlagsForMethod(int flags) {
         return Arrays.stream(CACHED_METHOD_FLAGS)
                 .filter(flag -> flag.isSet(flags))
-                .toArray(AccessFlags[]::new);
+                .toArray(AccessFlag[]::new);
     }
 
     public static String formatAccessFlagsForMethod(int flags) {
         return formatAccessFlags(getAccessFlagsForMethod(flags));
     }
 
-    public static AccessFlags[] getAccessFlagsForParameter(int flags) {
+    public static AccessFlag[] getAccessFlagsForParameter(int flags) {
         return Arrays.stream(CACHED_PARAMETER_FLAGS)
                 .filter(flag -> flag.isSet(flags))
-                .toArray(AccessFlags[]::new);
+                .toArray(AccessFlag[]::new);
     }
 
     public static String formatAccessFlagsForParameter(int flags) {
         return formatAccessFlags(getAccessFlagsForParameter(flags));
     }
 
-    public static AccessFlags[] getAccessFlagsForField(int flags) {
+    public static AccessFlag[] getAccessFlagsForField(int flags) {
         return Arrays.stream(CACHED_FIELD_FLAGS)
                 .filter(flag -> flag.isSet(flags))
-                .toArray(AccessFlags[]::new);
+                .toArray(AccessFlag[]::new);
     }
 
     public static String formatAccessFlagsForField(int flags) {
