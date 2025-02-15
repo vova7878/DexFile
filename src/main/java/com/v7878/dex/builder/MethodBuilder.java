@@ -96,6 +96,10 @@ public final class MethodBuilder {
         return this;
     }
 
+    public MethodBuilder withConstructorSignature() {
+        return withName("<init>").withReturnType(TypeId.V);
+    }
+
     private MethodBuilder withParametersInternal(List<Parameter> parameters) {
         this.parameters = parameters;
         return this;
