@@ -81,7 +81,7 @@ public final class ClassBuilder {
         return this;
     }
 
-    public ClassBuilder setInterfacesInternal(NavigableSet<TypeId> interfaces) {
+    private ClassBuilder setInterfacesInternal(NavigableSet<TypeId> interfaces) {
         this.interfaces = interfaces;
         return this;
     }
@@ -125,7 +125,7 @@ public final class ClassBuilder {
         return withAnnotations(Arrays.asList(annotations));
     }
 
-    public ClassBuilder setFieldsInternal(NavigableSet<FieldDef> fields) {
+    private ClassBuilder setFieldsInternal(NavigableSet<FieldDef> fields) {
         this.fields = fields;
         return this;
     }
@@ -159,7 +159,7 @@ public final class ClassBuilder {
         );
     }
 
-    public ClassBuilder setMethodsInternal(NavigableSet<MethodDef> methods) {
+    private ClassBuilder setMethodsInternal(NavigableSet<MethodDef> methods) {
         this.methods = methods;
         return this;
     }
