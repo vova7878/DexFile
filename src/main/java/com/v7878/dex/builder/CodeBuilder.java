@@ -281,6 +281,13 @@ public final class CodeBuilder {
         return this;
     }
 
+    public CodeBuilder if_(boolean value, Consumer<CodeBuilder> true_branch) {
+        if (value) {
+            true_branch.accept(this);
+        }
+        return this;
+    }
+
     public CodeBuilder commit(Consumer<CodeBuilder> branch) {
         branch.accept(this);
         return this;

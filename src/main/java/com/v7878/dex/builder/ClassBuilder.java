@@ -58,6 +58,13 @@ public final class ClassBuilder {
         return this;
     }
 
+    public ClassBuilder if_(boolean value, Consumer<ClassBuilder> true_branch) {
+        if (value) {
+            true_branch.accept(this);
+        }
+        return this;
+    }
+
     public ClassBuilder commit(Consumer<ClassBuilder> branch) {
         branch.accept(this);
         return this;

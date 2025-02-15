@@ -47,6 +47,13 @@ public final class FieldBuilder {
         return this;
     }
 
+    public FieldBuilder if_(boolean value, Consumer<FieldBuilder> true_branch) {
+        if (value) {
+            true_branch.accept(this);
+        }
+        return this;
+    }
+
     public FieldBuilder commit(Consumer<FieldBuilder> branch) {
         branch.accept(this);
         return this;

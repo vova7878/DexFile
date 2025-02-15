@@ -56,6 +56,13 @@ public final class MethodBuilder {
         return this;
     }
 
+    public MethodBuilder if_(boolean value, Consumer<MethodBuilder> true_branch) {
+        if (value) {
+            true_branch.accept(this);
+        }
+        return this;
+    }
+
     public MethodBuilder commit(Consumer<MethodBuilder> branch) {
         branch.accept(this);
         return this;
