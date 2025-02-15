@@ -1,6 +1,5 @@
 package com.v7878.dex.util;
 
-
 import java.util.AbstractList;
 
 public abstract class CachedFixedSizeList<T> extends AbstractList<T> {
