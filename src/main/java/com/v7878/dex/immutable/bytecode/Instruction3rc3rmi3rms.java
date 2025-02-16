@@ -3,6 +3,7 @@ package com.v7878.dex.immutable.bytecode;
 import static com.v7878.dex.Format.Format3rc3rmi3rms;
 
 import com.v7878.dex.Opcode;
+import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.util.Preconditions;
@@ -21,7 +22,7 @@ public final class Instruction3rc3rmi3rms extends Instruction
         // TODO: check start_register + register_count not overflows
         this.start_register = Preconditions.checkShortRegister(start_register);
         this.register_count = Preconditions.checkRegisterRangeCount(register_count);
-        this.reference1 = opcode.getReferenceType1().validate(reference1);
+        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
     }
 
     public static Instruction3rc3rmi3rms of(Opcode opcode, int start_register,

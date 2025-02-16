@@ -3,6 +3,7 @@ package com.v7878.dex.immutable.bytecode;
 import static com.v7878.dex.Format.Format45cc;
 
 import com.v7878.dex.Opcode;
+import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.iface.DualReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.VariableFiveRegisterInstruction;
 import com.v7878.dex.util.Preconditions;
@@ -30,8 +31,8 @@ public final class Instruction45cc extends Instruction
         this.register3 = (register_count > 2) ? Preconditions.checkNibbleRegister(register3) : 0;
         this.register4 = (register_count > 3) ? Preconditions.checkNibbleRegister(register4) : 0;
         this.register5 = (register_count > 4) ? Preconditions.checkNibbleRegister(register5) : 0;
-        this.reference1 = opcode.getReferenceType1().validate(reference1);
-        this.reference2 = opcode.getReferenceType2().validate(reference2);
+        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
+        this.reference2 = ReferenceType.validate(opcode.getReferenceType2(), reference2);
     }
 
     public static Instruction45cc of(Opcode opcode, int register_count, int register1,

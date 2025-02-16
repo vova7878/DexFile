@@ -1,8 +1,8 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexConstants.ACC_STATIC;
-import static com.v7878.dex.ReferenceType.ReferenceCollector;
 
+import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
 import com.v7878.dex.immutable.CallSiteId;
@@ -47,7 +47,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-public class DexCollector implements ReferenceCollector {
+public class DexCollector {
     public record CallSiteIdContainer(CallSiteId value, EncodedArray array)
             implements Comparable<CallSiteIdContainer> {
         @Override
@@ -374,18 +374,15 @@ public class DexCollector implements ReferenceCollector {
         class_defs = new ArrayList<>();
     }
 
-    @Override
     public void addString(String value) {
         strings.add(value);
     }
 
-    @Override
     public void addType(TypeId value) {
         types.add(value);
         addString(value.getDescriptor());
     }
 
-    @Override
     public void addField(FieldId value) {
         fields.add(value);
         addType(value.getDeclaringClass());
@@ -393,7 +390,6 @@ public class DexCollector implements ReferenceCollector {
         addType(value.getType());
     }
 
-    @Override
     public void addProto(ProtoId value) {
         protos.add(value);
         addString(value.getShorty());
@@ -401,7 +397,6 @@ public class DexCollector implements ReferenceCollector {
         addTypeList(value.getParameterTypes());
     }
 
-    @Override
     public void addMethod(MethodId value) {
         methods.add(value);
         addType(value.getDeclaringClass());
@@ -409,7 +404,6 @@ public class DexCollector implements ReferenceCollector {
         addProto(value.getProto());
     }
 
-    @Override
     public void addMethodHandle(MethodHandleId value) {
         method_handles.add(value);
         var member = value.getMember();
@@ -420,7 +414,6 @@ public class DexCollector implements ReferenceCollector {
         }
     }
 
-    @Override
     public void addCallSite(CallSiteId value) {
         var container = CallSiteIdContainer.of(value);
         call_sites.add(container);
@@ -507,12 +500,26 @@ public class DexCollector implements ReferenceCollector {
         fillEncodedArray(value);
     }
 
+    public void collect(ReferenceType type, Object value) {
+        Objects.requireNonNull(value);
+        switch (type) {
+            case STRING -> addString((String) value);
+            case TYPE -> addType((TypeId) value);
+            case FIELD -> addField((FieldId) value);
+            case METHOD -> addMethod((MethodId) value);
+            case PROTO -> addProto((ProtoId) value);
+            case CALLSITE -> addCallSite((CallSiteId) value);
+            case METHOD_HANDLE -> addMethodHandle((MethodHandleId) value);
+            case RAW_INDEX -> { /* nop */ }
+        }
+    }
+
     public void fillInstruction(Instruction value) {
         if (value instanceof SingleReferenceInstruction ref1) {
-            ref1.getOpcode().getReferenceType1().collect(this, ref1.getReference1());
+            collect(ref1.getOpcode().getReferenceType1(), ref1.getReference1());
         }
         if (value instanceof DualReferenceInstruction ref2) {
-            ref2.getOpcode().getReferenceType2().collect(this, ref2.getReference2());
+            collect(ref2.getOpcode().getReferenceType2(), ref2.getReference2());
         }
     }
 

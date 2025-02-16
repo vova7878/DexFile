@@ -3,6 +3,7 @@ package com.v7878.dex.immutable.bytecode;
 import static com.v7878.dex.Format.Format4rcc;
 
 import com.v7878.dex.Opcode;
+import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.iface.DualReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
 import com.v7878.dex.util.Preconditions;
@@ -22,8 +23,8 @@ public final class Instruction4rcc extends Instruction
         // TODO: check start_register + register_count not overflows
         this.start_register = Preconditions.checkShortRegister(start_register);
         this.register_count = Preconditions.checkRegisterRangeCount(register_count);
-        this.reference1 = opcode.getReferenceType1().validate(reference1);
-        this.reference2 = opcode.getReferenceType2().validate(reference2);
+        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
+        this.reference2 = ReferenceType.validate(opcode.getReferenceType2(), reference2);
     }
 
     public static Instruction4rcc of(Opcode opcode, int start_register, int register_count,

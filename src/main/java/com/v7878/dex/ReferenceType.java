@@ -11,221 +11,26 @@ import com.v7878.dex.util.Preconditions;
 import java.util.Objects;
 
 public enum ReferenceType {
-    STRING {
-        @Override
-        public String validate(Object ref) {
-            return (String) Objects.requireNonNull(ref);
-        }
+    STRING,
+    TYPE,
+    FIELD,
+    METHOD,
+    PROTO,
+    CALLSITE,
+    METHOD_HANDLE,
+    RAW_INDEX;
 
-        @Override
-        public String indexToRef(ReferenceStorage storage, int index) {
-            return storage.getString(index);
-        }
-
-        @Override
-        public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.addString(validate(value));
-        }
-
-        @Override
-        public int refToIndex(ReferenceIndexer indexer, Object value) {
-            return indexer.getStringIndex(validate(value));
-        }
-    }, TYPE {
-        @Override
-        public TypeId validate(Object ref) {
-            return (TypeId) Objects.requireNonNull(ref);
-        }
-
-        @Override
-        public TypeId indexToRef(ReferenceStorage storage, int index) {
-            return storage.getTypeId(index);
-        }
-
-        @Override
-        public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.addType(validate(value));
-        }
-
-        @Override
-        public int refToIndex(ReferenceIndexer indexer, Object value) {
-            return indexer.getTypeIndex(validate(value));
-        }
-    }, FIELD {
-        @Override
-        public FieldId validate(Object ref) {
-            return (FieldId) Objects.requireNonNull(ref);
-        }
-
-        @Override
-        public FieldId indexToRef(ReferenceStorage storage, int index) {
-            return storage.getFieldId(index);
-        }
-
-        @Override
-        public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.addField(validate(value));
-        }
-
-        @Override
-        public int refToIndex(ReferenceIndexer indexer, Object value) {
-            return indexer.getFieldIndex(validate(value));
-        }
-    }, METHOD {
-        @Override
-        public MethodId validate(Object ref) {
-            return (MethodId) Objects.requireNonNull(ref);
-        }
-
-        @Override
-        public MethodId indexToRef(ReferenceStorage storage, int index) {
-            return storage.getMethodId(index);
-        }
-
-        @Override
-        public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.addMethod(validate(value));
-        }
-
-        @Override
-        public int refToIndex(ReferenceIndexer indexer, Object value) {
-            return indexer.getMethodIndex(validate(value));
-        }
-    }, PROTO {
-        @Override
-        public ProtoId validate(Object ref) {
-            return (ProtoId) Objects.requireNonNull(ref);
-        }
-
-        @Override
-        public ProtoId indexToRef(ReferenceStorage storage, int index) {
-            return storage.getProtoId(index);
-        }
-
-        @Override
-        public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.addProto(validate(value));
-        }
-
-        @Override
-        public int refToIndex(ReferenceIndexer indexer, Object value) {
-            return indexer.getProtoIndex(validate(value));
-        }
-    }, CALLSITE {
-        @Override
-        public CallSiteId validate(Object ref) {
-            return (CallSiteId) Objects.requireNonNull(ref);
-        }
-
-        @Override
-        public CallSiteId indexToRef(ReferenceStorage storage, int index) {
-            return storage.getCallSiteId(index);
-        }
-
-        @Override
-        public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.addCallSite(validate(value));
-        }
-
-        @Override
-        public int refToIndex(ReferenceIndexer indexer, Object value) {
-            return indexer.getCallSiteIndex(validate(value));
-        }
-    }, METHOD_HANDLE {
-        @Override
-        public MethodHandleId validate(Object ref) {
-            return (MethodHandleId) Objects.requireNonNull(ref);
-        }
-
-        @Override
-        public MethodHandleId indexToRef(ReferenceStorage storage, int index) {
-            return storage.getMethodHandleId(index);
-        }
-
-        @Override
-        public void collect(ReferenceCollector colleactor, Object value) {
-            colleactor.addMethodHandle(validate(value));
-        }
-
-        @Override
-        public int refToIndex(ReferenceIndexer indexer, Object value) {
-            return indexer.getMethodHandleIndex(validate(value));
-        }
-    }, RAW_INDEX {
-        @Override
-        public Integer validate(Object ref) {
-            return Preconditions.checkRawIndex((Integer) Objects.requireNonNull(ref));
-        }
-
-        @Override
-        public Integer indexToRef(ReferenceStorage storage, int index) {
-            return index;
-        }
-
-        @Override
-        public void collect(ReferenceCollector colleactor, Object value) {
-            // nop
-        }
-
-        @Override
-        public int refToIndex(ReferenceIndexer indexer, Object value) {
-            return validate(value);
-        }
-    };
-
-    public abstract Object validate(Object ref);
-
-    public interface ReferenceStorage {
-        String getString(int index);
-
-        TypeId getTypeId(int index);
-
-        FieldId getFieldId(int index);
-
-        ProtoId getProtoId(int index);
-
-        MethodId getMethodId(int index);
-
-        MethodHandleId getMethodHandleId(int index);
-
-        CallSiteId getCallSiteId(int index);
+    public static Object validate(ReferenceType type, Object value) {
+        Objects.requireNonNull(value);
+        return switch (type) {
+            case STRING -> (String) value;
+            case TYPE -> (TypeId) value;
+            case FIELD -> (FieldId) value;
+            case METHOD -> (MethodId) value;
+            case PROTO -> (ProtoId) value;
+            case CALLSITE -> (CallSiteId) value;
+            case METHOD_HANDLE -> (MethodHandleId) value;
+            case RAW_INDEX -> Preconditions.checkRawIndex((Integer) value);
+        };
     }
-
-    public abstract Object indexToRef(ReferenceStorage storage, int index);
-
-    public interface ReferenceCollector {
-        void addString(String value);
-
-        void addType(TypeId value);
-
-        void addField(FieldId value);
-
-        void addProto(ProtoId value);
-
-        void addMethod(MethodId value);
-
-        void addMethodHandle(MethodHandleId value);
-
-        void addCallSite(CallSiteId value);
-    }
-
-    public abstract void collect(ReferenceCollector colleactor, Object value);
-
-    public interface ReferenceIndexer {
-        int getStringIndex(String value);
-
-        int getTypeIndex(TypeId value);
-
-        int getFieldIndex(FieldId value);
-
-        int getProtoIndex(ProtoId value);
-
-        int getMethodIndex(MethodId value);
-
-        int getMethodHandleIndex(MethodHandleId value);
-
-        int getCallSiteIndex(CallSiteId value);
-    }
-
-    public abstract int refToIndex(ReferenceIndexer indexer, Object value);
 }

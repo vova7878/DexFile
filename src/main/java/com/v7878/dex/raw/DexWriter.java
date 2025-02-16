@@ -65,7 +65,6 @@ import static com.v7878.dex.util.AlignmentUtils.roundUp;
 
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.Opcodes;
-import com.v7878.dex.ReferenceType.ReferenceIndexer;
 import com.v7878.dex.WriteOptions;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
@@ -120,7 +119,7 @@ import java.util.NavigableSet;
 import java.util.stream.Stream;
 import java.util.zip.Adler32;
 
-public class DexWriter implements ReferenceIndexer {
+public class DexWriter {
     private static class FileMap {
         public int header_size;
 
@@ -358,7 +357,6 @@ public class DexWriter implements ReferenceIndexer {
         map.data_off = roundUp(offset, DATA_SECTION_ALIGNMENT);
     }
 
-    @Override
     public int getStringIndex(String value) {
         int out = Arrays.binarySearch(strings, value);
         if (out < 0) {
@@ -368,7 +366,6 @@ public class DexWriter implements ReferenceIndexer {
         return out;
     }
 
-    @Override
     public int getTypeIndex(TypeId value) {
         int out = Arrays.binarySearch(types, value);
         if (out < 0) {
@@ -378,7 +375,6 @@ public class DexWriter implements ReferenceIndexer {
         return out;
     }
 
-    @Override
     public int getProtoIndex(ProtoId value) {
         int out = Arrays.binarySearch(protos, value);
         if (out < 0) {
@@ -388,7 +384,6 @@ public class DexWriter implements ReferenceIndexer {
         return out;
     }
 
-    @Override
     public int getFieldIndex(FieldId value) {
         int out = Arrays.binarySearch(fields, value);
         if (out < 0) {
@@ -398,7 +393,6 @@ public class DexWriter implements ReferenceIndexer {
         return out;
     }
 
-    @Override
     public int getMethodIndex(MethodId value) {
         int out = Arrays.binarySearch(methods, value);
         if (out < 0) {
@@ -408,7 +402,6 @@ public class DexWriter implements ReferenceIndexer {
         return out;
     }
 
-    @Override
     public int getCallSiteIndex(CallSiteId value) {
         // TODO: simplify
         int out = Arrays.<Object>binarySearch(call_sites, value,
@@ -420,7 +413,6 @@ public class DexWriter implements ReferenceIndexer {
         return out;
     }
 
-    @Override
     public int getMethodHandleIndex(MethodHandleId value) {
         int out = Arrays.binarySearch(method_handles, value);
         if (out < 0) {

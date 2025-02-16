@@ -3,6 +3,7 @@ package com.v7878.dex.immutable.bytecode;
 import static com.v7878.dex.Format.Format21c;
 
 import com.v7878.dex.Opcode;
+import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.util.Preconditions;
@@ -17,7 +18,7 @@ public final class Instruction21c extends Instruction
     private Instruction21c(Opcode opcode, int register1, Object reference1) {
         super(Preconditions.checkFormat(opcode, Format21c));
         this.register1 = Preconditions.checkByteRegister(register1);
-        this.reference1 = opcode.getReferenceType1().validate(reference1);
+        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
     }
 
     public static Instruction21c of(Opcode opcode, int register1, Object reference1) {

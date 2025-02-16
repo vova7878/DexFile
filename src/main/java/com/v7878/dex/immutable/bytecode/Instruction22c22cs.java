@@ -3,6 +3,7 @@ package com.v7878.dex.immutable.bytecode;
 import static com.v7878.dex.Format.Format22c22cs;
 
 import com.v7878.dex.Opcode;
+import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.TwoRegisterInstruction;
 import com.v7878.dex.util.Preconditions;
@@ -20,7 +21,7 @@ public final class Instruction22c22cs extends Instruction
         super(Preconditions.checkFormat(opcode, Format22c22cs));
         this.register1 = Preconditions.checkNibbleRegister(register1);
         this.register2 = Preconditions.checkNibbleRegister(register2);
-        this.reference1 = opcode.getReferenceType1().validate(reference1);
+        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
     }
 
     public static Instruction22c22cs of(

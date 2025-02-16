@@ -48,7 +48,6 @@ import com.v7878.dex.DexVersion;
 import com.v7878.dex.MethodHandleType;
 import com.v7878.dex.Opcodes;
 import com.v7878.dex.ReadOptions;
-import com.v7878.dex.ReferenceType.ReferenceStorage;
 import com.v7878.dex.ValueType;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
@@ -100,7 +99,7 @@ import java.util.Set;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
-public class DexReader implements ReferenceStorage {
+public class DexReader {
     private record AnnotationDirectory(Set<Annotation> class_annotations,
                                        SparseArray<Set<Annotation>> field_annotations,
                                        SparseArray<Set<Annotation>> method_annotations,
@@ -596,7 +595,6 @@ public class DexReader implements ReferenceStorage {
         }
         MethodHandleId handle;
         {
-            //noinspection SequencedCollectionMethodCanBeUsed
             var value = array.get(0);
             if (value.getValueType() != ValueType.METHOD_HANDLE) {
                 throw new IllegalStateException(String.format(
