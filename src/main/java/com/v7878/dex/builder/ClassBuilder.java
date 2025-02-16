@@ -74,7 +74,7 @@ public final class ClassBuilder {
         Objects.requireNonNull(def);
         return withType(def.getType())
                 .withFlags(def.getAccessFlags())
-                .withSuperclass(def.getSuperclass())
+                .withSuperClass(def.getSuperclass())
                 .setInterfacesInternal(def.getInterfaces())
                 .withSourceFile(def.getSourceFile())
                 .setFieldsInternal(def.getFields())
@@ -98,7 +98,7 @@ public final class ClassBuilder {
         return this;
     }
 
-    public ClassBuilder withSuperclass(TypeId superclass) {
+    public ClassBuilder withSuperClass(TypeId superclass) {
         this.superclass = superclass;
         return this;
     }

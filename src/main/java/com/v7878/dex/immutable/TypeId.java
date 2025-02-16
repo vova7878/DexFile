@@ -100,6 +100,10 @@ public final class TypeId implements Comparable<TypeId> {
         return ShortyUtils.getRegisterCount(this);
     }
 
+    public TypeId array() {
+        return new TypeId("[" + descriptor);
+    }
+
     @Override
     public int hashCode() {
         return Objects.hashCode(getDescriptor());

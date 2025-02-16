@@ -100,6 +100,10 @@ public final class MethodBuilder {
         return withName("<init>").withReturnType(TypeId.V);
     }
 
+    public MethodBuilder withStaticConstructorSignature() {
+        return withName("<clinit>").withReturnType(TypeId.V);
+    }
+
     private MethodBuilder withParametersInternal(List<Parameter> parameters) {
         this.parameters = parameters;
         return this;
@@ -114,6 +118,7 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withParameterTypes(Iterable<TypeId> parameters) {
+        // TODO: optimize
         return withParameters(StreamSupport.stream(parameters.spliterator(), false)
                 .map(Parameter::of).collect(Collectors.toList()));
     }
