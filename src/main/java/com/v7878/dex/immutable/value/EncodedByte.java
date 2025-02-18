@@ -10,8 +10,7 @@ public final class EncodedByte extends EncodedValue {
     }
 
     public static EncodedByte of(byte value) {
-        // TODO: cache values
-        return new EncodedByte(value);
+        return Cache.cache[value - Cache.BEGIN];
     }
 
     @Override
@@ -46,5 +45,25 @@ public final class EncodedByte extends EncodedValue {
         int out = ValueType.compare(getValueType(), other.getValueType());
         if (out != 0) return out;
         return Byte.compare(getValue(), ((EncodedByte) other).getValue());
+    }
+
+    private static final class Cache {
+        static final byte BEGIN = -128;
+        static final int SIZE = 256;
+        static final EncodedByte[] cache;
+
+        private Cache() {
+        }
+
+        static {
+            var array = new EncodedByte[SIZE];
+
+            byte value = BEGIN;
+            for (int i = 0; i < SIZE; i++) {
+                array[i] = new EncodedByte(value++);
+            }
+
+            cache = array;
+        }
     }
 }

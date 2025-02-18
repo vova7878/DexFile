@@ -10,7 +10,9 @@ public final class EncodedInt extends EncodedValue {
     }
 
     public static EncodedInt of(int value) {
-        // TODO: cache values
+        if (value >= Cache.BEGIN && value < Cache.END) {
+            return Cache.cache[value - Cache.BEGIN];
+        }
         return new EncodedInt(value);
     }
 
@@ -46,5 +48,26 @@ public final class EncodedInt extends EncodedValue {
         int out = ValueType.compare(getValueType(), other.getValueType());
         if (out != 0) return out;
         return Integer.compare(getValue(), ((EncodedInt) other).getValue());
+    }
+
+    private static final class Cache {
+        static final int BEGIN = -128;
+        static final int SIZE = 256;
+        static final int END = BEGIN + SIZE;
+        static final EncodedInt[] cache;
+
+        private Cache() {
+        }
+
+        static {
+            var array = new EncodedInt[SIZE];
+
+            int value = BEGIN;
+            for (int i = 0; i < SIZE; i++) {
+                array[i] = new EncodedInt(value++);
+            }
+
+            cache = array;
+        }
     }
 }
