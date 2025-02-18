@@ -10,7 +10,6 @@ public final class EncodedDouble extends EncodedValue {
     }
 
     public static EncodedDouble of(double value) {
-        // TODO: cache values
         return new EncodedDouble(value);
     }
 
@@ -30,14 +29,15 @@ public final class EncodedDouble extends EncodedValue {
 
     @Override
     public int hashCode() {
-        return Double.hashCode(getValue());
+        return Long.hashCode(Double.doubleToRawLongBits(getValue()));
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
         return obj instanceof EncodedDouble other
-                && getValue() == other.getValue();
+                && Double.doubleToRawLongBits(getValue())
+                == Double.doubleToRawLongBits(other.getValue());
     }
 
     @Override
@@ -45,6 +45,7 @@ public final class EncodedDouble extends EncodedValue {
         if (other == this) return 0;
         int out = ValueType.compare(getValueType(), other.getValueType());
         if (out != 0) return out;
-        return Double.compare(getValue(), ((EncodedDouble) other).getValue());
+        return Long.compare(Double.doubleToRawLongBits(getValue()),
+                Double.doubleToRawLongBits(((EncodedDouble) other).getValue()));
     }
 }

@@ -10,7 +10,6 @@ public final class EncodedFloat extends EncodedValue {
     }
 
     public static EncodedFloat of(float value) {
-        // TODO: cache values
         return new EncodedFloat(value);
     }
 
@@ -30,14 +29,15 @@ public final class EncodedFloat extends EncodedValue {
 
     @Override
     public int hashCode() {
-        return Float.hashCode(getValue());
+        return Integer.hashCode(Float.floatToRawIntBits(getValue()));
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
         return obj instanceof EncodedFloat other
-                && getValue() == other.getValue();
+                && Float.floatToRawIntBits(getValue())
+                == Float.floatToRawIntBits(other.getValue());
     }
 
     @Override
@@ -45,6 +45,7 @@ public final class EncodedFloat extends EncodedValue {
         if (other == this) return 0;
         int out = ValueType.compare(getValueType(), other.getValueType());
         if (out != 0) return out;
-        return Float.compare(getValue(), ((EncodedFloat) other).getValue());
+        return Integer.compare(Float.floatToRawIntBits(getValue()),
+                Float.floatToRawIntBits(((EncodedFloat) other).getValue()));
     }
 }
