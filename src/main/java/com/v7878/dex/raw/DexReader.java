@@ -591,13 +591,13 @@ public class DexReader {
         var in = mainAt(offset);
         var array = getEncodedArray(in.readSmallUInt()).getValue();
         if (array.size() < 3) {
-            throw new IllegalStateException("Invalid call site item: must contain at least 3 entries");
+            throw new InvalidDexFile("Invalid call site item: must contain at least 3 entries");
         }
         MethodHandleId handle;
         {
             var value = array.get(0);
             if (value.getValueType() != ValueType.METHOD_HANDLE) {
-                throw new IllegalStateException(String.format(
+                throw new InvalidDexFile(String.format(
                         "Invalid encoded value type (%s) for the first item in call site %d",
                         value.getValueType(), index));
             }
@@ -607,7 +607,7 @@ public class DexReader {
         {
             var value = array.get(1);
             if (value.getValueType() != ValueType.STRING) {
-                throw new IllegalStateException(String.format(
+                throw new InvalidDexFile(String.format(
                         "Invalid encoded value type (%s) for the second item in call site %d",
                         value.getValueType(), index));
             }
@@ -617,7 +617,7 @@ public class DexReader {
         {
             var value = array.get(2);
             if (value.getValueType() != ValueType.METHOD_TYPE) {
-                throw new IllegalStateException(String.format(
+                throw new InvalidDexFile(String.format(
                         "Invalid encoded value type (%s) for the third item in call site %d",
                         value.getValueType(), index));
             }
@@ -680,7 +680,7 @@ public class DexReader {
         int handler_off = in.readUShort();
         CatchHandler handler = handlers.get(handler_off);
         if (handler == null) {
-            throw new IllegalStateException(
+            throw new InvalidDexFile(
                     "Unable to find catch handler with offset " + handler_off);
         }
         return TryBlock.of(start_addr, unit_count, handler.catch_all_addr(), handler.elements());
