@@ -1,5 +1,6 @@
 package com.v7878.dex;
 
+import com.v7878.dex.immutable.ClassDef;
 import com.v7878.dex.immutable.Dex;
 import com.v7878.dex.io.ByteArrayIO;
 import com.v7878.dex.io.ByteArrayInput;
@@ -47,13 +48,23 @@ public final class DexIO {
         }
     }
 
-    //TODO: public static Dex read(ReadOptions options, byte[] data, int[] ids) {}
-
-    public static Dex read(ReadOptions options, byte[] data, int data_offset) {
+    public static Dex read(ReadOptions options, byte[] data, int data_offset, int[] ids) {
         Objects.requireNonNull(options);
         var input = new ByteArrayInput(data).sliceAt(data_offset);
         DexReader reader = new DexReader(options, input, 0);
-        return Dex.of(reader.getClasses());
+        var classes = reader.getClasses();
+        if (ids == null) {
+            return Dex.of(classes);
+        }
+        var out = new ArrayList<ClassDef>(ids.length);
+        for (int idx : ids) {
+            out.add(classes.get(idx));
+        }
+        return Dex.of(out);
+    }
+
+    public static Dex read(ReadOptions options, byte[] data, int data_offset) {
+        return read(options, data, data_offset, null);
     }
 
     public static Dex read(byte[] data) {
