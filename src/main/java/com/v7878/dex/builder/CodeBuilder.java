@@ -654,7 +654,7 @@ public final class CodeBuilder {
     // <AA|op BBBB CCCC> op {vCCCC .. vNNNN}, @BBBB (where NNNN = CCCC+AA-1)
     private CodeBuilder f3rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, arg_count);
-        add(Instruction3rc3rmi3rms.of(op, first_arg_reg, arg_count, constant));
+        add(Instruction3rc3rmi3rms.of(op, arg_count, first_arg_reg, constant));
         return this;
     }
 
@@ -672,7 +672,7 @@ public final class CodeBuilder {
     private CodeBuilder f4rcc(@SuppressWarnings("SameParameterValue") Opcode op, Object constant1,
                               Object constant2, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, arg_count);
-        add(Instruction4rcc.of(op, first_arg_reg, arg_count, constant1, constant2));
+        add(Instruction4rcc.of(op, arg_count, first_arg_reg, constant1, constant2));
         return this;
     }
 

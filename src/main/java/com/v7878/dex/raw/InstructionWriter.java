@@ -225,7 +225,7 @@ public class InstructionWriter {
     }
 
     public static void write_21c(Instruction21c value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_22x_21c(out, opcode, value.getRegister1(), refToIndex(value.getOpcode()
+        write_22x_21c(out, opcode, value.getRegister1(), refToIndex(value
                 .getReferenceType1(), indexer, value.getReference1()));
     }
 
@@ -276,7 +276,7 @@ public class InstructionWriter {
 
     public static void write_22c_22cs(Instruction22c22cs value, DexWriter indexer, RandomOutput out, int opcode) {
         write_22c_22cs(out, opcode, value.getRegister1(), value.getRegister2(),
-                refToIndex(value.getOpcode().getReferenceType1(), indexer, value.getReference1()));
+                refToIndex(value.getReferenceType1(), indexer, value.getReference1()));
     }
 
     public static void write_23x(RandomOutput out, int opcode, int AA, int BB, int CC) {
@@ -359,7 +359,7 @@ public class InstructionWriter {
     }
 
     public static void write_31c(Instruction31c value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_31i_31t_31c(out, opcode, value.getRegister1(), refToIndex(value.getOpcode()
+        write_31i_31t_31c(out, opcode, value.getRegister1(), refToIndex(value
                 .getReferenceType1(), indexer, value.getReference1()));
     }
 
@@ -378,7 +378,7 @@ public class InstructionWriter {
     }
 
     public static void write_35c_35ms_35mi(Instruction35c35mi35ms value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_35c_35ms_35mi(out, opcode, value.getRegisterCount(), refToIndex(value.getOpcode()
+        write_35c_35ms_35mi(out, opcode, value.getRegisterCount(), refToIndex(value
                         .getReferenceType1(), indexer, value.getReference1()),
                 value.getRegister1(), value.getRegister2(), value.getRegister3(),
                 value.getRegister4(), value.getRegister5());
@@ -395,7 +395,7 @@ public class InstructionWriter {
     }
 
     public static void write_3rc_3rms_3rmi(Instruction3rc3rmi3rms value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_3rc_3rms_3rmi(out, opcode, value.getRegisterCount(), refToIndex(value.getOpcode()
+        write_3rc_3rms_3rmi(out, opcode, value.getRegisterCount(), refToIndex(value
                 .getReferenceType1(), indexer, value.getReference1()), value.getStartRegister());
     }
 
@@ -416,10 +416,10 @@ public class InstructionWriter {
     }
 
     public static void write_45cc(Instruction45cc value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_45cc(out, opcode, value.getRegisterCount(), refToIndex(value.getOpcode()
+        write_45cc(out, opcode, value.getRegisterCount(), refToIndex(value
                         .getReferenceType1(), indexer, value.getReference1()),
                 value.getRegister1(), value.getRegister2(), value.getRegister3(),
-                value.getRegister4(), value.getRegister5(), refToIndex(value.getOpcode()
+                value.getRegister4(), value.getRegister5(), refToIndex(value
                         .getReferenceType2(), indexer, value.getReference2()));
     }
 
@@ -436,9 +436,9 @@ public class InstructionWriter {
     }
 
     public static void write_4rcc(Instruction4rcc value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_4rcc(out, opcode, value.getRegisterCount(), refToIndex(value.getOpcode()
+        write_4rcc(out, opcode, value.getRegisterCount(), refToIndex(value
                         .getReferenceType1(), indexer, value.getReference1()), value.getStartRegister(),
-                refToIndex(value.getOpcode().getReferenceType2(), indexer, value.getReference2()));
+                refToIndex(value.getReferenceType2(), indexer, value.getReference2()));
     }
 
     public static void write_51l(RandomOutput out, int opcode, int AA, long BBBBBBBBBBBBBBBB) {

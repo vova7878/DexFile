@@ -30,7 +30,7 @@ public final class Instruction35c35mi35ms extends Instruction
         this.register3 = (register_count > 2) ? Preconditions.checkNibbleRegister(register3) : 0;
         this.register4 = (register_count > 3) ? Preconditions.checkNibbleRegister(register4) : 0;
         this.register5 = (register_count > 4) ? Preconditions.checkNibbleRegister(register5) : 0;
-        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
+        this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
     }
 
     public static Instruction35c35mi35ms of(Opcode opcode, int register_count, int register1,

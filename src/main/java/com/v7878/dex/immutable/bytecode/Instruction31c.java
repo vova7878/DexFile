@@ -18,7 +18,7 @@ public final class Instruction31c extends Instruction
     private Instruction31c(Opcode opcode, int register1, Object reference1) {
         super(Preconditions.checkFormat(opcode, Format31c));
         this.register1 = Preconditions.checkByteRegister(register1);
-        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
+        this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
     }
 
     public static Instruction31c of(Opcode opcode, int register1, Object reference1) {

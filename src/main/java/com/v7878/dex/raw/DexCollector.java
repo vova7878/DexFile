@@ -516,10 +516,10 @@ public class DexCollector {
 
     public void fillInstruction(Instruction value) {
         if (value instanceof SingleReferenceInstruction ref1) {
-            collect(ref1.getOpcode().getReferenceType1(), ref1.getReference1());
+            collect(ref1.getReferenceType1(), ref1.getReference1());
         }
         if (value instanceof DualReferenceInstruction ref2) {
-            collect(ref2.getOpcode().getReferenceType2(), ref2.getReference2());
+            collect(ref2.getReferenceType2(), ref2.getReference2());
         }
     }
 

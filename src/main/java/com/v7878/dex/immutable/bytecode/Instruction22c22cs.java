@@ -21,7 +21,7 @@ public final class Instruction22c22cs extends Instruction
         super(Preconditions.checkFormat(opcode, Format22c22cs));
         this.register1 = Preconditions.checkNibbleRegister(register1);
         this.register2 = Preconditions.checkNibbleRegister(register2);
-        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
+        this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
     }
 
     public static Instruction22c22cs of(

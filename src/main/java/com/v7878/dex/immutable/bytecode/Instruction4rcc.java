@@ -12,35 +12,35 @@ import java.util.Objects;
 
 public final class Instruction4rcc extends Instruction
         implements RegisterRangeInstruction, DualReferenceInstruction {
-    private final int start_register;
     private final int register_count;
+    private final int start_register;
     private final Object reference1;
     private final Object reference2;
 
-    private Instruction4rcc(Opcode opcode, int start_register, int register_count,
+    private Instruction4rcc(Opcode opcode, int register_count, int start_register,
                             Object reference1, Object reference2) {
         super(Preconditions.checkFormat(opcode, Format4rcc));
         // TODO: check start_register + register_count not overflows
-        this.start_register = Preconditions.checkShortRegister(start_register);
         this.register_count = Preconditions.checkRegisterRangeCount(register_count);
-        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
-        this.reference2 = ReferenceType.validate(opcode.getReferenceType2(), reference2);
+        this.start_register = Preconditions.checkShortRegister(start_register);
+        this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
+        this.reference2 = ReferenceType.validate(getReferenceType2(), reference2);
     }
 
-    public static Instruction4rcc of(Opcode opcode, int start_register, int register_count,
+    public static Instruction4rcc of(Opcode opcode, int register_count, int start_register,
                                      Object reference1, Object reference2) {
         return new Instruction4rcc(opcode,
-                start_register, register_count, reference1, reference2);
-    }
-
-    @Override
-    public int getStartRegister() {
-        return start_register;
+                register_count, start_register, reference1, reference2);
     }
 
     @Override
     public int getRegisterCount() {
         return register_count;
+    }
+
+    @Override
+    public int getStartRegister() {
+        return start_register;
     }
 
     @Override

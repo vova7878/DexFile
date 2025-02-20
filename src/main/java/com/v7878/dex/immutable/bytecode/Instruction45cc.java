@@ -31,8 +31,8 @@ public final class Instruction45cc extends Instruction
         this.register3 = (register_count > 2) ? Preconditions.checkNibbleRegister(register3) : 0;
         this.register4 = (register_count > 3) ? Preconditions.checkNibbleRegister(register4) : 0;
         this.register5 = (register_count > 4) ? Preconditions.checkNibbleRegister(register5) : 0;
-        this.reference1 = ReferenceType.validate(opcode.getReferenceType1(), reference1);
-        this.reference2 = ReferenceType.validate(opcode.getReferenceType2(), reference2);
+        this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
+        this.reference2 = ReferenceType.validate(getReferenceType2(), reference2);
     }
 
     public static Instruction45cc of(Opcode opcode, int register_count, int register1,

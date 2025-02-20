@@ -278,7 +278,7 @@ public class InstructionReader {
             Opcode opcode, RandomInput in, DexReader context, int AA) {
         int BBBB = in.readUShort();
         int CCCC = in.readUShort();
-        return Instruction3rc3rmi3rms.of(opcode, CCCC, AA,
+        return Instruction3rc3rmi3rms.of(opcode, AA, CCCC,
                 indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
@@ -303,7 +303,7 @@ public class InstructionReader {
         int BBBB = in.readUShort();
         int CCCC = in.readUShort();
         int HHHH = in.readUShort();
-        return Instruction4rcc.of(opcode, CCCC, AA,
+        return Instruction4rcc.of(opcode, AA, CCCC,
                 indexToRef(opcode.getReferenceType1(), context, BBBB),
                 indexToRef(opcode.getReferenceType2(), context, HHHH));
     }

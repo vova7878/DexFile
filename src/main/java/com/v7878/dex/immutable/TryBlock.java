@@ -10,8 +10,8 @@ import java.util.Objects;
 public final class TryBlock implements Comparable<TryBlock> {
     private final int start_address;
     private final int unit_count;
-    private final List<ExceptionHandler> handlers;
     private final Integer catch_all_address;
+    private final List<ExceptionHandler> handlers;
 
     private TryBlock(int start_address, int unit_count, Integer catch_all_address,
                      Iterable<ExceptionHandler> handlers) {
@@ -39,12 +39,12 @@ public final class TryBlock implements Comparable<TryBlock> {
         return unit_count;
     }
 
-    public List<ExceptionHandler> getHandlers() {
-        return handlers;
-    }
-
     public Integer getCatchAllAddress() {
         return catch_all_address;
+    }
+
+    public List<ExceptionHandler> getHandlers() {
+        return handlers;
     }
 
     @Override
