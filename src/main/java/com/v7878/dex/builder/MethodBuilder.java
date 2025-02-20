@@ -101,7 +101,7 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withStaticConstructorSignature() {
-        return withName("<clinit>").withReturnType(TypeId.V);
+        return withName("<clinit>").withReturnType(TypeId.V).withParameters();
     }
 
     // Note: parameters are set only as a whole, as single collection
