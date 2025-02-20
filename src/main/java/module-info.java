@@ -2,7 +2,7 @@
 module com.v7878.dex {
     exports com.v7878.dex;
     exports com.v7878.dex.builder;
-    // TODO: exports com.v7878.dex.rewriter;
+    exports com.v7878.dex.rewriter;
     exports com.v7878.dex.immutable;
     exports com.v7878.dex.immutable.debug;
     exports com.v7878.dex.immutable.value;
