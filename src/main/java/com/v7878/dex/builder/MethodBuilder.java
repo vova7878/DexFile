@@ -104,7 +104,7 @@ public final class MethodBuilder {
         return withName("<clinit>").withReturnType(TypeId.V);
     }
 
-    // Note: зarameters are set only as a whole, as single collection
+    // Note: parameters are set only as a whole, as single collection
     private MethodBuilder withParametersInternal(List<Parameter> parameters) {
         this.parameters = parameters;
         return this;
