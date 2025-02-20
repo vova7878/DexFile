@@ -76,7 +76,7 @@ public final class MethodBuilder {
                 .withFlags(def.getAccessFlags())
                 .withHiddenApiFlags(def.getHiddenApiFlags())
                 .withCode(def.getImplementation())
-                .setAnnotationsInternal(def.getAnnotations());
+                .setAnnotations(def.getAnnotations());
     }
 
     public MethodBuilder of(MethodId id) {
@@ -104,6 +104,7 @@ public final class MethodBuilder {
         return withName("<clinit>").withReturnType(TypeId.V);
     }
 
+    // Note: зarameters are set only as a whole, as single collection
     private MethodBuilder withParametersInternal(List<Parameter> parameters) {
         this.parameters = parameters;
         return this;
@@ -155,13 +156,9 @@ public final class MethodBuilder {
                 (access_flags & ACC_STATIC) == 0, consumer));
     }
 
-    private MethodBuilder setAnnotationsInternal(NavigableSet<Annotation> annotations) {
-        this.annotations = annotations;
-        return this;
-    }
-
     public MethodBuilder setAnnotations(Iterable<Annotation> annotations) {
-        return setAnnotationsInternal(ItemConverter.toNavigableSet(annotations));
+        this.annotations = ItemConverter.toMutableNavigableSet(annotations);
+        return this;
     }
 
     public MethodBuilder setAnnotations(Annotation... annotations) {

@@ -66,7 +66,7 @@ public final class FieldBuilder {
                 .withFlags(def.getAccessFlags())
                 .withHiddenApiFlags(def.getHiddenApiFlags())
                 .withInitialValue(def.getInitialValue())
-                .setAnnotationsInternal(def.getAnnotations());
+                .setAnnotations(def.getAnnotations());
     }
 
     public FieldBuilder of(FieldId id) {
@@ -101,13 +101,9 @@ public final class FieldBuilder {
         return this;
     }
 
-    private FieldBuilder setAnnotationsInternal(NavigableSet<Annotation> annotations) {
-        this.annotations = annotations;
-        return this;
-    }
-
     public FieldBuilder setAnnotations(Iterable<Annotation> annotations) {
-        return setAnnotationsInternal(ItemConverter.toNavigableSet(annotations));
+        this.annotations = ItemConverter.toMutableNavigableSet(annotations);
+        return this;
     }
 
     public FieldBuilder setAnnotations(Annotation... annotations) {

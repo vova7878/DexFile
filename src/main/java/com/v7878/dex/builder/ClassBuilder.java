@@ -75,11 +75,11 @@ public final class ClassBuilder {
         return withType(def.getType())
                 .withFlags(def.getAccessFlags())
                 .withSuperClass(def.getSuperclass())
-                .setInterfacesInternal(def.getInterfaces())
+                .setInterfaces(def.getInterfaces())
                 .withSourceFile(def.getSourceFile())
-                .setFieldsInternal(def.getFields())
-                .setMethodsInternal(def.getMethods())
-                .setAnnotationsInternal(def.getAnnotations());
+                .setFields(def.getFields())
+                .setMethods(def.getMethods())
+                .setAnnotations(def.getAnnotations());
     }
 
     public ClassBuilder withType(TypeId type) {
@@ -103,13 +103,9 @@ public final class ClassBuilder {
         return this;
     }
 
-    private ClassBuilder setInterfacesInternal(NavigableSet<TypeId> interfaces) {
-        this.interfaces = interfaces;
-        return this;
-    }
-
     public ClassBuilder setInterfaces(Iterable<TypeId> interfaces) {
-        return setInterfacesInternal(ItemConverter.toNavigableSet(interfaces));
+        this.interfaces = ItemConverter.toMutableNavigableSet(interfaces);
+        return this;
     }
 
     public ClassBuilder setInterfaces(TypeId... interfaces) {
@@ -125,13 +121,9 @@ public final class ClassBuilder {
         return withInterfaces(Arrays.asList(interfaces));
     }
 
-    private ClassBuilder setAnnotationsInternal(NavigableSet<Annotation> annotations) {
-        this.annotations = annotations;
-        return this;
-    }
-
     public ClassBuilder setAnnotations(Iterable<Annotation> annotations) {
-        return setAnnotationsInternal(ItemConverter.toNavigableSet(annotations));
+        this.annotations = ItemConverter.toMutableNavigableSet(annotations);
+        return this;
     }
 
     public ClassBuilder setAnnotations(Annotation... annotations) {
@@ -147,13 +139,9 @@ public final class ClassBuilder {
         return withAnnotations(Arrays.asList(annotations));
     }
 
-    private ClassBuilder setFieldsInternal(NavigableSet<FieldDef> fields) {
-        this.fields = fields;
-        return this;
-    }
-
     public ClassBuilder setFields(Iterable<FieldDef> fields) {
-        return setFieldsInternal(ItemConverter.toNavigableSet(fields));
+        this.fields = ItemConverter.toMutableNavigableSet(fields);
+        return this;
     }
 
     public ClassBuilder setFields(FieldDef... fields) {
@@ -181,13 +169,9 @@ public final class ClassBuilder {
         );
     }
 
-    private ClassBuilder setMethodsInternal(NavigableSet<MethodDef> methods) {
-        this.methods = methods;
-        return this;
-    }
-
     public ClassBuilder setMethods(Iterable<MethodDef> methods) {
-        return setMethodsInternal(ItemConverter.toNavigableSet(methods));
+        this.methods = ItemConverter.toMutableNavigableSet(methods);
+        return this;
     }
 
     public ClassBuilder setMethods(MethodDef... methods) {
