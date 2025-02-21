@@ -83,7 +83,7 @@ public class ItemConverter {
     }
 
     public static <R, P> List<R> transformList(List<P> list, Function<P, R> transformer) {
-        return new AbstractList<R>() {
+        return new AbstractList<>() {
             @Override
             public int size() {
                 return list.size();

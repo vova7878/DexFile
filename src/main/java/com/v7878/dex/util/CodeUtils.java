@@ -24,9 +24,8 @@ public class CodeUtils {
                      INVOKE_DIRECT_EMPTY, INVOKE_OBJECT_INIT_RANGE,
 
                      INVOKE_VIRTUAL_QUICK, INVOKE_VIRTUAL_QUICK_RANGE,
-                     INVOKE_SUPER_QUICK, INVOKE_SUPER_QUICK_RANGE -> {
-                    out_regs = Math.max(out_regs, ((VariableRegisterInstruction) instruction).getRegisterCount());
-                }
+                     INVOKE_SUPER_QUICK, INVOKE_SUPER_QUICK_RANGE ->
+                        out_regs = Math.max(out_regs, ((VariableRegisterInstruction) instruction).getRegisterCount());
             }
         }
         return out_regs;

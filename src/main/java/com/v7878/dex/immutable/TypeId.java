@@ -47,6 +47,7 @@ public final class TypeId implements Comparable<TypeId> {
             class_name = class_name.substring(0, class_name.length() - 2);
         }
         StringBuilder out = new StringBuilder();
+        //noinspection StringRepeatCanBeUsed
         for (int i = 0; i < array_depth; i++) {
             out.append('[');
         }
