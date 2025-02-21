@@ -59,11 +59,19 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
         return parameters;
     }
 
-    public String getShorty() {
+    public List<TypeId> getParameterTypes() {
+        return ItemConverter.transformList(parameters, Parameter::getType);
+    }
+
+    public ProtoId getProto() {
+        return ProtoId.ofInternal(return_type, getParameterTypes());
+    }
+
+    public String computeShorty() {
         return ShortyUtils.getDefShorty(return_type, parameters);
     }
 
-    public int getInputRegisterCount() {
+    public int countInputRegisters() {
         return ShortyUtils.getDefInputRegisterCount(parameters);
     }
 

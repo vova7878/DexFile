@@ -21,6 +21,11 @@ public final class ProtoId implements Comparable<ProtoId> {
         this.parameters = parameters;
     }
 
+    // package-private
+    static ProtoId ofInternal(TypeId return_type, List<TypeId> parameters) {
+        return new ProtoId(return_type, parameters);
+    }
+
     public static ProtoId of(TypeId return_type, Iterable<TypeId> parameters) {
         return new ProtoId(Objects.requireNonNull(return_type),
                 ItemConverter.toList(parameters));
@@ -53,11 +58,11 @@ public final class ProtoId implements Comparable<ProtoId> {
         return parameters;
     }
 
-    public String getShorty() {
+    public String computeShorty() {
         return ShortyUtils.getShorty(return_type, parameters);
     }
 
-    public int getInputRegisterCount() {
+    public int countInputRegisters() {
         return ShortyUtils.getInputRegisterCount(parameters);
     }
 

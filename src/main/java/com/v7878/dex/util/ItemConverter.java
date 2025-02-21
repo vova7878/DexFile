@@ -1,5 +1,6 @@
 package com.v7878.dex.util;
 
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -7,6 +8,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
+import java.util.function.Function;
 
 public class ItemConverter {
     public static <T> List<T> toMutableList(Iterable<T> iterable) {
@@ -78,5 +80,19 @@ public class ItemConverter {
         }
 
         return Collections.unmodifiableNavigableSet(set);
+    }
+
+    public static <R, P> List<R> transformList(List<P> list, Function<P, R> transformer) {
+        return new AbstractList<R>() {
+            @Override
+            public int size() {
+                return list.size();
+            }
+
+            @Override
+            public R get(int i) {
+                return transformer.apply(list.get(i));
+            }
+        };
     }
 }

@@ -55,7 +55,7 @@ public class Preconditions {
     }
 
     public static int checkDebugAddrDiff(int addr_diff) {
-        if (addr_diff < 0) {
+        if (addr_diff <= 0) {
             throw new IllegalArgumentException(
                     String.format("Invalid address difference: %d. Must be greater than zero", addr_diff));
         }
@@ -63,7 +63,7 @@ public class Preconditions {
     }
 
     public static int checkDebugLine(int line) {
-        if (line < 0) {
+        if (line <= 0) {
             throw new IllegalArgumentException(
                     String.format("Invalid line: %d. Must be greater than zero", line));
         }

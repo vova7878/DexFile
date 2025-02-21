@@ -133,7 +133,7 @@ public class DexCollector {
         public static CodeContainer of(MethodImplementation value, MethodId id, int flags) {
             if (value == null) return null;
             return new CodeContainer(value, toTriesArray(value.getTryBlocks()),
-                    id.getProto().getInputRegisterCount() +
+                    id.getProto().countInputRegisters() +
                             /* this */ ((flags & ACC_STATIC) == 0 ? 1 : 0),
                     CodeUtils.getOutputRegisterCount(value.getInstructions()));
         }
@@ -392,7 +392,7 @@ public class DexCollector {
 
     public void addProto(ProtoId value) {
         protos.add(value);
-        addString(value.getShorty());
+        addString(value.computeShorty());
         addType(value.getReturnType());
         addTypeList(value.getParameterTypes());
     }

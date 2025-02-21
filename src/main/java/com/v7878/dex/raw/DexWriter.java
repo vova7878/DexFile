@@ -727,7 +727,7 @@ public class DexWriter {
     }
 
     public void writeProto(ProtoId value) {
-        main_buffer.writeInt(getStringIndex(value.getShorty()));
+        main_buffer.writeInt(getStringIndex(value.computeShorty()));
         main_buffer.writeInt(getTypeIndex(value.getReturnType()));
         var parameters = value.getParameterTypes();
         main_buffer.writeInt(parameters.isEmpty() ? 0

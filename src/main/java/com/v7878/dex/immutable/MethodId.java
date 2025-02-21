@@ -78,12 +78,12 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         return proto.getParameterTypes();
     }
 
-    public String getShorty() {
-        return proto.getShorty();
+    public String computeShorty() {
+        return proto.computeShorty();
     }
 
-    public int getInputRegisterCount() {
-        return proto.getInputRegisterCount();
+    public int countInputRegisters() {
+        return proto.countInputRegisters();
     }
 
     @Override
