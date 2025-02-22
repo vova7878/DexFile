@@ -32,8 +32,9 @@ public final class Parameter implements Annotatable {
     }
 
     public static List<Parameter> listOf(Iterable<TypeId> types) {
+        //noinspection SimplifyStreamApiCallChains
         return StreamSupport.stream(types.spliterator(), false)
-                .map(Parameter::of).collect(Collectors.toList());
+                .map(Parameter::of).collect(Collectors.toUnmodifiableList());
     }
 
     public TypeId getType() {
