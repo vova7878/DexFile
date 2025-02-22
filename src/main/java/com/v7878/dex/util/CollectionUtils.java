@@ -1,8 +1,12 @@
 package com.v7878.dex.util;
 
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CollectionUtils {
     public static <T extends Comparable<? super T>> int compareNonNull(T left, T right) {
@@ -39,5 +43,10 @@ public class CollectionUtils {
         var floor = set.floor(e);
         if (floor == null) return null;
         return ((Comparable<E>) e).compareTo(floor) == 0 ? floor : null;
+    }
+
+    public static <T> List<T> toUnmodifiableList(Stream<T> stream) {
+        //noinspection FuseStreamOperations
+        return Collections.unmodifiableList(stream.collect(Collectors.toList()));
     }
 }

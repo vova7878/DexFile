@@ -1,6 +1,7 @@
 package com.v7878.dex.builder;
 
 import static com.v7878.dex.DexConstants.ACC_STATIC;
+import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
 
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.MethodDef;
@@ -19,7 +20,6 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 public final class MethodBuilder {
     private String name;
@@ -122,9 +122,8 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withParameterTypes(TypeId... parameters) {
-        //noinspection SimplifyStreamApiCallChains
-        return withParametersInternal(Arrays.stream(parameters)
-                .map(Parameter::of).collect(Collectors.toUnmodifiableList()));
+        return withParametersInternal(toUnmodifiableList(Arrays
+                .stream(parameters).map(Parameter::of)));
     }
 
     public MethodBuilder withProto(ProtoId proto) {

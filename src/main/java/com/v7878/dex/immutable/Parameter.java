@@ -1,11 +1,12 @@
 package com.v7878.dex.immutable;
 
+import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
+
 import com.v7878.dex.util.ItemConverter;
 
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 public final class Parameter implements Annotatable {
@@ -32,9 +33,9 @@ public final class Parameter implements Annotatable {
     }
 
     public static List<Parameter> listOf(Iterable<TypeId> types) {
-        //noinspection SimplifyStreamApiCallChains
-        return StreamSupport.stream(types.spliterator(), false)
-                .map(Parameter::of).collect(Collectors.toUnmodifiableList());
+        return toUnmodifiableList(StreamSupport
+                .stream(types.spliterator(), false)
+                .map(Parameter::of));
     }
 
     public TypeId getType() {

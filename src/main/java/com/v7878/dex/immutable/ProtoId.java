@@ -1,5 +1,7 @@
 package com.v7878.dex.immutable;
 
+import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
+
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.ShortyUtils;
@@ -10,7 +12,6 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public final class ProtoId implements Comparable<ProtoId> {
     private final TypeId return_type;
@@ -38,18 +39,14 @@ public final class ProtoId implements Comparable<ProtoId> {
     public static ProtoId of(Executable value) {
         Objects.requireNonNull(value);
         Class<?> return_type = value instanceof Method m ? m.getReturnType() : void.class;
-        //noinspection SimplifyStreamApiCallChains
-        return new ProtoId(TypeId.of(return_type),
-                Arrays.stream(value.getParameterTypes()).map(TypeId::of)
-                        .collect(Collectors.toUnmodifiableList()));
+        return new ProtoId(TypeId.of(return_type), toUnmodifiableList(
+                Arrays.stream(value.getParameterTypes()).map(TypeId::of)));
     }
 
     public static ProtoId of(MethodType value) {
         Objects.requireNonNull(value);
-        //noinspection SimplifyStreamApiCallChains
-        return new ProtoId(TypeId.of(value.returnType()),
-                value.parameterList().stream().map(TypeId::of)
-                        .collect(Collectors.toUnmodifiableList()));
+        return new ProtoId(TypeId.of(value.returnType()), toUnmodifiableList(
+                value.parameterList().stream().map(TypeId::of)));
     }
 
     public TypeId getReturnType() {
