@@ -70,7 +70,7 @@ public final class ClassDef implements Annotatable {
     }
 
     public FieldDef findStaticField(String name, TypeId type) {
-        return MemberUtils.findField(getStaticFields(), name, type);
+        return MemberUtils.findField(getStaticFields(), true, name, type);
     }
 
     public FieldDef findStaticField(FieldId id) {
@@ -85,7 +85,7 @@ public final class ClassDef implements Annotatable {
     }
 
     public FieldDef findInstanceField(String name, TypeId type) {
-        return MemberUtils.findField(getInstanceFields(), name, type);
+        return MemberUtils.findField(getInstanceFields(), false, name, type);
     }
 
     public FieldDef findInstanceField(FieldId id) {
@@ -117,7 +117,7 @@ public final class ClassDef implements Annotatable {
     }
 
     public MethodDef findDirectMethod(String name, ProtoId proto) {
-        return MemberUtils.findMethod(getDirectMethods(), name, proto);
+        return MemberUtils.findMethod(getDirectMethods(), true, name, proto);
     }
 
     public MethodDef findDirectMethod(MethodId id) {
@@ -132,7 +132,7 @@ public final class ClassDef implements Annotatable {
     }
 
     public MethodDef findVirtualMethod(String name, ProtoId proto) {
-        return MemberUtils.findMethod(getVirtualMethods(), name, proto);
+        return MemberUtils.findMethod(getVirtualMethods(), false, name, proto);
     }
 
     public MethodDef findVirtualMethod(MethodId id) {

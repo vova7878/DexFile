@@ -2,8 +2,11 @@ package com.v7878.dex.immutable;
 
 import com.v7878.dex.util.ItemConverter;
 
+import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public final class Parameter implements Annotatable {
     private final TypeId type;
@@ -26,6 +29,11 @@ public final class Parameter implements Annotatable {
 
     public static Parameter of(TypeId type) {
         return of(type, null, null);
+    }
+
+    public static List<Parameter> listOf(Iterable<TypeId> types) {
+        return StreamSupport.stream(types.spliterator(), false)
+                .map(Parameter::of).collect(Collectors.toList());
     }
 
     public TypeId getType() {

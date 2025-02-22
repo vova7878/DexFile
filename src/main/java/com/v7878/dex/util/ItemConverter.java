@@ -23,8 +23,7 @@ public class ItemConverter {
         } else {
             list = new ArrayList<>();
             for (T tmp : iterable) {
-                Objects.requireNonNull(tmp);
-                list.add(tmp);
+                list.add(Objects.requireNonNull(tmp));
             }
             list.trimToSize();
         }
@@ -44,8 +43,7 @@ public class ItemConverter {
         } else {
             list = new ArrayList<>();
             for (T tmp : iterable) {
-                Objects.requireNonNull(tmp);
-                list.add(tmp);
+                list.add(Objects.requireNonNull(tmp));
             }
             list.trimToSize();
         }
@@ -61,8 +59,13 @@ public class ItemConverter {
             return set;
         }
 
-        for (T tmp : iterable) {
-            set.add(Objects.requireNonNull(tmp));
+        if (iterable instanceof Collection<T> collection) {
+            set.addAll(collection);
+            set.forEach(Objects::requireNonNull);
+        } else {
+            for (T tmp : iterable) {
+                set.add(Objects.requireNonNull(tmp));
+            }
         }
 
         return set;
@@ -75,8 +78,13 @@ public class ItemConverter {
         }
 
         NavigableSet<T> set = new TreeSet<>();
-        for (T tmp : iterable) {
-            set.add(Objects.requireNonNull(tmp));
+        if (iterable instanceof Collection<T> collection) {
+            set.addAll(collection);
+            set.forEach(Objects::requireNonNull);
+        } else {
+            for (T tmp : iterable) {
+                set.add(Objects.requireNonNull(tmp));
+            }
         }
 
         return Collections.unmodifiableNavigableSet(set);

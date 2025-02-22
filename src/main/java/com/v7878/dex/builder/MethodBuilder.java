@@ -20,7 +20,6 @@ import java.util.Objects;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 public final class MethodBuilder {
     private String name;
@@ -119,13 +118,11 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withParameterTypes(Iterable<TypeId> parameters) {
-        // TODO: optimize
-        return withParameters(StreamSupport.stream(parameters.spliterator(), false)
-                .map(Parameter::of).collect(Collectors.toList()));
+        return withParametersInternal(Parameter.listOf(parameters));
     }
 
     public MethodBuilder withParameterTypes(TypeId... parameters) {
-        return withParameters(Arrays.stream(parameters)
+        return withParametersInternal(Arrays.stream(parameters)
                 .map(Parameter::of).collect(Collectors.toList()));
     }
 
