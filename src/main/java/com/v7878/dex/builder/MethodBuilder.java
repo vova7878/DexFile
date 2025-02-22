@@ -122,8 +122,9 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withParameterTypes(TypeId... parameters) {
+        //noinspection SimplifyStreamApiCallChains
         return withParametersInternal(Arrays.stream(parameters)
-                .map(Parameter::of).collect(Collectors.toList()));
+                .map(Parameter::of).collect(Collectors.toUnmodifiableList()));
     }
 
     public MethodBuilder withProto(ProtoId proto) {

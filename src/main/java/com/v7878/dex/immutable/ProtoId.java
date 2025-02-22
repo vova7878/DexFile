@@ -38,16 +38,18 @@ public final class ProtoId implements Comparable<ProtoId> {
     public static ProtoId of(Executable value) {
         Objects.requireNonNull(value);
         Class<?> return_type = value instanceof Method m ? m.getReturnType() : void.class;
+        //noinspection SimplifyStreamApiCallChains
         return new ProtoId(TypeId.of(return_type),
                 Arrays.stream(value.getParameterTypes()).map(TypeId::of)
-                        .collect(Collectors.toList()));
+                        .collect(Collectors.toUnmodifiableList()));
     }
 
     public static ProtoId of(MethodType value) {
         Objects.requireNonNull(value);
+        //noinspection SimplifyStreamApiCallChains
         return new ProtoId(TypeId.of(value.returnType()),
                 value.parameterList().stream().map(TypeId::of)
-                        .collect(Collectors.toList()));
+                        .collect(Collectors.toUnmodifiableList()));
     }
 
     public TypeId getReturnType() {
