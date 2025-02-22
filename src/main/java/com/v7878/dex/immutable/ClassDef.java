@@ -69,8 +69,43 @@ public final class ClassDef implements Annotatable {
         return MemberUtils.getStaticFieldsSubset(getFields());
     }
 
+    public FieldDef findStaticField(String name, TypeId type) {
+        return MemberUtils.findField(getStaticFields(), name, type);
+    }
+
+    public FieldDef findStaticField(FieldId id) {
+        if (!getType().equals(id.getDeclaringClass())) {
+            return null;
+        }
+        return findStaticField(id.getName(), id.getType());
+    }
+
     public NavigableSet<FieldDef> getInstanceFields() {
         return MemberUtils.getInstanceFieldsSubset(getFields());
+    }
+
+    public FieldDef findInstanceField(String name, TypeId type) {
+        return MemberUtils.findField(getInstanceFields(), name, type);
+    }
+
+    public FieldDef findInstanceField(FieldId id) {
+        if (!getType().equals(id.getDeclaringClass())) {
+            return null;
+        }
+        return findInstanceField(id.getName(), id.getType());
+    }
+
+    public FieldDef findField(String name, TypeId type) {
+        var out = findInstanceField(name, type);
+        if (out != null) return out;
+        return findStaticField(name, type);
+    }
+
+    public FieldDef findField(FieldId id) {
+        if (!getType().equals(id.getDeclaringClass())) {
+            return null;
+        }
+        return findField(id.getName(), id.getType());
     }
 
     public NavigableSet<MethodDef> getMethods() {
@@ -81,10 +116,46 @@ public final class ClassDef implements Annotatable {
         return MemberUtils.getDirectMethodsSubset(getMethods());
     }
 
+    public MethodDef findDirectMethod(String name, ProtoId proto) {
+        return MemberUtils.findMethod(getDirectMethods(), name, proto);
+    }
+
+    public MethodDef findDirectMethod(MethodId id) {
+        if (!getType().equals(id.getDeclaringClass())) {
+            return null;
+        }
+        return findDirectMethod(id.getName(), id.getProto());
+    }
+
     public NavigableSet<MethodDef> getVirtualMethods() {
         return MemberUtils.getVirtualMethodsSubset(getMethods());
     }
 
+    public MethodDef findVirtualMethod(String name, ProtoId proto) {
+        return MemberUtils.findMethod(getVirtualMethods(), name, proto);
+    }
+
+    public MethodDef findVirtualMethod(MethodId id) {
+        if (!getType().equals(id.getDeclaringClass())) {
+            return null;
+        }
+        return findVirtualMethod(id.getName(), id.getProto());
+    }
+
+    public MethodDef findMethod(String name, ProtoId proto) {
+        var out = findVirtualMethod(name, proto);
+        if (out != null) return out;
+        return findDirectMethod(name, proto);
+    }
+
+    public MethodDef findMethod(MethodId id) {
+        if (!getType().equals(id.getDeclaringClass())) {
+            return null;
+        }
+        return findMethod(id.getName(), id.getProto());
+    }
+
+    @Override
     public NavigableSet<Annotation> getAnnotations() {
         return annotations;
     }

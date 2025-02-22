@@ -34,6 +34,7 @@ import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CodeUtils;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 
 import java.util.ArrayList;
@@ -64,7 +65,7 @@ public class DexCollector {
 
         @Override
         public int compareTo(CallSiteIdContainer other) {
-            return value.compareTo(other.value);
+            return CollectionUtils.compareNonNull(value, other.value);
         }
 
         private static List<EncodedValue> toList(CallSiteId value) {

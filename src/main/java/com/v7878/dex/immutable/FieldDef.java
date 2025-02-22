@@ -86,7 +86,8 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
     @Override
     public int compareTo(FieldDef other) {
         if (other == this) return 0;
-        int out = Boolean.compare(AccessFlagUtils.isStatic(getAccessFlags()),
+        // First static fields, then instance fields
+        int out = -Boolean.compare(AccessFlagUtils.isStatic(getAccessFlags()),
                 AccessFlagUtils.isStatic(other.getAccessFlags()));
         if (out != 0) return out;
         out = CollectionUtils.compareNonNull(getName(), other.getName());

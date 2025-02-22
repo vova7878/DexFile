@@ -115,7 +115,8 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     @Override
     public int compareTo(MethodDef other) {
         if (other == this) return 0;
-        int out = Boolean.compare(AccessFlagUtils.isDirect(getAccessFlags()),
+        // First direct methods, then virtual methods
+        int out = -Boolean.compare(AccessFlagUtils.isDirect(getAccessFlags()),
                 AccessFlagUtils.isDirect(other.getAccessFlags()));
         if (out != 0) return out;
         out = CollectionUtils.compareNonNull(getName(), other.getName());

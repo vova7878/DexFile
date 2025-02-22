@@ -10,6 +10,7 @@ public final class Dex {
     private final List<ClassDef> classes;
 
     private Dex(Iterable<ClassDef> classes) {
+        // TODO: check if there are classes with the same type
         this.classes = ItemConverter.toList(classes);
     }
 
@@ -23,6 +24,16 @@ public final class Dex {
 
     public List<ClassDef> getClasses() {
         return classes;
+    }
+
+    public ClassDef findClass(TypeId type) {
+        Objects.requireNonNull(type);
+        for (ClassDef tmp : classes) {
+            if (tmp.getType().equals(type)) {
+                return tmp;
+            }
+        }
+        return null;
     }
 
     @Override
