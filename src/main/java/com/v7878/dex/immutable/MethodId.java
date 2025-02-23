@@ -32,6 +32,12 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
                 Objects.requireNonNull(name), ProtoId.of(returnType, parameters));
     }
 
+    public static MethodId of(TypeId declaring_class, String name,
+                              TypeId returnType, TypeId... parameters) {
+        return new MethodId(Objects.requireNonNull(declaring_class),
+                Objects.requireNonNull(name), ProtoId.of(returnType, parameters));
+    }
+
     public static MethodId constructor(TypeId declaring_class, Iterable<TypeId> parameters) {
         return of(declaring_class, "<init>", TypeId.V, parameters);
     }

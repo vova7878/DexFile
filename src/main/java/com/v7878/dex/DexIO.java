@@ -91,11 +91,24 @@ public final class DexIO {
     }
 
     public static Dex readSingleDex(ReadOptions options, byte[] data,
-                                    int data_offset, int header_offset) {
+                                    int data_offset, int header_offset, int[] ids) {
         Objects.requireNonNull(options);
         var input = new ByteArrayInput(data).sliceAt(data_offset);
         var reader = new DexReader(options, input, header_offset);
-        return Dex.of(reader.getClasses());
+        var classes = reader.getClasses();
+        if (ids == null) {
+            return Dex.of(classes);
+        }
+        var out = new ArrayList<ClassDef>(ids.length);
+        for (int idx : ids) {
+            out.add(classes.get(idx));
+        }
+        return Dex.of(out);
+    }
+
+    public static Dex readSingleDex(ReadOptions options, byte[] data,
+                                    int data_offset, int header_offset) {
+        return readSingleDex(options, data, data_offset, header_offset, null);
     }
 
     public static byte[] write(WriteOptions options, Dex data) {
