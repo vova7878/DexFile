@@ -1,5 +1,6 @@
 package com.v7878.dex.util;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -48,5 +49,15 @@ public class CollectionUtils {
     public static <T> List<T> toUnmodifiableList(Stream<T> stream) {
         //noinspection FuseStreamOperations
         return Collections.unmodifiableList(stream.collect(Collectors.toList()));
+    }
+
+    public static <T> void removeAll(NavigableSet<T> set, Iterable<T> iterable) {
+        if (iterable instanceof Collection<T> collection) {
+            set.removeAll(collection);
+        } else {
+            for (T tmp : iterable) {
+                set.remove(tmp);
+            }
+        }
     }
 }

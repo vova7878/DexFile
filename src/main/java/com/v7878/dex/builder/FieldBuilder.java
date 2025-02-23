@@ -5,6 +5,7 @@ import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.value.EncodedValue;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 
@@ -117,5 +118,14 @@ public final class FieldBuilder {
 
     public FieldBuilder withAnnotations(Annotation... annotations) {
         return withAnnotations(Arrays.asList(annotations));
+    }
+
+    public FieldBuilder withoutAnnotations(Iterable<Annotation> annotations) {
+        CollectionUtils.removeAll(this.annotations, annotations);
+        return this;
+    }
+
+    public FieldBuilder withoutAnnotations(Annotation... annotations) {
+        return withoutAnnotations(Arrays.asList(annotations));
     }
 }

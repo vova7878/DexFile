@@ -10,6 +10,7 @@ import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
@@ -169,5 +170,14 @@ public final class MethodBuilder {
 
     public MethodBuilder withAnnotations(Annotation... annotations) {
         return withAnnotations(Arrays.asList(annotations));
+    }
+
+    public MethodBuilder withoutAnnotations(Iterable<Annotation> annotations) {
+        CollectionUtils.removeAll(this.annotations, annotations);
+        return this;
+    }
+
+    public MethodBuilder withoutAnnotations(Annotation... annotations) {
+        return withoutAnnotations(Arrays.asList(annotations));
     }
 }

@@ -7,6 +7,7 @@ import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 
@@ -121,6 +122,15 @@ public final class ClassBuilder {
         return withInterfaces(Arrays.asList(interfaces));
     }
 
+    public ClassBuilder withoutInterfaces(Iterable<TypeId> interfaces) {
+        CollectionUtils.removeAll(this.interfaces, interfaces);
+        return this;
+    }
+
+    public ClassBuilder withoutInterfaces(TypeId... interfaces) {
+        return withoutInterfaces(Arrays.asList(interfaces));
+    }
+
     public ClassBuilder setAnnotations(Iterable<Annotation> annotations) {
         this.annotations = ItemConverter.toMutableNavigableSet(annotations);
         return this;
@@ -137,6 +147,15 @@ public final class ClassBuilder {
 
     public ClassBuilder withAnnotations(Annotation... annotations) {
         return withAnnotations(Arrays.asList(annotations));
+    }
+
+    public ClassBuilder withoutAnnotations(Iterable<Annotation> annotations) {
+        CollectionUtils.removeAll(this.annotations, annotations);
+        return this;
+    }
+
+    public ClassBuilder withoutAnnotations(Annotation... annotations) {
+        return withoutAnnotations(Arrays.asList(annotations));
     }
 
     public ClassBuilder setFields(Iterable<FieldDef> fields) {
@@ -167,6 +186,15 @@ public final class ClassBuilder {
                 .withType(type)
                 .withFlags(flags)
         );
+    }
+
+    public ClassBuilder withoutFields(Iterable<FieldDef> fields) {
+        CollectionUtils.removeAll(this.fields, fields);
+        return this;
+    }
+
+    public ClassBuilder withoutFields(FieldDef... fields) {
+        return withoutFields(Arrays.asList(fields));
     }
 
     public ClassBuilder setMethods(Iterable<MethodDef> methods) {
@@ -209,5 +237,14 @@ public final class ClassBuilder {
                 .withFlags(flags)
                 .withCode(locals, consumer)
         );
+    }
+
+    public ClassBuilder withoutMethods(Iterable<MethodDef> methods) {
+        CollectionUtils.removeAll(this.methods, methods);
+        return this;
+    }
+
+    public ClassBuilder withoutMethods(MethodDef... methods) {
+        return withoutMethods(Arrays.asList(methods));
     }
 }
