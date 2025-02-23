@@ -74,6 +74,7 @@ public final class DexIO {
     //TODO: public static Dex[] readDexContainer(ReadOptions options, byte[] data, int[][] ids) {}
 
     public static Dex[] readDexContainer(ReadOptions options, byte[] data, int data_offset) {
+        Objects.requireNonNull(options);
         var input = new ByteArrayInput(data).sliceAt(data_offset);
         var readers = new ArrayList<DexReader>();
         int header_offset = 0;
@@ -87,6 +88,14 @@ public final class DexIO {
             out[i] = Dex.of(readers.get(i).getClasses());
         }
         return out;
+    }
+
+    public static Dex readSingleDex(ReadOptions options, byte[] data,
+                                    int data_offset, int header_offset) {
+        Objects.requireNonNull(options);
+        var input = new ByteArrayInput(data).sliceAt(data_offset);
+        var reader = new DexReader(options, input, header_offset);
+        return Dex.of(reader.getClasses());
     }
 
     public static byte[] write(WriteOptions options, Dex data) {
