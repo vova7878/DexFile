@@ -164,6 +164,7 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withAnnotations(Iterable<Annotation> annotations) {
+        withoutAnnotations(annotations);
         this.annotations.addAll(ItemConverter.toList(annotations));
         return this;
     }

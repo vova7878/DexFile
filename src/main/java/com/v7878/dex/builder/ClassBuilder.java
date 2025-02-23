@@ -114,6 +114,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder withInterfaces(Iterable<TypeId> interfaces) {
+        withoutInterfaces(interfaces);
         this.interfaces.addAll(ItemConverter.toList(interfaces));
         return this;
     }
@@ -141,6 +142,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder withAnnotations(Iterable<Annotation> annotations) {
+        withoutAnnotations(annotations);
         this.annotations.addAll(ItemConverter.toList(annotations));
         return this;
     }
@@ -168,6 +170,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder withFields(Iterable<FieldDef> fields) {
+        withoutFields(fields);
         this.fields.addAll(ItemConverter.toList(fields));
         return this;
     }
@@ -207,6 +210,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder withMethods(Iterable<MethodDef> methods) {
+        withoutMethods(methods);
         this.methods.addAll(ItemConverter.toList(methods));
         return this;
     }

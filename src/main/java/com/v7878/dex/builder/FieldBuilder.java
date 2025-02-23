@@ -112,6 +112,7 @@ public final class FieldBuilder {
     }
 
     public FieldBuilder withAnnotations(Iterable<Annotation> annotations) {
+        withoutAnnotations(annotations);
         this.annotations.addAll(ItemConverter.toList(annotations));
         return this;
     }
