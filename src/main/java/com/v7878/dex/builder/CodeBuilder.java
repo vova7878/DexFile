@@ -718,70 +718,70 @@ public final class CodeBuilder {
         return f10x(Opcode.NOP);
     }
 
-    public CodeBuilder raw_move(int dsr_reg, int src_reg) {
-        return f12x(Opcode.MOVE, dsr_reg, false, src_reg, false);
+    public CodeBuilder raw_move(int dst_reg, int src_reg) {
+        return f12x(Opcode.MOVE, dst_reg, false, src_reg, false);
     }
 
-    public CodeBuilder raw_move_from16(int dsr_reg, int src_reg) {
-        return f22x(Opcode.MOVE_FROM16, dsr_reg, false, src_reg, false);
+    public CodeBuilder raw_move_from16(int dst_reg, int src_reg) {
+        return f22x(Opcode.MOVE_FROM16, dst_reg, false, src_reg, false);
     }
 
-    public CodeBuilder raw_move_16(int dsr_reg, int src_reg) {
-        return f32x(Opcode.MOVE_16, dsr_reg, false, src_reg, false);
+    public CodeBuilder raw_move_16(int dst_reg, int src_reg) {
+        return f32x(Opcode.MOVE_16, dst_reg, false, src_reg, false);
     }
 
-    public CodeBuilder move(int dsr_reg, int src_reg) {
-        if (src_reg < 1 << 4 && dsr_reg < 1 << 4) {
-            return raw_move(dsr_reg, src_reg);
+    public CodeBuilder move(int dst_reg, int src_reg) {
+        if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
+            return raw_move(dst_reg, src_reg);
         }
         if (src_reg < 1 << 8) {
-            return raw_move_from16(dsr_reg, src_reg);
+            return raw_move_from16(dst_reg, src_reg);
         }
-        return raw_move_16(dsr_reg, src_reg);
+        return raw_move_16(dst_reg, src_reg);
     }
 
-    public CodeBuilder raw_move_wide(int dsr_reg_pair, int src_reg_pair) {
-        return f12x(Opcode.MOVE_WIDE, dsr_reg_pair, true, src_reg_pair, true);
+    public CodeBuilder raw_move_wide(int dst_reg_pair, int src_reg_pair) {
+        return f12x(Opcode.MOVE_WIDE, dst_reg_pair, true, src_reg_pair, true);
     }
 
-    public CodeBuilder raw_move_wide_from16(int dsr_reg_pair, int src_reg_pair) {
-        return f22x(Opcode.MOVE_WIDE_FROM16, dsr_reg_pair, true, src_reg_pair, true);
+    public CodeBuilder raw_move_wide_from16(int dst_reg_pair, int src_reg_pair) {
+        return f22x(Opcode.MOVE_WIDE_FROM16, dst_reg_pair, true, src_reg_pair, true);
     }
 
-    public CodeBuilder raw_move_wide_16(int dsr_reg_pair, int src_reg_pair) {
-        return f32x(Opcode.MOVE_WIDE_16, dsr_reg_pair, true, src_reg_pair, true);
+    public CodeBuilder raw_move_wide_16(int dst_reg_pair, int src_reg_pair) {
+        return f32x(Opcode.MOVE_WIDE_16, dst_reg_pair, true, src_reg_pair, true);
     }
 
-    public CodeBuilder move_wide(int dsr_reg, int src_reg) {
-        if (src_reg < 1 << 4 && dsr_reg < 1 << 4) {
-            return raw_move_wide(dsr_reg, src_reg);
-        }
-        if (src_reg < 1 << 8) {
-            return raw_move_wide_from16(dsr_reg, src_reg);
-        }
-        return raw_move_wide_16(dsr_reg, src_reg);
-    }
-
-    public CodeBuilder raw_move_object(int dsr_reg, int src_reg) {
-        return f12x(Opcode.MOVE_OBJECT, dsr_reg, false, src_reg, false);
-    }
-
-    public CodeBuilder raw_move_object_from16(int dsr_reg, int src_reg) {
-        return f22x(Opcode.MOVE_OBJECT_FROM16, dsr_reg, false, src_reg, false);
-    }
-
-    public CodeBuilder raw_move_object_16(int dsr_reg, int src_reg) {
-        return f32x(Opcode.MOVE_OBJECT_16, dsr_reg, false, src_reg, false);
-    }
-
-    public CodeBuilder move_object(int dsr_reg, int src_reg) {
-        if (src_reg < 1 << 4 && dsr_reg < 1 << 4) {
-            return raw_move_object(dsr_reg, src_reg);
+    public CodeBuilder move_wide(int dst_reg, int src_reg) {
+        if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
+            return raw_move_wide(dst_reg, src_reg);
         }
         if (src_reg < 1 << 8) {
-            return raw_move_object_from16(dsr_reg, src_reg);
+            return raw_move_wide_from16(dst_reg, src_reg);
         }
-        return raw_move_object_16(dsr_reg, src_reg);
+        return raw_move_wide_16(dst_reg, src_reg);
+    }
+
+    public CodeBuilder raw_move_object(int dst_reg, int src_reg) {
+        return f12x(Opcode.MOVE_OBJECT, dst_reg, false, src_reg, false);
+    }
+
+    public CodeBuilder raw_move_object_from16(int dst_reg, int src_reg) {
+        return f22x(Opcode.MOVE_OBJECT_FROM16, dst_reg, false, src_reg, false);
+    }
+
+    public CodeBuilder raw_move_object_16(int dst_reg, int src_reg) {
+        return f32x(Opcode.MOVE_OBJECT_16, dst_reg, false, src_reg, false);
+    }
+
+    public CodeBuilder move_object(int dst_reg, int src_reg) {
+        if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
+            return raw_move_object(dst_reg, src_reg);
+        }
+        if (src_reg < 1 << 8) {
+            return raw_move_object_from16(dst_reg, src_reg);
+        }
+        return raw_move_object_16(dst_reg, src_reg);
     }
 
     public CodeBuilder move_result(int dst_reg) {
@@ -1317,8 +1317,8 @@ public final class CodeBuilder {
         }
     }
 
-    public CodeBuilder unop(UnOp op, int dsr_reg_or_pair, int src_reg_or_pair) {
-        return f12x(op.opcode, dsr_reg_or_pair, op.isDstWide, src_reg_or_pair, op.isSrcWide);
+    public CodeBuilder unop(UnOp op, int dst_reg_or_pair, int src_reg_or_pair) {
+        return f12x(op.opcode, dst_reg_or_pair, op.isDstWide, src_reg_or_pair, op.isSrcWide);
     }
 
     public enum BinOp {
@@ -1376,12 +1376,12 @@ public final class CodeBuilder {
         }
     }
 
-    public CodeBuilder binop(BinOp op, int dsr_reg_or_pair,
+    public CodeBuilder binop(BinOp op, int dst_reg_or_pair,
                              int first_src_reg_or_pair, int second_src_reg_or_pair) {
         if (op.regular == null) {
             throw new IllegalArgumentException("There is no regular version of " + op);
         }
-        return f23x(op.regular, dsr_reg_or_pair, op.isDstAndSrc1Wide,
+        return f23x(op.regular, dst_reg_or_pair, op.isDstAndSrc1Wide,
                 first_src_reg_or_pair, op.isDstAndSrc1Wide,
                 second_src_reg_or_pair, op.isSrc2Wide);
     }
