@@ -189,7 +189,7 @@ public final class CodeBuilder {
                     continue;
                 }
                 borders_set.add(start);
-                borders_set.add(end + 1);
+                borders_set.add(end);
                 i++;
             }
             borders = borders_set.stream().mapToInt(v -> v).toArray();
