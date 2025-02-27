@@ -239,7 +239,7 @@ public final class CodeBuilder {
             var container = elements.valueAt(i);
             //noinspection SizeReplaceableByIsEmpty
             if (container.catch_all_address != null || container.handlers.size() > 0) {
-                out.add(i, TryBlock.of(borders[i], borders[i + 1] - borders[i],
+                out.add(TryBlock.of(borders[i], borders[i + 1] - borders[i],
                         container.catch_all_address, container.handlers));
             }
         }
