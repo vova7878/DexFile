@@ -209,9 +209,8 @@ public final class CodeBuilder {
                     ExceptionHandler.of(exception, handler_address);
 
             int start_index = Arrays.binarySearch(borders, item.start());
-            assert start_index >= 0;
             int end_index = Arrays.binarySearch(borders, item.end());
-            end_index = end_index < 0 ? ~end_index : end_index;
+            assert start_index >= 0 && end_index > start_index;
 
             for (int i = start_index; i < end_index; i++) {
                 var position = borders[i];
@@ -238,8 +237,11 @@ public final class CodeBuilder {
         var out = new ArrayList<TryBlock>(elements_size);
         for (int i = 0; i < elements_size; i++) {
             var container = elements.valueAt(i);
-            out.add(i, TryBlock.of(borders[i], borders[i + 1] - borders[i],
-                    container.catch_all_address, container.handlers));
+            //noinspection SizeReplaceableByIsEmpty
+            if (container.catch_all_address != null || container.handlers.size() > 0) {
+                out.add(i, TryBlock.of(borders[i], borders[i + 1] - borders[i],
+                        container.catch_all_address, container.handlers));
+            }
         }
         return out;
     }
