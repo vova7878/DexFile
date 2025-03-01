@@ -1,5 +1,7 @@
 package com.v7878.dex.builder;
 
+import static com.v7878.dex.util.ShortyUtils.unrecognizedShorty;
+
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.CallSiteId;
@@ -45,6 +47,7 @@ import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
+import com.v7878.dex.util.ShortyUtils;
 import com.v7878.dex.util.SparseArray;
 
 import java.util.ArrayList;
@@ -338,13 +341,14 @@ public final class CodeBuilder {
         return isPair ? check_reg_pair(reg_or_pair) : check_reg(reg_or_pair);
     }
 
+    private int check_reg_empty_range(int first_reg) {
+        return checkRange(first_reg, 0, regs_size + 1);
+    }
+
     @SuppressWarnings("UnusedReturnValue")
     private int check_reg_range(int first_reg, int count) {
         if (count == 0) {
-            if (first_reg != 0) {
-                throw new IllegalArgumentException("count == 0, but first_reg != 0");
-            }
-            return first_reg;
+            return check_reg_empty_range(first_reg);
         }
         count--;
         checkRange(first_reg + count, count, regs_size - count);
@@ -754,14 +758,14 @@ public final class CodeBuilder {
         return f32x(Opcode.MOVE_WIDE_16, dst_reg_pair, true, src_reg_pair, true);
     }
 
-    public CodeBuilder move_wide(int dst_reg, int src_reg) {
-        if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
-            return raw_move_wide(dst_reg, src_reg);
+    public CodeBuilder move_wide(int dst_reg_pair, int src_reg_pair) {
+        if (src_reg_pair < 1 << 4 && dst_reg_pair < 1 << 4) {
+            return raw_move_wide(dst_reg_pair, src_reg_pair);
         }
-        if (src_reg < 1 << 8) {
-            return raw_move_wide_from16(dst_reg, src_reg);
+        if (src_reg_pair < 1 << 8) {
+            return raw_move_wide_from16(dst_reg_pair, src_reg_pair);
         }
-        return raw_move_wide_16(dst_reg, src_reg);
+        return raw_move_wide_16(dst_reg_pair, src_reg_pair);
     }
 
     public CodeBuilder raw_move_object(int dst_reg, int src_reg) {
@@ -786,6 +790,37 @@ public final class CodeBuilder {
         return raw_move_object_16(dst_reg, src_reg);
     }
 
+    public CodeBuilder move_shorty(char shorty, int dst_reg_or_pair, int src_reg_or_pair) {
+        return switch (shorty) {
+            case 'V' -> {
+                check_reg_empty_range(dst_reg_or_pair);
+                check_reg_empty_range(src_reg_or_pair);
+                yield this;
+            }
+            case 'Z', 'B', 'C', 'S', 'I', 'F' -> move(dst_reg_or_pair, src_reg_or_pair);
+            case 'J', 'D' -> move_wide(dst_reg_or_pair, src_reg_or_pair);
+            case 'L' -> move_object(dst_reg_or_pair, src_reg_or_pair);
+            default -> throw unrecognizedShorty(shorty);
+        };
+    }
+
+    public CodeBuilder move_range(String shorty, int first_dst_reg, int first_src_reg) {
+        char[] chars = shorty.toCharArray();
+        int size = 0;
+        for (char value : chars) {
+            size += ShortyUtils.getRegisterCountWithCheck(value);
+        }
+        check_reg_range(first_dst_reg, size);
+        check_reg_range(first_src_reg, size);
+        int offset = 0;
+        for (char value : chars) {
+            move_shorty(value, first_dst_reg + offset,
+                    first_src_reg + offset);
+            offset += ShortyUtils.getRegisterCount(value);
+        }
+        return this;
+    }
+
     public CodeBuilder move_result(int dst_reg) {
         return f11x(Opcode.MOVE_RESULT, dst_reg, false);
     }
@@ -796,6 +831,19 @@ public final class CodeBuilder {
 
     public CodeBuilder move_result_object(int dst_reg) {
         return f11x(Opcode.MOVE_RESULT_OBJECT, dst_reg, false);
+    }
+
+    public CodeBuilder move_result_shorty(char shorty, int dst_reg_or_pair) {
+        return switch (shorty) {
+            case 'V' -> {
+                check_reg_empty_range(dst_reg_or_pair);
+                yield this;
+            }
+            case 'Z', 'B', 'C', 'S', 'I', 'F' -> move_result(dst_reg_or_pair);
+            case 'J', 'D' -> move_result_wide(dst_reg_or_pair);
+            case 'L' -> move_result_object(dst_reg_or_pair);
+            default -> throw unrecognizedShorty(shorty);
+        };
     }
 
     public CodeBuilder move_exception(int dst_reg) {
@@ -816,6 +864,19 @@ public final class CodeBuilder {
 
     public CodeBuilder return_object(int return_value_reg) {
         return f11x(Opcode.RETURN_OBJECT, return_value_reg, false);
+    }
+
+    public CodeBuilder return_shorty(char shorty, int return_value_reg_or_pair) {
+        return switch (shorty) {
+            case 'V' -> {
+                check_reg_empty_range(return_value_reg_or_pair);
+                yield return_void();
+            }
+            case 'Z', 'B', 'C', 'S', 'I', 'F' -> return_(return_value_reg_or_pair);
+            case 'J', 'D' -> return_wide(return_value_reg_or_pair);
+            case 'L' -> return_object(return_value_reg_or_pair);
+            default -> throw unrecognizedShorty(shorty);
+        };
     }
 
     public CodeBuilder raw_const_4(int dst_reg, int value) {

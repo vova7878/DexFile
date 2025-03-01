@@ -6,6 +6,14 @@ import com.v7878.dex.immutable.TypeId;
 import java.util.List;
 
 public class ShortyUtils {
+    public static RuntimeException unrecognizedType(String descriptor) {
+        throw new IllegalArgumentException("Unrecognized type: " + descriptor);
+    }
+
+    public static RuntimeException unrecognizedShorty(char shorty) {
+        throw new IllegalArgumentException("Unrecognized shorty: " + shorty);
+    }
+
     public static char getTypeShorty(String descriptor) {
         return switch (descriptor) {
             case "V" -> 'V';
@@ -21,7 +29,7 @@ public class ShortyUtils {
                 if (descriptor.startsWith("L") || descriptor.startsWith("[")) {
                     yield 'L';
                 }
-                throw new IllegalArgumentException("Unrecognized type: " + descriptor);
+                throw unrecognizedType(descriptor);
             }
         };
     }
@@ -30,9 +38,21 @@ public class ShortyUtils {
         return getTypeShorty(type.getDescriptor());
     }
 
-    public static int getRegisterCount(String descriptor) {
-        char shorty = getTypeShorty(descriptor);
+    public static int getRegisterCountWithCheck(char shorty) {
+        return switch (shorty) {
+            case 'V' -> 0;
+            case 'Z', 'B', 'C', 'S', 'I', 'F', 'L' -> 1;
+            case 'J', 'D' -> 2;
+            default -> throw unrecognizedShorty(shorty);
+        };
+    }
+
+    public static int getRegisterCount(char shorty) {
         return shorty == 'V' ? 0 : (shorty == 'D' || shorty == 'J' ? 2 : 1);
+    }
+
+    public static int getRegisterCount(String descriptor) {
+        return getRegisterCount(getTypeShorty(descriptor));
     }
 
     public static int getRegisterCount(TypeId type) {
