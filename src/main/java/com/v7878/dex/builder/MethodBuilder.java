@@ -35,7 +35,11 @@ public final class MethodBuilder {
         this.annotations = new TreeSet<>();
     }
 
-    private MethodDef finish() {
+    public static MethodBuilder newInstance() {
+        return new MethodBuilder();
+    }
+
+    public MethodDef finish() {
         return MethodDef.of(name, return_type, parameters, access_flags,
                 hiddenapi_flags, implementation, annotations);
     }

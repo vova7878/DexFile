@@ -27,7 +27,11 @@ public final class FieldBuilder {
         this.annotations = new TreeSet<>();
     }
 
-    private FieldDef finish() {
+    public static FieldBuilder newInstance() {
+        return new FieldBuilder();
+    }
+
+    public FieldDef finish() {
         return FieldDef.of(name, type, access_flags,
                 hiddenapi_flags, initial_value, annotations);
     }

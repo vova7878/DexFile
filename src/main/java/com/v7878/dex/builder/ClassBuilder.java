@@ -34,7 +34,11 @@ public final class ClassBuilder {
         this.annotations = new TreeSet<>();
     }
 
-    private ClassDef finish() {
+    public static ClassBuilder newInstance() {
+        return new ClassBuilder();
+    }
+
+    public ClassDef finish() {
         return ClassDef.of(type, access_flags, superclass, interfaces,
                 source_file, fields, methods, annotations);
     }
