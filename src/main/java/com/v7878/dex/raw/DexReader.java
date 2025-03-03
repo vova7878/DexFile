@@ -430,8 +430,8 @@ public class DexReader {
         var out = new ArrayList<Set<Annotation>>(size);
         for (int i = 0; i < size; i++) {
             int annotations_off = in.readSmallUInt();
-            var annotations = annotations_off == NO_OFFSET ?
-                    Set.<Annotation>of() : getAnnotationSet(in.readSmallUInt());
+            Set<Annotation> annotations = annotations_off == NO_OFFSET ?
+                    Set.of() : getAnnotationSet(annotations_off);
             out.add(i, annotations);
         }
         return out;
@@ -820,8 +820,8 @@ public class DexReader {
 
         TypeId clazz = getTypeId(in.readSmallUInt());
         int access_flags = in.readInt();
-        int superclass_idx = in.readInt();
         // TODO: readSmallUInt but with -1
+        int superclass_idx = in.readInt();
         TypeId superclass = superclass_idx == DexConstants.NO_INDEX ?
                 null : getTypeId(superclass_idx);
         int interfaces_off = in.readSmallUInt();
