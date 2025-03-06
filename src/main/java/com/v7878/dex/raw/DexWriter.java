@@ -1,6 +1,10 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexConstants.ENDIAN_CONSTANT;
+import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_BLOCKED;
+import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_MAX_TARGET_O;
+import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_SDK;
+import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_UNSUPPORTED;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM;
@@ -61,6 +65,11 @@ import static com.v7878.dex.raw.CompactCodeItemConstants.kInsnsSizeShift;
 import static com.v7878.dex.raw.CompactCodeItemConstants.kOutsSizeShift;
 import static com.v7878.dex.raw.CompactCodeItemConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactCodeItemConstants.kTriesSizeSizeShift;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.getSecondFlag;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.kBlacklist;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.kDarkGreylist;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.kLightGreylist;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.kWhitelist;
 import static com.v7878.dex.util.AlignmentUtils.roundUp;
 
 import com.v7878.dex.DexVersion;
@@ -212,6 +221,7 @@ public class DexWriter {
 
     public DexWriter(WriteOptions options, RandomIO io, Dex dexfile, int header_offset) {
         assert io.position() == 0;
+        options.validate();
         this.options = options;
         main_buffer = io.duplicate();
 
@@ -255,8 +265,12 @@ public class DexWriter {
         annotation_set_lists = collector.annotation_set_lists;
         annotation_directories = collector.annotation_directories;
 
-        // TODO: only api 29+
-        hiddenapi_flags = getHiddenApiFlags();
+        if (options.hasHiddenApiFlags() && options.getTargetApi() != 28) {
+            assert options.getTargetApi() >= 29;
+            hiddenapi_flags = getHiddenApiFlags();
+        } else {
+            hiddenapi_flags = null;
+        }
 
         initMap();
 
@@ -781,8 +795,33 @@ public class DexWriter {
         }
     }
 
+    private int fixLegacyHiddenApiFlags(int access_flags, int hiddenapi_flags) {
+        hiddenapi_flags = switch (hiddenapi_flags) {
+            case HIDDENAPI_FLAG_SDK -> kWhitelist;
+            case HIDDENAPI_FLAG_UNSUPPORTED -> kLightGreylist;
+            case HIDDENAPI_FLAG_MAX_TARGET_O -> kDarkGreylist;
+            case HIDDENAPI_FLAG_BLOCKED -> kBlacklist;
+            default -> throw new IllegalArgumentException(String.format(
+                    "Invalid hidden api flag: %d", hiddenapi_flags));
+        };
+        if ((hiddenapi_flags & 0x1) != 0) {
+            int visibility_mask = 0x7;
+            access_flags ^= visibility_mask;
+        }
+        if ((hiddenapi_flags & 0x2) != 0) {
+            int second_flag = getSecondFlag(access_flags);
+            access_flags |= second_flag;
+        }
+        return access_flags;
+    }
+
     public void writeFieldDef(FieldDefContainer value) {
-        data_buffer.writeULeb128(value.value().getAccessFlags());
+        int access_flags = value.value().getAccessFlags();
+        if (options.hasHiddenApiFlags() && options.getTargetApi() == 28) {
+            int hiddenapi_flags = value.value().getHiddenApiFlags();
+            access_flags = fixLegacyHiddenApiFlags(access_flags, hiddenapi_flags);
+        }
+        data_buffer.writeULeb128(access_flags);
     }
 
     public void writeFieldDefArray(FieldDefContainer[] array) {
@@ -796,7 +835,12 @@ public class DexWriter {
     }
 
     public void writeMethodDef(MethodDefContainer value) {
-        data_buffer.writeULeb128(value.value().getAccessFlags());
+        int access_flags = value.value().getAccessFlags();
+        if (options.hasHiddenApiFlags() && options.getTargetApi() == 28) {
+            int hiddenapi_flags = value.value().getHiddenApiFlags();
+            access_flags = fixLegacyHiddenApiFlags(access_flags, hiddenapi_flags);
+        }
+        data_buffer.writeULeb128(access_flags);
         var code = value.code();
         data_buffer.writeULeb128(code == null ? NO_OFFSET : getCodeItemOffset(code));
     }

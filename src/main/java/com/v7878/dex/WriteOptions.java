@@ -3,20 +3,25 @@ package com.v7878.dex;
 public final class WriteOptions extends DexOptions<WriteOptions> {
     private final DexVersion dex_version;
 
-    WriteOptions(DexVersion dex_version, int targetApi, boolean targetForArt, boolean allowOdexInstructions) {
-        super(targetApi, targetForArt, allowOdexInstructions);
-        //TODO: requireMinApi(dex_version.getMinApi());
+    WriteOptions(DexVersion dex_version, int api, boolean art, boolean odex, boolean hiddenapi) {
+        super(api, art, odex, hiddenapi);
         this.dex_version = dex_version;
     }
 
     private WriteOptions() {
         super();
-        this.dex_version = DexVersion.forApi(targetApi);
+        this.dex_version = DexVersion.forApi(api);
     }
 
     @Override
-    protected WriteOptions dup(int targetApi, boolean targetForArt, boolean allowOdexInstructions) {
-        return new WriteOptions(dex_version, targetApi, targetForArt, allowOdexInstructions);
+    public void validate() {
+        //TODO: requireMinApi(dex_version.getMinApi());
+        super.validate();
+    }
+
+    @Override
+    protected WriteOptions dup(int api, boolean art, boolean odex, boolean hiddenapi) {
+        return new WriteOptions(dex_version, api, art, odex, hiddenapi);
     }
 
     public DexVersion getDexVersion() {
@@ -24,7 +29,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
     }
 
     public WriteOptions withDexVersion(DexVersion version) {
-        return new WriteOptions(version, targetApi, targetForArt, allowOdexInstructions);
+        return new WriteOptions(version, api, art, odex, hiddenapi);
     }
 
     public static WriteOptions defaultOptions() {
@@ -32,6 +37,5 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
     }
 
     //TODO: withCDEXFlags(int flags)
-    //TODO: skip hiddenapi writing option
     //TODO: setByteOrder (see https://android.googlesource.com/platform/dalvik/+/kitkat-mr2-release/libdex/DexSwapVerify.cpp)
 }

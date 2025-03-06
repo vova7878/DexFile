@@ -1,8 +1,8 @@
 package com.v7878.dex;
 
 public final class ReadOptions extends DexOptions<ReadOptions> {
-    ReadOptions(int targetApi, boolean targetForArt, boolean allowOdexInstructions) {
-        super(targetApi, targetForArt, allowOdexInstructions);
+    ReadOptions(int api, boolean art, boolean odex, boolean hiddenapi) {
+        super(api, art, odex, hiddenapi);
     }
 
     private ReadOptions() {
@@ -10,8 +10,8 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
     }
 
     @Override
-    protected ReadOptions dup(int targetApi, boolean targetForArt, boolean allowOdexInstructions) {
-        return new ReadOptions(targetApi, targetForArt, allowOdexInstructions);
+    protected ReadOptions dup(int api, boolean art, boolean odex, boolean hiddenapi) {
+        return new ReadOptions(api, art, odex, hiddenapi);
     }
 
     public static ReadOptions defaultOptions() {
@@ -19,5 +19,4 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
     }
 
     //TODO: verify checksum/signature option
-    //TODO: skip hiddenapi reading option
 }

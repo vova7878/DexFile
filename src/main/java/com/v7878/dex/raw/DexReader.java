@@ -1,5 +1,9 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_BLOCKED;
+import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_MAX_TARGET_O;
+import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_SDK;
+import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_UNSUPPORTED;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.DexIO.InvalidDexFile;
 import static com.v7878.dex.DexIO.NotADexFile;
@@ -41,6 +45,12 @@ import static com.v7878.dex.raw.CompactCodeItemConstants.kInsnsSizeShift;
 import static com.v7878.dex.raw.CompactCodeItemConstants.kOutsSizeShift;
 import static com.v7878.dex.raw.CompactCodeItemConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactCodeItemConstants.kTriesSizeSizeShift;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.getSecondFlag;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.kBlacklist;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.kDarkGreylist;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.kLightGreylist;
+import static com.v7878.dex.raw.LegacyHiddenApiFlags.kWhitelist;
+import static com.v7878.dex.util.Exceptions.shouldNotReachHere;
 
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.DexConstants;
@@ -146,6 +156,7 @@ public class DexReader {
 
     public DexReader(ReadOptions options, RandomInput input, int header_offset) {
         assert input.position() == 0;
+        options.validate();
         this.options = options;
         main_buffer = input.duplicate();
 
@@ -229,10 +240,13 @@ public class DexReader {
                 CALL_SITE_ID_SIZE, this::readCallSiteId
         );
 
-        // TODO: only api 29+
-        MapItem hiddenapi = getMapItemForSection(DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM);
-        hiddenapi_section = readHiddenApiSection(
-                hiddenapi != null ? hiddenapi.offset() : NO_OFFSET);
+        if (options.hasHiddenApiFlags()) {
+            MapItem hiddenapi = getMapItemForSection(DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM);
+            hiddenapi_section = readHiddenApiSection(
+                    hiddenapi != null ? hiddenapi.offset() : NO_OFFSET);
+        } else {
+            hiddenapi_section = null;
+        }
 
         class_section = makeSection(
                 mainAt(header_offset + CLASS_COUNT_OFFSET).readSmallUInt(),
@@ -636,6 +650,38 @@ public class DexReader {
         return section.get(index);
     }
 
+    private long fixLegacyHiddenApiFlags(int access_flags) {
+        int hiddenapi_flags = 0;
+        // First bit
+        {
+            int visibility_mask = 0x7;
+            int count = access_flags & 0x1 +
+                    (access_flags >> 1 & 0x1) +
+                    (access_flags >> 2 & 0x1);
+            if (count >= 2) {
+                access_flags ^= visibility_mask;
+                hiddenapi_flags |= 0x1;
+            }
+        }
+        // Second bit
+        {
+            int second_flag = getSecondFlag(access_flags);
+            if ((access_flags & second_flag) != 0) {
+                access_flags &= ~second_flag;
+                hiddenapi_flags |= 0x2;
+            }
+        }
+        hiddenapi_flags = switch (hiddenapi_flags) {
+            case kWhitelist -> HIDDENAPI_FLAG_SDK;
+            case kLightGreylist -> HIDDENAPI_FLAG_UNSUPPORTED;
+            case kDarkGreylist -> HIDDENAPI_FLAG_MAX_TARGET_O;
+            case kBlacklist -> HIDDENAPI_FLAG_BLOCKED;
+            default -> throw shouldNotReachHere();
+        };
+        return access_flags & 0xffffffffL |
+                (hiddenapi_flags & 0xffffffffL) << 32;
+    }
+
     private List<FieldDef> readFieldDefList(
             RandomInput in, int count, IntSupplier hiddenapi,
             SparseArray<Set<Annotation>> annotations_map,
@@ -646,13 +692,23 @@ public class DexReader {
             index += in.readSmallULeb128();
             var id = getFieldId(index);
             int access_flags = in.readULeb128();
+            int hiddenapi_flags;
+            if (options.getTargetApi() == 28) {
+                long common = fixLegacyHiddenApiFlags(access_flags);
+                access_flags = (int) common;
+                hiddenapi_flags = options.hasHiddenApiFlags() ?
+                        (int) (common >> 32) : 0;
+            } else {
+                hiddenapi_flags = options.hasHiddenApiFlags() ?
+                        hiddenapi.getAsInt() : 0;
+            }
             EncodedValue initial_value = null;
             if (static_list) {
                 initial_value = (static_values != null && i < static_values.size()) ?
                         static_values.get(i) : EncodedValue.defaultValue(id.getType());
             }
             out.add(FieldDef.of(id.getName(), id.getType(), access_flags,
-                    hiddenapi.getAsInt(), initial_value, annotations_map.get(index)));
+                    hiddenapi_flags, initial_value, annotations_map.get(index)));
         }
         return out;
     }
@@ -803,13 +859,23 @@ public class DexReader {
             index += in.readSmallULeb128();
             var id = getMethodId(index);
             int access_flags = in.readULeb128();
+            int hiddenapi_flags;
+            if (options.getTargetApi() == 28) {
+                long common = fixLegacyHiddenApiFlags(access_flags);
+                access_flags = (int) common;
+                hiddenapi_flags = options.hasHiddenApiFlags() ?
+                        (int) (common >> 32) : 0;
+            } else {
+                hiddenapi_flags = options.hasHiddenApiFlags() ?
+                        hiddenapi.getAsInt() : 0;
+            }
             int code_off = in.readSmallULeb128();
             List<Parameter> parameters = toParamaterList(id.getParameterTypes(),
                     parameter_annotations.get(index, List.of()));
             var code = code_off == NO_OFFSET ? null : getCodeItem(code_off);
             MethodImplementation implementation = toImplementation(code);
             out.add(MethodDef.of(id.getName(), id.getReturnType(),
-                    parameters, access_flags, hiddenapi.getAsInt(),
+                    parameters, access_flags, hiddenapi_flags,
                     implementation, method_annotations.get(index)));
         }
         return out;
@@ -888,6 +954,6 @@ public class DexReader {
 
     public IntSupplier getHiddenApiIterator(int class_idx) {
         checkIndex(class_idx, class_section.size(), "class def");
-        return hiddenapi_section.apply(class_idx);
+        return options.hasHiddenApiFlags() ? hiddenapi_section.apply(class_idx) : null;
     }
 }
