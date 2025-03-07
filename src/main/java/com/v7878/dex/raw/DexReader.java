@@ -50,6 +50,7 @@ import static com.v7878.dex.raw.LegacyHiddenApiFlags.kBlacklist;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.kDarkGreylist;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.kLightGreylist;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.kWhitelist;
+import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
 import static com.v7878.dex.util.Exceptions.shouldNotReachHere;
 
 import com.v7878.dex.AnnotationVisibility;
@@ -655,10 +656,7 @@ public class DexReader {
         // First bit
         {
             int visibility_mask = 0x7;
-            int count = access_flags & 0x1 +
-                    (access_flags >> 1 & 0x1) +
-                    (access_flags >> 2 & 0x1);
-            if (count >= 2) {
+            if (!isPowerOfTwo(access_flags)) {
                 access_flags ^= visibility_mask;
                 hiddenapi_flags |= 0x1;
             }
