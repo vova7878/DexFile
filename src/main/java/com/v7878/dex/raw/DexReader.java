@@ -656,7 +656,7 @@ public class DexReader {
         // First bit
         {
             int visibility_mask = 0x7;
-            if (!isPowerOfTwo(access_flags)) {
+            if (!isPowerOfTwo(access_flags & visibility_mask)) {
                 access_flags ^= visibility_mask;
                 hiddenapi_flags |= 0x1;
             }
