@@ -55,6 +55,7 @@ import static com.v7878.dex.util.Exceptions.shouldNotReachHere;
 
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.DexConstants;
+import com.v7878.dex.DexIO;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.MethodHandleType;
 import com.v7878.dex.Opcodes;
@@ -110,7 +111,7 @@ import java.util.Set;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
-public class DexReader {
+public class DexReader implements DexIO.DexReaderCache {
     private record AnnotationDirectory(Set<Annotation> class_annotations,
                                        SparseArray<Set<Annotation>> field_annotations,
                                        SparseArray<Set<Annotation>> method_annotations,
@@ -524,6 +525,7 @@ public class DexReader {
         return dataAt(data_offset).readMUTF8();
     }
 
+    @Override
     public String getString(int index) {
         var section = string_section;
         checkIndex(index, section.size(), "string");
@@ -535,6 +537,7 @@ public class DexReader {
         return TypeId.of(descriptor);
     }
 
+    @Override
     public TypeId getTypeId(int index) {
         var section = type_section;
         checkIndex(index, section.size(), "type");
@@ -549,6 +552,7 @@ public class DexReader {
         return FieldId.of(declaring_class, name, type);
     }
 
+    @Override
     public FieldId getFieldId(int index) {
         var section = field_section;
         checkIndex(index, section.size(), "field");
@@ -565,6 +569,7 @@ public class DexReader {
         return ProtoId.of(return_type, parameters);
     }
 
+    @Override
     public ProtoId getProtoId(int index) {
         var section = proto_section;
         checkIndex(index, section.size(), "proto");
@@ -579,7 +584,7 @@ public class DexReader {
         return MethodId.of(declaring_class, name, proto);
     }
 
-
+    @Override
     public MethodId getMethodId(int index) {
         var section = method_section;
         checkIndex(index, section.size(), "method");
@@ -596,6 +601,7 @@ public class DexReader {
         return MethodHandleId.of(type, member);
     }
 
+    @Override
     public MethodHandleId getMethodHandleId(int index) {
         var section = method_handle_section;
         checkIndex(index, section.size(), "method handle");
@@ -645,6 +651,7 @@ public class DexReader {
         return CallSiteId.of(handle, name, proto, extra_args);
     }
 
+    @Override
     public CallSiteId getCallSiteId(int index) {
         var section = callsite_section;
         checkIndex(index, section.size(), "callsite");
@@ -929,6 +936,13 @@ public class DexReader {
                 MemberUtils.mergeFields(static_fields, instance_fields),
                 MemberUtils.mergeMethods(direct_methods, virtual_methods),
                 annotations.class_annotations());
+    }
+
+    @Override
+    public ClassDef getClassDef(int index) {
+        var section = class_section;
+        checkIndex(index, section.size(), "class");
+        return section.get(index);
     }
 
     public List<ClassDef> getClasses() {
