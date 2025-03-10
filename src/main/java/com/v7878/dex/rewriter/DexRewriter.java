@@ -66,7 +66,7 @@ public class DexRewriter {
                 rewriteTypeId(value.getType()),
                 value.getAccessFlags(),
                 rewriteNullable(value.getSuperclass(), this::rewriteTypeId),
-                rewriteNavigableSet(value.getInterfaces(), this::rewriteTypeId),
+                rewriteList(value.getInterfaces(), this::rewriteTypeId),
                 value.getSourceFile(),
                 rewriteNavigableSet(value.getFields(), this::rewriteFieldDef),
                 rewriteNavigableSet(value.getMethods(), this::rewriteMethodDef),
@@ -112,6 +112,8 @@ public class DexRewriter {
 
     public CallSiteId rewriteCallSiteId(CallSiteId value) {
         return CallSiteId.of(
+                // This String does not refer to the dex format, but is simply for identification purposes
+                value.getName(),
                 rewriteMethodHandleId(value.getMethodHandle()),
                 value.getMethodName(),
                 rewriteProtoId(value.getMethodProto()),

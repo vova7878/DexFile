@@ -624,7 +624,7 @@ public class DexReader implements DexIO.DexReaderCache {
             }
             handle = ((EncodedMethodHandle) value).getValue();
         }
-        String name;
+        String method_name;
         {
             var value = array.get(1);
             if (value.getValueType() != ValueType.STRING) {
@@ -632,7 +632,7 @@ public class DexReader implements DexIO.DexReaderCache {
                         "Invalid encoded value type (%s) for the second item in call site %d",
                         value.getValueType(), index));
             }
-            name = ((EncodedString) value).getValue();
+            method_name = ((EncodedString) value).getValue();
         }
         ProtoId proto;
         {
@@ -648,7 +648,8 @@ public class DexReader implements DexIO.DexReaderCache {
         {
             extra_args = array.size() <= 3 ? List.of() : array.subList(3, array.size());
         }
-        return CallSiteId.of(handle, name, proto, extra_args);
+        String name = String.format("call_size_%s", index);
+        return CallSiteId.of(name, handle, method_name, proto, extra_args);
     }
 
     @Override

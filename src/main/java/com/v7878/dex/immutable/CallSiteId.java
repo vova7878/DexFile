@@ -9,27 +9,35 @@ import java.util.List;
 import java.util.Objects;
 
 public final class CallSiteId implements Comparable<CallSiteId> {
+    // Each CallSite is assigned a unique name based on its id,
+    //  this is necessary to distinguish elements with the same content
+    private final String name;
     private final MethodHandleId method_handle;
     private final String method_name;
     private final ProtoId method_proto;
     private final List<EncodedValue> extra_arguments;
 
-    private CallSiteId(MethodHandleId method_handle, String method_name,
+    private CallSiteId(String name, MethodHandleId method_handle, String method_name,
                        ProtoId method_proto, Iterable<EncodedValue> extra_arguments) {
+        this.name = Objects.requireNonNull(name);
         this.method_handle = Objects.requireNonNull(method_handle);
         this.method_name = Objects.requireNonNull(method_name);
         this.method_proto = Objects.requireNonNull(method_proto);
         this.extra_arguments = ItemConverter.toList(extra_arguments);
     }
 
-    public static CallSiteId of(MethodHandleId method_handle, String method_name,
+    public static CallSiteId of(String name, MethodHandleId method_handle, String method_name,
                                 ProtoId method_proto, Iterable<EncodedValue> extra_arguments) {
-        return new CallSiteId(method_handle, method_name, method_proto, extra_arguments);
+        return new CallSiteId(name, method_handle, method_name, method_proto, extra_arguments);
     }
 
-    public static CallSiteId of(MethodHandleId method_handle, String method_name,
+    public static CallSiteId of(String name, MethodHandleId method_handle, String method_name,
                                 ProtoId method_proto, EncodedValue... extra_arguments) {
-        return of(method_handle, method_name, method_proto, Arrays.asList(extra_arguments));
+        return of(name, method_handle, method_name, method_proto, Arrays.asList(extra_arguments));
+    }
+
+    public String getName() {
+        return name;
     }
 
     public MethodHandleId getMethodHandle() {
@@ -50,13 +58,15 @@ public final class CallSiteId implements Comparable<CallSiteId> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getMethodName(), getMethodProto(), getMethodHandle(), getExtraArguments());
+        return Objects.hash(getName(), getMethodName(), getMethodProto(),
+                getMethodHandle(), getExtraArguments());
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
         return obj instanceof CallSiteId other
+                && Objects.equals(getName(), other.getName())
                 && Objects.equals(getMethodName(), other.getMethodName())
                 && Objects.equals(getMethodProto(), other.getMethodProto())
                 && Objects.equals(getMethodHandle(), other.getMethodHandle())
@@ -66,7 +76,9 @@ public final class CallSiteId implements Comparable<CallSiteId> {
     @Override
     public int compareTo(CallSiteId other) {
         if (other == this) return 0;
-        int out = CollectionUtils.compareNonNull(getMethodHandle(), other.getMethodHandle());
+        int out = CollectionUtils.compareNonNull(getName(), other.getName());
+        if (out != 0) return out;
+        out = CollectionUtils.compareNonNull(getMethodHandle(), other.getMethodHandle());
         if (out != 0) return out;
         out = CollectionUtils.compareNonNull(getMethodName(), other.getMethodName());
         if (out != 0) return out;
