@@ -648,7 +648,7 @@ public class DexReader implements DexIO.DexReaderCache {
         {
             extra_args = array.size() <= 3 ? List.of() : array.subList(3, array.size());
         }
-        String name = String.format("call_size_%s", index);
+        String name = String.format("callsite_%s", index);
         return CallSiteId.of(name, handle, method_name, proto, extra_args);
     }
 
