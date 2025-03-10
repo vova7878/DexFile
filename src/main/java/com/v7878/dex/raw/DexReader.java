@@ -1,5 +1,6 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.DexConstants.ACC_VISIBILITY_MASK;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_BLOCKED;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_MAX_TARGET_O;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_SDK;
@@ -663,9 +664,8 @@ public class DexReader implements DexIO.DexReaderCache {
         int hiddenapi_flags = 0;
         // First bit
         {
-            int visibility_mask = 0x7;
-            if (!isPowerOfTwo(access_flags & visibility_mask)) {
-                access_flags ^= visibility_mask;
+            if (!isPowerOfTwo(access_flags & ACC_VISIBILITY_MASK)) {
+                access_flags ^= ACC_VISIBILITY_MASK;
                 hiddenapi_flags |= 0x1;
             }
         }

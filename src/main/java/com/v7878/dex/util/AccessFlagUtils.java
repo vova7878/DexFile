@@ -1,16 +1,14 @@
 package com.v7878.dex.util;
 
-import com.v7878.dex.AccessFlag;
+import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
+import static com.v7878.dex.DexConstants.ACC_STATIC;
 
 public class AccessFlagUtils {
     public static boolean isStatic/*Field*/(int flags) {
-        return AccessFlag.STATIC.isSet(flags);
+        return (flags & ACC_STATIC) != 0;
     }
 
-    public static final int DIRECT_MASK = AccessFlag.STATIC.value()
-            | AccessFlag.PRIVATE.value() | AccessFlag.CONSTRUCTOR.value();
-
     public static boolean isDirect/*Method*/(int flags) {
-        return (flags & DIRECT_MASK) != 0;
+        return (flags & ACC_DIRECT_MASK) != 0;
     }
 }

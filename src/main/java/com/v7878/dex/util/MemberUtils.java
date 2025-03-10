@@ -1,8 +1,8 @@
 package com.v7878.dex.util;
 
+import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
 import static com.v7878.dex.DexConstants.ACC_NATIVE;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
-import static com.v7878.dex.util.AccessFlagUtils.DIRECT_MASK;
 
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.immutable.Annotation;
@@ -27,7 +27,7 @@ public class MemberUtils {
 
     private static MethodDef searchableMethod(String name, TypeId ret, List<Parameter> parameters, boolean is_direct) {
         return MethodDef.of(name, ret, parameters,
-                is_direct ? DIRECT_MASK : ACC_NATIVE, 0, null, null);
+                is_direct ? ACC_DIRECT_MASK : ACC_NATIVE, 0, null, null);
     }
 
     private static Annotation searchableAnnotation(TypeId type) {

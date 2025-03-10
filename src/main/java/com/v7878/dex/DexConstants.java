@@ -31,6 +31,9 @@ public final class DexConstants {
     public static final int ACC_CONSTRUCTOR = 0x10000;
     public static final int ACC_DECLARED_SYNCHRONIZED = 0x20000;
 
+    public static final int ACC_VISIBILITY_MASK = ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED;
+    public static final int ACC_DIRECT_MASK = ACC_PRIVATE | ACC_STATIC | ACC_CONSTRUCTOR;
+
     // Type Codes
     public static final int TYPE_HEADER_ITEM = 0x0000;
     public static final int TYPE_STRING_ID_ITEM = 0x0001;

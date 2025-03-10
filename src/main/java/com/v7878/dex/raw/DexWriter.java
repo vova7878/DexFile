@@ -1,5 +1,6 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.DexConstants.ACC_VISIBILITY_MASK;
 import static com.v7878.dex.DexConstants.ENDIAN_CONSTANT;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_BLOCKED;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_MAX_TARGET_O;
@@ -805,8 +806,7 @@ public class DexWriter {
                     "Invalid hidden api flag: %d", hiddenapi_flags));
         };
         if ((hiddenapi_flags & 0x1) != 0) {
-            int visibility_mask = 0x7;
-            access_flags ^= visibility_mask;
+            access_flags ^= ACC_VISIBILITY_MASK;
         }
         if ((hiddenapi_flags & 0x2) != 0) {
             int second_flag = getSecondFlag(access_flags);
