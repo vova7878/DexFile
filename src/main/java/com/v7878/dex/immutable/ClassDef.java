@@ -4,6 +4,7 @@ import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
+import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 
@@ -11,7 +12,8 @@ public final class ClassDef implements Annotatable {
     private final TypeId type;
     private final int access_flags;
     private final TypeId superclass;
-    private final NavigableSet<TypeId> interfaces;
+    // Note: In some cases, the order of interfaces may be important (for example when redefining classes)
+    private final List<TypeId> interfaces;
     private final String source_file;
     private final NavigableSet<FieldDef> fields;
     private final NavigableSet<MethodDef> methods;
@@ -24,7 +26,8 @@ public final class ClassDef implements Annotatable {
         this.type = Objects.requireNonNull(type);
         this.access_flags = Preconditions.checkClassAccessFlags(access_flags);
         this.superclass = superclass; // may be null
-        this.interfaces = ItemConverter.toNavigableSet(interfaces);
+        // TODO: check for duplicates
+        this.interfaces = ItemConverter.toList(interfaces);
         this.source_file = source_file; // may be null
         this.fields = ItemConverter.toNavigableSet(fields);
         this.methods = ItemConverter.toNavigableSet(methods);
@@ -53,7 +56,7 @@ public final class ClassDef implements Annotatable {
         return superclass;
     }
 
-    public NavigableSet<TypeId> getInterfaces() {
+    public List<TypeId> getInterfaces() {
         return interfaces;
     }
 

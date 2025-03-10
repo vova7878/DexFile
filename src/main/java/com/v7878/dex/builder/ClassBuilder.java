@@ -11,7 +11,9 @@ import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
@@ -21,14 +23,14 @@ public final class ClassBuilder {
     private TypeId type;
     private int access_flags;
     private TypeId superclass;
-    private NavigableSet<TypeId> interfaces;
+    private List<TypeId> interfaces;
     private String source_file;
     private NavigableSet<FieldDef> fields;
     private NavigableSet<MethodDef> methods;
     private NavigableSet<Annotation> annotations;
 
     private ClassBuilder() {
-        this.interfaces = new TreeSet<>();
+        this.interfaces = new ArrayList<>();
         this.fields = new TreeSet<>();
         this.methods = new TreeSet<>();
         this.annotations = new TreeSet<>();
@@ -109,7 +111,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder setInterfaces(Iterable<TypeId> interfaces) {
-        this.interfaces = ItemConverter.toMutableNavigableSet(interfaces);
+        this.interfaces = ItemConverter.toMutableList(interfaces);
         return this;
     }
 

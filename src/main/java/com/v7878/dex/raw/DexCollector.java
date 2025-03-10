@@ -35,7 +35,6 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CodeUtils;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -242,7 +241,7 @@ public class DexCollector {
             var annotations = AnnotationDirectory.of(value, static_fields,
                     instance_fields, direct_methods, virtual_methods);
             return new ClassDefContainer(value,
-                    interfaces.isEmpty() ? null : ItemConverter.toList(interfaces),
+                    interfaces.isEmpty() ? null : interfaces,
                     static_fields, toStaticValuesList(static_fields),
                     instance_fields, direct_methods, virtual_methods,
                     annotations.isEmpty() ? null : annotations);

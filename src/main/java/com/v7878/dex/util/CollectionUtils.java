@@ -60,4 +60,15 @@ public class CollectionUtils {
             }
         }
     }
+
+    // TODO: Is this really working correctly?
+    public static <T> void removeAll(List<T> list, Iterable<T> iterable) {
+        if (iterable instanceof Collection<T> collection) {
+            list.removeAll(collection);
+        } else {
+            for (T tmp : iterable) {
+                list.remove(tmp);
+            }
+        }
+    }
 }
