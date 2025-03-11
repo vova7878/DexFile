@@ -52,22 +52,19 @@ public class CollectionUtils {
     }
 
     public static <T> void removeAll(NavigableSet<T> set, Iterable<T> iterable) {
-        if (iterable instanceof Collection<T> collection) {
-            set.removeAll(collection);
-        } else {
-            for (T tmp : iterable) {
-                set.remove(tmp);
-            }
+        // You cannot use removeAll here because it
+        //  compares objects using equals() instead of compare()
+        for (T tmp : iterable) {
+            set.remove(tmp);
         }
     }
 
-    // TODO: Is this really working correctly?
     public static <T> void removeAll(List<T> list, Iterable<T> iterable) {
         if (iterable instanceof Collection<T> collection) {
             list.removeAll(collection);
         } else {
             for (T tmp : iterable) {
-                list.remove(tmp);
+                while (list.remove(tmp)) { /* nop */ }
             }
         }
     }
