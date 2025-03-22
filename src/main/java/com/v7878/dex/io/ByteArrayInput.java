@@ -15,7 +15,7 @@ public class ByteArrayInput implements RandomInput {
     }
 
     public ByteArrayInput(byte[] array) {
-        this.array = Objects.requireNonNull(array);
+        this(array, 0, ByteOrder.LITTLE_ENDIAN);
     }
 
     public ByteOrder getByteOrder() {
@@ -43,14 +43,18 @@ public class ByteArrayInput implements RandomInput {
         return offset;
     }
 
-    @Override
-    public void position(int new_position) {
-        Objects.checkIndex(new_position, array.length + 1);
-        offset = new_position;
+    private int checkPosition(int position) {
+        Objects.checkIndex(position, array.length + 1);
+        return position;
     }
 
     @Override
-    public RandomInput duplicate() {
-        return new ByteArrayInput(array, offset, order);
+    public void position(int position) {
+        offset = checkPosition(position);
+    }
+
+    @Override
+    public RandomInput duplicateAt(int position) {
+        return new ByteArrayInput(array, checkPosition(position), order);
     }
 }

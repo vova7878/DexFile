@@ -1,23 +1,14 @@
 package com.v7878.dex.io;
 
-import static com.v7878.dex.util.AlignmentUtils.isAligned;
-import static com.v7878.dex.util.AlignmentUtils.roundUp;
-
 import java.nio.ByteOrder;
 import java.util.Objects;
 
 class OffsetInput implements RandomInput {
-
     private final RandomInput delegate;
     private final int offset;
 
-    OffsetInput(Void ignored, RandomInput delegate, int offset) {
-        this.delegate = delegate.duplicate();
-        this.offset = offset;
-    }
-
     OffsetInput(RandomInput delegate, int offset) {
-        this.delegate = delegate.duplicateAt(offset);
+        this.delegate = delegate;
         this.offset = offset;
     }
 
@@ -47,26 +38,24 @@ class OffsetInput implements RandomInput {
     }
 
     @Override
-    public void position(int new_position) {
-        delegate.position(Math.addExact(new_position, offset));
+    public void position(int position) {
+        delegate.position(Math.addExact(offset, position));
     }
 
     @Override
-    public RandomInput duplicate() {
-        return new OffsetInput(null, delegate, offset);
+    public OffsetInput duplicateAt(int position) {
+        position = Math.addExact(offset, position);
+        return new OffsetInput(delegate.duplicateAt(position), offset);
+    }
+
+    @Override
+    public OffsetInput sliceAt(int position) {
+        position = Math.addExact(offset, position);
+        return new OffsetInput(delegate.duplicateAt(position), position);
     }
 }
 
-public interface RandomInput {
-
-    ByteOrder getByteOrder();
-
-    default boolean isBigEndian() {
-        return getByteOrder() == ByteOrder.BIG_ENDIAN;
-    }
-
-    void setByteOrder(ByteOrder order);
-
+public interface RandomInput extends RandomAccess {
     default void readFully(byte[] arr) {
         readFully(arr, 0, arr.length);
     }
@@ -194,50 +183,31 @@ public interface RandomInput {
         readTo(out, size() - position());
     }
 
-    int size();
-
-    int position();
-
-    void position(int new_position);
-
-    default void addPosition(int delta) {
-        position(Math.addExact(position(), delta));
+    @Override
+    default RandomInput duplicate() {
+        return duplicateAt(position());
     }
 
-    default void alignPosition(int alignment) {
-        position(roundUp(position(), alignment));
-    }
-
-    default void requireAlignment(int alignment) {
-        int pos = position();
-        if (!isAligned(pos, alignment)) {
-            throw new IllegalStateException("Position " + pos + " not aligned by " + alignment);
-        }
-    }
-
-    RandomInput duplicate();
-
+    @Override
     default RandomInput duplicate(int offset) {
-        RandomInput out = duplicate();
-        out.addPosition(offset);
-        return out;
+        return duplicateAt(Math.addExact(position(), offset));
     }
 
-    default RandomInput duplicateAt(int offset) {
-        RandomInput out = duplicate();
-        out.position(offset);
-        return out;
-    }
+    @Override
+    RandomInput duplicateAt(int position);
 
+    @Override
     default RandomInput slice() {
         return sliceAt(position());
     }
 
+    @Override
     default RandomInput slice(int offset) {
         return sliceAt(Math.addExact(position(), offset));
     }
 
-    default RandomInput sliceAt(int offset) {
-        return new OffsetInput(this, offset);
+    @Override
+    default RandomInput sliceAt(int position) {
+        return new OffsetInput(this.duplicateAt(position), position);
     }
 }

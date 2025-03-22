@@ -1,23 +1,17 @@
 package com.v7878.dex.io;
 
-import static com.v7878.dex.util.AlignmentUtils.isAligned;
+import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
 import static com.v7878.dex.util.AlignmentUtils.roundUp;
 
 import java.nio.ByteOrder;
 import java.util.Objects;
 
 class OffsetOutput implements RandomOutput {
-
     private final RandomOutput delegate;
     private final int offset;
 
-    OffsetOutput(Void ignored, RandomOutput delegate, int offset) {
-        this.delegate = delegate.duplicate();
-        this.offset = offset;
-    }
-
     OffsetOutput(RandomOutput delegate, int offset) {
-        this.delegate = delegate.duplicateAt(offset);
+        this.delegate = delegate;
         this.offset = offset;
     }
 
@@ -47,26 +41,24 @@ class OffsetOutput implements RandomOutput {
     }
 
     @Override
-    public void position(int new_position) {
-        delegate.position(Math.addExact(new_position, offset));
+    public void position(int position) {
+        delegate.position(Math.addExact(offset, position));
     }
 
     @Override
-    public RandomOutput duplicate() {
-        return new OffsetOutput(null, delegate, offset);
+    public OffsetOutput duplicateAt(int position) {
+        position = Math.addExact(offset, position);
+        return new OffsetOutput(delegate.duplicateAt(position), offset);
+    }
+
+    @Override
+    public OffsetOutput sliceAt(int position) {
+        position = Math.addExact(offset, position);
+        return new OffsetOutput(delegate.duplicateAt(position), position);
     }
 }
 
-public interface RandomOutput {
-
-    ByteOrder getByteOrder();
-
-    default boolean isBigEndian() {
-        return getByteOrder() == ByteOrder.BIG_ENDIAN;
-    }
-
-    void setByteOrder(ByteOrder order);
-
+public interface RandomOutput extends RandomAccess {
     default void writeByteArray(byte[] arr) {
         writeByteArray(arr, 0, arr.length);
     }
@@ -158,21 +150,8 @@ public interface RandomOutput {
         writeFrom(in, size() - position());
     }
 
-    int size();
-
-    int position();
-
-    void position(int new_position);
-
-    default void addPosition(int delta) {
-        position(Math.addExact(position(), delta));
-    }
-
-    default void alignPosition(int alignment) {
-        position(roundUp(position(), alignment));
-    }
-
     default void fillZerosToAlignment(int alignment) {
+        assert isPowerOfTwo(alignment);
         int old_position = position();
         int new_position = roundUp(old_position, alignment);
         for (long i = 0; i < new_position - old_position; i++) {
@@ -180,36 +159,31 @@ public interface RandomOutput {
         }
     }
 
-    default void requireAlignment(int alignment) {
-        int pos = position();
-        if (!isAligned(pos, alignment)) {
-            throw new IllegalStateException("Position " + pos + " not aligned by " + alignment);
-        }
+    @Override
+    default RandomOutput duplicate() {
+        return duplicateAt(position());
     }
 
-    RandomOutput duplicate();
-
+    @Override
     default RandomOutput duplicate(int offset) {
-        RandomOutput out = duplicate();
-        out.addPosition(offset);
-        return out;
+        return duplicateAt(Math.addExact(position(), offset));
     }
 
-    default RandomOutput duplicateAt(int offset) {
-        RandomOutput out = duplicate();
-        out.position(offset);
-        return out;
-    }
+    @Override
+    RandomOutput duplicateAt(int position);
 
+    @Override
     default RandomOutput slice() {
         return sliceAt(position());
     }
 
+    @Override
     default RandomOutput slice(int offset) {
         return sliceAt(Math.addExact(position(), offset));
     }
 
-    default RandomOutput sliceAt(int offset) {
-        return new OffsetOutput(this, offset);
+    @Override
+    default RandomOutput sliceAt(int position) {
+        return new OffsetOutput(this.duplicateAt(position), position);
     }
 }

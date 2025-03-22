@@ -124,7 +124,8 @@ public class ByteArrayIO implements RandomIO {
     }
 
     @Override
-    public ByteArrayIO duplicate() {
-        return new ByteArrayIO(arr, offset, order);
+    public ByteArrayIO duplicateAt(int new_position) {
+        arr.ensureSize(new_position);
+        return new ByteArrayIO(arr, new_position, order);
     }
 }

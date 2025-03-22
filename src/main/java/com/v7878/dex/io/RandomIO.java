@@ -1,22 +1,13 @@
 package com.v7878.dex.io;
 
-import static com.v7878.dex.util.AlignmentUtils.isAligned;
-import static com.v7878.dex.util.AlignmentUtils.roundUp;
-
 import java.nio.ByteOrder;
 
 class OffsetIO implements RandomIO {
-
     private final RandomIO delegate;
     private final int offset;
 
-    OffsetIO(Void ignored, RandomIO delegate, int offset) {
-        this.delegate = delegate.duplicate();
-        this.offset = offset;
-    }
-
     OffsetIO(RandomIO delegate, int offset) {
-        this.delegate = delegate.duplicateAt(offset);
+        this.delegate = delegate;
         this.offset = offset;
     }
 
@@ -51,61 +42,48 @@ class OffsetIO implements RandomIO {
     }
 
     @Override
-    public void position(int new_position) {
-        delegate.position(Math.addExact(new_position, offset));
+    public void position(int position) {
+        delegate.position(Math.addExact(offset, position));
     }
 
     @Override
-    public RandomIO duplicate() {
-        return new OffsetIO(null, delegate, offset);
+    public OffsetIO duplicateAt(int position) {
+        position = Math.addExact(offset, position);
+        return new OffsetIO(delegate.duplicateAt(position), offset);
+    }
+
+    @Override
+    public OffsetIO sliceAt(int position) {
+        position = Math.addExact(offset, position);
+        return new OffsetIO(delegate.duplicateAt(position), position);
     }
 }
 
 public interface RandomIO extends RandomInput, RandomOutput {
-
-    default boolean isBigEndian() {
-        return getByteOrder() == ByteOrder.BIG_ENDIAN;
-    }
-
-    default void addPosition(int delta) {
-        position(Math.addExact(position(), delta));
-    }
-
-    default void alignPosition(int alignment) {
-        position(roundUp(position(), alignment));
-    }
-
-    default void requireAlignment(int alignment) {
-        int pos = position();
-        if (!isAligned(pos, alignment)) {
-            throw new IllegalStateException("Position " + pos + " not aligned by " + alignment);
-        }
+    @Override
+    default RandomIO duplicate() {
+        return duplicateAt(position());
     }
 
     @Override
-    RandomIO duplicate();
-
     default RandomIO duplicate(int offset) {
-        RandomIO out = duplicate();
-        out.addPosition(offset);
-        return out;
+        return duplicateAt(Math.addExact(position(), offset));
     }
 
-    default RandomIO duplicateAt(int offset) {
-        RandomIO out = duplicate();
-        out.position(offset);
-        return out;
-    }
+    @Override
+    RandomIO duplicateAt(int position);
 
+    @Override
     default RandomIO slice() {
         return sliceAt(position());
     }
 
+    @Override
     default RandomIO slice(int offset) {
         return sliceAt(Math.addExact(position(), offset));
     }
 
-    default RandomIO sliceAt(int offset) {
-        return new OffsetIO(this, offset);
+    default RandomIO sliceAt(int position) {
+        return new OffsetIO(this.duplicateAt(position), position);
     }
 }
