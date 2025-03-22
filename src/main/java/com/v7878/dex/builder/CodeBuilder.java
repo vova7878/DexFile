@@ -1,5 +1,19 @@
 package com.v7878.dex.builder;
 
+import static com.v7878.dex.builder.CodeBuilder.Op.GET;
+import static com.v7878.dex.builder.CodeBuilder.Op.GET_BOOLEAN;
+import static com.v7878.dex.builder.CodeBuilder.Op.GET_BYTE;
+import static com.v7878.dex.builder.CodeBuilder.Op.GET_CHAR;
+import static com.v7878.dex.builder.CodeBuilder.Op.GET_OBJECT;
+import static com.v7878.dex.builder.CodeBuilder.Op.GET_SHORT;
+import static com.v7878.dex.builder.CodeBuilder.Op.GET_WIDE;
+import static com.v7878.dex.builder.CodeBuilder.Op.PUT;
+import static com.v7878.dex.builder.CodeBuilder.Op.PUT_BOOLEAN;
+import static com.v7878.dex.builder.CodeBuilder.Op.PUT_BYTE;
+import static com.v7878.dex.builder.CodeBuilder.Op.PUT_CHAR;
+import static com.v7878.dex.builder.CodeBuilder.Op.PUT_OBJECT;
+import static com.v7878.dex.builder.CodeBuilder.Op.PUT_SHORT;
+import static com.v7878.dex.builder.CodeBuilder.Op.PUT_WIDE;
 import static com.v7878.dex.util.ShortyUtils.unrecognizedShorty;
 
 import com.v7878.dex.Format;
@@ -1287,6 +1301,60 @@ public final class CodeBuilder {
 
     public CodeBuilder sop(Op op, int value_reg_or_pair, FieldId static_field) {
         return f21c(op.sop, value_reg_or_pair, op.isWide, static_field);
+    }
+
+    private static Op op_get_shorty(char shorty) {
+        return switch (shorty) {
+            case 'Z' -> GET_BOOLEAN;
+            case 'B' -> GET_BYTE;
+            case 'S' -> GET_SHORT;
+            case 'C' -> GET_CHAR;
+            case 'I', 'F' -> GET;
+            case 'J', 'D' -> GET_WIDE;
+            case 'L' -> GET_OBJECT;
+            default -> throw unrecognizedShorty(shorty);
+        };
+    }
+
+    private static Op op_put_shorty(char shorty) {
+        return switch (shorty) {
+            case 'Z' -> PUT_BOOLEAN;
+            case 'B' -> PUT_BYTE;
+            case 'S' -> PUT_SHORT;
+            case 'C' -> PUT_CHAR;
+            case 'I', 'F' -> PUT;
+            case 'J', 'D' -> PUT_WIDE;
+            case 'L' -> PUT_OBJECT;
+            default -> throw unrecognizedShorty(shorty);
+        };
+    }
+
+    public CodeBuilder aget(char shorty, int value_reg_or_pair, int array_reg, int index_reg) {
+        return aop(op_get_shorty(shorty), value_reg_or_pair, array_reg, index_reg);
+    }
+
+    public CodeBuilder aput(char shorty, int value_reg_or_pair, int array_reg, int index_reg) {
+        return aop(op_put_shorty(shorty), value_reg_or_pair, array_reg, index_reg);
+    }
+
+    public CodeBuilder iget(int value_reg_or_pair, int object_reg, FieldId instance_field) {
+        return iop(op_get_shorty(instance_field.getType().getShorty()),
+                value_reg_or_pair, object_reg, instance_field);
+    }
+
+    public CodeBuilder iput(int value_reg_or_pair, int object_reg, FieldId instance_field) {
+        return iop(op_put_shorty(instance_field.getType().getShorty()),
+                value_reg_or_pair, object_reg, instance_field);
+    }
+
+    public CodeBuilder sget(int value_reg_or_pair, FieldId static_field) {
+        return sop(op_get_shorty(static_field.getType().getShorty()),
+                value_reg_or_pair, static_field);
+    }
+
+    public CodeBuilder sput(int value_reg_or_pair, FieldId static_field) {
+        return sop(op_put_shorty(static_field.getType().getShorty()),
+                value_reg_or_pair, static_field);
     }
 
     public enum InvokeKind {
