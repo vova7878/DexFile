@@ -173,14 +173,14 @@ public interface RandomInput extends RandomAccess {
         return MUTF8.readMUTF8(this);
     }
 
-    default void readTo(RandomOutput out, long length) {
+    default void writeTo(RandomOutput out, long length) {
         for (int i = 0; i < length; i++) {
             out.writeByte(readByte());
         }
     }
 
-    default void readTo(RandomOutput out) {
-        readTo(out, size() - position());
+    default void writeTo(RandomOutput out) {
+        writeTo(out, size() - position());
     }
 
     @Override

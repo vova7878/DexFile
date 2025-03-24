@@ -54,6 +54,10 @@ public final class MethodImplementation {
         return Objects.hash(getRegisterCount(), getInstructions(), getTryBlocks(), getDebugItems());
     }
 
+    public int hashCodeNoDebug() {
+        return Objects.hash(getRegisterCount(), getInstructions(), getTryBlocks());
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
@@ -62,5 +66,12 @@ public final class MethodImplementation {
                 && Objects.equals(getInstructions(), other.getInstructions())
                 && Objects.equals(getTryBlocks(), other.getTryBlocks())
                 && Objects.equals(getDebugItems(), other.getDebugItems());
+    }
+
+    public boolean equalsNoDebug(MethodImplementation other) {
+        if (other == this) return true;
+        return getRegisterCount() == other.getRegisterCount()
+                && Objects.equals(getInstructions(), other.getInstructions())
+                && Objects.equals(getTryBlocks(), other.getTryBlocks());
     }
 }

@@ -23,6 +23,9 @@ import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.iface.DualReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
+import com.v7878.dex.immutable.debug.DebugItem;
+import com.v7878.dex.immutable.debug.SetFile;
+import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
 import com.v7878.dex.immutable.value.EncodedArray;
 import com.v7878.dex.immutable.value.EncodedEnum;
@@ -35,6 +38,7 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CodeUtils;
 import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.ItemConverter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,7 +49,6 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 public class DexCollector {
     public record CallSiteIdContainer(CallSiteId value, EncodedArray array)
@@ -110,37 +113,46 @@ public class DexCollector {
     }
 
     public record CodeContainer(MethodImplementation value,
+                                // Not null only for standard dex files
+                                DebugInfo debug_info,
                                 TryBlockContainer[] tries,
                                 int ins, int outs) {
+        public CodeContainer {
+            Objects.requireNonNull(value);
+        }
+
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
-            // The number of input registers is external parameter, it should also be checked
-            return obj instanceof CodeContainer that && ins == that.ins
-                    && Objects.equals(value, that.value);
+            return obj instanceof CodeContainer that
+                    && ins == that.ins
+                    && value.equalsNoDebug(that.value)
+                    && Objects.equals(debug_info, that.debug_info);
         }
 
         @Override
         public int hashCode() {
-            // The number of input registers is external parameter, it should also be checked
-            return Objects.hash(value, ins);
+            return Objects.hash(ins, value.hashCodeNoDebug(), debug_info);
         }
 
         private static TryBlockContainer[] toTriesArray(NavigableSet<TryBlock> tries) {
             return tries.stream().map(TryBlockContainer::of).toArray(TryBlockContainer[]::new);
         }
 
-        public static CodeContainer of(MethodImplementation value, MethodId id, int flags) {
+        public static CodeContainer of(MethodImplementation value,
+                                       DebugInfo debug_info,
+                                       MethodId id, int flags) {
             if (value == null) return null;
-            return new CodeContainer(value, toTriesArray(value.getTryBlocks()),
+            return new CodeContainer(value, debug_info, toTriesArray(value.getTryBlocks()),
                     id.getProto().countInputRegisters() +
                             /* this */ ((flags & ACC_STATIC) == 0 ? 1 : 0),
-                    CodeUtils.getOutputRegisterCount(value.getInstructions()));
+                    CodeUtils.countOutputRegisters(value.getInstructions()));
         }
     }
 
     public record MethodDefContainer(MethodDef value, MethodId id,
-                                     List<String> parameter_names,
+                                     // Not null only for compact dex files
+                                     DebugInfo debug_info,
                                      CodeContainer code) {
         @Override
         public boolean equals(Object obj) {
@@ -154,22 +166,19 @@ public class DexCollector {
             return value.hashCode();
         }
 
-        private static List<TypeId> toTypeList(List<Parameter> parameters) {
-            return parameters.stream().map(Parameter::getType)
-                    .collect(Collectors.toList());
-        }
-
         private static List<String> toNamesList(List<Parameter> parameters) {
-            return parameters.stream().map(Parameter::getName)
-                    .collect(Collectors.toList());
+            return ItemConverter.transformList(parameters, Parameter::getName);
         }
 
-        public static MethodDefContainer of(TypeId declaring_class, MethodDef value) {
+        public static MethodDefContainer of(boolean is_compact, TypeId declaring_class, MethodDef value) {
+            var code = value.getImplementation();
             var parameters = value.getParameters();
+            var debug_info = (code == null) ? null : new DebugInfo(
+                    toNamesList(parameters), code.getDebugItems());
             MethodId id = MethodId.of(declaring_class, value.getName(),
-                    value.getReturnType(), toTypeList(parameters));
-            return new MethodDefContainer(value, id, toNamesList(parameters),
-                    CodeContainer.of(value.getImplementation(), id, value.getAccessFlags()));
+                    value.getReturnType(), value.getParameterTypes());
+            return new MethodDefContainer(value, id, is_compact ? debug_info : null,
+                    CodeContainer.of(code, is_compact ? null : debug_info, id, value.getAccessFlags()));
         }
     }
 
@@ -225,19 +234,19 @@ public class DexCollector {
         }
 
         private static MethodDefContainer[] toMethodsArray(
-                TypeId declaring_class, NavigableSet<MethodDef> methods) {
+                boolean is_compact, TypeId declaring_class, NavigableSet<MethodDef> methods) {
             return methods.stream().map(value ->
-                            MethodDefContainer.of(declaring_class, value))
+                            MethodDefContainer.of(is_compact, declaring_class, value))
                     .toArray(MethodDefContainer[]::new);
         }
 
-        public static ClassDefContainer of(ClassDef value) {
+        public static ClassDefContainer of(boolean is_compact, ClassDef value) {
             var type = value.getType();
             var interfaces = value.getInterfaces();
             var static_fields = toFieldsArray(type, value.getStaticFields());
             var instance_fields = toFieldsArray(type, value.getInstanceFields());
-            var direct_methods = toMethodsArray(type, value.getDirectMethods());
-            var virtual_methods = toMethodsArray(type, value.getVirtualMethods());
+            var direct_methods = toMethodsArray(is_compact, type, value.getDirectMethods());
+            var virtual_methods = toMethodsArray(is_compact, type, value.getVirtualMethods());
             var annotations = AnnotationDirectory.of(value, static_fields,
                     instance_fields, direct_methods, virtual_methods);
             return new ClassDefContainer(value,
@@ -346,6 +355,7 @@ public class DexCollector {
 
     public final Map<List<TypeId>, Integer> type_lists;
     public final Map<EncodedArray, Integer> encoded_arrays;
+    public final Map<DebugInfo, Integer> debug_infos;
     public final Map<CodeContainer, Integer> code_items;
     public final Map<Annotation, Integer> annotations;
     public final Map<NavigableSet<Annotation>, Integer> annotation_sets;
@@ -354,7 +364,11 @@ public class DexCollector {
 
     public final List<ClassDefContainer> class_defs;
 
-    public DexCollector() {
+    private final boolean is_compact;
+
+    public DexCollector(boolean is_compact) {
+        this.is_compact = is_compact;
+
         strings = new TreeSet<>();
         types = new TreeSet<>();
         protos = new TreeSet<>();
@@ -365,6 +379,7 @@ public class DexCollector {
 
         type_lists = new HashMap<>();
         encoded_arrays = new HashMap<>();
+        debug_infos = new HashMap<>();
         code_items = new HashMap<>();
         annotations = new HashMap<>();
         annotation_sets = new HashMap<>();
@@ -455,7 +470,7 @@ public class DexCollector {
     }
 
     public void addClassDef(ClassDef value) {
-        var container = ClassDefContainer.of(value);
+        var container = ClassDefContainer.of(is_compact, value);
         class_defs.add(container);
         addType(value.getType());
         var superclass = value.getSuperclass();
@@ -533,6 +548,34 @@ public class DexCollector {
         }
     }
 
+    public void fillFieldDef(FieldDefContainer value) {
+        addField(value.id());
+    }
+
+    public void fillDebugItem(DebugItem value) {
+        if (value instanceof SetFile item) {
+            var name = item.getName();
+            if (name != null) addString(name);
+        } else if (value instanceof StartLocal item) {
+            var name = item.getName();
+            if (name != null) addString(name);
+            var type = item.getType();
+            if (type != null) addType(type);
+            var signature = item.getSignature();
+            if (signature != null) addString(signature);
+        }
+    }
+
+    public void addDebugInfo(DebugInfo value) {
+        debug_infos.put(value, null);
+        for (var tmp : value.parameter_names()) {
+            if (tmp != null) addString(tmp);
+        }
+        for (var tmp : value.items()) {
+            fillDebugItem(tmp);
+        }
+    }
+
     public void addCodeItem(CodeContainer value) {
         code_items.put(value, null);
         for (var tmp : value.value().getInstructions()) {
@@ -541,17 +584,16 @@ public class DexCollector {
         for (var tmp : value.value().getTryBlocks()) {
             fillTryBlock(tmp);
         }
-    }
-
-    public void fillFieldDef(FieldDefContainer value) {
-        addField(value.id());
+        var debug_info = value.debug_info();
+        if (debug_info != null) addDebugInfo(debug_info);
     }
 
     public void fillMethodDef(MethodDefContainer value) {
         addMethod(value.id());
         var code = value.code();
         if (code != null) addCodeItem(code);
-        //TODO: debug info
+        var debug_info = value.debug_info();
+        if (debug_info != null) addDebugInfo(debug_info);
     }
 
     public void fillEncodedArray(EncodedArray value) {

@@ -140,14 +140,14 @@ public interface RandomOutput extends RandomAccess {
         MUTF8.writeMUTF8(this, value);
     }
 
-    default void writeFrom(RandomInput in, long length) {
+    default void readFrom(RandomInput in, int length) {
         for (int i = 0; i < length; i++) {
             writeByte(in.readByte());
         }
     }
 
-    default void writeFrom(RandomInput in) {
-        writeFrom(in, size() - position());
+    default void readFrom(RandomInput in) {
+        readFrom(in, size() - position());
     }
 
     default void fillZerosToAlignment(int alignment) {

@@ -1,11 +1,28 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexConstants.ACC_VISIBILITY_MASK;
+import static com.v7878.dex.DexConstants.DBG_ADVANCE_LINE;
+import static com.v7878.dex.DexConstants.DBG_ADVANCE_PC;
+import static com.v7878.dex.DexConstants.DBG_END_LOCAL;
+import static com.v7878.dex.DexConstants.DBG_END_SEQUENCE;
+import static com.v7878.dex.DexConstants.DBG_FIRST_SPECIAL;
+import static com.v7878.dex.DexConstants.DBG_LINE_BASE;
+import static com.v7878.dex.DexConstants.DBG_LINE_RANGE;
+import static com.v7878.dex.DexConstants.DBG_RESTART_LOCAL;
+import static com.v7878.dex.DexConstants.DBG_SET_EPILOGUE_BEGIN;
+import static com.v7878.dex.DexConstants.DBG_SET_FILE;
+import static com.v7878.dex.DexConstants.DBG_SET_PROLOGUE_END;
+import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
+import static com.v7878.dex.DexConstants.DBG_START_LOCAL_EXTENDED;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_BLOCKED;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_MAX_TARGET_O;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_SDK;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_UNSUPPORTED;
+import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
+import static com.v7878.dex.DexConstants.TYPE_CALL_SITE_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_METHOD_HANDLE_ITEM;
 import static com.v7878.dex.DexIO.InvalidDexFile;
 import static com.v7878.dex.DexIO.NotADexFile;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
@@ -55,7 +72,6 @@ import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
 import static com.v7878.dex.util.Exceptions.shouldNotReachHere;
 
 import com.v7878.dex.AnnotationVisibility;
-import com.v7878.dex.DexConstants;
 import com.v7878.dex.DexIO;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.MethodHandleType;
@@ -79,6 +95,15 @@ import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
+import com.v7878.dex.immutable.debug.AdvancePC;
+import com.v7878.dex.immutable.debug.DebugItem;
+import com.v7878.dex.immutable.debug.EndLocal;
+import com.v7878.dex.immutable.debug.LineNumber;
+import com.v7878.dex.immutable.debug.RestartLocal;
+import com.v7878.dex.immutable.debug.SetEpilogueBegin;
+import com.v7878.dex.immutable.debug.SetFile;
+import com.v7878.dex.immutable.debug.SetPrologueEnd;
+import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
 import com.v7878.dex.immutable.value.EncodedArray;
 import com.v7878.dex.immutable.value.EncodedBoolean;
@@ -123,7 +148,7 @@ public class DexReader implements DexIO.DexReaderCache {
         }
     }
 
-    private record CodeItem(int registers, int ins, int outs,
+    private record CodeItem(int registers, int ins, int outs, DebugInfo debug_info,
                             List<Instruction> instructions, List<TryBlock> tries) {
     }
 
@@ -136,6 +161,7 @@ public class DexReader implements DexIO.DexReaderCache {
 
     private final IntFunction<List<TypeId>> typelist_cache;
     private final IntFunction<EncodedArray> encoded_array_cache;
+    private final IntFunction<DebugInfo> debug_info_cache;
     private final IntFunction<Annotation> annotation_cache;
     private final IntFunction<List<Annotation>> annotation_list_cache;
     private final IntFunction<List<Set<Annotation>>> annotation_set_list_cache;
@@ -195,6 +221,7 @@ public class DexReader implements DexIO.DexReaderCache {
 
         typelist_cache = makeOffsetCache(this::readTypeList);
         encoded_array_cache = makeOffsetCache(this::readEncodedArray);
+        debug_info_cache = makeOffsetCache(this::readDebugInfo);
         annotation_cache = makeOffsetCache(this::readAnnotation);
         annotation_list_cache = makeOffsetCache(this::readAnnotationList);
         annotation_set_list_cache = makeOffsetCache(this::readAnnotationSetList);
@@ -229,14 +256,14 @@ public class DexReader implements DexIO.DexReaderCache {
 
         map_items = readMapItemsList(mainAt(header_offset + MAP_OFFSET).readSmallUInt());
 
-        MapItem method_handles = getMapItemForSection(DexConstants.TYPE_METHOD_HANDLE_ITEM);
+        MapItem method_handles = getMapItemForSection(TYPE_METHOD_HANDLE_ITEM);
         method_handle_section = makeSection(
                 method_handles != null ? method_handles.size() : 0,
                 method_handles != null ? method_handles.offset() : NO_OFFSET,
                 METHOD_HANDLE_ID_SIZE, this::readMethodHandleId
         );
 
-        MapItem callsites = getMapItemForSection(DexConstants.TYPE_CALL_SITE_ID_ITEM);
+        MapItem callsites = getMapItemForSection(TYPE_CALL_SITE_ID_ITEM);
         callsite_section = makeSection(
                 callsites != null ? callsites.size() : 0,
                 callsites != null ? callsites.offset() : NO_OFFSET,
@@ -244,7 +271,7 @@ public class DexReader implements DexIO.DexReaderCache {
         );
 
         if (options.hasHiddenApiFlags()) {
-            MapItem hiddenapi = getMapItemForSection(DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM);
+            MapItem hiddenapi = getMapItemForSection(TYPE_HIDDENAPI_CLASS_DATA_ITEM);
             hiddenapi_section = readHiddenApiSection(
                     hiddenapi != null ? hiddenapi.offset() : NO_OFFSET);
         } else {
@@ -318,16 +345,6 @@ public class DexReader implements DexIO.DexReaderCache {
         return null;
     }
 
-    private List<TypeId> readTypeList(int offset) {
-        var in = dataAt(offset);
-        int size = in.readSmallUInt();
-        var out = new ArrayList<TypeId>(size);
-        for (int i = 0; i < size; i++) {
-            out.add(i, getTypeId(in.readUShort()));
-        }
-        return out;
-    }
-
     private static <T> IntFunction<T> makeOffsetCache(IntFunction<T> reader) {
         var cache = new SparseArray<T>();
         return offset -> {
@@ -337,6 +354,16 @@ public class DexReader implements DexIO.DexReaderCache {
             cache.put(offset, out);
             return out;
         };
+    }
+
+    private List<TypeId> readTypeList(int offset) {
+        var in = dataAt(offset);
+        int size = in.readSmallUInt();
+        var out = new ArrayList<TypeId>(size);
+        for (int i = 0; i < size; i++) {
+            out.add(i, getTypeId(in.readUShort()));
+        }
+        return out;
     }
 
     public List<TypeId> getTypeList(int offset) {
@@ -354,6 +381,10 @@ public class DexReader implements DexIO.DexReaderCache {
 
     private EncodedArray readEncodedArray(int offset) {
         return readEncodedArray(dataAt(offset));
+    }
+
+    public EncodedArray getEncodedArray(int offset) {
+        return encoded_array_cache.apply(offset);
     }
 
     private AnnotationElement readAnnotationElement(RandomInput in) {
@@ -406,10 +437,6 @@ public class DexReader implements DexIO.DexReaderCache {
             case ARRAY -> readEncodedArray(in);
             case ANNOTATION -> readEncodedAnnotation(in);
         };
-    }
-
-    public EncodedArray getEncodedArray(int offset) {
-        return encoded_array_cache.apply(offset);
     }
 
     private Annotation readAnnotation(int offset) {
@@ -660,6 +687,116 @@ public class DexReader implements DexIO.DexReaderCache {
         return section.get(index);
     }
 
+    public List<DebugItem> readDebugItemArray(
+            RandomInput in, int line_start) {
+        var out = new ArrayList<DebugItem>();
+        int[] address = {0, 0};
+        Runnable emit_address = () -> {
+            if (address[0] != address[1]) {
+                out.add(AdvancePC.of(address[0] - address[1]));
+                address[1] = address[0];
+            }
+        };
+        int[] line = {line_start, 0};
+        Runnable emit_line = () -> {
+            if (line[0] != line[1]) {
+                out.add(LineNumber.of(line[0]));
+                line[1] = line[0];
+            }
+        };
+
+        int opcode;
+        do {
+            opcode = in.readUByte();
+        } while (switch (opcode) {
+            case DBG_END_SEQUENCE -> false;
+            case DBG_ADVANCE_PC -> {
+                address[0] += in.readULeb128();
+                yield true;
+            }
+            case DBG_ADVANCE_LINE -> {
+                line[0] += in.readSLeb128();
+                yield true;
+            }
+            case DBG_START_LOCAL, DBG_START_LOCAL_EXTENDED -> {
+                int reg = in.readULeb128();
+                int name_idx = in.readULeb128() - 1;
+                String name = name_idx == NO_INDEX ?
+                        null : getString(name_idx);
+                int type_idx = in.readULeb128() - 1;
+                TypeId type = type_idx == NO_INDEX ?
+                        null : getTypeId(type_idx);
+                int signature_idx = opcode == DBG_START_LOCAL ?
+                        NO_INDEX : in.readULeb128() - 1;
+                String signature = signature_idx == NO_INDEX ?
+                        null : getString(signature_idx);
+                emit_address.run();
+                out.add(StartLocal.of(reg, name, type, signature));
+                yield true;
+            }
+            case DBG_END_LOCAL -> {
+                int reg = in.readULeb128();
+                emit_address.run();
+                out.add(EndLocal.of(reg));
+                yield true;
+            }
+            case DBG_RESTART_LOCAL -> {
+                int reg = in.readULeb128();
+                emit_address.run();
+                out.add(RestartLocal.of(reg));
+                yield true;
+            }
+            case DBG_SET_PROLOGUE_END -> {
+                emit_address.run();
+                out.add(SetPrologueEnd.INSTANCE);
+                yield true;
+            }
+            case DBG_SET_EPILOGUE_BEGIN -> {
+                emit_address.run();
+                out.add(SetEpilogueBegin.INSTANCE);
+                yield true;
+            }
+            case DBG_SET_FILE -> {
+                int name_idx = in.readULeb128() - 1;
+                String name = name_idx == NO_INDEX ?
+                        null : getString(name_idx);
+                emit_address.run();
+                out.add(SetFile.of(name));
+                yield true;
+            }
+            default -> {
+                int adjopcode = opcode - DBG_FIRST_SPECIAL;
+                address[0] += adjopcode / DBG_LINE_RANGE;
+                line[0] += DBG_LINE_BASE + (adjopcode % DBG_LINE_RANGE);
+                emit_address.run();
+                emit_line.run();
+                yield true;
+            }
+        });
+        return out;
+    }
+
+    public DebugInfo readDebugInfo(int offset) {
+        var in = dataAt(offset);
+        int line_start = in.readULeb128();
+        List<String> parameter_names;
+        {
+            int parameters_size = in.readULeb128();
+            parameter_names = new ArrayList<>(parameters_size);
+            for (int i = 0; i < parameters_size; i++) {
+                int name_idx = in.readULeb128() - 1;
+                parameter_names.add(name_idx == NO_INDEX ?
+                        null : getString(name_idx));
+            }
+        }
+        var items = readDebugItemArray(in, line_start);
+        return new DebugInfo(parameter_names, items);
+    }
+
+    public DebugInfo getDebugInfo(int offset) {
+        return debug_info_cache.apply(offset);
+    }
+
     private long fixLegacyHiddenApiFlags(int access_flags) {
         int hiddenapi_flags = 0;
         // First bit
@@ -758,6 +895,8 @@ public class DexReader implements DexIO.DexReaderCache {
     private CodeItem readCodeItem(int offset) {
         var in = dataAt(offset);
 
+        DebugInfo debug_info;
+
         int registers_size;
         int ins_size;
         int outs_size;
@@ -794,12 +933,17 @@ public class DexReader implements DexIO.DexReaderCache {
             }
 
             registers_size += ins_size;
+
+            // In compact dex files, debug information is located in a separate table
+            debug_info = null;
         } else {
             registers_size = in.readUShort();
             ins_size = in.readUShort();
             outs_size = in.readUShort();
             tries_size = in.readUShort();
-            int debug_info_off = in.readSmallUInt(); // TODO
+            int debug_info_off = in.readSmallUInt();
+            debug_info = debug_info_off == NO_OFFSET ?
+                    null : getDebugInfo(debug_info_off);
             insns_count = in.readSmallUInt();
         }
 
@@ -828,7 +972,7 @@ public class DexReader implements DexIO.DexReaderCache {
         }
 
         return new CodeItem(registers_size, ins_size,
-                outs_size, instructions, tries);
+                outs_size, debug_info, instructions, tries);
     }
 
     public CodeItem getCodeItem(int offset) {
@@ -837,18 +981,20 @@ public class DexReader implements DexIO.DexReaderCache {
 
     private MethodImplementation toImplementation(CodeItem code) {
         if (code == null) return null;
-        return MethodImplementation.of(code.registers(),
-                code.instructions(), code.tries(), null);
+        var debug_info = code.debug_info();
+        return MethodImplementation.of(code.registers(), code.instructions(),
+                code.tries(), debug_info == null ? null : debug_info.items());
     }
 
-    private List<Parameter> toParamaterList(
-            List<TypeId> types, List<Set<Annotation>> annotations_map) {
+    private List<Parameter> toParamaterList(List<String> names, List<TypeId> types,
+                                            List<Set<Annotation>> annotations_map) {
         int types_size = types.size();
         int annotations_size = annotations_map.size();
         List<Parameter> out = new ArrayList<>(types.size());
         for (int i = 0; i < types_size; i++) {
             var type = types.get(i);
-            String name = null; // TODO
+            // TODO: Can parameter name list be smaller than the number of parameters legally?
+            String name = (names == null || i >= names.size()) ? null : names.get(i);
             var annotations = i < annotations_size ? annotations_map.get(i) : null;
             out.add(Parameter.of(type, name, annotations));
         }
@@ -876,9 +1022,16 @@ public class DexReader implements DexIO.DexReaderCache {
                         hiddenapi.getAsInt() : 0;
             }
             int code_off = in.readSmallULeb128();
-            List<Parameter> parameters = toParamaterList(id.getParameterTypes(),
-                    parameter_annotations.get(index, List.of()));
             var code = code_off == NO_OFFSET ? null : getCodeItem(code_off);
+            DebugInfo debug_info;
+            if (isCompact()) {
+                debug_info = null; // TODO
+            } else {
+                debug_info = code == null ? null : code.debug_info();
+            }
+            List<Parameter> parameters = toParamaterList(
+                    debug_info == null ? null : debug_info.parameter_names(),
+                    id.getParameterTypes(), parameter_annotations.get(index, List.of()));
             MethodImplementation implementation = toImplementation(code);
             out.add(MethodDef.of(id.getName(), id.getReturnType(),
                     parameters, access_flags, hiddenapi_flags,
@@ -894,14 +1047,14 @@ public class DexReader implements DexIO.DexReaderCache {
         int access_flags = in.readInt();
         // TODO: readSmallUInt but with -1
         int superclass_idx = in.readInt();
-        TypeId superclass = superclass_idx == DexConstants.NO_INDEX ?
+        TypeId superclass = superclass_idx == NO_INDEX ?
                 null : getTypeId(superclass_idx);
         int interfaces_off = in.readSmallUInt();
         List<TypeId> interfaces = interfaces_off == NO_OFFSET ?
                 null : getTypeList(interfaces_off);
         // TODO: readSmallUInt but with -1
         int source_file_idx = in.readInt();
-        String source_file = source_file_idx == DexConstants.NO_INDEX ?
+        String source_file = source_file_idx == NO_INDEX ?
                 null : getString(source_file_idx);
         int annotations_off = in.readSmallUInt();
         AnnotationDirectory annotations = annotations_off == NO_OFFSET ?

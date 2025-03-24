@@ -87,4 +87,6 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     public D withHiddenApiFlags(boolean hiddenapi) {
         return dup(api, art, odex, hiddenapi);
     }
+
+    // TODO: has/with DebugInfo(){}
 }

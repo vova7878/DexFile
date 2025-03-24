@@ -1,6 +1,20 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexConstants.ACC_VISIBILITY_MASK;
+import static com.v7878.dex.DexConstants.DBG_ADVANCE_LINE;
+import static com.v7878.dex.DexConstants.DBG_ADVANCE_PC;
+import static com.v7878.dex.DexConstants.DBG_END_LOCAL;
+import static com.v7878.dex.DexConstants.DBG_END_SEQUENCE;
+import static com.v7878.dex.DexConstants.DBG_FIRST_SPECIAL;
+import static com.v7878.dex.DexConstants.DBG_LAST_SPECIAL;
+import static com.v7878.dex.DexConstants.DBG_LINE_BASE;
+import static com.v7878.dex.DexConstants.DBG_LINE_CEIL;
+import static com.v7878.dex.DexConstants.DBG_LINE_RANGE;
+import static com.v7878.dex.DexConstants.DBG_RESTART_LOCAL;
+import static com.v7878.dex.DexConstants.DBG_SET_EPILOGUE_BEGIN;
+import static com.v7878.dex.DexConstants.DBG_SET_PROLOGUE_END;
+import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
+import static com.v7878.dex.DexConstants.DBG_START_LOCAL_EXTENDED;
 import static com.v7878.dex.DexConstants.ENDIAN_CONSTANT;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_BLOCKED;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_MAX_TARGET_O;
@@ -87,6 +101,15 @@ import com.v7878.dex.immutable.MethodId;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
+import com.v7878.dex.immutable.debug.AdvancePC;
+import com.v7878.dex.immutable.debug.DebugItem;
+import com.v7878.dex.immutable.debug.EndLocal;
+import com.v7878.dex.immutable.debug.LineNumber;
+import com.v7878.dex.immutable.debug.RestartLocal;
+import com.v7878.dex.immutable.debug.SetEpilogueBegin;
+import com.v7878.dex.immutable.debug.SetFile;
+import com.v7878.dex.immutable.debug.SetPrologueEnd;
+import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
 import com.v7878.dex.immutable.value.EncodedArray;
 import com.v7878.dex.immutable.value.EncodedBoolean;
@@ -105,6 +128,7 @@ import com.v7878.dex.immutable.value.EncodedShort;
 import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
+import com.v7878.dex.io.ByteArrayIO;
 import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.io.ValueCoder;
@@ -209,12 +233,12 @@ public class DexWriter {
 
     private final Map<List<TypeId>, Integer> type_lists;
     private final Map<EncodedArray, Integer> encoded_arrays;
+    private final Map<DebugInfo, Integer> debug_infos;
     private final Map<CodeContainer, Integer> code_items;
     private final Map<Annotation, Integer> annotations;
     private final Map<NavigableSet<Annotation>, Integer> annotation_sets;
     private final Map<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
     private final Map<AnnotationDirectory, Integer> annotation_directories;
-    // TODO: private final Map<DebugInfo, Integer> debug_infos;
 
     private final ClassDefContainer[] class_defs;
 
@@ -241,7 +265,7 @@ public class DexWriter {
             map.compact_feature_flags = /* kDefaultMethods */ 0x1;
         }
 
-        var collector = new DexCollector();
+        var collector = new DexCollector(isCompact());
         collector.fillDex(dexfile);
 
         strings = collector.strings.toArray(EmptyArrays.STRING);
@@ -260,6 +284,7 @@ public class DexWriter {
 
         type_lists = collector.type_lists;
         encoded_arrays = collector.encoded_arrays;
+        debug_infos = collector.debug_infos;
         code_items = collector.code_items;
         annotations = collector.annotations;
         annotation_sets = collector.annotation_sets;
@@ -285,7 +310,7 @@ public class DexWriter {
 
         writeTypeListSection();
         writeEncodedArraySection();
-        // TODO: writeDebugInfoSection();
+        writeDebugInfoSection();
         writeCodeItemSection();
         writeAnnotationSection();
         writeAnnotationSetSection();
@@ -455,6 +480,15 @@ public class DexWriter {
         return out;
     }
 
+    public int getDebugInfoOffset(DebugInfo value) {
+        Integer out = debug_infos.get(value);
+        if (out == null) {
+            throw new IllegalArgumentException(
+                    "Unable to find debug info \"" + value + "\"");
+        }
+        return out;
+    }
+
     public int getCodeItemOffset(CodeContainer value) {
         Integer out = code_items.get(value);
         if (out == null) {
@@ -499,7 +533,6 @@ public class DexWriter {
         }
         return out;
     }
-
 
     public int getFileSize() {
         return map.file_size;
@@ -852,6 +885,12 @@ public class DexWriter {
             index += diff;
             data_buffer.writeULeb128(diff);
             writeMethodDef(tmp);
+
+            // TODO
+            // if (isCompact()) {
+            //     var debug_info = tmp.debug_info();
+            //     if(debug_info != null) { }
+            // }
         }
     }
 
@@ -921,6 +960,126 @@ public class DexWriter {
         }
         for (var tmp : type_lists.keySet()) {
             writeTypeList(tmp);
+        }
+    }
+
+    public void writeDebugItemArray(RandomOutput out, List<DebugItem> items, int[] first_line) {
+        int[] address = {0, 0};
+        Runnable emit_address = () -> {
+            if (address[0] != address[1]) {
+                out.writeByte(DBG_ADVANCE_PC);
+                out.writeULeb128(address[0] - address[1]);
+                address[1] = address[0];
+            }
+        };
+        int[] line = {0, 0};
+        Runnable emit_position = () -> {
+            if (line[0] != line[1]) {
+                if (line[1] == 0) first_line[0] = line[1] = line[0];
+
+                int addr_diff = address[0] - address[1];
+                int line_diff = line[0] - line[1];
+
+                int adjusted_opcode = Math.max(Math.min(
+                        line_diff, DBG_LINE_CEIL), DBG_LINE_BASE);
+                line_diff -= adjusted_opcode;
+                adjusted_opcode -= DBG_LINE_BASE;
+
+                int max_addr_diff = DBG_LAST_SPECIAL - DBG_FIRST_SPECIAL;
+                max_addr_diff -= adjusted_opcode;
+                max_addr_diff /= DBG_LINE_RANGE;
+                max_addr_diff = Math.min(max_addr_diff, addr_diff);
+                addr_diff -= max_addr_diff;
+
+                adjusted_opcode += max_addr_diff * DBG_LINE_RANGE + DBG_FIRST_SPECIAL;
+
+                if (addr_diff != 0) {
+                    out.writeByte(DBG_ADVANCE_PC);
+                    out.writeULeb128(addr_diff);
+                }
+                if (line_diff != 0) {
+                    out.writeByte(DBG_ADVANCE_LINE);
+                    out.writeSLeb128(line_diff);
+                }
+                out.writeByte(adjusted_opcode);
+
+                address[1] = address[0];
+                line[1] = line[0];
+            }
+        };
+        for (var item : items) {
+            if (item instanceof AdvancePC op) {
+                address[0] += op.getAddrDiff();
+            } else if (item instanceof StartLocal op) {
+                var register = op.getRegister();
+                var name = op.getName();
+                var type = op.getType();
+                var signature = op.getSignature();
+                emit_address.run();
+                out.writeByte(signature == null ? DBG_START_LOCAL : DBG_START_LOCAL_EXTENDED);
+                out.writeULeb128(register);
+                out.writeULeb128((name == null ? NO_INDEX : getStringIndex(name)) + 1);
+                out.writeULeb128((type == null ? NO_INDEX : getTypeIndex(type)) + 1);
+                if (signature != null) out.writeULeb128(getStringIndex(signature) + 1);
+            } else if (item instanceof EndLocal op) {
+                var register = op.getRegister();
+                emit_address.run();
+                out.writeByte(DBG_END_LOCAL);
+                out.writeULeb128(register);
+            } else if (item instanceof RestartLocal op) {
+                var register = op.getRegister();
+                emit_address.run();
+                out.writeByte(DBG_RESTART_LOCAL);
+                out.writeULeb128(register);
+            } else if (item instanceof SetPrologueEnd) {
+                emit_address.run();
+                out.writeByte(DBG_SET_PROLOGUE_END);
+            } else if (item instanceof SetEpilogueBegin) {
+                emit_address.run();
+                out.writeByte(DBG_SET_EPILOGUE_BEGIN);
+            } else if (item instanceof SetFile op) {
+                var name = op.getName();
+                emit_address.run();
+                out.writeULeb128((name == null ? NO_INDEX : getStringIndex(name)) + 1);
+            } else if (item instanceof LineNumber op) {
+                line[0] = op.getLine();
+                emit_position.run();
+            }
+        }
+        out.writeByte(DBG_END_SEQUENCE);
+    }
+
+    public void writeDebugInfo(DebugInfo value) {
+        int start = data_buffer.position();
+
+        int[] line_start = {1};
+        ByteArrayIO dbg_sequence = new ByteArrayIO();
+        writeDebugItemArray(dbg_sequence, value.items(), line_start);
+        dbg_sequence.position(0);
+
+        var names = value.parameter_names();
+        var names_size = names.size();
+
+        data_buffer.writeULeb128(line_start[0]);
+        data_buffer.writeULeb128(names_size);
+        for (int i = 0; i < names_size; i++) {
+            var name = names.get(i);
+            var index = name == null ? NO_INDEX : getStringIndex(name);
+            data_buffer.writeULeb128(index + 1);
+        }
+        dbg_sequence.writeTo(data_buffer);
+
+        debug_infos.replace(value, start);
+    }
+
+    public void writeDebugInfoSection() {
+        var size = debug_infos.size();
+        if (size != 0) {
+            map.debug_info_items_off = data_buffer.position();
+            map.debug_info_items_size = size;
+        }
+        for (var tmp : debug_infos.keySet()) {
+            writeDebugInfo(tmp);
         }
     }
 
@@ -1042,8 +1201,9 @@ public class DexWriter {
             data_buffer.writeShort(ins_size);
             data_buffer.writeShort(outs_size);
             data_buffer.writeShort(tries_size);
-            //TODO debug_info.isEmpty() ? NO_OFFSET : context.getDebugInfoOffset(debug_info)
-            data_buffer.writeInt(NO_OFFSET);
+            var debug_info = value.debug_info();
+            data_buffer.writeInt(debug_info == null ?
+                    NO_OFFSET : getDebugInfoOffset(debug_info));
             data_buffer.writeInt(insns_count);
         }
 
