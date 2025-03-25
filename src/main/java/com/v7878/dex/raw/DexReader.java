@@ -32,6 +32,9 @@ import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_START_OFFSET;
 import static com.v7878.dex.DexOffsets.CONTAINER_OFF_OFFSET;
 import static com.v7878.dex.DexOffsets.DATA_START_OFFSET;
+import static com.v7878.dex.DexOffsets.DEBUG_INFO_BASE_OFFSET;
+import static com.v7878.dex.DexOffsets.DEBUG_INFO_OFFSETS_POS_OFFSET;
+import static com.v7878.dex.DexOffsets.DEBUG_INFO_OFFSETS_TABLE_OFFSET;
 import static com.v7878.dex.DexOffsets.FIELD_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_START_OFFSET;
@@ -53,16 +56,17 @@ import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_START_OFFSET;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderInsSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderInsnsSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderOutsSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderRegistersSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderTriesSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kInsSizeShift;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kInsnsSizeShift;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kOutsSizeShift;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kRegistersSizeShift;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kTriesSizeSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kDebugElementsPerIndex;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsSize;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsnsSize;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderOutsSize;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderRegistersSize;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderTriesSize;
+import static com.v7878.dex.raw.CompactDexConstants.kInsSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kInsnsSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kOutsSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kRegistersSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.getSecondFlag;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.kBlacklist;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.kDarkGreylist;
@@ -152,6 +156,11 @@ public class DexReader implements DexIO.DexReaderCache {
                             List<Instruction> instructions, List<TryBlock> tries) {
     }
 
+    private record CompactData(int offsets_pos,
+                               int offsets_table_offset,
+                               int base) {
+    }
+
     private final RandomInput main_buffer;
     private final RandomInput data_buffer;
 
@@ -182,6 +191,9 @@ public class DexReader implements DexIO.DexReaderCache {
     private final IntFunction<IntSupplier> hiddenapi_section;
 
     private final int file_size;
+
+    // Not null only for compact dex files
+    private final CompactData compact_debug_info;
 
     public DexReader(ReadOptions options, RandomInput input, int header_offset) {
         assert input.position() == 0;
@@ -283,6 +295,12 @@ public class DexReader implements DexIO.DexReaderCache {
                 mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt(),
                 CLASS_DEF_SIZE, this::readClassDef
         );
+
+        compact_debug_info = isCompact() ? new CompactData(
+                mainAt(header_offset + DEBUG_INFO_OFFSETS_POS_OFFSET).readSmallUInt(),
+                mainAt(header_offset + DEBUG_INFO_OFFSETS_TABLE_OFFSET).readSmallUInt(),
+                mainAt(header_offset + DEBUG_INFO_BASE_OFFSET).readSmallUInt()
+        ) : null;
     }
 
     public RandomInput mainAt(int offset) {
@@ -979,9 +997,8 @@ public class DexReader implements DexIO.DexReaderCache {
         return code_cache.apply(offset);
     }
 
-    private MethodImplementation toImplementation(CodeItem code) {
+    private MethodImplementation toImplementation(CodeItem code, DebugInfo debug_info) {
         if (code == null) return null;
-        var debug_info = code.debug_info();
         return MethodImplementation.of(code.registers(), code.instructions(),
                 code.tries(), debug_info == null ? null : debug_info.items());
     }
@@ -998,6 +1015,36 @@ public class DexReader implements DexIO.DexReaderCache {
             out.add(Parameter.of(type, name, annotations));
         }
         return out;
+    }
+
+    // TODO: cache blocks?
+    private int getDebugInfoOffset(int method_idx) {
+        var info = compact_debug_info;
+        assert isCompact() && info != null;
+
+        int table_index = method_idx / kDebugElementsPerIndex;
+        int bit_index = method_idx % kDebugElementsPerIndex;
+
+        int table_offset = info.offsets_pos + info.offsets_table_offset;
+
+        var in = dataAt(table_offset + table_index * 4);
+        int block_offset = in.readSmallUInt();
+
+        in = dataAt(info.offsets_pos + block_offset);
+        int bit_mask = in.readUByte() << 8;
+        bit_mask |= in.readUByte();
+
+        if ((bit_mask & (1 << bit_index)) == 0) {
+            return NO_OFFSET;
+        }
+
+        int offset_mask = 0xFFFF >> (16 - bit_index);
+        int offset_count = Integer.bitCount(bit_mask & offset_mask);
+        int debug_info_offset = info.base;
+        for (int i = 0; i <= offset_count; i++) {
+            debug_info_offset += in.readULeb128();
+        }
+        return debug_info_offset;
     }
 
     private List<MethodDef> readMethodDefList(
@@ -1023,15 +1070,19 @@ public class DexReader implements DexIO.DexReaderCache {
             int code_off = in.readSmallULeb128();
             var code = code_off == NO_OFFSET ? null : getCodeItem(code_off);
             DebugInfo debug_info;
-            if (isCompact()) {
-                debug_info = null; // TODO
+            if (code == null) {
+                debug_info = null;
+            } else if (isCompact()) {
+                int debug_info_off = getDebugInfoOffset(index);
+                debug_info = debug_info_off == NO_OFFSET ?
+                        null : getDebugInfo(debug_info_off);
             } else {
-                debug_info = code == null ? null : code.debug_info();
+                debug_info = code.debug_info();
             }
             List<Parameter> parameters = toParamaterList(
                     debug_info == null ? null : debug_info.parameter_names(),
                     id.getParameterTypes(), parameter_annotations.get(index, List.of()));
-            MethodImplementation implementation = toImplementation(code);
+            MethodImplementation implementation = toImplementation(code, debug_info);
             out.add(MethodDef.of(id.getName(), id.getReturnType(),
                     parameters, access_flags, hiddenapi_flags,
                     implementation, method_annotations.get(index)));
