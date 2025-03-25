@@ -993,7 +993,6 @@ public class DexReader implements DexIO.DexReaderCache {
         List<Parameter> out = new ArrayList<>(types.size());
         for (int i = 0; i < types_size; i++) {
             var type = types.get(i);
-            // TODO: Can parameter name list be smaller than the number of parameters legally?
             String name = (names == null || i >= names.size()) ? null : names.get(i);
             var annotations = i < annotations_size ? annotations_map.get(i) : null;
             out.add(Parameter.of(type, name, annotations));

@@ -38,9 +38,9 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CodeUtils;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -166,8 +166,21 @@ public class DexCollector {
             return value.hashCode();
         }
 
+        // TODO: simplify
         private static List<String> toNamesList(List<Parameter> parameters) {
-            return ItemConverter.transformList(parameters, Parameter::getName);
+            int size = parameters.size();
+            for (; size > 0; size--) {
+                var name = parameters.get(size - 1).getName();
+                if (name != null) break;
+            }
+            if (size == 0) {
+                return Collections.emptyList();
+            }
+            var out = new ArrayList<String>(size);
+            for (int i = 0; i < size; i++) {
+                out.add(parameters.get(i).getName());
+            }
+            return out;
         }
 
         public static MethodDefContainer of(boolean is_compact, TypeId declaring_class, MethodDef value) {
