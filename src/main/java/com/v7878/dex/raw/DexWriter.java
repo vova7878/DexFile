@@ -54,6 +54,7 @@ import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.CODE_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.COMPACT_CODE_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.COMPACT_HEADER_SIZE;
+import static com.v7878.dex.DexOffsets.COMPACT_OFFSET_TABLE_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.DATA_SECTION_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.DEXCONTAINER_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
@@ -69,17 +70,18 @@ import static com.v7878.dex.DexOffsets.TRY_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_LIST_ALIGNMENT;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderInsSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderInsnsSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderOutsSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderRegistersSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kFlagPreHeaderTriesSize;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kInsSizeShift;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kInsnsSizeMask;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kInsnsSizeShift;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kOutsSizeShift;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kRegistersSizeShift;
-import static com.v7878.dex.raw.CompactCodeItemConstants.kTriesSizeSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kDebugElementsPerIndex;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsSize;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsnsSize;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderOutsSize;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderRegistersSize;
+import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderTriesSize;
+import static com.v7878.dex.raw.CompactDexConstants.kInsSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kInsnsSizeMask;
+import static com.v7878.dex.raw.CompactDexConstants.kInsnsSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kOutsSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kRegistersSizeShift;
+import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.getSecondFlag;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.kBlacklist;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.kDarkGreylist;
@@ -215,6 +217,9 @@ public class DexWriter {
         public int container_size;
     }
 
+    private record CompactData(int[] offsets) {
+    }
+
     private final RandomIO main_buffer;
     private final RandomIO data_buffer;
 
@@ -243,6 +248,9 @@ public class DexWriter {
     private final ClassDefContainer[] class_defs;
 
     private final int[][] hiddenapi_flags;
+
+    // Not null only for compact dex files
+    private final CompactData compact_debug_info;
 
     public DexWriter(WriteOptions options, RandomIO io, Dex dexfile, int header_offset) {
         assert io.position() == 0;
@@ -298,6 +306,10 @@ public class DexWriter {
             hiddenapi_flags = null;
         }
 
+        compact_debug_info = isCompact() ? new CompactData(
+                new int[methods.length]
+        ) : null;
+
         initMap();
 
         // Note: for compact dex, offsets are calculated from the data section, not the header
@@ -308,14 +320,21 @@ public class DexWriter {
             data_buffer.addPosition(DATA_SECTION_ALIGNMENT);
         }
 
-        writeTypeListSection();
+        // Write code item first to minimize the space required for encoded methods
+        if (isCompact()) {
+            // For cdex, the code items don't depend on the debug info
+            writeCodeItemSection();
+            writeDebugInfoSection();
+        } else {
+            writeDebugInfoSection();
+            writeCodeItemSection();
+        }
         writeEncodedArraySection();
-        writeDebugInfoSection();
-        writeCodeItemSection();
         writeAnnotationSection();
         writeAnnotationSetSection();
         writeAnnotationSetListSection();
         writeAnnotationDirectorySection();
+        writeTypeListSection();
 
         writeTypeSection();
         writeFieldSection();
@@ -324,14 +343,18 @@ public class DexWriter {
         writeCallSiteSection();
         writeMethodHandleSection();
 
-        // string id + string data
-        writeStringSections();
         // class def + class data
         writeClassDefSections();
+        // string id + string data
+        writeStringSections();
 
         writeHiddenApiSection();
 
         writeMap();
+
+        if (isCompact()) {
+            writeDebugInfoOffsetTable();
+        }
 
         data_buffer.alignPosition(DATA_SECTION_ALIGNMENT);
         // Note: for compact dex, data section is placed
@@ -734,6 +757,60 @@ public class DexWriter {
         }
     }
 
+    public void writeDebugInfoOffsetTable() {
+        var info = compact_debug_info;
+        assert isCompact() && info != null;
+
+        data_buffer.alignPosition(COMPACT_OFFSET_TABLE_ALIGNMENT);
+        int start = data_buffer.position();
+
+        int base = 0;
+        for (var offset : info.offsets()) {
+            if (offset != 0) {
+                base = Math.max(base, offset);
+            }
+        }
+
+        var offsets = data_buffer.duplicate();
+        int offsets_count = (info.offsets().length +
+                kDebugElementsPerIndex - 1) / kDebugElementsPerIndex;
+        data_buffer.addPosition(offsets_count * 4);
+
+        int block_start = 0;
+        while (block_start < info.offsets().length) {
+            offsets.writeInt(data_buffer.position() - start);
+            int block_size = Math.min(info.offsets().length - block_start, kDebugElementsPerIndex);
+
+            short bit_mask = 0;
+            for (int i = 0; i < block_size; i++) {
+                if (info.offsets()[block_start + i] != 0) {
+                    bit_mask |= (short) (1 << i);
+                }
+            }
+
+            data_buffer.writeByte(bit_mask >> 8);
+            data_buffer.writeByte(bit_mask);
+
+            int prev_offset = base;
+            for (int i = 0; i < block_size; ++i) {
+                int offset = info.offsets()[block_start + i];
+                if (offset != 0) {
+                    int delta = offset - prev_offset;
+                    data_buffer.writeULeb128(delta);
+                    prev_offset = offset;
+                }
+            }
+
+            block_start += block_size;
+        }
+
+        map.compact_debug_info_offsets_pos = start;
+        // Note: Why does this field exist?
+        // If you write the table first, it will be equal to zero
+        map.compact_debug_info_offsets_table_offset = 0;
+        map.compact_debug_info_base = base;
+    }
+
     public void writeString(String value) {
         main_buffer.writeInt(data_buffer.position());
         data_buffer.writeMUtf8(value);
@@ -867,7 +944,7 @@ public class DexWriter {
         }
     }
 
-    public void writeMethodDef(MethodDefContainer value) {
+    public void writeMethodDef(MethodDefContainer value, int index) {
         int access_flags = value.value().getAccessFlags();
         if (options.hasHiddenApiFlags() && options.getTargetApi() == 28) {
             int hiddenapi_flags = value.value().getHiddenApiFlags();
@@ -876,6 +953,12 @@ public class DexWriter {
         data_buffer.writeULeb128(access_flags);
         var code = value.code();
         data_buffer.writeULeb128(code == null ? NO_OFFSET : getCodeItemOffset(code));
+        if (isCompact()) {
+            var debug_info = value.debug_info();
+            if (debug_info != null) {
+                compact_debug_info.offsets[index] = getDebugInfoOffset(debug_info);
+            }
+        }
     }
 
     public void writeMethodDefArray(MethodDefContainer[] array) {
@@ -884,13 +967,7 @@ public class DexWriter {
             int diff = getMethodIndex(tmp.id()) - index;
             index += diff;
             data_buffer.writeULeb128(diff);
-            writeMethodDef(tmp);
-
-            // TODO
-            // if (isCompact()) {
-            //     var debug_info = tmp.debug_info();
-            //     if(debug_info != null) { }
-            // }
+            writeMethodDef(tmp, index);
         }
     }
 
