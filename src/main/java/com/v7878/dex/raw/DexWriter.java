@@ -760,30 +760,30 @@ public class DexWriter {
     public void writeDebugInfoOffsetTable() {
         var info = compact_debug_info;
         assert isCompact() && info != null;
+        var offsets = info.offsets();
 
         data_buffer.alignPosition(COMPACT_OFFSET_TABLE_ALIGNMENT);
         int start = data_buffer.position();
 
-        int base = 0;
-        for (var offset : info.offsets()) {
+        int base = Integer.MAX_VALUE;
+        for (var offset : offsets) {
             if (offset != 0) {
-                base = Math.max(base, offset);
+                base = Math.min(base, offset);
             }
         }
 
-        var offsets = data_buffer.duplicate();
-        int offsets_count = (info.offsets().length +
-                kDebugElementsPerIndex - 1) / kDebugElementsPerIndex;
+        var offsets_buffer = data_buffer.duplicate();
+        int offsets_count = (offsets.length + kDebugElementsPerIndex - 1) / kDebugElementsPerIndex;
         data_buffer.addPosition(offsets_count * 4);
 
         int block_start = 0;
-        while (block_start < info.offsets().length) {
-            offsets.writeInt(data_buffer.position() - start);
-            int block_size = Math.min(info.offsets().length - block_start, kDebugElementsPerIndex);
+        while (block_start < offsets.length) {
+            offsets_buffer.writeInt(data_buffer.position() - start);
+            int block_size = Math.min(offsets.length - block_start, kDebugElementsPerIndex);
 
             short bit_mask = 0;
             for (int i = 0; i < block_size; i++) {
-                if (info.offsets()[block_start + i] != 0) {
+                if (offsets[block_start + i] != 0) {
                     bit_mask |= (short) (1 << i);
                 }
             }
@@ -793,7 +793,7 @@ public class DexWriter {
 
             int prev_offset = base;
             for (int i = 0; i < block_size; ++i) {
-                int offset = info.offsets()[block_start + i];
+                int offset = offsets[block_start + i];
                 if (offset != 0) {
                     int delta = offset - prev_offset;
                     data_buffer.writeULeb128(delta);

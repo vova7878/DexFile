@@ -299,7 +299,7 @@ public class DexReader implements DexIO.DexReaderCache {
         compact_debug_info = isCompact() ? new CompactData(
                 mainAt(header_offset + DEBUG_INFO_OFFSETS_POS_OFFSET).readSmallUInt(),
                 mainAt(header_offset + DEBUG_INFO_OFFSETS_TABLE_OFFSET).readSmallUInt(),
-                mainAt(header_offset + DEBUG_INFO_BASE_OFFSET).readSmallUInt()
+                mainAt(header_offset + DEBUG_INFO_BASE_OFFSET).readInt()
         ) : null;
     }
 
