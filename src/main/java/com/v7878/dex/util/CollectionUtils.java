@@ -6,6 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.function.ToIntBiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -67,5 +68,64 @@ public class CollectionUtils {
                 while (list.remove(tmp)) { /* nop */ }
             }
         }
+    }
+
+    public static <A extends Comparable<? super V>, V> int
+    binarySearch(A[] a, V key) {
+        return binarySearch0(a, 0, a.length, key);
+    }
+
+    public static <A extends Comparable<? super V>, V> int
+    binarySearch(A[] a, int fromIndex, int toIndex, V key) {
+        Objects.checkFromToIndex(fromIndex, toIndex, a.length);
+        return binarySearch0(a, fromIndex, toIndex, key);
+    }
+
+    private static <A extends Comparable<? super V>, V> int
+    binarySearch0(A[] a, int fromIndex, int toIndex, V key) {
+        int low = fromIndex;
+        int high = toIndex - 1;
+
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            int cmp = a[mid].compareTo(key);
+
+            if (cmp < 0)
+                low = mid + 1;
+            else if (cmp > 0)
+                high = mid - 1;
+            else
+                return mid; // key found
+        }
+        return -(low + 1);  // key not found.
+    }
+
+    public static <A, V> int binarySearch(A[] a, V key, ToIntBiFunction<? super A, ? super V> c) {
+        return binarySearch0(a, 0, a.length, key, c);
+    }
+
+    public static <A, V> int binarySearch(A[] a, int fromIndex, int toIndex,
+                                          V key, ToIntBiFunction<? super A, ? super V> c) {
+        Objects.checkFromToIndex(fromIndex, toIndex, a.length);
+        return binarySearch0(a, fromIndex, toIndex, key, c);
+    }
+
+    private static <A, V> int binarySearch0(A[] a, int fromIndex, int toIndex,
+                                            V key, ToIntBiFunction<? super A, ? super V> c) {
+        Objects.requireNonNull(c);
+        int low = fromIndex;
+        int high = toIndex - 1;
+
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            int cmp = c.applyAsInt(a[mid], key);
+            if (cmp < 0)
+                low = mid + 1;
+            else if (cmp > 0)
+                high = mid - 1;
+            else
+                return mid; // key found
+        }
+        return -(low + 1);  // key not found.
     }
 }

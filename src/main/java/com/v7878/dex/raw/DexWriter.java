@@ -141,12 +141,12 @@ import com.v7878.dex.raw.DexCollector.CodeContainer;
 import com.v7878.dex.raw.DexCollector.FieldDefContainer;
 import com.v7878.dex.raw.DexCollector.MethodDefContainer;
 import com.v7878.dex.raw.DexCollector.TryBlockContainer;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.EmptyArrays;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -421,7 +421,7 @@ public class DexWriter {
     }
 
     public int getStringIndex(String value) {
-        int out = Arrays.binarySearch(strings, value);
+        int out = CollectionUtils.binarySearch(strings, value);
         if (out < 0) {
             throw new IllegalArgumentException(
                     "Unable to find string \"" + value + "\"");
@@ -430,7 +430,7 @@ public class DexWriter {
     }
 
     public int getTypeIndex(TypeId value) {
-        int out = Arrays.binarySearch(types, value);
+        int out = CollectionUtils.binarySearch(types, value);
         if (out < 0) {
             throw new IllegalArgumentException(
                     "Unable to find type \"" + value + "\"");
@@ -439,7 +439,7 @@ public class DexWriter {
     }
 
     public int getProtoIndex(ProtoId value) {
-        int out = Arrays.binarySearch(protos, value);
+        int out = CollectionUtils.binarySearch(protos, value);
         if (out < 0) {
             throw new IllegalArgumentException(
                     "Unable to find proto \"" + value + "\"");
@@ -448,7 +448,7 @@ public class DexWriter {
     }
 
     public int getFieldIndex(FieldId value) {
-        int out = Arrays.binarySearch(fields, value);
+        int out = CollectionUtils.binarySearch(fields, value);
         if (out < 0) {
             throw new IllegalArgumentException(
                     "Unable to find field \"" + value + "\"");
@@ -457,7 +457,7 @@ public class DexWriter {
     }
 
     public int getMethodIndex(MethodId value) {
-        int out = Arrays.binarySearch(methods, value);
+        int out = CollectionUtils.binarySearch(methods, value);
         if (out < 0) {
             throw new IllegalArgumentException(
                     "Unable to find method \"" + value + "\"");
@@ -466,9 +466,8 @@ public class DexWriter {
     }
 
     public int getCallSiteIndex(CallSiteId value) {
-        // TODO: simplify
-        int out = Arrays.<Object>binarySearch(call_sites, value,
-                (a, b) -> ((CallSiteIdContainer) a).value().compareTo((CallSiteId) b));
+        int out = CollectionUtils.binarySearch(call_sites, value,
+                (c, v) -> c.value().compareTo(v));
         if (out < 0) {
             throw new IllegalArgumentException(
                     "Unable to find call site \"" + value + "\"");
@@ -477,7 +476,7 @@ public class DexWriter {
     }
 
     public int getMethodHandleIndex(MethodHandleId value) {
-        int out = Arrays.binarySearch(method_handles, value);
+        int out = CollectionUtils.binarySearch(method_handles, value);
         if (out < 0) {
             throw new IllegalArgumentException(
                     "Unable to find method handle \"" + value + "\"");
