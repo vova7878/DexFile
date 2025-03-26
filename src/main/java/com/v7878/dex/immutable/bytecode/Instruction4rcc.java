@@ -20,9 +20,9 @@ public final class Instruction4rcc extends Instruction
     private Instruction4rcc(Opcode opcode, int register_count, int start_register,
                             Object reference1, Object reference2) {
         super(Preconditions.checkFormat(opcode, Format4rcc));
-        // TODO: check start_register + register_count not overflows
         this.register_count = Preconditions.checkRegisterRangeCount(register_count);
         this.start_register = Preconditions.checkShortRegister(start_register);
+        Preconditions.checkShortRegister(start_register + register_count);
         this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
         this.reference2 = ReferenceType.validate(getReferenceType2(), reference2);
     }

@@ -11,8 +11,11 @@ public final class MethodHandleId implements Comparable<MethodHandleId> {
 
     private MethodHandleId(MethodHandleType handle_type, MemberId member) {
         this.handle_type = Objects.requireNonNull(handle_type);
-        // TODO: check member type according to handle type
-        this.member = Objects.requireNonNull(member);
+        if (handle_type.isMethodAccess()) {
+            this.member = Objects.requireNonNull((MethodId) member);
+        } else {
+            this.member = Objects.requireNonNull((FieldId) member);
+        }
     }
 
     public static MethodHandleId of(MethodHandleType handle_type, MemberId member) {

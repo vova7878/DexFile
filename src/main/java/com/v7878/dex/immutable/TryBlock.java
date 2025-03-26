@@ -17,10 +17,12 @@ public final class TryBlock implements Comparable<TryBlock> {
                      Iterable<ExceptionHandler> handlers) {
         this.start_address = Preconditions.checkCodeAddress(start_address);
         this.unit_count = Preconditions.checkUnitCount(unit_count);
-        // TODO: check what catch_all_address != null or handlers not empty
         this.handlers = ItemConverter.toList(handlers);
         this.catch_all_address = catch_all_address == null ? null :
                 Preconditions.checkCodeAddress(catch_all_address);
+        if (this.handlers.isEmpty() && this.catch_all_address == null) {
+            throw new IllegalArgumentException("Empty try block");
+        }
     }
 
     public static TryBlock of(int start_address, int unit_count, Integer catch_all_address,
