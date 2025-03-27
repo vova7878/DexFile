@@ -30,7 +30,6 @@ import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_START_OFFSET;
-import static com.v7878.dex.DexOffsets.CONTAINER_OFF_OFFSET;
 import static com.v7878.dex.DexOffsets.DATA_START_OFFSET;
 import static com.v7878.dex.DexOffsets.DEBUG_INFO_BASE_OFFSET;
 import static com.v7878.dex.DexOffsets.DEBUG_INFO_OFFSETS_POS_OFFSET;
@@ -39,6 +38,7 @@ import static com.v7878.dex.DexOffsets.FIELD_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_START_OFFSET;
 import static com.v7878.dex.DexOffsets.FILE_SIZE_OFFSET;
+import static com.v7878.dex.DexOffsets.HEADER_OFF_OFFSET;
 import static com.v7878.dex.DexOffsets.MAGIC_OFFSET;
 import static com.v7878.dex.DexOffsets.MAP_OFFSET;
 import static com.v7878.dex.DexOffsets.METHOD_COUNT_OFFSET;
@@ -56,6 +56,7 @@ import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_START_OFFSET;
+import static com.v7878.dex.DexOffsets.getHeaderSize;
 import static com.v7878.dex.raw.CompactDexConstants.kDebugElementsPerIndex;
 import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsSize;
 import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsnsSize;
@@ -198,32 +199,39 @@ public class DexReader implements DexIO.DexReaderCache {
     public DexReader(ReadOptions options, RandomInput input, int header_offset) {
         assert input.position() == 0;
         options.validate();
+        if (header_offset < 0) {
+            throw new IllegalArgumentException("Negative header offset");
+        }
         this.options = options;
         main_buffer = input.duplicate();
 
-        if (main_buffer.size() < BASE_HEADER_SIZE) {
+        if (main_buffer.size() < Math.addExact(header_offset, BASE_HEADER_SIZE)) {
             throw new NotADexFile("File is too short");
         }
-        // ??? version = DexVersion.forMagic(mainAt(MAGIC_OFFSET).readLong());
+        // TODO: add option? version = DexVersion.forMagic(mainAt(MAGIC_OFFSET).readLong());
         version = DexVersion.forMagic(mainAt(header_offset + MAGIC_OFFSET).readLong());
-        // TODO: check full header size
         // TODO: check dex version min api
-
-        // TODO: check file size
-        file_size = mainAt(header_offset + FILE_SIZE_OFFSET).readSmallUInt();
-
-        opcodes = Opcodes.of(version, options.getTargetApi(),
-                options.isTargetForArt(), options.hasOdexInstructions());
+        if (main_buffer.size() < Math.addExact(header_offset, getHeaderSize(version))) {
+            throw new NotADexFile("File is too short");
+        }
 
         // TODO: check endian tag
 
+        file_size = mainAt(header_offset + FILE_SIZE_OFFSET).readSmallUInt();
+        if (main_buffer.size() < Math.addExact(header_offset, file_size)) {
+            throw new InvalidDexFile("Truncated dex file");
+        }
+
         int container_off = 0;
         if (version.isDexContainer()) {
-            container_off = mainAt(header_offset + CONTAINER_OFF_OFFSET).readSmallUInt();
+            container_off = mainAt(header_offset + HEADER_OFF_OFFSET).readSmallUInt();
         }
         if (container_off != header_offset) {
-            throw new InvalidDexFile("Unexpected container offset in header");
+            throw new InvalidDexFile("Unexpected header offset " + container_off);
         }
+
+        opcodes = Opcodes.of(version, options.getTargetApi(),
+                options.isTargetForArt(), options.hasOdexInstructions());
 
         int data_off = 0;
         if (version.isCompact()) {
@@ -799,7 +807,7 @@ public class DexReader implements DexIO.DexReaderCache {
         int line_start = in.readULeb128();
         List<String> parameter_names;
         {
-            int parameters_size = in.readULeb128();
+            int parameters_size = in.readSmallULeb128();
             parameter_names = new ArrayList<>(parameters_size);
             for (int i = 0; i < parameters_size; i++) {
                 int name_idx = in.readULeb128() - 1;

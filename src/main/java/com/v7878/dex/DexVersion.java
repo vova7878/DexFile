@@ -21,6 +21,19 @@ public enum DexVersion {
         return magic;
     }
 
+    public byte[] getMagicArray() {
+        return new byte[]{
+                (byte) (magic),
+                (byte) (magic >> 8),
+                (byte) (magic >> 16),
+                (byte) (magic >> 24),
+                (byte) (magic >> 32),
+                (byte) (magic >> 40),
+                (byte) (magic >> 48),
+                (byte) (magic >> 56)
+        };
+    }
+
     public boolean isCompact() {
         return this == CDEX001;
     }

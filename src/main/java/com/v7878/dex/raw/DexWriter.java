@@ -46,17 +46,14 @@ import static com.v7878.dex.DexConstants.TYPE_TYPE_LIST;
 import static com.v7878.dex.DexOffsets.ANNOTATION_DIRECTORY_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.ANNOTATION_SET_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.ANNOTATION_SET_LIST_ALIGNMENT;
-import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.CHECKSUM_DATA_START_OFFSET;
 import static com.v7878.dex.DexOffsets.CHECKSUM_OFFSET;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.CODE_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.COMPACT_CODE_ITEM_ALIGNMENT;
-import static com.v7878.dex.DexOffsets.COMPACT_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.COMPACT_OFFSET_TABLE_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.DATA_SECTION_ALIGNMENT;
-import static com.v7878.dex.DexOffsets.DEXCONTAINER_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.HIDDENAPI_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.MAP_ALIGNMENT;
@@ -70,6 +67,7 @@ import static com.v7878.dex.DexOffsets.TRY_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_LIST_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.getHeaderSize;
 import static com.v7878.dex.raw.CompactDexConstants.kDebugElementsPerIndex;
 import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsSize;
 import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsnsSize;
@@ -213,8 +211,8 @@ public class DexWriter {
         public int compact_owned_data_begin;
         public int compact_owned_data_end;
 
-        public int header_off;
         public int container_size;
+        public int header_off;
     }
 
     private record CompactData(int[] offsets) {
@@ -264,7 +262,7 @@ public class DexWriter {
         map = new FileMap();
 
         if (!isDexContainer() && header_offset != 0) {
-            throw new IllegalArgumentException("Unexpected container offset");
+            throw new IllegalArgumentException("Unexpected header offset");
         }
         map.header_off = header_offset;
 
@@ -276,15 +274,20 @@ public class DexWriter {
         var collector = new DexCollector(isCompact());
         collector.fillDex(dexfile);
 
+        // The number of strings is limited to 32 bits, so no checks are needed.
         strings = collector.strings.toArray(EmptyArrays.STRING);
-        // TODO: at most 65535
         types = collector.types.toArray(EmptyArrays.TYPE_ID);
-        // TODO: at most 65535
+        checkSizeLimit(types.length, 0xffff, "type");
         protos = collector.protos.toArray(EmptyArrays.PROTO_ID);
+        checkSizeLimit(protos.length, 0xffff, "proto");
         fields = collector.fields.toArray(EmptyArrays.FIELD_ID);
+        checkSizeLimit(fields.length, 0xffff, "field");
         methods = collector.methods.toArray(EmptyArrays.METHOD_ID);
+        checkSizeLimit(methods.length, 0xffff, "method");
         call_sites = collector.call_sites.toArray(EmptyArrays.CALLSITE_ID_CONTAINER);
+        checkSizeLimit(call_sites.length, 0xffff, "callsite");
         method_handles = collector.method_handles.toArray(EmptyArrays.METHOD_HANDLE_ID);
+        checkSizeLimit(method_handles.length, 0xffff, "method handle");
 
         // TODO: "The classes must be ordered such that a given class's superclass
         //  and implemented interfaces appear in the list earlier than the referring class"
@@ -371,12 +374,13 @@ public class DexWriter {
         map.file_size -= map.header_off;
     }
 
-    private static int getHeaderSize(DexVersion version) {
-        return switch (version) {
-            case CDEX001 -> COMPACT_HEADER_SIZE;
-            case DEX041 -> DEXCONTAINER_HEADER_SIZE;
-            default -> BASE_HEADER_SIZE;
-        };
+    @SuppressWarnings("SameParameterValue")
+    private static void checkSizeLimit(int size, int limit, String name) {
+        if (size > limit) {
+            throw new IllegalStateException(String.format(
+                    "Size(%d) should not exceed limit(%d) for %s section",
+                    size, limit, name));
+        }
     }
 
     private void initMap() {
@@ -582,7 +586,7 @@ public class DexWriter {
 
     public void writeHeader() {
         main_buffer.position(map.header_off);
-        main_buffer.writeLong(version().getMagic()); // TODO: only little-endian
+        main_buffer.writeByteArray(version().getMagicArray());
         main_buffer.addPosition(4); // checksum
         main_buffer.addPosition(20); // signature
         main_buffer.writeInt(map.file_size);

@@ -9,6 +9,14 @@ public final class DexOffsets {
     public static final int DEXCONTAINER_HEADER_SIZE = BASE_HEADER_SIZE + 4 * 2;
     public static final int COMPACT_HEADER_SIZE = BASE_HEADER_SIZE + 4 * 6;
 
+    public static int getHeaderSize(DexVersion version) {
+        return switch (version) {
+            case CDEX001 -> COMPACT_HEADER_SIZE;
+            case DEX041 -> DEXCONTAINER_HEADER_SIZE;
+            default -> BASE_HEADER_SIZE;
+        };
+    }
+
     // dex element sizes
     public static final int STRING_ID_SIZE = 4;
     public static final int TYPE_ID_SIZE = 4;
@@ -61,7 +69,7 @@ public final class DexOffsets {
     public static final int DATA_START_OFFSET = 108;
 
     public static final int CONTAINER_SIZE_OFFSET = 112;
-    public static final int CONTAINER_OFF_OFFSET = 116;
+    public static final int HEADER_OFF_OFFSET = 116;
 
     public static final int FEATURE_FLAGS_OFFSET = 112;
     public static final int DEBUG_INFO_OFFSETS_POS_OFFSET = 116;
