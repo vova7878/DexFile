@@ -254,7 +254,6 @@ public final class CodeBuilder {
         var out = new ArrayList<TryBlock>(elements_size);
         for (int i = 0; i < elements_size; i++) {
             var container = elements.valueAt(i);
-            //noinspection SizeReplaceableByIsEmpty
             if (container.catch_all_address != null || container.handlers.size() > 0) {
                 out.add(TryBlock.of(borders[i], borders[i + 1] - borders[i],
                         container.catch_all_address, container.handlers));
@@ -325,9 +324,9 @@ public final class CodeBuilder {
 
     private int p(int reg, boolean include_this) {
         //only parameter registers
+        int this_reg = include_this ? 1 : 0;
         int locals = regs_size - ins_size;
-        return locals + checkRange(reg, 0,
-                ins_size - (include_this ? 1 : 0)) + (include_this ? 1 : 0);
+        return locals + checkRange(reg, 0, ins_size - this_reg) + this_reg;
     }
 
     public int p(int reg) {
@@ -1161,9 +1160,10 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder packed_switch_internal(int reg_to_test, int first_key, Object... labels) {
+        assert first_key + labels.length >= first_key;
         int start_unit = current_unit;
         InternalLabel payload = new InternalLabel();
-        var insn = f31t(Opcode.PACKED_SWITCH, reg_to_test, false,
+        f31t(Opcode.PACKED_SWITCH, reg_to_test, false,
                 () -> getLabelBranchOffset(payload, start_unit));
         addDelayedAction(() -> {
             NavigableSet<SwitchElement> elements = new TreeSet<>();
@@ -1176,17 +1176,14 @@ public final class CodeBuilder {
             putLabel(payload);
             packed_switch_payload(elements);
         });
-        return insn;
+        return this;
     }
-
-    // Note: first_key + offsets.length must not overflow
-    // TODO: public CodeBuilder packed_switch(int reg_to_test, int first_key, String... labels) {}
 
     private CodeBuilder sparse_switch_internal(int reg_to_test, int[] keys, Object... labels) {
         assert keys.length == labels.length;
         int start_unit = current_unit;
         InternalLabel payload = new InternalLabel();
-        var insn = f31t(Opcode.SPARSE_SWITCH, reg_to_test, false,
+        f31t(Opcode.SPARSE_SWITCH, reg_to_test, false,
                 () -> getLabelBranchOffset(payload, start_unit));
         addDelayedAction(() -> {
             NavigableSet<SwitchElement> elements = new TreeSet<>();
@@ -1199,10 +1196,21 @@ public final class CodeBuilder {
             putLabel(payload);
             sparse_switch_payload(elements);
         });
-        return insn;
+        return this;
     }
 
-    // TODO: public CodeBuilder sparse_switch(int reg_to_test, int[] keys, String... labels) {}
+    public CodeBuilder switch_(int reg_to_test, Map<Integer, String> table) {
+        check_reg(reg_to_test);
+        var map = new SparseArray<String>(table.size());
+        table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
+        if (map.size() == 0) {
+            return this;
+        }
+        if (map.size() <= 1 || map.lastKey() - map.firstKey() == map.size()) {
+            return packed_switch_internal(reg_to_test, map.firstKey(), map.valuesArray());
+        }
+        return sparse_switch_internal(reg_to_test, map.keysArray(), map.valuesArray());
+    }
 
     public enum Cmp {
         CMPL_FLOAT(Opcode.CMPL_FLOAT, false),
@@ -1526,20 +1534,25 @@ public final class CodeBuilder {
                 op.isDstAndSrc1Wide, second_src_reg_or_pair, op.isSrc2Wide);
     }
 
-    //TODO: common binop_lit
-
-    public CodeBuilder binop_lit16(BinOp op, int dst_reg, int src_reg, int value) {
+    public CodeBuilder raw_binop_lit16(BinOp op, int dst_reg, int src_reg, int value) {
         if (op.lit16 == null) {
             throw new IllegalArgumentException("There is no lit16 version of " + op);
         }
         return f22s(op.lit16, dst_reg, false, src_reg, false, value);
     }
 
-    public CodeBuilder binop_lit8(BinOp op, int dst_reg, int src_reg, int value) {
+    public CodeBuilder raw_binop_lit8(BinOp op, int dst_reg, int src_reg, int value) {
         if (op.lit8 == null) {
             throw new IllegalArgumentException("There is no lit8 version of " + op);
         }
         return f22b(op.lit8, dst_reg, false, src_reg, false, value);
+    }
+
+    public CodeBuilder binop_lit(BinOp op, int dst_reg, int src_reg, int value) {
+        if (check_width_int(value, 8)) {
+            return raw_binop_lit8(op, dst_reg, src_reg, value);
+        }
+        return raw_binop_lit16(op, dst_reg, src_reg, value);
     }
 
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_count, int arg_reg1,

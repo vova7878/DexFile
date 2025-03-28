@@ -2,6 +2,7 @@ package com.v7878.dex.util;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.IntFunction;
 
 public class SparseArray<E> implements Cloneable {
     private static final Object DELETED = new Object();
@@ -222,10 +223,36 @@ public class SparseArray<E> implements Cloneable {
         return size() == 0;
     }
 
+    public int[] keysArray() {
+        int size = size();
+        // size() call above took care about gc() compaction.
+        return Arrays.copyOf(keys, size);
+    }
+
+    public <T> T[] valuesArray(IntFunction<T[]> factory) {
+        int length = size();
+        T[] array = factory.apply(length);
+        //noinspection SuspiciousSystemArraycopy
+        System.arraycopy(values, 0, array, 0, length);
+        return array;
+    }
+
+    public Object[] valuesArray() {
+        return valuesArray(Object[]::new);
+    }
+
     public int keyAt(int index) {
         gcIfNeeded();
         checkIndex(index);
         return keys[index];
+    }
+
+    public int firstKey() {
+        return keyAt(0);
+    }
+
+    public int lastKey() {
+        return keyAt(size() - 1);
     }
 
     @SuppressWarnings("unchecked")
@@ -233,6 +260,14 @@ public class SparseArray<E> implements Cloneable {
         gcIfNeeded();
         checkIndex(index);
         return (E) values[index];
+    }
+
+    public E firstValue() {
+        return valueAt(0);
+    }
+
+    public E lastValue() {
+        return valueAt(size() - 1);
     }
 
     public E setValueAt(int index, E value) {
