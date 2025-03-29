@@ -74,6 +74,7 @@ public class SparseArray<E> implements Cloneable {
         return i < 0 || values[i] == DELETED ? valueIfKeyNotFound : (E) values[i];
     }
 
+    @SuppressWarnings("unchecked")
     public E remove(int key) {
         int i = Arrays.binarySearch(keys, 0, size, key);
         if (i >= 0) {
@@ -81,7 +82,6 @@ public class SparseArray<E> implements Cloneable {
             if (last != DELETED) {
                 values[i] = DELETED;
                 garbage = true;
-                //noinspection unchecked
                 return (E) last;
             }
         }
@@ -162,12 +162,12 @@ public class SparseArray<E> implements Cloneable {
         return newArray;
     }
 
+    @SuppressWarnings("unchecked")
     public E put(int key, E value) {
         int i = Arrays.binarySearch(keys, 0, size, key);
         if (i >= 0) {
             Object last = values[i];
             values[i] = value;
-            //noinspection unchecked
             return last == DELETED ? null : (E) last;
         }
         i = ~i;
@@ -196,6 +196,7 @@ public class SparseArray<E> implements Cloneable {
         return put(key, value);
     }
 
+    @SuppressWarnings("unchecked")
     public void putAll(SparseArray<? extends E> other) {
         Objects.requireNonNull(other);
         int length = other.size;
@@ -208,7 +209,6 @@ public class SparseArray<E> implements Cloneable {
         for (int i = 0; i < length; i++) {
             Object value = other_values[i];
             if (value != DELETED) {
-                //noinspection unchecked
                 append(other_keys[i], (E) value);
             }
         }
@@ -270,12 +270,12 @@ public class SparseArray<E> implements Cloneable {
         return valueAt(size() - 1);
     }
 
+    @SuppressWarnings("unchecked")
     public E setValueAt(int index, E value) {
         gcIfNeeded();
         checkIndex(index);
         Object last = values[index];
         values[index] = value;
-        //noinspection unchecked
         return last == DELETED ? null : (E) last;
     }
 
