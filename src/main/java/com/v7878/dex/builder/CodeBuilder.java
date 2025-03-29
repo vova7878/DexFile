@@ -1130,13 +1130,13 @@ public final class CodeBuilder {
         return f11x(Opcode.THROW, ex_reg, false);
     }
 
-    private CodeBuilder raw_goto(Object label) {
+    private CodeBuilder goto_internal(Object label) {
         //TODO: Generate smaller instructions if possible
         return raw_goto_32_internal(label);
     }
 
     public CodeBuilder goto_(String label) {
-        return raw_goto(label);
+        return goto_internal(label);
     }
 
     private CodeBuilder raw_goto_internal(Object label) {
