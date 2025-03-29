@@ -26,6 +26,9 @@ public final class ClassDef implements Annotatable {
 
     // Remove duplicates but keep order
     private static List<TypeId> toInterfacesList(Iterable<TypeId> interfaces) {
+        if (interfaces == null) {
+            return Collections.emptyList();
+        }
         int capacity = interfaces instanceof Collection<?> c ? c.size() : 0;
         var list = new ArrayList<TypeId>(capacity);
         var set = new HashSet<TypeId>(capacity);
