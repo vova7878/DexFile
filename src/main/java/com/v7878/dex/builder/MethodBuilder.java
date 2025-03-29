@@ -138,7 +138,7 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withFlags(int flags) {
-        this.access_flags = Preconditions.checkFieldAccessFlags(flags);
+        this.access_flags = Preconditions.checkMethodAccessFlags(flags);
         return this;
     }
 
