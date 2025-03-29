@@ -1130,33 +1130,40 @@ public final class CodeBuilder {
         return f11x(Opcode.THROW, ex_reg, false);
     }
 
-    //TODO: common goto
+    private CodeBuilder raw_goto(Object label) {
+        //TODO: Generate smaller instructions if possible
+        return raw_goto_32_internal(label);
+    }
 
-    private CodeBuilder goto_internal(Object label) {
+    public CodeBuilder goto_(String label) {
+        return raw_goto(label);
+    }
+
+    private CodeBuilder raw_goto_internal(Object label) {
         int start_unit = current_unit;
         return f10t(Opcode.GOTO, () -> getLabelBranchOffset(label, start_unit));
     }
 
-    public CodeBuilder goto_(String label) {
-        return goto_internal(label);
+    public CodeBuilder raw_goto(String label) {
+        return raw_goto_internal(label);
     }
 
-    private CodeBuilder goto_16_internal(Object label) {
+    private CodeBuilder raw_goto_16_internal(Object label) {
         int start_unit = current_unit;
         return f20t(Opcode.GOTO_16, () -> getLabelBranchOffset(label, start_unit));
     }
 
-    public CodeBuilder goto_16(String label) {
-        return goto_16_internal(label);
+    public CodeBuilder raw_goto_16(String label) {
+        return raw_goto_16_internal(label);
     }
 
-    private CodeBuilder goto_32_internal(Object label) {
+    private CodeBuilder raw_goto_32_internal(Object label) {
         int start_unit = current_unit;
         return f30t(Opcode.GOTO_32, () -> getLabelBranchOffset(label, start_unit, true));
     }
 
-    public CodeBuilder goto_32(String label) {
-        return goto_32_internal(label);
+    public CodeBuilder raw_goto_32(String label) {
+        return raw_goto_32_internal(label);
     }
 
     private CodeBuilder packed_switch_internal(int reg_to_test, int first_key, Object... labels) {

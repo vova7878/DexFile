@@ -3,6 +3,7 @@ package com.v7878.dex.builder;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
 
+import com.v7878.dex.AccessFlag;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.MethodId;
@@ -140,7 +141,10 @@ public final class MethodBuilder {
         this.access_flags = Preconditions.checkFieldAccessFlags(flags);
         return this;
     }
-    //TODO: withFlags(AccessFlag... flags)
+
+    public MethodBuilder withFlags(AccessFlag... flags) {
+        return withFlags(AccessFlag.combine(flags));
+    }
 
     public MethodBuilder withHiddenApiFlags(int flags) {
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(flags);

@@ -35,6 +35,7 @@ public final class TypeId implements Comparable<TypeId> {
             case "J" -> J;
             case "D" -> D;
             case "Ljava/lang/Object;" -> OBJECT;
+            // TODO: verify?
             default -> new TypeId(descriptor);
         };
     }
@@ -67,7 +68,7 @@ public final class TypeId implements Comparable<TypeId> {
                 out.append(";");
             }
         }
-        return new TypeId(out.toString());
+        return of(out.toString());
     }
 
     public static TypeId of(Class<?> clazz) {

@@ -33,7 +33,7 @@ public enum AccessFlag {
     STATIC(ACC_STATIC, "static", false, true, true, false, true),
     FINAL(ACC_FINAL, "final", true, true, true, true, true),
     SYNCHRONIZED(ACC_SYNCHRONIZED, "synchronized", false, false, true, false, false),
-    // unused legacy flag
+    // Unused legacy flag
     SUPER(ACC_SUPER, "super", true, true, false, false, false),
     VOLATILE(ACC_VOLATILE, "volatile", false, false, false, false, true),
     BRIDGE(ACC_BRIDGE, "bridge", false, false, true, false, false),
@@ -46,6 +46,7 @@ public enum AccessFlag {
     SYNTHETIC(ACC_SYNTHETIC, "synthetic", true, true, true, true, true),
     ANNOTATION(ACC_ANNOTATION, "annotation", true, true, false, false, false),
     ENUM(ACC_ENUM, "enum", true, true, false, false, true),
+    // Used only in the dalvik.annotation.MethodParameters annotation
     MANDATED(ACC_MANDATED, "mandated", false, false, false, true, false),
     CONSTRUCTOR(ACC_CONSTRUCTOR, "constructor", false, false, true, false, false),
     DECLARED_SYNCHRONIZED(ACC_DECLARED_SYNCHRONIZED, "declared-synchronized", false, false, true, false, false);
@@ -102,7 +103,7 @@ public enum AccessFlag {
         this.validForField = validForField;
     }
 
-    public static int combine(AccessFlag[] flags) {
+    public static int combine(AccessFlag... flags) {
         int value = 0;
         for (var flag : flags) {
             value |= flag.value;
@@ -131,6 +132,7 @@ public enum AccessFlag {
     }
 
     private static String formatAccessFlags(AccessFlag[] flags) {
+        // TODO: Print unknown flags as "[1 << X]"
         return Arrays.stream(flags).map(Objects::toString)
                 .collect(Collectors.joining(" "));
     }

@@ -1,5 +1,6 @@
 package com.v7878.dex.builder;
 
+import com.v7878.dex.AccessFlag;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.FieldId;
@@ -94,7 +95,10 @@ public final class FieldBuilder {
         this.access_flags = Preconditions.checkFieldAccessFlags(flags);
         return this;
     }
-    //TODO: withFlags(AccessFlag... flags)
+
+    public FieldBuilder withFlags(AccessFlag... flags) {
+        return withFlags(AccessFlag.combine(flags));
+    }
 
     public FieldBuilder withHiddenApiFlags(int flags) {
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(flags);

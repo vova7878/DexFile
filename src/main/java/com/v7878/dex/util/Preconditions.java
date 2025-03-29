@@ -1,5 +1,9 @@
 package com.v7878.dex.util;
 
+import static com.v7878.dex.DexConstants.ACC_VISIBILITY_MASK;
+import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
+
+import com.v7878.dex.AccessFlag;
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -8,28 +12,75 @@ import java.util.List;
 import java.util.NavigableSet;
 
 public class Preconditions {
+    private static boolean checkVisibilityFlags(int access_flags) {
+        return isPowerOfTwo(access_flags & ACC_VISIBILITY_MASK);
+    }
+
     public static int checkInnerClassAccessFlags(int access_flags) {
-        // TODO: check
+        if (!AccessFlag.isValidForInnerClass(access_flags)) {
+            throw new IllegalArgumentException(
+                    String.format("Bad inner class access flags: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForInnerClass(access_flags))
+            );
+        }
+        if (!checkVisibilityFlags(access_flags)) {
+            throw new IllegalArgumentException(
+                    String.format("Inner class may have only one of public/protected/private: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForInnerClass(access_flags))
+            );
+        }
         return access_flags;
     }
 
     public static int checkClassAccessFlags(int access_flags) {
-        // TODO: check
+        if (!AccessFlag.isValidForClass(access_flags)) {
+            throw new IllegalArgumentException(
+                    String.format("Bad class access flags: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForClass(access_flags))
+            );
+        }
         return access_flags;
     }
 
     public static int checkMethodAccessFlags(int access_flags) {
-        // TODO: check
+        if (!AccessFlag.isValidForMethod(access_flags)) {
+            throw new IllegalArgumentException(
+                    String.format("Bad method access flags: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForMethod(access_flags))
+            );
+        }
+        if (!checkVisibilityFlags(access_flags)) {
+            throw new IllegalArgumentException(
+                    String.format("Method may have only one of public/protected/private: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForMethod(access_flags))
+            );
+        }
         return access_flags;
     }
 
     public static int checkParamaterAccessFlags(int access_flags) {
-        // TODO: check
+        if (!AccessFlag.isValidForParameter(access_flags)) {
+            throw new IllegalArgumentException(
+                    String.format("Bad parameter access flags: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForParameter(access_flags))
+            );
+        }
         return access_flags;
     }
 
     public static int checkFieldAccessFlags(int access_flags) {
-        // TODO: check
+        if (!AccessFlag.isValidForField(access_flags)) {
+            throw new IllegalArgumentException(
+                    String.format("Bad field access flags: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForField(access_flags))
+            );
+        }
+        if (!checkVisibilityFlags(access_flags)) {
+            throw new IllegalArgumentException(
+                    String.format("Field may have only one of public/protected/private: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForField(access_flags))
+            );
+        }
         return access_flags;
     }
 

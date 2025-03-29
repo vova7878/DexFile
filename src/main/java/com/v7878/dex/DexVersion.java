@@ -63,6 +63,6 @@ public enum DexVersion {
         }
 
         throw new IllegalArgumentException(
-                String.format("Unknown dex magic: %08X", magic));
+                String.format("Unknown dex magic: %016X", magic));
     }
 }

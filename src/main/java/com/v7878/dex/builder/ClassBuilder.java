@@ -1,5 +1,6 @@
 package com.v7878.dex.builder;
 
+import com.v7878.dex.AccessFlag;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.ClassDef;
 import com.v7878.dex.immutable.FieldDef;
@@ -98,7 +99,10 @@ public final class ClassBuilder {
         this.access_flags = Preconditions.checkClassAccessFlags(flags);
         return this;
     }
-    //TODO: withFlags(AccessFlag... flags)
+
+    public ClassBuilder withFlags(AccessFlag... flags) {
+        return withFlags(AccessFlag.combine(flags));
+    }
 
     public ClassBuilder withSourceFile(String source_file) {
         this.source_file = source_file;

@@ -4,6 +4,7 @@ import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
 import com.v7878.dex.immutable.value.EncodedInt;
 import com.v7878.dex.immutable.value.EncodedMethod;
+import com.v7878.dex.immutable.value.EncodedNull;
 import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
@@ -74,7 +75,8 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
     public static Annotation InnerClass(String name, int access_flags) {
         return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                         "dalvik.annotation.InnerClass"),
-                AnnotationElement.of("name", EncodedString.of(name)),
+                AnnotationElement.of("name", name == null ?
+                        EncodedNull.INSTANCE : EncodedString.of(name)),
                 AnnotationElement.of("accessFlags", EncodedInt.of(
                         Preconditions.checkInnerClassAccessFlags(access_flags))));
     }
@@ -86,11 +88,19 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
     }
 
     public static Annotation MethodParameters(String[] names, int[] access_flags) {
+        if (names.length != access_flags.length) {
+            throw new IllegalArgumentException(
+                    String.format("Number of names (%s) and access flags (%s) are not equal",
+                            names.length, access_flags.length)
+            );
+        }
+        access_flags = access_flags.clone();
+        for (var flags : access_flags) {
+            Preconditions.checkParamaterAccessFlags(flags);
+        }
         return Annotation.of(AnnotationVisibility.SYSTEM, TypeId.ofName(
                         "dalvik.annotation.MethodParameters"),
-                // TODO: check names
                 AnnotationElement.of("names", EncodedValue.ofValue(names)),
-                // TODO: check access flags
                 AnnotationElement.of("accessFlags", EncodedValue.ofValue(access_flags)));
     }
 

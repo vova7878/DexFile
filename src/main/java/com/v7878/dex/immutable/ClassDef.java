@@ -4,6 +4,10 @@ import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
@@ -12,12 +16,30 @@ public final class ClassDef implements Annotatable {
     private final TypeId type;
     private final int access_flags;
     private final TypeId superclass;
-    // Note: In some cases, the order of interfaces may be important (for example when redefining classes)
+    // In some cases, the order of interfaces may be
+    //  important (for example when redefining classes)
     private final List<TypeId> interfaces;
     private final String source_file;
     private final NavigableSet<FieldDef> fields;
     private final NavigableSet<MethodDef> methods;
     private final NavigableSet<Annotation> annotations;
+
+    // Remove duplicates but keep order
+    private static List<TypeId> toInterfacesList(Iterable<TypeId> interfaces) {
+        int capacity = interfaces instanceof Collection<?> c ? c.size() : 0;
+        var list = new ArrayList<TypeId>(capacity);
+        var set = new HashSet<TypeId>(capacity);
+
+        for (var value : interfaces) {
+            Objects.requireNonNull(value);
+            if (set.add(value)) {
+                list.add(value);
+            }
+        }
+
+        list.trimToSize();
+        return Collections.unmodifiableList(list);
+    }
 
     private ClassDef(
             TypeId type, int access_flags, TypeId superclass, Iterable<TypeId> interfaces,
@@ -26,8 +48,7 @@ public final class ClassDef implements Annotatable {
         this.type = Objects.requireNonNull(type);
         this.access_flags = Preconditions.checkClassAccessFlags(access_flags);
         this.superclass = superclass; // may be null
-        // TODO: check for duplicates
-        this.interfaces = ItemConverter.toList(interfaces);
+        this.interfaces = toInterfacesList(interfaces);
         this.source_file = source_file; // may be null
         this.fields = ItemConverter.toNavigableSet(fields);
         this.methods = ItemConverter.toNavigableSet(methods);
