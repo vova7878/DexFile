@@ -59,6 +59,15 @@ import com.v7878.dex.immutable.bytecode.Instruction51l;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
+import com.v7878.dex.immutable.debug.AdvancePC;
+import com.v7878.dex.immutable.debug.DebugItem;
+import com.v7878.dex.immutable.debug.EndLocal;
+import com.v7878.dex.immutable.debug.LineNumber;
+import com.v7878.dex.immutable.debug.RestartLocal;
+import com.v7878.dex.immutable.debug.SetEpilogueBegin;
+import com.v7878.dex.immutable.debug.SetFile;
+import com.v7878.dex.immutable.debug.SetPrologueEnd;
+import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
@@ -80,7 +89,6 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-// TODO: debug info
 public final class CodeBuilder {
     private static class InternalLabel {
     }
@@ -147,10 +155,13 @@ public final class CodeBuilder {
     private final List<Supplier<Instruction>> instructions;
     private final List<Runnable> delayed_actions;
     private final List<BuilderTryItem> try_items;
+    private final List<DebugItem> debug_items;
     private final Map<Object, Integer> labels;
     private final boolean has_this;
 
-    private int current_unit;
+    private int current_unit, current_debug_unit;
+
+    private boolean generate_lines;
 
     private CodeBuilder(int regs_size, int ins_size, boolean add_hidden_this) {
         this.has_this = add_hidden_this;
@@ -160,8 +171,10 @@ public final class CodeBuilder {
         this.instructions = new ArrayList<>();
         this.delayed_actions = new ArrayList<>();
         this.try_items = new ArrayList<>();
+        this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
-        this.current_unit = 0;
+        this.current_debug_unit = this.current_unit = 0;
+        this.generate_lines = false;
     }
 
     // <------------------>
@@ -270,7 +283,7 @@ public final class CodeBuilder {
 
         List<TryBlock> try_blocks = mergeTryItems(try_items);
 
-        return MethodImplementation.of(regs_size, insns, try_blocks, null);
+        return MethodImplementation.of(regs_size, insns, try_blocks, debug_items);
     }
 
     public static MethodImplementation build(int regs_size, int ins_size, boolean add_hidden_this,
@@ -368,21 +381,27 @@ public final class CodeBuilder {
         return check_reg(first_reg);
     }
 
+    private void add(Supplier<Instruction> instruction, int unit_count) {
+        if (generate_lines) {
+            line(instructions.size() + 1);
+        }
+        instructions.add(instruction);
+        current_unit += unit_count;
+    }
+
     private void add(Instruction instruction) {
-        instructions.add(() -> instruction);
-        current_unit += instruction.getUnitCount();
+        add(() -> instruction, instruction.getUnitCount());
     }
 
     private void add(Format format, Supplier<Instruction> factory) {
         if (format.isPayload()) {
             throw new AssertionError();
         }
-        instructions.add(() -> {
+        add(() -> {
             var instruction = factory.get();
             assert instruction.getOpcode().format() == format;
             return instruction;
-        });
-        current_unit += format.getUnitCount();
+        }, format.getUnitCount());
     }
 
     private void addDelayedAction(Runnable action) {
@@ -460,6 +479,53 @@ public final class CodeBuilder {
         InternalLabel handler = new InternalLabel();
         try_catch_all_internal(start, end, handler);
         putLabel(handler);
+        return this;
+    }
+
+    private CodeBuilder addDebugItem(DebugItem item) {
+        Objects.requireNonNull(item);
+        if (current_debug_unit != current_unit) {
+            debug_items.add(AdvancePC.of(current_unit - current_debug_unit));
+            current_debug_unit = current_unit;
+        }
+        debug_items.add(item);
+        return this;
+    }
+
+    public CodeBuilder line(int line) {
+        return addDebugItem(LineNumber.of(line));
+    }
+
+    public CodeBuilder prologue() {
+        return addDebugItem(SetPrologueEnd.INSTANCE);
+    }
+
+    public CodeBuilder epilogue() {
+        return addDebugItem(SetEpilogueBegin.INSTANCE);
+    }
+
+    public CodeBuilder source(String name) {
+        return addDebugItem(SetFile.of(name));
+    }
+
+    public CodeBuilder local(int register, String name, TypeId type, String signature) {
+        return addDebugItem(StartLocal.of(register, name, type, signature));
+    }
+
+    public CodeBuilder local(int register, String name, TypeId type) {
+        return local(register, name, type, null);
+    }
+
+    public CodeBuilder end_local(int register) {
+        return addDebugItem(EndLocal.of(register));
+    }
+
+    public CodeBuilder restart_local(int register) {
+        return addDebugItem(RestartLocal.of(register));
+    }
+
+    public CodeBuilder generate_lines() {
+        generate_lines = true;
         return this;
     }
 
