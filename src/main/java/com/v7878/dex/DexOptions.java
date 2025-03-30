@@ -13,12 +13,14 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     protected final boolean art;
     protected final boolean odex;
     protected final boolean hiddenapi;
+    protected final boolean debug_info;
 
-    DexOptions(int api, boolean art, boolean odex, boolean hiddenapi) {
+    DexOptions(int api, boolean art, boolean odex, boolean hiddenapi, boolean debug_info) {
         this.api = api;
         this.art = art;
         this.odex = odex;
         this.hiddenapi = hiddenapi;
+        this.debug_info = debug_info;
     }
 
     @SuppressWarnings("ConstantValue")
@@ -36,6 +38,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
         this.art = api > LAST_DALVIK_TARGET;
         this.odex = is_android;
         this.hiddenapi = false;
+        this.debug_info = true;
     }
 
     public void validate() {
@@ -50,22 +53,22 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
         }
     }
 
-    protected abstract D dup(int api, boolean art, boolean odex, boolean hiddenapi);
+    protected abstract D dup(int api, boolean art, boolean odex, boolean hiddenapi, boolean debug_info);
 
     public int getTargetApi() {
         return api;
     }
 
-    public D withTargetApi(int targetApi) {
-        return dup(targetApi, art, odex, hiddenapi);
+    public D withTargetApi(int api) {
+        return dup(api, art, odex, hiddenapi, debug_info);
     }
 
     public boolean isTargetForArt() {
         return art;
     }
 
-    public D withTargetForArt(boolean targetForArt) {
-        return dup(api, targetForArt, odex, hiddenapi);
+    public D withTargetForArt(boolean art) {
+        return dup(api, art, odex, hiddenapi, debug_info);
     }
 
     public boolean isTargetForDalvik() {
@@ -76,8 +79,8 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
         return odex;
     }
 
-    public D withOdexInstructions(boolean allowOdexInstructions) {
-        return dup(api, art, allowOdexInstructions, hiddenapi);
+    public D withOdexInstructions(boolean odex) {
+        return dup(api, art, odex, hiddenapi, debug_info);
     }
 
     public boolean hasHiddenApiFlags() {
@@ -85,8 +88,14 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withHiddenApiFlags(boolean hiddenapi) {
-        return dup(api, art, odex, hiddenapi);
+        return dup(api, art, odex, hiddenapi, debug_info);
     }
 
-    // TODO: has/with DebugInfo(){}
+    public boolean hasDebugInfo() {
+        return debug_info;
+    }
+
+    public D withDebugInfo(boolean debug_info) {
+        return dup(api, art, odex, hiddenapi, debug_info);
+    }
 }

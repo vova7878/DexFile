@@ -1,8 +1,8 @@
 package com.v7878.dex;
 
 public final class ReadOptions extends DexOptions<ReadOptions> {
-    ReadOptions(int api, boolean art, boolean odex, boolean hiddenapi) {
-        super(api, art, odex, hiddenapi);
+    ReadOptions(int api, boolean art, boolean odex, boolean hiddenapi, boolean debug_info) {
+        super(api, art, odex, hiddenapi, debug_info);
     }
 
     private ReadOptions() {
@@ -10,8 +10,8 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
     }
 
     @Override
-    protected ReadOptions dup(int api, boolean art, boolean odex, boolean hiddenapi) {
-        return new ReadOptions(api, art, odex, hiddenapi);
+    protected ReadOptions dup(int api, boolean art, boolean odex, boolean hiddenapi, boolean debug_info) {
+        return new ReadOptions(api, art, odex, hiddenapi, debug_info);
     }
 
     public static ReadOptions defaultOptions() {

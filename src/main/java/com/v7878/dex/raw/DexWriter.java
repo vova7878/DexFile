@@ -271,7 +271,7 @@ public class DexWriter {
             map.compact_feature_flags = /* kDefaultMethods */ 0x1;
         }
 
-        var collector = new DexCollector(isCompact());
+        var collector = new DexCollector(isCompact(), options.hasDebugInfo());
         collector.fillDex(dexfile);
 
         // The number of strings is limited to 32 bits, so no checks are needed.

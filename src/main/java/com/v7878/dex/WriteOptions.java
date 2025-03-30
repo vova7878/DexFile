@@ -3,8 +3,8 @@ package com.v7878.dex;
 public final class WriteOptions extends DexOptions<WriteOptions> {
     private final DexVersion dex_version;
 
-    WriteOptions(DexVersion dex_version, int api, boolean art, boolean odex, boolean hiddenapi) {
-        super(api, art, odex, hiddenapi);
+    WriteOptions(DexVersion dex_version, int api, boolean art, boolean odex, boolean hiddenapi, boolean debug_info) {
+        super(api, art, odex, hiddenapi, debug_info);
         this.dex_version = dex_version;
     }
 
@@ -20,8 +20,8 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
     }
 
     @Override
-    protected WriteOptions dup(int api, boolean art, boolean odex, boolean hiddenapi) {
-        return new WriteOptions(dex_version, api, art, odex, hiddenapi);
+    protected WriteOptions dup(int api, boolean art, boolean odex, boolean hiddenapi, boolean debug_info) {
+        return new WriteOptions(dex_version, api, art, odex, hiddenapi, debug_info);
     }
 
     public DexVersion getDexVersion() {
@@ -29,7 +29,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
     }
 
     public WriteOptions withDexVersion(DexVersion version) {
-        return new WriteOptions(version, api, art, odex, hiddenapi);
+        return new WriteOptions(version, api, art, odex, hiddenapi, debug_info);
     }
 
     public static WriteOptions defaultOptions() {

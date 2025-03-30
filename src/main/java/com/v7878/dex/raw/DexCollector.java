@@ -124,15 +124,19 @@ public class DexCollector {
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
-            return obj instanceof CodeContainer that
-                    && ins == that.ins
-                    && value.equalsNoDebug(that.value)
-                    && Objects.equals(debug_info, that.debug_info);
+            return obj instanceof CodeContainer other
+                    && ins == other.ins
+                    // && outs == other.outs (depends on instructions)
+                    && value.getRegisterCount() == other.value.getRegisterCount()
+                    && Objects.equals(value.getInstructions(), other.value.getInstructions())
+                    && Objects.equals(value.getTryBlocks(), other.value.getTryBlocks())
+                    && Objects.equals(debug_info, other.debug_info);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(ins, value.hashCodeNoDebug(), debug_info);
+            return Objects.hash(ins, /* outs, (depends on instructions) */ value.getRegisterCount(),
+                    value.getInstructions(), value.getTryBlocks(), debug_info);
         }
 
         private static TryBlockContainer[] toTriesArray(NavigableSet<TryBlock> tries) {
@@ -183,11 +187,19 @@ public class DexCollector {
             return out;
         }
 
-        public static MethodDefContainer of(boolean is_compact, TypeId declaring_class, MethodDef value) {
+        private static DebugInfo toDebugInfo(List<String> names, List<DebugItem> items) {
+            if (names.size() == 0 && items.size() == 0) {
+                return null;
+            }
+            return new DebugInfo(names, items);
+        }
+
+        public static MethodDefContainer of(boolean is_compact, boolean collect_debug_info,
+                                            TypeId declaring_class, MethodDef value) {
             var code = value.getImplementation();
             var parameters = value.getParameters();
-            var debug_info = (code == null) ? null : new DebugInfo(
-                    toNamesList(parameters), code.getDebugItems());
+            var debug_info = (code == null || !collect_debug_info) ? null :
+                    toDebugInfo(toNamesList(parameters), code.getDebugItems());
             MethodId id = MethodId.of(declaring_class, value.getName(),
                     value.getReturnType(), value.getParameterTypes());
             return new MethodDefContainer(value, id, is_compact ? debug_info : null,
@@ -247,19 +259,22 @@ public class DexCollector {
         }
 
         private static MethodDefContainer[] toMethodsArray(
-                boolean is_compact, TypeId declaring_class, NavigableSet<MethodDef> methods) {
-            return methods.stream().map(value ->
-                            MethodDefContainer.of(is_compact, declaring_class, value))
+                boolean is_compact, boolean collect_debug_info,
+                TypeId declaring_class, NavigableSet<MethodDef> methods) {
+            return methods.stream().map(value -> MethodDefContainer.of(
+                            is_compact, collect_debug_info, declaring_class, value))
                     .toArray(MethodDefContainer[]::new);
         }
 
-        public static ClassDefContainer of(boolean is_compact, ClassDef value) {
+        public static ClassDefContainer of(boolean is_compact, boolean collect_debug_info, ClassDef value) {
             var type = value.getType();
             var interfaces = value.getInterfaces();
             var static_fields = toFieldsArray(type, value.getStaticFields());
             var instance_fields = toFieldsArray(type, value.getInstanceFields());
-            var direct_methods = toMethodsArray(is_compact, type, value.getDirectMethods());
-            var virtual_methods = toMethodsArray(is_compact, type, value.getVirtualMethods());
+            var direct_methods = toMethodsArray(is_compact,
+                    collect_debug_info, type, value.getDirectMethods());
+            var virtual_methods = toMethodsArray(is_compact,
+                    collect_debug_info, type, value.getVirtualMethods());
             var annotations = AnnotationDirectory.of(value, static_fields,
                     instance_fields, direct_methods, virtual_methods);
             return new ClassDefContainer(value,
@@ -378,9 +393,11 @@ public class DexCollector {
     public final List<ClassDefContainer> class_defs;
 
     private final boolean is_compact;
+    private final boolean collect_debug_info;
 
-    public DexCollector(boolean is_compact) {
+    public DexCollector(boolean is_compact, boolean collect_debug_info) {
         this.is_compact = is_compact;
+        this.collect_debug_info = collect_debug_info;
 
         strings = new TreeSet<>();
         types = new TreeSet<>();
@@ -483,7 +500,7 @@ public class DexCollector {
     }
 
     public void addClassDef(ClassDef value) {
-        var container = ClassDefContainer.of(is_compact, value);
+        var container = ClassDefContainer.of(is_compact, collect_debug_info, value);
         class_defs.add(container);
         addType(value.getType());
         var superclass = value.getSuperclass();
@@ -566,6 +583,7 @@ public class DexCollector {
     }
 
     public void fillDebugItem(DebugItem value) {
+        assert collect_debug_info;
         if (value instanceof SetFile item) {
             var name = item.getName();
             if (name != null) addString(name);
@@ -580,6 +598,7 @@ public class DexCollector {
     }
 
     public void addDebugInfo(DebugInfo value) {
+        assert collect_debug_info;
         debug_infos.put(value, null);
         for (var tmp : value.parameter_names()) {
             if (tmp != null) addString(tmp);

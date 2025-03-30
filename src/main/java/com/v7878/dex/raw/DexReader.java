@@ -241,7 +241,11 @@ public class DexReader implements DexIO.DexReaderCache {
 
         typelist_cache = makeOffsetCache(this::readTypeList);
         encoded_array_cache = makeOffsetCache(this::readEncodedArray);
-        debug_info_cache = makeOffsetCache(this::readDebugInfo);
+        if (options.hasDebugInfo()) {
+            debug_info_cache = makeOffsetCache(this::readDebugInfo);
+        } else {
+            debug_info_cache = null;
+        }
         annotation_cache = makeOffsetCache(this::readAnnotation);
         annotation_list_cache = makeOffsetCache(this::readAnnotationList);
         annotation_set_list_cache = makeOffsetCache(this::readAnnotationSetList);
@@ -304,11 +308,15 @@ public class DexReader implements DexIO.DexReaderCache {
                 CLASS_DEF_SIZE, this::readClassDef
         );
 
-        compact_debug_info = isCompact() ? new CompactData(
-                mainAt(header_offset + DEBUG_INFO_OFFSETS_POS_OFFSET).readSmallUInt(),
-                mainAt(header_offset + DEBUG_INFO_OFFSETS_TABLE_OFFSET).readSmallUInt(),
-                mainAt(header_offset + DEBUG_INFO_BASE_OFFSET).readInt()
-        ) : null;
+        if (isCompact() && options.hasDebugInfo()) {
+            compact_debug_info = new CompactData(
+                    mainAt(header_offset + DEBUG_INFO_OFFSETS_POS_OFFSET).readSmallUInt(),
+                    mainAt(header_offset + DEBUG_INFO_OFFSETS_TABLE_OFFSET).readSmallUInt(),
+                    mainAt(header_offset + DEBUG_INFO_BASE_OFFSET).readInt()
+            );
+        } else {
+            compact_debug_info = null;
+        }
     }
 
     public RandomInput mainAt(int offset) {
@@ -968,8 +976,11 @@ public class DexReader implements DexIO.DexReaderCache {
             outs_size = in.readUShort();
             tries_size = in.readUShort();
             int debug_info_off = in.readSmallUInt();
-            debug_info = debug_info_off == NO_OFFSET ?
-                    null : getDebugInfo(debug_info_off);
+            if (options.hasDebugInfo() && debug_info_off != NO_OFFSET) {
+                debug_info = getDebugInfo(debug_info_off);
+            } else {
+                debug_info = null;
+            }
             insns_count = in.readSmallUInt();
         }
 
@@ -1078,7 +1089,7 @@ public class DexReader implements DexIO.DexReaderCache {
             int code_off = in.readSmallULeb128();
             var code = code_off == NO_OFFSET ? null : getCodeItem(code_off);
             DebugInfo debug_info;
-            if (code == null) {
+            if (code == null || !options.hasDebugInfo()) {
                 debug_info = null;
             } else if (isCompact()) {
                 int debug_info_off = getDebugInfoOffset(index);
