@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable;
 
-import com.v7878.dex.util.AccessFlagUtils;
+import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
+
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
@@ -116,8 +117,8 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     public int compareTo(MethodDef other) {
         if (other == this) return 0;
         // First direct methods, then virtual methods
-        int out = -Boolean.compare(AccessFlagUtils.isDirect(getAccessFlags()),
-                AccessFlagUtils.isDirect(other.getAccessFlags()));
+        int out = -Boolean.compare((getAccessFlags() & ACC_DIRECT_MASK) != 0,
+                (other.getAccessFlags() & ACC_DIRECT_MASK) != 0);
         if (out != 0) return out;
         out = CollectionUtils.compareNonNull(getName(), other.getName());
         if (out != 0) return out;
