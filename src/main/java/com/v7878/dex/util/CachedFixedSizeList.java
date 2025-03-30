@@ -15,10 +15,10 @@ public abstract class CachedFixedSizeList<T> extends AbstractList<T> {
         return size;
     }
 
+    @SuppressWarnings("unchecked")
     private T[] getCache() {
         T[] arr = data;
         if (arr == null) {
-            //noinspection unchecked
             data = arr = (T[]) new Object[size];
         }
         return arr;
