@@ -494,6 +494,7 @@ public class DexWriter {
             throw new IllegalArgumentException(
                     "Unable to find type list \"" + value + "\"");
         }
+        assert out > 0;
         return out;
     }
 
@@ -503,6 +504,7 @@ public class DexWriter {
             throw new IllegalArgumentException(
                     "Unable to find encoded array \"" + value + "\"");
         }
+        assert out > 0;
         return out;
     }
 
@@ -512,6 +514,7 @@ public class DexWriter {
             throw new IllegalArgumentException(
                     "Unable to find debug info \"" + value + "\"");
         }
+        assert out > 0;
         return out;
     }
 
@@ -521,6 +524,7 @@ public class DexWriter {
             throw new IllegalArgumentException(
                     "Unable to find code item \"" + value + "\"");
         }
+        assert out > 0;
         return out;
     }
 
@@ -530,6 +534,7 @@ public class DexWriter {
             throw new IllegalArgumentException(
                     "Unable to find annotation \"" + value + "\"");
         }
+        assert out > 0;
         return out;
     }
 
@@ -539,6 +544,7 @@ public class DexWriter {
             throw new IllegalArgumentException(
                     "Unable to find annotation set \"" + value + "\"");
         }
+        assert out > 0;
         return out;
     }
 
@@ -548,6 +554,7 @@ public class DexWriter {
             throw new IllegalArgumentException(
                     "Unable to find annotation set list \"" + value + "\"");
         }
+        assert out > 0;
         return out;
     }
 
@@ -557,6 +564,7 @@ public class DexWriter {
             throw new IllegalArgumentException(
                     "Unable to find annotations directory \"" + value + "\"");
         }
+        assert out > 0;
         return out;
     }
 
@@ -1021,14 +1029,15 @@ public class DexWriter {
         }
     }
 
-    public void writeTypeList(List<TypeId> value) {
+    public void writeTypeList(Map.Entry<List<TypeId>, Integer> entry) {
+        var value = entry.getKey();
         data_buffer.alignPosition(TYPE_LIST_ALIGNMENT);
         int start = data_buffer.position();
         data_buffer.writeInt(value.size());
         for (var tmp : value) {
             data_buffer.writeShort(getTypeIndex(tmp));
         }
-        type_lists.replace(value, start);
+        entry.setValue(start);
     }
 
     public void writeTypeListSection() {
@@ -1038,7 +1047,7 @@ public class DexWriter {
             map.type_lists_off = data_buffer.position();
             map.type_lists_size = size;
         }
-        for (var tmp : type_lists.keySet()) {
+        for (var tmp : type_lists.entrySet()) {
             writeTypeList(tmp);
         }
     }
@@ -1129,7 +1138,8 @@ public class DexWriter {
         out.writeByte(DBG_END_SEQUENCE);
     }
 
-    public void writeDebugInfo(DebugInfo value) {
+    public void writeDebugInfo(Map.Entry<DebugInfo, Integer> entry) {
+        var value = entry.getKey();
         int start = data_buffer.position();
 
         int[] line_start = {1};
@@ -1149,7 +1159,7 @@ public class DexWriter {
         }
         dbg_sequence.writeTo(data_buffer);
 
-        debug_infos.replace(value, start);
+        entry.setValue(start);
     }
 
     public void writeDebugInfoSection() {
@@ -1158,7 +1168,7 @@ public class DexWriter {
             map.debug_info_items_off = data_buffer.position();
             map.debug_info_items_size = size;
         }
-        for (var tmp : debug_infos.keySet()) {
+        for (var tmp : debug_infos.entrySet()) {
             writeDebugInfo(tmp);
         }
     }
@@ -1255,7 +1265,8 @@ public class DexWriter {
         out.writeShort(offset);
     }
 
-    public void writeCodeItem(CodeContainer value) {
+    public void writeCodeItem(Map.Entry<CodeContainer, Integer> entry) {
+        var value = entry.getKey();
         data_buffer.alignPosition(isCompact() ? COMPACT_CODE_ITEM_ALIGNMENT : CODE_ITEM_ALIGNMENT);
 
         var insns = value.value().getInstructions();
@@ -1313,10 +1324,10 @@ public class DexWriter {
             int handlers_start = data_buffer.position();
             data_buffer.writeULeb128(handlers.size());
 
-            for (CatchHandler tmp : handlers.keySet()) {
+            for (var tmp : handlers.entrySet()) {
                 int handler_offset = data_buffer.position() - handlers_start;
-                writeCatchHandler(tmp);
-                handlers.replace(tmp, handler_offset);
+                writeCatchHandler(tmp.getKey());
+                tmp.setValue(handler_offset);
             }
 
             for (var tmp : tries) {
@@ -1324,7 +1335,7 @@ public class DexWriter {
             }
         }
 
-        code_items.replace(value, code_item_start);
+        entry.setValue(code_item_start);
     }
 
     public void writeCodeItemSection() {
@@ -1334,7 +1345,7 @@ public class DexWriter {
             map.code_items_off = data_buffer.position();
             map.code_items_size = size;
         }
-        for (var tmp : code_items.keySet()) {
+        for (var tmp : code_items.entrySet()) {
             writeCodeItem(tmp);
         }
     }
@@ -1347,10 +1358,11 @@ public class DexWriter {
         }
     }
 
-    public void writeEncodedArray(EncodedArray value) {
+    public void writeEncodedArray(Map.Entry<EncodedArray, Integer> entry) {
+        var value = entry.getKey();
         int start = data_buffer.position();
         writeEncodedArrayData(value);
-        encoded_arrays.replace(value, start);
+        entry.setValue(start);
     }
 
     public void writeEncodedArraySection() {
@@ -1359,7 +1371,7 @@ public class DexWriter {
             map.encoded_arrays_off = data_buffer.position();
             map.encoded_arrays_size = size;
         }
-        for (var tmp : encoded_arrays.keySet()) {
+        for (var tmp : encoded_arrays.entrySet()) {
             writeEncodedArray(tmp);
         }
     }
@@ -1378,11 +1390,12 @@ public class DexWriter {
         }
     }
 
-    public void writeAnnotation(Annotation value) {
+    public void writeAnnotation(Map.Entry<Annotation, Integer> entry) {
+        var value = entry.getKey();
         int start = data_buffer.position();
         data_buffer.writeByte(value.getVisibility().value());
         writeAnnotationData(value);
-        annotations.replace(value, start);
+        entry.setValue(start);
     }
 
     public void writeAnnotationSection() {
@@ -1391,19 +1404,20 @@ public class DexWriter {
             map.annotations_off = data_buffer.position();
             map.annotations_size = size;
         }
-        for (var tmp : annotations.keySet()) {
+        for (var tmp : annotations.entrySet()) {
             writeAnnotation(tmp);
         }
     }
 
-    public void writeAnnotationSet(NavigableSet<Annotation> value) {
+    public void writeAnnotationSet(Map.Entry<NavigableSet<Annotation>, Integer> entry) {
+        var value = entry.getKey();
         data_buffer.alignPosition(ANNOTATION_SET_ALIGNMENT);
         int start = data_buffer.position();
         data_buffer.writeInt(value.size());
         for (var tmp : value) {
             data_buffer.writeInt(getAnnotationOffset(tmp));
         }
-        annotation_sets.replace(value, start);
+        entry.setValue(start);
     }
 
     public void writeAnnotationSetSection() {
@@ -1413,12 +1427,13 @@ public class DexWriter {
             map.annotation_sets_off = data_buffer.position();
             map.annotation_sets_size = size;
         }
-        for (var tmp : annotation_sets.keySet()) {
+        for (var tmp : annotation_sets.entrySet()) {
             writeAnnotationSet(tmp);
         }
     }
 
-    public void writeAnnotationSetList(List<NavigableSet<Annotation>> value) {
+    public void writeAnnotationSetList(Map.Entry<List<NavigableSet<Annotation>>, Integer> entry) {
+        var value = entry.getKey();
         data_buffer.alignPosition(ANNOTATION_SET_LIST_ALIGNMENT);
         int start = data_buffer.position();
         data_buffer.writeInt(value.size());
@@ -1426,7 +1441,7 @@ public class DexWriter {
             data_buffer.writeInt(tmp == null ?
                     NO_OFFSET : getAnnotationSetOffset(tmp));
         }
-        annotation_set_lists.replace(value, start);
+        entry.setValue(start);
     }
 
     public void writeAnnotationSetListSection() {
@@ -1436,12 +1451,13 @@ public class DexWriter {
             map.annotation_set_lists_off = data_buffer.position();
             map.annotation_set_lists_size = size;
         }
-        for (var tmp : annotation_set_lists.keySet()) {
+        for (var tmp : annotation_set_lists.entrySet()) {
             writeAnnotationSetList(tmp);
         }
     }
 
-    public void writeAnnotationDirectory(AnnotationDirectory value) {
+    public void writeAnnotationDirectory(Map.Entry<AnnotationDirectory, Integer> entry) {
+        var value = entry.getKey();
         data_buffer.alignPosition(ANNOTATION_DIRECTORY_ALIGNMENT);
         int start = data_buffer.position();
 
@@ -1468,7 +1484,7 @@ public class DexWriter {
             data_buffer.writeInt(getAnnotationSetListOffset(tmp.getValue()));
         }
 
-        annotation_directories.replace(value, start);
+        entry.setValue(start);
     }
 
     public void writeAnnotationDirectorySection() {
@@ -1478,7 +1494,7 @@ public class DexWriter {
             map.annotation_directories_off = data_buffer.position();
             map.annotation_directories_size = size;
         }
-        for (var tmp : annotation_directories.keySet()) {
+        for (var tmp : annotation_directories.entrySet()) {
             writeAnnotationDirectory(tmp);
         }
     }

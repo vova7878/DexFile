@@ -1,6 +1,7 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexConstants.ACC_STATIC;
+import static com.v7878.dex.DexConstants.NO_OFFSET;
 
 import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.Annotation;
@@ -52,6 +53,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 public class DexCollector {
+    private static final Integer NO_OFFSET_I = NO_OFFSET;
+
     public record CallSiteIdContainer(CallSiteId value, EncodedArray array)
             implements Comparable<CallSiteIdContainer> {
         @Override
@@ -417,78 +420,50 @@ public class DexCollector {
     }
 
     public void addType(TypeId value) {
-        types.add(value);
-        addString(value.getDescriptor());
+        if (types.add(value)) {
+            addString(value.getDescriptor());
+        }
     }
 
     public void addField(FieldId value) {
-        fields.add(value);
-        addType(value.getDeclaringClass());
-        addString(value.getName());
-        addType(value.getType());
+        if (fields.add(value)) {
+            addType(value.getDeclaringClass());
+            addString(value.getName());
+            addType(value.getType());
+        }
     }
 
     public void addProto(ProtoId value) {
-        protos.add(value);
-        addString(value.computeShorty());
-        addType(value.getReturnType());
-        addTypeList(value.getParameterTypes());
+        if (protos.add(value)) {
+            addString(value.computeShorty());
+            addType(value.getReturnType());
+            addTypeList(value.getParameterTypes());
+        }
     }
 
     public void addMethod(MethodId value) {
-        methods.add(value);
-        addType(value.getDeclaringClass());
-        addString(value.getName());
-        addProto(value.getProto());
+        if (methods.add(value)) {
+            addType(value.getDeclaringClass());
+            addString(value.getName());
+            addProto(value.getProto());
+        }
     }
 
     public void addMethodHandle(MethodHandleId value) {
-        method_handles.add(value);
-        var member = value.getMember();
-        if (value.getHandleType().isMethodAccess()) {
-            addMethod((MethodId) member);
-        } else {
-            addField((FieldId) member);
+        if (method_handles.add(value)) {
+            var member = value.getMember();
+            if (value.getHandleType().isMethodAccess()) {
+                addMethod((MethodId) member);
+            } else {
+                addField((FieldId) member);
+            }
         }
     }
 
     public void addCallSite(CallSiteId value) {
         var container = CallSiteIdContainer.of(value);
-        call_sites.add(container);
-        addEncodedArray(container.array());
-    }
-
-    public void addAnnotation(Annotation value) {
-        annotations.put(value, null);
-        fillCommonAnnotation(value);
-    }
-
-    public void addAnnotationSet(NavigableSet<Annotation> value) {
-        annotation_sets.put(value, null);
-        for (var tmp : value) {
-            addAnnotation(tmp);
-        }
-    }
-
-    public void addAnnotationSetList(List<NavigableSet<Annotation>> value) {
-        annotation_set_lists.put(value, null);
-        for (var tmp : value) {
-            if (tmp != null) addAnnotationSet(tmp);
-        }
-    }
-
-    public void addAnnotationDirectory(AnnotationDirectory value) {
-        annotation_directories.put(value, null);
-        var class_annotations = value.class_annotations();
-        if (class_annotations != null) addAnnotationSet(class_annotations);
-        for (var entry : value.field_annotations.entrySet()) {
-            addAnnotationSet(entry.getValue());
-        }
-        for (var entry : value.method_annotations.entrySet()) {
-            addAnnotationSet(entry.getValue());
-        }
-        for (var entry : value.parameter_annotations.entrySet()) {
-            addAnnotationSetList(entry.getValue());
+        if (call_sites.add(container)) {
+            addEncodedArray(container.array());
         }
     }
 
@@ -520,22 +495,87 @@ public class DexCollector {
         if (annotations != null) addAnnotationDirectory(annotations);
     }
 
-    public void fillDex(Dex value) {
-        for (var tmp : value.getClasses()) {
-            addClassDef(tmp);
+    public void addAnnotation(Annotation value) {
+        if (annotations.put(value, NO_OFFSET_I) == null) {
+            fillCommonAnnotation(value);
+        }
+    }
+
+    public void addAnnotationSet(NavigableSet<Annotation> value) {
+        if (annotation_sets.put(value, NO_OFFSET_I) == null) {
+            for (var tmp : value) {
+                addAnnotation(tmp);
+            }
+        }
+    }
+
+    public void addAnnotationSetList(List<NavigableSet<Annotation>> value) {
+        if (annotation_set_lists.put(value, NO_OFFSET_I) == null) {
+            for (var tmp : value) {
+                if (tmp != null) addAnnotationSet(tmp);
+            }
+        }
+    }
+
+    public void addAnnotationDirectory(AnnotationDirectory value) {
+        if (annotation_directories.put(value, NO_OFFSET_I) == null) {
+            var class_annotations = value.class_annotations();
+            if (class_annotations != null) addAnnotationSet(class_annotations);
+            for (var entry : value.field_annotations.entrySet()) {
+                addAnnotationSet(entry.getValue());
+            }
+            for (var entry : value.method_annotations.entrySet()) {
+                addAnnotationSet(entry.getValue());
+            }
+            for (var entry : value.parameter_annotations.entrySet()) {
+                addAnnotationSetList(entry.getValue());
+            }
         }
     }
 
     public void addTypeList(List<TypeId> value) {
-        type_lists.put(value, null);
-        for (var tmp : value) {
-            addType(tmp);
+        if (type_lists.put(value, NO_OFFSET_I) == null) {
+            for (var tmp : value) {
+                addType(tmp);
+            }
         }
     }
 
     public void addEncodedArray(EncodedArray value) {
-        encoded_arrays.put(value, null);
-        fillEncodedArray(value);
+        if (encoded_arrays.put(value, NO_OFFSET_I) == null) {
+            fillEncodedArray(value);
+        }
+    }
+
+    public void addDebugInfo(DebugInfo value) {
+        assert collect_debug_info;
+        if (debug_infos.put(value, NO_OFFSET_I) == null) {
+            for (var tmp : value.parameter_names()) {
+                if (tmp != null) addString(tmp);
+            }
+            for (var tmp : value.items()) {
+                fillDebugItem(tmp);
+            }
+        }
+    }
+
+    public void addCodeItem(CodeContainer value) {
+        if (code_items.put(value, NO_OFFSET_I) == null) {
+            for (var tmp : value.value().getInstructions()) {
+                fillInstruction(tmp);
+            }
+            for (var tmp : value.value().getTryBlocks()) {
+                fillTryBlock(tmp);
+            }
+            var debug_info = value.debug_info();
+            if (debug_info != null) addDebugInfo(debug_info);
+        }
+    }
+
+    public void fillDex(Dex value) {
+        for (var tmp : value.getClasses()) {
+            addClassDef(tmp);
+        }
     }
 
     public void collect(ReferenceType type, Object value) {
@@ -588,29 +628,6 @@ public class DexCollector {
             var signature = item.getSignature();
             if (signature != null) addString(signature);
         }
-    }
-
-    public void addDebugInfo(DebugInfo value) {
-        assert collect_debug_info;
-        debug_infos.put(value, null);
-        for (var tmp : value.parameter_names()) {
-            if (tmp != null) addString(tmp);
-        }
-        for (var tmp : value.items()) {
-            fillDebugItem(tmp);
-        }
-    }
-
-    public void addCodeItem(CodeContainer value) {
-        code_items.put(value, null);
-        for (var tmp : value.value().getInstructions()) {
-            fillInstruction(tmp);
-        }
-        for (var tmp : value.value().getTryBlocks()) {
-            fillTryBlock(tmp);
-        }
-        var debug_info = value.debug_info();
-        if (debug_info != null) addDebugInfo(debug_info);
     }
 
     public void fillMethodDef(MethodDefContainer value) {
