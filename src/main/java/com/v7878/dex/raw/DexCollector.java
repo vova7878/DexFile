@@ -40,6 +40,7 @@ import com.v7878.dex.util.CodeUtils;
 import com.v7878.dex.util.CollectionUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -87,17 +88,7 @@ public class DexCollector {
     }
 
     public record FieldDefContainer(FieldDef value, FieldId id) {
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            return obj instanceof FieldDefContainer that
-                    && Objects.equals(value, that.value);
-        }
-
-        @Override
-        public int hashCode() {
-            return value.hashCode();
-        }
+        // equals and hashCode are not used
 
         public static FieldDefContainer of(TypeId declaring_class, FieldDef value) {
             return new FieldDefContainer(value, FieldId.of(
@@ -106,6 +97,18 @@ public class DexCollector {
     }
 
     public record TryBlockContainer(TryBlock value, CatchHandler handler) {
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            return obj instanceof TryBlockContainer that
+                    && Objects.equals(value, that.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return value.hashCode();
+        }
+
         public static TryBlockContainer of(TryBlock value) {
             return new TryBlockContainer(value, new CatchHandler(
                     value.getHandlers(), value.getCatchAllAddress()));
@@ -129,7 +132,7 @@ public class DexCollector {
                     // && outs == other.outs (depends on instructions)
                     && value.getRegisterCount() == other.value.getRegisterCount()
                     && Objects.equals(value.getInstructions(), other.value.getInstructions())
-                    && Objects.equals(value.getTryBlocks(), other.value.getTryBlocks())
+                    && Arrays.equals(tries, other.tries)
                     && Objects.equals(debug_info, other.debug_info);
         }
 
@@ -158,17 +161,7 @@ public class DexCollector {
                                      // Not null only for compact dex files
                                      DebugInfo debug_info,
                                      CodeContainer code) {
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            return obj instanceof MethodDefContainer that
-                    && Objects.equals(value, that.value);
-        }
-
-        @Override
-        public int hashCode() {
-            return value.hashCode();
-        }
+        // equals and hashCode are not used
 
         // TODO: simplify
         private static List<String> toNamesList(List<Parameter> parameters) {
