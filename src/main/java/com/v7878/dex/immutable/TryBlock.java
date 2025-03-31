@@ -4,6 +4,7 @@ import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
 import com.v7878.dex.util.Preconditions;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -25,13 +26,24 @@ public final class TryBlock implements Comparable<TryBlock> {
         }
     }
 
-    public static TryBlock of(int start_address, int unit_count, Integer catch_all_address,
+    public static TryBlock of(int start_address, int unit_count,
+                              Integer catch_all_address,
                               Iterable<ExceptionHandler> handlers) {
-        return new TryBlock(start_address, unit_count, catch_all_address, handlers);
+        return new TryBlock(start_address, unit_count,
+                catch_all_address, handlers);
     }
 
-    // TODO?: of(int start_address, int unit_count, Integer catch_all_address, ExceptionHandler... handlers)
-    // TODO?: of(int start_address, int unit_count, int catch_all_address)
+    public static TryBlock of(int start_address, int unit_count,
+                              Integer catch_all_address,
+                              ExceptionHandler... handlers) {
+        return new TryBlock(start_address, unit_count,
+                catch_all_address, Arrays.asList(handlers));
+    }
+
+    public static TryBlock of(int start_address, int unit_count, int catch_all_address) {
+        return new TryBlock(start_address, unit_count,
+                catch_all_address, null);
+    }
 
     public int getStartAddress() {
         return start_address;
