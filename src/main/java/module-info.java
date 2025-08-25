@@ -1,4 +1,4 @@
-@SuppressWarnings({"JavaModuleNaming", "module"})
+@SuppressWarnings("JavaModuleNaming")
 module com.v7878.dex {
     exports com.v7878.dex;
     exports com.v7878.dex.builder;

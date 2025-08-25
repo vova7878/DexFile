@@ -1,6 +1,6 @@
 package com.v7878.dex;
 
-import static com.v7878.misc.Version.CORRECT_SDK_INT;
+import com.v7878.misc.Version;
 
 public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOptions, WriteOptions {
     private static final int MIN_TARGET_API = 1;
@@ -23,17 +23,9 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
         this.debug_info = debug_info;
     }
 
-    @SuppressWarnings("ConstantValue")
     DexOptions() {
-        boolean is_android;
-        int api;
-        try {
-            api = CORRECT_SDK_INT;
-            is_android = true;
-        } catch (Throwable th) {
-            api = 26;
-            is_android = false;
-        }
+        boolean is_android = Version.IS_ANDROID;
+        int api = is_android ? Version.getSDK() : 26;
         this.api = api;
         this.art = api > LAST_DALVIK_TARGET;
         this.odex = is_android;

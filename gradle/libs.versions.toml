@@ -1,5 +1,5 @@
 [versions]
-androidmisc = "v0.0.5"
+androidmisc = "v0.0.6"
 
 [libraries]
 androidmisc = { module = "com.github.vova7878:AndroidMisc", version.ref = "androidmisc" }
