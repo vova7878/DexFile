@@ -14,10 +14,19 @@ import com.v7878.dex.raw.DexReader;
 import com.v7878.dex.raw.DexWriter;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 public final class DexIO {
     private DexIO() {
+    }
+
+    public interface DexMapEntry {
+        int type();
+
+        int size();
+
+        int offset();
     }
 
     public interface DexReaderCache {
@@ -36,6 +45,8 @@ public final class DexIO {
         MethodHandleId getMethodHandleId(int index);
 
         CallSiteId getCallSiteId(int index);
+
+        List<? extends DexMapEntry> getMapItems();
 
         // TODO: Other sections?
     }

@@ -1,4 +1,6 @@
 package com.v7878.dex.raw;
 
-public record MapItem(int type, int size, int offset) {
+import com.v7878.dex.DexIO.DexMapEntry;
+
+public record MapItem(int type, int size, int offset) implements DexMapEntry {
 }
