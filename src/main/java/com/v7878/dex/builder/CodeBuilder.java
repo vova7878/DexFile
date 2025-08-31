@@ -1279,7 +1279,7 @@ public final class CodeBuilder {
         if (map.size() == 0) {
             return this;
         }
-        if (map.size() <= 1 || map.lastKey() - map.firstKey() == map.size()) {
+        if (map.size() <= 1 || (map.lastKey() - map.firstKey()) == (map.size() - 1)) {
             return packed_switch_internal(reg_to_test, map.firstKey(), map.valuesArray());
         }
         return sparse_switch_internal(reg_to_test, map.keysArray(), map.valuesArray());
