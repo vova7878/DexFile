@@ -1,5 +1,7 @@
 package com.v7878.dex;
 
+import static com.v7878.dex.util.Checks.checkIndex;
+
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.ClassDef;
 import com.v7878.dex.immutable.Dex;
@@ -30,23 +32,92 @@ public final class DexIO {
     }
 
     public interface DexReaderCache {
-        String getString(int index);
+        private static <T> T getValue(List<T> section, int index, String name) {
+            checkIndex(index, section.size(), name);
+            return section.get(index);
+        }
 
-        TypeId getTypeId(int index);
+        List<String> getStrings();
 
-        FieldId getFieldId(int index);
+        List<TypeId> getTypes();
 
-        ProtoId getProtoId(int index);
+        List<FieldId> getFields();
 
-        MethodId getMethodId(int index);
+        List<ProtoId> getProtos();
 
-        ClassDef getClassDef(int index);
+        List<MethodId> getMethods();
 
-        MethodHandleId getMethodHandleId(int index);
+        List<ClassDef> getClasses();
 
-        CallSiteId getCallSiteId(int index);
+        List<MethodHandleId> getMethodHandles();
+
+        List<CallSiteId> getCallSites();
 
         List<? extends DexMapEntry> getMapItems();
+
+        default int getStringCount() {
+            return getStrings().size();
+        }
+
+        default int getTypeCount() {
+            return getTypes().size();
+        }
+
+        default int getFieldCount() {
+            return getFields().size();
+        }
+
+        default int getProtoCount() {
+            return getProtos().size();
+        }
+
+        default int getMethodCount() {
+            return getMethods().size();
+        }
+
+        default int getClassCount() {
+            return getClasses().size();
+        }
+
+        default int getMethodHandleCount() {
+            return getMethodHandles().size();
+        }
+
+        default int getCallSiteCount() {
+            return getCallSites().size();
+        }
+
+        default String getString(int index) {
+            return getValue(getStrings(), index, "string");
+        }
+
+        default TypeId getType(int index) {
+            return getValue(getTypes(), index, "type");
+        }
+
+        default FieldId getField(int index) {
+            return getValue(getFields(), index, "field");
+        }
+
+        default ProtoId getProto(int index) {
+            return getValue(getProtos(), index, "proto");
+        }
+
+        default MethodId getMethod(int index) {
+            return getValue(getMethods(), index, "method");
+        }
+
+        default ClassDef getClass(int index) {
+            return getValue(getClasses(), index, "class");
+        }
+
+        default MethodHandleId getMethodHandle(int index) {
+            return getValue(getMethodHandles(), index, "method handle");
+        }
+
+        default CallSiteId getCallSite(int index) {
+            return getValue(getCallSites(), index, "callsite");
+        }
 
         // TODO: Other sections?
     }

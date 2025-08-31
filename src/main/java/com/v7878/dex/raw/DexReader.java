@@ -74,7 +74,8 @@ import static com.v7878.dex.raw.LegacyHiddenApiFlags.kDarkGreylist;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.kLightGreylist;
 import static com.v7878.dex.raw.LegacyHiddenApiFlags.kWhitelist;
 import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
-import static com.v7878.dex.util.Exceptions.shouldNotReachHere;
+import static com.v7878.dex.util.Checks.checkIndex;
+import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.DexIO;
@@ -395,7 +396,7 @@ public class DexReader implements DexIO.DexReaderCache {
         int size = in.readSmallUInt();
         var out = new ArrayList<TypeId>(size);
         for (int i = 0; i < size; i++) {
-            out.add(i, getTypeId(in.readUShort()));
+            out.add(i, getType(in.readUShort()));
         }
         return out;
     }
@@ -428,7 +429,7 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private EncodedAnnotation readEncodedAnnotation(RandomInput in) {
-        TypeId type = getTypeId(in.readSmallULeb128());
+        TypeId type = getType(in.readSmallULeb128());
         int size = in.readSmallULeb128();
         var elements = new HashSet<AnnotationElement>(size);
         for (int i = 0; i < size; i++) {
@@ -456,17 +457,17 @@ public class DexReader implements DexIO.DexReaderCache {
             case NULL -> EncodedNull.INSTANCE;
             case STRING -> EncodedString.of(getString(
                     ValueCoder.readUnsignedInt(in, arg, false)));
-            case TYPE -> EncodedType.of(getTypeId(
+            case TYPE -> EncodedType.of(getType(
                     ValueCoder.readUnsignedInt(in, arg, false)));
-            case FIELD -> EncodedField.of(getFieldId(
+            case FIELD -> EncodedField.of(getField(
                     ValueCoder.readUnsignedInt(in, arg, false)));
-            case ENUM -> EncodedEnum.of(getFieldId(
+            case ENUM -> EncodedEnum.of(getField(
                     ValueCoder.readUnsignedInt(in, arg, false)));
-            case METHOD -> EncodedMethod.of(getMethodId(
+            case METHOD -> EncodedMethod.of(getMethod(
                     ValueCoder.readUnsignedInt(in, arg, false)));
-            case METHOD_TYPE -> EncodedMethodType.of(getProtoId(
+            case METHOD_TYPE -> EncodedMethodType.of(getProto(
                     ValueCoder.readUnsignedInt(in, arg, false)));
-            case METHOD_HANDLE -> EncodedMethodHandle.of(getMethodHandleId(
+            case METHOD_HANDLE -> EncodedMethodHandle.of(getMethodHandle(
                     ValueCoder.readUnsignedInt(in, arg, false)));
             case ARRAY -> readEncodedArray(in);
             case ANNOTATION -> readEncodedAnnotation(in);
@@ -561,13 +562,6 @@ public class DexReader implements DexIO.DexReaderCache {
         return annotation_directory_cache.apply(offset);
     }
 
-    private void checkIndex(int index, int size, String name) {
-        if (index < 0 || index >= size) {
-            throw new IndexOutOfBoundsException(
-                    String.format("Invalid %s index %d, not in [0, %d)", name, index, size));
-        }
-    }
-
     private interface SectionReader<T> {
         T read(int index, int offset);
     }
@@ -588,10 +582,8 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     @Override
-    public String getString(int index) {
-        var section = string_section;
-        checkIndex(index, section.size(), "string");
-        return section.get(index);
+    public List<String> getStrings() {
+        return string_section;
     }
 
     private TypeId readTypeId(int index, int offset) {
@@ -600,31 +592,27 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     @Override
-    public TypeId getTypeId(int index) {
-        var section = type_section;
-        checkIndex(index, section.size(), "type");
-        return section.get(index);
+    public List<TypeId> getTypes() {
+        return type_section;
     }
 
     private FieldId readFieldId(int index, int offset) {
         var in = mainAt(offset);
-        var declaring_class = getTypeId(in.readUShort());
-        var type = getTypeId(in.readUShort());
+        var declaring_class = getType(in.readUShort());
+        var type = getType(in.readUShort());
         var name = getString(in.readSmallUInt());
         return FieldId.of(declaring_class, name, type);
     }
 
     @Override
-    public FieldId getFieldId(int index) {
-        var section = field_section;
-        checkIndex(index, section.size(), "field");
-        return section.get(index);
+    public List<FieldId> getFields() {
+        return field_section;
     }
 
     private ProtoId readProtoId(int index, int offset) {
         var in = mainAt(offset);
         in.readSmallUInt(); // shorty
-        var return_type = getTypeId(in.readSmallUInt());
+        var return_type = getType(in.readSmallUInt());
         int parameters_off = in.readSmallUInt();
         var parameters = parameters_off == NO_OFFSET ?
                 null : getTypeList(parameters_off);
@@ -632,25 +620,21 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     @Override
-    public ProtoId getProtoId(int index) {
-        var section = proto_section;
-        checkIndex(index, section.size(), "proto");
-        return section.get(index);
+    public List<ProtoId> getProtos() {
+        return proto_section;
     }
 
     private MethodId readMethodId(int index, int offset) {
         var in = mainAt(offset);
-        var declaring_class = getTypeId(in.readUShort());
-        var proto = getProtoId(in.readUShort());
+        var declaring_class = getType(in.readUShort());
+        var proto = getProto(in.readUShort());
         var name = getString(in.readSmallUInt());
         return MethodId.of(declaring_class, name, proto);
     }
 
     @Override
-    public MethodId getMethodId(int index) {
-        var section = method_section;
-        checkIndex(index, section.size(), "method");
-        return section.get(index);
+    public List<MethodId> getMethods() {
+        return method_section;
     }
 
     private MethodHandleId readMethodHandleId(int index, int offset) {
@@ -659,15 +643,13 @@ public class DexReader implements DexIO.DexReaderCache {
         in.readUShort(); // padding
         int member_id = in.readUShort();
         in.readUShort(); // padding
-        MemberId member = type.isMethodAccess() ? getMethodId(member_id) : getFieldId(member_id);
+        MemberId member = type.isMethodAccess() ? getMethod(member_id) : getField(member_id);
         return MethodHandleId.of(type, member);
     }
 
     @Override
-    public MethodHandleId getMethodHandleId(int index) {
-        var section = method_handle_section;
-        checkIndex(index, section.size(), "method handle");
-        return section.get(index);
+    public List<MethodHandleId> getMethodHandles() {
+        return method_handle_section;
     }
 
     private CallSiteId readCallSiteId(int index, int offset) {
@@ -715,10 +697,8 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     @Override
-    public CallSiteId getCallSiteId(int index) {
-        var section = callsite_section;
-        checkIndex(index, section.size(), "callsite");
-        return section.get(index);
+    public List<CallSiteId> getCallSites() {
+        return callsite_section;
     }
 
     public List<DebugItem> readDebugItemArray(
@@ -759,7 +739,7 @@ public class DexReader implements DexIO.DexReaderCache {
                         null : getString(name_idx);
                 int type_idx = in.readULeb128() - 1;
                 TypeId type = type_idx == NO_INDEX ?
-                        null : getTypeId(type_idx);
+                        null : getType(type_idx);
                 int signature_idx = opcode == DBG_START_LOCAL ?
                         NO_INDEX : in.readULeb128() - 1;
                 String signature = signature_idx == NO_INDEX ?
@@ -867,7 +847,7 @@ public class DexReader implements DexIO.DexReaderCache {
         int index = 0;
         for (int i = 0; i < count; i++) {
             index += in.readSmallULeb128();
-            var id = getFieldId(index);
+            var id = getField(index);
             int access_flags = in.readULeb128();
             int hiddenapi_flags;
             if (options.getTargetApi() == 28) {
@@ -895,7 +875,7 @@ public class DexReader implements DexIO.DexReaderCache {
         int handlersCount = Math.abs(size);
         var handlers = new ArrayList<ExceptionHandler>(handlersCount);
         for (int i = 0; i < handlersCount; i++) {
-            var type = getTypeId(in.readSmallULeb128());
+            var type = getType(in.readSmallULeb128());
             int address = in.readSmallULeb128();
             handlers.add(ExceptionHandler.of(type, address));
         }
@@ -1074,7 +1054,7 @@ public class DexReader implements DexIO.DexReaderCache {
         int index = 0;
         for (int i = 0; i < count; i++) {
             index += in.readSmallULeb128();
-            var id = getMethodId(index);
+            var id = getMethod(index);
             int access_flags = in.readULeb128();
             int hiddenapi_flags;
             if (options.getTargetApi() == 28) {
@@ -1112,12 +1092,12 @@ public class DexReader implements DexIO.DexReaderCache {
     private ClassDef readClassDef(int index, int offset) {
         var in = mainAt(offset);
 
-        TypeId clazz = getTypeId(in.readSmallUInt());
+        TypeId clazz = getType(in.readSmallUInt());
         int access_flags = in.readInt();
         // TODO: readSmallUInt but with -1
         int superclass_idx = in.readInt();
         TypeId superclass = superclass_idx == NO_INDEX ?
-                null : getTypeId(superclass_idx);
+                null : getType(superclass_idx);
         int interfaces_off = in.readSmallUInt();
         List<TypeId> interfaces = interfaces_off == NO_OFFSET ?
                 null : getTypeList(interfaces_off);
@@ -1162,12 +1142,6 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     @Override
-    public ClassDef getClassDef(int index) {
-        var section = class_section;
-        checkIndex(index, section.size(), "class");
-        return section.get(index);
-    }
-
     public List<ClassDef> getClasses() {
         return class_section;
     }
@@ -1188,7 +1162,7 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     public IntSupplier getHiddenApiIterator(int class_idx) {
-        checkIndex(class_idx, class_section.size(), "class def");
+        checkIndex(class_idx, class_section.size(), "class");
         return options.hasHiddenApiFlags() ? hiddenapi_section.apply(class_idx) : null;
     }
 }

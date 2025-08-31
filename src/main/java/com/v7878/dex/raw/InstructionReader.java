@@ -116,12 +116,12 @@ public class InstructionReader {
     private static Object indexToRef(ReferenceType type, DexReader context, int index) {
         return switch (type) {
             case STRING -> context.getString(index);
-            case TYPE -> context.getTypeId(index);
-            case FIELD -> context.getFieldId(index);
-            case METHOD -> context.getMethodId(index);
-            case PROTO -> context.getProtoId(index);
-            case CALLSITE -> context.getCallSiteId(index);
-            case METHOD_HANDLE -> context.getMethodHandleId(index);
+            case TYPE -> context.getType(index);
+            case FIELD -> context.getField(index);
+            case METHOD -> context.getMethod(index);
+            case PROTO -> context.getProto(index);
+            case CALLSITE -> context.getCallSite(index);
+            case METHOD_HANDLE -> context.getMethodHandle(index);
             case RAW_INDEX -> index;
         };
     }
