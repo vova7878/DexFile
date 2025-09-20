@@ -1,6 +1,9 @@
 package com.v7878.dex.immutable;
 
+import static com.v7878.dex.DexConstants.ACC_ABSTRACT;
 import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
+import static com.v7878.dex.DexConstants.ACC_NATIVE;
+import static com.v7878.dex.DexConstants.ACC_STATIC;
 
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ItemConverter;
@@ -31,8 +34,21 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
         this.parameters = ItemConverter.toList(parameters);
         this.access_flags = Preconditions.checkMethodAccessFlags(access_flags);
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
-        // TODO: check number of registers (at least as many as required for parameters)
-        // TODO: check that abstract and native methods should not have implementation
+        if ((access_flags & (ACC_ABSTRACT | ACC_NATIVE)) != 0) {
+            if (implementation != null) {
+                throw new IllegalArgumentException("Abstract or native methods should not have implementation");
+            }
+        } else {
+            if (implementation == null) {
+                throw new IllegalArgumentException("Implementation is null");
+            }
+            int ins = countFullInputRegisters();
+            int regs = implementation.getRegisterCount();
+            if (regs < ins) {
+                throw new IllegalArgumentException(String.format(
+                        "Not enough registers for parameters. Required: %d, available: %d", ins, regs));
+            }
+        }
         this.implementation = implementation; // may be null
         this.annotations = ItemConverter.toNavigableSet(annotations);
     }
@@ -74,6 +90,12 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
 
     public int countInputRegisters() {
         return ShortyUtils.getDefInputRegisterCount(parameters);
+    }
+
+    public int countFullInputRegisters() {
+        int ins = countInputRegisters();
+        ins += (access_flags & ACC_STATIC) == 0 ? 1 : 0; // this;
+        return ins;
     }
 
     @Override

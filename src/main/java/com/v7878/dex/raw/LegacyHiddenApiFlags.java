@@ -14,7 +14,7 @@ import static com.v7878.dex.DexConstants.ACC_NATIVE;
  * Bits were selected so that they never increase the length of unsigned LEB-128
  * encoding of the access flags.
  */
-public class LegacyHiddenApiFlags {
+class LegacyHiddenApiFlags {
     // Analogue of HIDDENAPI_FLAG_SDK from newer versions of Android
     public static final int kWhitelist = 0;
     // Analogue of HIDDENAPI_FLAG_UNSUPPORTED from newer versions of Android

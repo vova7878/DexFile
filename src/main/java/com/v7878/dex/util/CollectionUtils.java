@@ -37,7 +37,6 @@ public class CollectionUtils {
         return Boolean.compare(i1.hasNext(), i2.hasNext());
     }
 
-
     @SuppressWarnings("unchecked")
     public static <E> E findValue(NavigableSet<E> set, E e) {
         Objects.requireNonNull(e);

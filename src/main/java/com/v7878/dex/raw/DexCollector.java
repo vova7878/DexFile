@@ -1,6 +1,5 @@
 package com.v7878.dex.raw;
 
-import static com.v7878.dex.DexConstants.ACC_STATIC;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 
 import com.v7878.dex.ReferenceType;
@@ -39,6 +38,7 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CodeUtils;
 import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.ItemConverter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -132,7 +132,8 @@ public class DexCollector {
             if (this == obj) return true;
             return obj instanceof CodeContainer other
                     && ins == other.ins
-                    // && outs == other.outs (depends on instructions)
+                    // 'outs' depends on instructions, exists because it can speed up the comparison
+                    && outs == other.outs
                     && value.getRegisterCount() == other.value.getRegisterCount()
                     && Objects.equals(value.getInstructions(), other.value.getInstructions())
                     && Arrays.equals(tries, other.tries)
@@ -141,12 +142,12 @@ public class DexCollector {
 
         @Override
         public int hashCode() {
-            return Objects.hash(ins, /* outs, (depends on instructions) */ value.getRegisterCount(),
+            return Objects.hash(ins, /* outs (depends on instructions), */ value.getRegisterCount(),
                     value.getInstructions(), value.getTryBlocks(), debug_info);
         }
 
         private static TryBlockContainer[] toTriesArray(NavigableSet<TryBlock> tries) {
-            return tries.stream().map(TryBlockContainer::of).toArray(TryBlockContainer[]::new);
+            return ItemConverter.transform(tries, TryBlockContainer::of, TryBlockContainer[]::new);
         }
 
         public static CodeContainer of(MethodImplementation value,
@@ -154,8 +155,7 @@ public class DexCollector {
                                        MethodId id, int flags) {
             if (value == null) return null;
             return new CodeContainer(value, debug_info, toTriesArray(value.getTryBlocks()),
-                    id.getProto().countInputRegisters() +
-                            /* this */ ((flags & ACC_STATIC) == 0 ? 1 : 0),
+                    CodeUtils.countInputRegisters(id.getProto(), flags),
                     CodeUtils.countOutputRegisters(value.getInstructions()));
         }
     }
@@ -184,7 +184,7 @@ public class DexCollector {
         }
 
         private static DebugInfo toDebugInfo(List<String> names, List<DebugItem> items) {
-            if (names.size() == 0 && items.size() == 0) {
+            if (names.isEmpty() && items.isEmpty()) {
                 return null;
             }
             return new DebugInfo(names, items);
@@ -230,9 +230,18 @@ public class DexCollector {
 
         private static FieldDefContainer[] toFieldsArray(
                 TypeId declaring_class, NavigableSet<FieldDef> fields) {
-            return fields.stream().map(value ->
-                            FieldDefContainer.of(declaring_class, value))
-                    .toArray(FieldDefContainer[]::new);
+            return ItemConverter.transform(fields,
+                    value -> FieldDefContainer.of(declaring_class, value),
+                    FieldDefContainer[]::new);
+        }
+
+        private static MethodDefContainer[] toMethodsArray(
+                boolean is_compact, boolean collect_debug_info,
+                TypeId declaring_class, NavigableSet<MethodDef> methods) {
+            return ItemConverter.transform(methods,
+                    value -> MethodDefContainer.of(is_compact,
+                            collect_debug_info, declaring_class, value),
+                    MethodDefContainer[]::new);
         }
 
         // TODO: simplify
@@ -252,14 +261,6 @@ public class DexCollector {
                         .defaultValue(fields[i].value().getType()));
             }
             return EncodedArray.of(out);
-        }
-
-        private static MethodDefContainer[] toMethodsArray(
-                boolean is_compact, boolean collect_debug_info,
-                TypeId declaring_class, NavigableSet<MethodDef> methods) {
-            return methods.stream().map(value -> MethodDefContainer.of(
-                            is_compact, collect_debug_info, declaring_class, value))
-                    .toArray(MethodDefContainer[]::new);
         }
 
         public static ClassDefContainer of(boolean is_compact, boolean collect_debug_info, ClassDef value) {

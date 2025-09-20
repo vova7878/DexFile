@@ -25,7 +25,9 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
         this.type = Objects.requireNonNull(type);
         this.access_flags = Preconditions.checkFieldAccessFlags(access_flags);
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
-        // TODO: check that instance fields should not have initial_value
+        if ((access_flags & ACC_STATIC) == 0 && initial_value != null) {
+            throw new IllegalArgumentException("Instance fields can`t have initial value");
+        }
         this.initial_value = initial_value; // may be null
         this.annotations = ItemConverter.toNavigableSet(annotations);
     }

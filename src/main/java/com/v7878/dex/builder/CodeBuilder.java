@@ -267,7 +267,7 @@ public final class CodeBuilder {
         var out = new ArrayList<TryBlock>(elements_size);
         for (int i = 0; i < elements_size; i++) {
             var container = elements.valueAt(i);
-            if (container.catch_all_address != null || container.handlers.size() > 0) {
+            if (container.catch_all_address != null || !container.handlers.isEmpty()) {
                 out.add(TryBlock.of(borders[i], borders[i + 1] - borders[i],
                         container.catch_all_address, container.handlers));
             }
@@ -1276,7 +1276,7 @@ public final class CodeBuilder {
         check_reg(reg_to_test);
         var map = new SparseArray<String>(table.size());
         table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
-        if (map.size() == 0) {
+        if (map.isEmpty()) {
             return this;
         }
         if (map.size() <= 1 || (map.lastKey() - map.firstKey()) == (map.size() - 1)) {

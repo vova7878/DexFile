@@ -1,5 +1,8 @@
 package com.v7878.dex.util;
 
+import static com.v7878.dex.DexConstants.ACC_STATIC;
+
+import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.iface.VariableRegisterInstruction;
 
@@ -14,5 +17,11 @@ public class CodeUtils {
             }
         }
         return out_regs;
+    }
+
+    public static int countInputRegisters(ProtoId proto, int flags) {
+        int out = proto.countInputRegisters();
+        out += (flags & ACC_STATIC) == 0 ? 1 : 0; // this
+        return out;
     }
 }

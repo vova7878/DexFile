@@ -9,6 +9,7 @@ import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 
 public class ItemConverter {
     public static <T> List<T> toMutableList(Iterable<T> iterable) {
@@ -102,5 +103,15 @@ public class ItemConverter {
                 return transformer.apply(list.get(i));
             }
         };
+    }
+
+    public static <R, P> R[] transform(Collection<P> data, Function<P, R> transformer, IntFunction<R[]> arr) {
+        R[] out = arr.apply(data.size());
+        int i = 0;
+        for (var value : data) {
+            out[i] = transformer.apply(value);
+            i++;
+        }
+        return out;
     }
 }
