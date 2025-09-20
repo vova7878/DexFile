@@ -98,6 +98,10 @@ public final class TypeId implements Comparable<TypeId> {
         return ShortyUtils.getTypeShorty(this);
     }
 
+    public boolean isPrimitive() {
+        return getShorty() != 'L';
+    }
+
     public int getRegisterCount() {
         return ShortyUtils.getRegisterCount(this);
     }
