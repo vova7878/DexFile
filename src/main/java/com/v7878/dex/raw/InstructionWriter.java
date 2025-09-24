@@ -109,7 +109,7 @@ public class InstructionWriter {
     public static int check_unsigned(int value, int width) {
         if ((value >>> width) != 0) {
             throw new IllegalStateException("Illegal instruction unsigned value "
-                    + Integer.toHexString(width) + " for width " + width);
+                    + Integer.toHexString(value) + " for width " + width);
         }
         return value & (~0 >>> (32 - width));
     }
