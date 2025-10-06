@@ -22,12 +22,16 @@ import java.util.TreeSet;
 
 public class MemberUtils {
     private static FieldDef searchableField(String name, TypeId type, boolean is_static) {
-        return FieldDef.of(name, type, is_static ? ACC_STATIC : 0, 0, null, null);
+        // TODO: use raw constructor
+        return FieldDef.of(name, type, is_static ? ACC_STATIC : 0,
+                0, null, null);
     }
 
     private static MethodDef searchableMethod(String name, TypeId ret, List<Parameter> parameters, boolean is_direct) {
+        // TODO: use raw constructor
         return MethodDef.of(name, ret, parameters,
-                is_direct ? ACC_DIRECT_MASK : ACC_NATIVE, 0, null, null);
+                is_direct ? ACC_DIRECT_MASK | ACC_NATIVE : ACC_NATIVE,
+                0, null, null);
     }
 
     private static Annotation searchableAnnotation(TypeId type) {
