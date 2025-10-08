@@ -3,8 +3,9 @@ package com.v7878.dex.immutable.bytecode;
 import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
 
 import com.v7878.dex.Format;
+import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.bytecode.iface.ArrayPayloadInstruction;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.List;
@@ -14,16 +15,21 @@ public final class ArrayPayload extends Instruction implements ArrayPayloadInstr
     private final int element_width;
     private final List<? extends Number> elements;
 
-    private ArrayPayload(int element_width, Iterable<? extends Number> elements) {
+    private ArrayPayload(int element_width, List<? extends Number> elements) {
         super(Preconditions.checkFormat(ARRAY_PAYLOAD, Format.ArrayPayload));
-        this.elements = Preconditions.checkArrayPayloadElements(
-                element_width, ItemConverter.toList(elements));
-        // Already checked in checkArrayPayloadElements
+        this.elements = Objects.requireNonNull(elements);
+        assert element_width == 1 || element_width == 2 || element_width == 4 || element_width == 8;
         this.element_width = element_width;
     }
 
-    public static ArrayPayload of(int element_width, Iterable<? extends Number> elements) {
+    @Internal
+    public static ArrayPayload raw(int element_width, List<? extends Number> elements) {
         return new ArrayPayload(element_width, elements);
+    }
+
+    public static ArrayPayload of(int element_width, Iterable<? extends Number> elements) {
+        return new ArrayPayload(element_width, Preconditions.checkArrayPayloadElements(
+                element_width, Converter.toList(elements)));
     }
 
     @Override

@@ -1,25 +1,30 @@
 package com.v7878.dex.immutable;
 
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.Internal;
+import com.v7878.dex.util.Converter;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
 public final class Dex {
     private final List<ClassDef> classes;
 
-    private Dex(Iterable<ClassDef> classes) {
+    private Dex(List<ClassDef> classes) {
         // TODO: check if there are classes with the same type
-        this.classes = ItemConverter.toList(classes);
+        this.classes = Objects.requireNonNull(classes);
     }
 
-    public static Dex of(Iterable<ClassDef> classes) {
+    @Internal
+    public static Dex raw(List<ClassDef> classes) {
         return new Dex(classes);
     }
 
+    public static Dex of(Iterable<ClassDef> classes) {
+        return new Dex(Converter.toList(classes));
+    }
+
     public static Dex of(ClassDef... classes) {
-        return of(Arrays.asList(classes));
+        return new Dex(Converter.toList(classes));
     }
 
     public List<ClassDef> getClasses() {

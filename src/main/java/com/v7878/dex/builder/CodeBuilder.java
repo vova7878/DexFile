@@ -68,7 +68,7 @@ import com.v7878.dex.immutable.debug.SetEpilogueBegin;
 import com.v7878.dex.immutable.debug.SetFile;
 import com.v7878.dex.immutable.debug.SetPrologueEnd;
 import com.v7878.dex.immutable.debug.StartLocal;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
 import com.v7878.dex.util.SparseArray;
@@ -782,20 +782,17 @@ public final class CodeBuilder {
 
     private void packed_switch_payload(NavigableSet<SwitchElement> elements) {
         check_current_unit_alignment2();
-        // TODO: Add constructor variant without checks?
-        add(PackedSwitchPayload.of(elements));
+        add(PackedSwitchPayload.raw(elements));
     }
 
     private void sparse_switch_payload(NavigableSet<SwitchElement> elements) {
         check_current_unit_alignment2();
-        // TODO: Add constructor variant without checks?
-        add(SparseSwitchPayload.of(elements));
+        add(SparseSwitchPayload.raw(elements));
     }
 
     private void fill_array_data_payload(int element_width, List<? extends Number> data) {
         check_current_unit_alignment2();
-        // TODO: Add constructor variant without checks?
-        add(ArrayPayload.of(element_width, data));
+        add(ArrayPayload.raw(element_width, data));
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -1116,7 +1113,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder fill_array_data(int arr_ref_reg, int element_width, Iterable<? extends Number> data) {
-        var checked_data = Preconditions.checkArrayPayloadElements(element_width, ItemConverter.toList(data));
+        var checked_data = Preconditions.checkArrayPayloadElements(element_width, Converter.toList(data));
         return fill_array_data_internal(arr_ref_reg, element_width, checked_data);
     }
 

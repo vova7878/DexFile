@@ -36,9 +36,9 @@ import com.v7878.dex.immutable.value.EncodedMethodType;
 import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
-import com.v7878.dex.util.CodeUtils;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.ShortyUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -147,7 +147,7 @@ public class DexCollector {
         }
 
         private static TryBlockContainer[] toTriesArray(NavigableSet<TryBlock> tries) {
-            return ItemConverter.transform(tries, TryBlockContainer::of, TryBlockContainer[]::new);
+            return Converter.transform(tries, TryBlockContainer::of, TryBlockContainer[]::new);
         }
 
         public static CodeContainer of(MethodImplementation value,
@@ -155,8 +155,8 @@ public class DexCollector {
                                        MethodId id, int flags) {
             if (value == null) return null;
             return new CodeContainer(value, debug_info, toTriesArray(value.getTryBlocks()),
-                    CodeUtils.countInputRegisters(id.getProto(), flags),
-                    CodeUtils.countOutputRegisters(value.getInstructions()));
+                    ShortyUtils.getInputRegisterCount(id.getParameterTypes(), flags),
+                    ShortyUtils.getOutputRegisters(value.getInstructions()));
         }
     }
 
@@ -230,7 +230,7 @@ public class DexCollector {
 
         private static FieldDefContainer[] toFieldsArray(
                 TypeId declaring_class, NavigableSet<FieldDef> fields) {
-            return ItemConverter.transform(fields,
+            return Converter.transform(fields,
                     value -> FieldDefContainer.of(declaring_class, value),
                     FieldDefContainer[]::new);
         }
@@ -238,7 +238,7 @@ public class DexCollector {
         private static MethodDefContainer[] toMethodsArray(
                 boolean is_compact, boolean collect_debug_info,
                 TypeId declaring_class, NavigableSet<MethodDef> methods) {
-            return ItemConverter.transform(methods,
+            return Converter.transform(methods,
                     value -> MethodDefContainer.of(is_compact,
                             collect_debug_info, declaring_class, value),
                     MethodDefContainer[]::new);

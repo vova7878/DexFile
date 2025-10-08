@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable;
 
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.Internal;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
@@ -29,6 +30,7 @@ public final class ClassDef implements Annotatable {
         if (interfaces == null) {
             return Collections.emptyList();
         }
+
         int capacity = interfaces instanceof Collection<?> c ? c.size() : 0;
         var list = new ArrayList<TypeId>(capacity);
         var set = new HashSet<TypeId>(capacity);
@@ -44,26 +46,35 @@ public final class ClassDef implements Annotatable {
         return Collections.unmodifiableList(list);
     }
 
-    private ClassDef(
-            TypeId type, int access_flags, TypeId superclass, Iterable<TypeId> interfaces,
-            String source_file, Iterable<FieldDef> fields,
-            Iterable<MethodDef> methods, Iterable<Annotation> annotations) {
+    private ClassDef(TypeId type, int access_flags, TypeId superclass, List<TypeId> interfaces,
+                     String source_file, NavigableSet<FieldDef> fields,
+                     NavigableSet<MethodDef> methods, NavigableSet<Annotation> annotations) {
         this.type = Objects.requireNonNull(type);
         this.access_flags = Preconditions.checkClassAccessFlags(access_flags);
         this.superclass = superclass; // may be null
-        this.interfaces = toInterfacesList(interfaces);
+        this.interfaces = Objects.requireNonNull(interfaces);
         this.source_file = source_file; // may be null
-        this.fields = ItemConverter.toNavigableSet(fields);
-        this.methods = ItemConverter.toNavigableSet(methods);
-        this.annotations = ItemConverter.toNavigableSet(annotations);
+        this.fields = Objects.requireNonNull(fields);
+        this.methods = Objects.requireNonNull(methods);
+        this.annotations = Objects.requireNonNull(annotations);
+    }
+
+    @Internal
+    public static ClassDef raw(
+            TypeId type, int access_flags, TypeId superclass, List<TypeId> interfaces,
+            String source_file, NavigableSet<FieldDef> fields,
+            NavigableSet<MethodDef> methods, NavigableSet<Annotation> annotations) {
+        return new ClassDef(type, access_flags, superclass, interfaces,
+                source_file, fields, methods, annotations);
     }
 
     public static ClassDef of(
             TypeId type, int access_flags, TypeId superclass, Iterable<TypeId> interfaces,
             String source_file, Iterable<FieldDef> fields,
             Iterable<MethodDef> methods, Iterable<Annotation> annotations) {
-        return new ClassDef(type, access_flags, superclass,
-                interfaces, source_file, fields, methods, annotations);
+        return new ClassDef(type, access_flags, superclass, toInterfacesList(interfaces),
+                source_file, Converter.toNavigableSet(fields),
+                Converter.toNavigableSet(methods), Converter.toNavigableSet(annotations));
     }
 
     // TODO?: Add simpler constructor?

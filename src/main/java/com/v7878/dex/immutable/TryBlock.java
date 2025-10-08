@@ -1,10 +1,10 @@
 package com.v7878.dex.immutable;
 
+import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -15,10 +15,10 @@ public final class TryBlock implements Comparable<TryBlock> {
     private final List<ExceptionHandler> handlers;
 
     private TryBlock(int start_address, int unit_count, Integer catch_all_address,
-                     Iterable<ExceptionHandler> handlers) {
+                     List<ExceptionHandler> handlers) {
         this.start_address = Preconditions.checkCodeAddress(start_address);
         this.unit_count = Preconditions.checkUnitCount(unit_count);
-        this.handlers = ItemConverter.toList(handlers);
+        this.handlers = Objects.requireNonNull(handlers);
         this.catch_all_address = catch_all_address == null ? null :
                 Preconditions.checkCodeAddress(catch_all_address);
         if (this.handlers.isEmpty() && this.catch_all_address == null) {
@@ -26,23 +26,25 @@ public final class TryBlock implements Comparable<TryBlock> {
         }
     }
 
+    @Internal
+    public static TryBlock raw(int start_address, int unit_count,
+                               Integer catch_all_address,
+                               List<ExceptionHandler> handlers) {
+        return new TryBlock(start_address, unit_count, catch_all_address, handlers);
+    }
+
     public static TryBlock of(int start_address, int unit_count,
                               Integer catch_all_address,
                               Iterable<ExceptionHandler> handlers) {
         return new TryBlock(start_address, unit_count,
-                catch_all_address, handlers);
+                catch_all_address, Converter.toList(handlers));
     }
 
     public static TryBlock of(int start_address, int unit_count,
                               Integer catch_all_address,
                               ExceptionHandler... handlers) {
         return new TryBlock(start_address, unit_count,
-                catch_all_address, Arrays.asList(handlers));
-    }
-
-    public static TryBlock of(int start_address, int unit_count, int catch_all_address) {
-        return new TryBlock(start_address, unit_count,
-                catch_all_address, null);
+                catch_all_address, Converter.toList(handlers));
     }
 
     public int getStartAddress() {

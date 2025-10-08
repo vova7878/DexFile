@@ -1,8 +1,9 @@
 package com.v7878.dex.immutable.value;
 
+import com.v7878.dex.Internal;
 import com.v7878.dex.ValueType;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 
 import java.util.Collections;
 import java.util.List;
@@ -14,11 +15,17 @@ public final class EncodedArray extends EncodedValue {
     private final List<EncodedValue> value;
 
     private EncodedArray(List<EncodedValue> value) {
-        this.value = value;
+        this.value = Objects.requireNonNull(value);
+    }
+
+    @Internal
+    public static EncodedArray raw(List<EncodedValue> values) {
+        if (values.isEmpty()) return EMPTY;
+        return new EncodedArray(values);
     }
 
     public static EncodedArray of(Iterable<EncodedValue> values) {
-        var value = ItemConverter.toList(values);
+        var value = Converter.toList(values);
         if (value.isEmpty()) return EMPTY;
         return new EncodedArray(value);
     }

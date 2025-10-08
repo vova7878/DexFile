@@ -11,8 +11,14 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 
-public class ItemConverter {
-    public static <T> List<T> toMutableList(Iterable<T> iterable) {
+public class Converter {
+    @SafeVarargs
+    public static <T> List<T> toList(T... elements) {
+        Objects.requireNonNull(elements);
+        return List.of(elements);
+    }
+
+    public static <T> List<T> mutableList(Iterable<T> iterable) {
         if (iterable == null) {
             return new ArrayList<>();
         }
@@ -37,23 +43,12 @@ public class ItemConverter {
             return Collections.emptyList();
         }
 
-        ArrayList<T> list;
-        if (iterable instanceof Collection<T> collection) {
-            list = new ArrayList<>(collection);
-            list.forEach(Objects::requireNonNull);
-        } else {
-            list = new ArrayList<>();
-            for (T tmp : iterable) {
-                list.add(Objects.requireNonNull(tmp));
-            }
-            list.trimToSize();
-        }
-
-        return Collections.unmodifiableList(list);
+        return Collections.unmodifiableList(
+                mutableList(iterable));
     }
 
-    public static <T extends Comparable<? super T>> NavigableSet<T>
-    toMutableNavigableSet(Iterable<T> iterable) {
+    public static <T extends Comparable<? super T>>
+    NavigableSet<T> mutableNavigableSet(Iterable<T> iterable) {
         NavigableSet<T> set = new TreeSet<>();
 
         if (iterable == null) {
@@ -72,23 +67,14 @@ public class ItemConverter {
         return set;
     }
 
-    public static <T extends Comparable<? super T>> NavigableSet<T>
-    toNavigableSet(Iterable<T> iterable) {
+    public static <T extends Comparable<? super T>>
+    NavigableSet<T> toNavigableSet(Iterable<T> iterable) {
         if (iterable == null) {
             return Collections.emptyNavigableSet();
         }
 
-        NavigableSet<T> set = new TreeSet<>();
-        if (iterable instanceof Collection<T> collection) {
-            set.addAll(collection);
-            set.forEach(Objects::requireNonNull);
-        } else {
-            for (T tmp : iterable) {
-                set.add(Objects.requireNonNull(tmp));
-            }
-        }
-
-        return Collections.unmodifiableNavigableSet(set);
+        return Collections.unmodifiableNavigableSet(
+                mutableNavigableSet(iterable));
     }
 
     public static <R, P> List<R> transformList(List<P> list, Function<P, R> transformer) {
@@ -103,6 +89,30 @@ public class ItemConverter {
                 return transformer.apply(list.get(i));
             }
         };
+    }
+
+    public static <R, P> List<R> mutableTransform(List<P> list, Function<P, R> transformer) {
+        var out = new ArrayList<R>(list.size());
+        for (var tmp : list) {
+            out.add(transformer.apply(tmp));
+        }
+        return out;
+    }
+
+    public static <R, P> List<R> transform(List<P> list, Function<P, R> transformer) {
+        return Collections.unmodifiableList(mutableTransform(list, transformer));
+    }
+
+    public static <R, P> List<R> mutableTransform(P[] array, Function<P, R> transformer) {
+        var out = new ArrayList<R>(array.length);
+        for (var tmp : array) {
+            out.add(transformer.apply(tmp));
+        }
+        return out;
+    }
+
+    public static <R, P> List<R> transform(P[] array, Function<P, R> transformer) {
+        return Collections.unmodifiableList(mutableTransform(array, transformer));
     }
 
     public static <R, P> R[] transform(Collection<P> data, Function<P, R> transformer, IntFunction<R[]> arr) {

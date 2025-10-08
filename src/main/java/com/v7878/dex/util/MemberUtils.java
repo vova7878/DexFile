@@ -22,30 +22,30 @@ import java.util.TreeSet;
 
 public class MemberUtils {
     private static FieldDef searchableField(String name, TypeId type, boolean is_static) {
-        // TODO: use raw constructor
-        return FieldDef.of(name, type, is_static ? ACC_STATIC : 0,
-                0, null, null);
+        return FieldDef.raw(name, type, is_static ? ACC_STATIC : 0,
+                0, null, Collections.emptyNavigableSet());
     }
 
     private static MethodDef searchableMethod(String name, TypeId ret, List<Parameter> parameters, boolean is_direct) {
-        // TODO: use raw constructor
-        return MethodDef.of(name, ret, parameters,
+        return MethodDef.raw(name, ret, parameters,
                 is_direct ? ACC_DIRECT_MASK | ACC_NATIVE : ACC_NATIVE,
-                0, null, null);
+                0, null, Collections.emptyNavigableSet());
     }
 
     private static Annotation searchableAnnotation(TypeId type) {
-        return Annotation.of(AnnotationVisibility.RUNTIME, type, (NavigableSet<AnnotationElement>) null);
+        // TODO: use raw constructor
+        return Annotation.raw(AnnotationVisibility.RUNTIME, type, Collections.emptyNavigableSet());
     }
 
     private static AnnotationElement searchableAnnotationElement(String name) {
         return AnnotationElement.of(name, EncodedNull.INSTANCE);
     }
 
-    private static final TypeId FIRST_TYPE = TypeId.of("");
-
+    private static final TypeId FIRST_TYPE = TypeId.raw("");
     private static final FieldDef FIRST_INSTANCE_FIELD =
             searchableField("", FIRST_TYPE, false);
+    private static final MethodDef FIRST_VIRTUAL_METHOD =
+            searchableMethod("", FIRST_TYPE, Collections.emptyList(), false);
 
     public static NavigableSet<FieldDef> getStaticFieldsSubset(NavigableSet<FieldDef> set) {
         return set.headSet(FIRST_INSTANCE_FIELD, false);
@@ -54,9 +54,6 @@ public class MemberUtils {
     public static NavigableSet<FieldDef> getInstanceFieldsSubset(NavigableSet<FieldDef> set) {
         return set.tailSet(FIRST_INSTANCE_FIELD, true);
     }
-
-    private static final MethodDef FIRST_VIRTUAL_METHOD =
-            searchableMethod("", FIRST_TYPE, Collections.emptyList(), false);
 
     public static NavigableSet<MethodDef> getDirectMethodsSubset(NavigableSet<MethodDef> set) {
         return set.headSet(FIRST_VIRTUAL_METHOD, false);

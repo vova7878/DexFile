@@ -1,15 +1,13 @@
 package com.v7878.dex.immutable;
 
-import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
-
+import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.ShortyUtils;
 
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -18,35 +16,34 @@ public final class ProtoId implements Comparable<ProtoId> {
     private final List<TypeId> parameters;
 
     private ProtoId(TypeId return_type, List<TypeId> parameters) {
-        this.return_type = return_type;
-        this.parameters = parameters;
+        this.return_type = Objects.requireNonNull(return_type);
+        this.parameters = Objects.requireNonNull(parameters);
     }
 
-    // package-private
-    static ProtoId ofInternal(TypeId return_type, List<TypeId> parameters) {
+    @Internal
+    public static ProtoId raw(TypeId return_type, List<TypeId> parameters) {
         return new ProtoId(return_type, parameters);
     }
 
     public static ProtoId of(TypeId return_type, Iterable<TypeId> parameters) {
-        return new ProtoId(Objects.requireNonNull(return_type),
-                ItemConverter.toList(parameters));
+        return new ProtoId(return_type, Converter.toList(parameters));
     }
 
     public static ProtoId of(TypeId return_type, TypeId... parameters) {
-        return of(return_type, Arrays.asList(parameters));
+        return new ProtoId(return_type, Converter.toList(parameters));
     }
 
     public static ProtoId of(Executable value) {
         Objects.requireNonNull(value);
         Class<?> return_type = value instanceof Method m ? m.getReturnType() : void.class;
-        return new ProtoId(TypeId.of(return_type), toUnmodifiableList(
-                Arrays.stream(value.getParameterTypes()).map(TypeId::of)));
+        return new ProtoId(TypeId.of(return_type),
+                Converter.transform(value.getParameterTypes(), TypeId::of));
     }
 
     public static ProtoId of(MethodType value) {
         Objects.requireNonNull(value);
-        return new ProtoId(TypeId.of(value.returnType()), toUnmodifiableList(
-                value.parameterList().stream().map(TypeId::of)));
+        return new ProtoId(TypeId.of(value.returnType()),
+                Converter.transform(value.parameterList(), TypeId::of));
     }
 
     public TypeId getReturnType() {

@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable;
 
 import com.v7878.dex.AnnotationVisibility;
+import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
 import com.v7878.dex.immutable.value.EncodedInt;
 import com.v7878.dex.immutable.value.EncodedMethod;
@@ -9,7 +10,7 @@ import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Arrays;
@@ -23,15 +24,20 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
 
     private Annotation(AnnotationVisibility visibility, TypeId type,
                        NavigableSet<AnnotationElement> elements) {
-        this.visibility = visibility;
-        this.type = type;
-        this.elements = elements;
+        this.visibility = Objects.requireNonNull(visibility);
+        this.type = Objects.requireNonNull(type);
+        this.elements = Objects.requireNonNull(elements);
+    }
+
+    @Internal
+    public static Annotation raw(AnnotationVisibility visibility, TypeId type,
+                                 NavigableSet<AnnotationElement> elements) {
+        return new Annotation(visibility, type, elements);
     }
 
     public static Annotation of(AnnotationVisibility visibility, TypeId type,
                                 Iterable<AnnotationElement> elements) {
-        return new Annotation(Objects.requireNonNull(visibility),
-                Objects.requireNonNull(type), ItemConverter.toNavigableSet(elements));
+        return new Annotation(visibility, type, Converter.toNavigableSet(elements));
     }
 
     public static Annotation of(AnnotationVisibility visibility, TypeId type,

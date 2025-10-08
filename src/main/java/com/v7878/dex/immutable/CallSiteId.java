@@ -1,10 +1,10 @@
 package com.v7878.dex.immutable;
 
+import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -18,22 +18,28 @@ public final class CallSiteId implements Comparable<CallSiteId> {
     private final List<EncodedValue> extra_arguments;
 
     private CallSiteId(String name, MethodHandleId method_handle, String method_name,
-                       ProtoId method_proto, Iterable<EncodedValue> extra_arguments) {
+                       ProtoId method_proto, List<EncodedValue> extra_arguments) {
         this.name = Objects.requireNonNull(name);
         this.method_handle = Objects.requireNonNull(method_handle);
         this.method_name = Objects.requireNonNull(method_name);
         this.method_proto = Objects.requireNonNull(method_proto);
-        this.extra_arguments = ItemConverter.toList(extra_arguments);
+        this.extra_arguments = Objects.requireNonNull(extra_arguments);
     }
 
-    public static CallSiteId of(String name, MethodHandleId method_handle, String method_name,
-                                ProtoId method_proto, Iterable<EncodedValue> extra_arguments) {
+    @Internal
+    public static CallSiteId raw(String name, MethodHandleId method_handle, String method_name,
+                                 ProtoId method_proto, List<EncodedValue> extra_arguments) {
         return new CallSiteId(name, method_handle, method_name, method_proto, extra_arguments);
     }
 
     public static CallSiteId of(String name, MethodHandleId method_handle, String method_name,
+                                ProtoId method_proto, Iterable<EncodedValue> extra_arguments) {
+        return new CallSiteId(name, method_handle, method_name, method_proto, Converter.toList(extra_arguments));
+    }
+
+    public static CallSiteId of(String name, MethodHandleId method_handle, String method_name,
                                 ProtoId method_proto, EncodedValue... extra_arguments) {
-        return of(name, method_handle, method_name, method_proto, Arrays.asList(extra_arguments));
+        return new CallSiteId(name, method_handle, method_name, method_proto, Converter.toList(extra_arguments));
     }
 
     public String getName() {

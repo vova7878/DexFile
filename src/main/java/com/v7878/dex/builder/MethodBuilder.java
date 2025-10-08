@@ -12,7 +12,7 @@ import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
 
@@ -116,7 +116,7 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withParameters(Iterable<Parameter> parameters) {
-        return withParametersInternal(ItemConverter.toList(parameters));
+        return withParametersInternal(Converter.toList(parameters));
     }
 
     public MethodBuilder withParameters(Parameter... parameters) {
@@ -163,7 +163,7 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder setAnnotations(Iterable<Annotation> annotations) {
-        this.annotations = ItemConverter.toMutableNavigableSet(annotations);
+        this.annotations = Converter.mutableNavigableSet(annotations);
         return this;
     }
 
@@ -173,7 +173,7 @@ public final class MethodBuilder {
 
     public MethodBuilder withAnnotations(Iterable<Annotation> annotations) {
         withoutAnnotations(annotations);
-        this.annotations.addAll(ItemConverter.toList(annotations));
+        this.annotations.addAll(Converter.toList(annotations));
         return this;
     }
 

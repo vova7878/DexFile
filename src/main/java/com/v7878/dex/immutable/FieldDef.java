@@ -2,9 +2,10 @@ package com.v7878.dex.immutable;
 
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 
+import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.NavigableSet;
@@ -18,25 +19,30 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
     private final EncodedValue initial_value;
     private final NavigableSet<Annotation> annotations;
 
-    private FieldDef(
-            String name, TypeId type, int access_flags, int hiddenapi_flags,
-            EncodedValue initial_value, Iterable<Annotation> annotations) {
+    private FieldDef(String name, TypeId type, int access_flags, int hiddenapi_flags,
+                     EncodedValue initial_value, NavigableSet<Annotation> annotations) {
         this.name = Objects.requireNonNull(name);
         this.type = Objects.requireNonNull(type);
         this.access_flags = Preconditions.checkFieldAccessFlags(access_flags);
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
+        this.initial_value = initial_value; // may be null
+        this.annotations = Objects.requireNonNull(annotations);
+    }
+
+    @Internal
+    public static FieldDef raw(String name, TypeId type, int access_flags, int hiddenapi_flags,
+                               EncodedValue initial_value, NavigableSet<Annotation> annotations) {
+        return new FieldDef(name, type, access_flags,
+                hiddenapi_flags, initial_value, annotations);
+    }
+
+    public static FieldDef of(String name, TypeId type, int access_flags, int hiddenapi_flags,
+                              EncodedValue initial_value, Iterable<Annotation> annotations) {
         if ((access_flags & ACC_STATIC) == 0 && initial_value != null) {
             throw new IllegalArgumentException("Instance fields can`t have initial value");
         }
-        this.initial_value = initial_value; // may be null
-        this.annotations = ItemConverter.toNavigableSet(annotations);
-    }
-
-    public static FieldDef of(
-            String name, TypeId type, int access_flags, int hiddenapi_flags,
-            EncodedValue initial_value, Iterable<Annotation> annotations) {
-        return new FieldDef(name, type, access_flags,
-                hiddenapi_flags, initial_value, annotations);
+        return new FieldDef(name, type, access_flags, hiddenapi_flags,
+                initial_value, Converter.toNavigableSet(annotations));
     }
 
     // TODO?: Add simpler constructor?
@@ -53,6 +59,14 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
     @Override
     public int getAccessFlags() {
         return access_flags;
+    }
+
+    public boolean isStatic() {
+        return (getAccessFlags() & ACC_STATIC) != 0;
+    }
+
+    public boolean isInstance() {
+        return !isStatic();
     }
 
     @Override
@@ -90,8 +104,7 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
     public int compareTo(FieldDef other) {
         if (other == this) return 0;
         // First static fields, then instance fields
-        int out = -Boolean.compare((getAccessFlags() & ACC_STATIC) != 0,
-                (other.getAccessFlags() & ACC_STATIC) != 0);
+        int out = -Boolean.compare(isStatic(), other.isStatic());
         if (out != 0) return out;
         out = CollectionUtils.compareNonNull(getName(), other.getName());
         if (out != 0) return out;

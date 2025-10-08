@@ -1,5 +1,6 @@
 package com.v7878.dex.immutable;
 
+import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ShortyUtils;
 
@@ -23,7 +24,8 @@ public final class TypeId implements Comparable<TypeId> {
         this.descriptor = Objects.requireNonNull(descriptor);
     }
 
-    public static TypeId of(String descriptor) {
+    @Internal
+    public static TypeId raw(String descriptor) {
         return switch (descriptor) {
             case "V" -> V;
             case "Z" -> Z;
@@ -35,9 +37,13 @@ public final class TypeId implements Comparable<TypeId> {
             case "J" -> J;
             case "D" -> D;
             case "Ljava/lang/Object;" -> OBJECT;
-            // TODO: verify?
             default -> new TypeId(descriptor);
         };
+    }
+
+    public static TypeId of(String descriptor) {
+        // TODO: verify
+        return raw(descriptor);
     }
 
     public static TypeId ofName(String class_name) {
@@ -74,7 +80,7 @@ public final class TypeId implements Comparable<TypeId> {
     public static TypeId of(Class<?> clazz) {
         String class_name = clazz.getName();
         if (clazz.isArray()) {
-            return of(class_name.replace('.', '/'));
+            return new TypeId(class_name.replace('.', '/'));
         }
         return switch (class_name) {
             case "void" -> V;
@@ -86,7 +92,7 @@ public final class TypeId implements Comparable<TypeId> {
             case "float" -> F;
             case "long" -> J;
             case "double" -> D;
-            default -> of("L" + class_name.replace('.', '/') + ";");
+            default -> raw("L" + class_name.replace('.', '/') + ";");
         };
     }
 

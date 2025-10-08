@@ -11,14 +11,13 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
     private final TypeId type;
 
     private FieldId(TypeId declaring_class, String name, TypeId type) {
-        this.declaring_class = declaring_class;
-        this.name = name;
-        this.type = type;
+        this.declaring_class = Objects.requireNonNull(declaring_class);
+        this.name = Objects.requireNonNull(name);
+        this.type = Objects.requireNonNull(type);
     }
 
     public static FieldId of(TypeId declaring_class, String name, TypeId type) {
-        return new FieldId(Objects.requireNonNull(declaring_class),
-                Objects.requireNonNull(name), Objects.requireNonNull(type));
+        return new FieldId(declaring_class, name, type);
     }
 
     public static FieldId of(Field field) {

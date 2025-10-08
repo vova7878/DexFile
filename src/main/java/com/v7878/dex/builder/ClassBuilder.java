@@ -9,7 +9,7 @@ import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.ArrayList;
@@ -115,7 +115,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder setInterfaces(Iterable<TypeId> interfaces) {
-        this.interfaces = ItemConverter.toMutableList(interfaces);
+        this.interfaces = Converter.mutableList(interfaces);
         return this;
     }
 
@@ -125,7 +125,7 @@ public final class ClassBuilder {
 
     public ClassBuilder withInterfaces(Iterable<TypeId> interfaces) {
         withoutInterfaces(interfaces);
-        this.interfaces.addAll(ItemConverter.toList(interfaces));
+        this.interfaces.addAll(Converter.toList(interfaces));
         return this;
     }
 
@@ -143,7 +143,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder setAnnotations(Iterable<Annotation> annotations) {
-        this.annotations = ItemConverter.toMutableNavigableSet(annotations);
+        this.annotations = Converter.mutableNavigableSet(annotations);
         return this;
     }
 
@@ -153,7 +153,7 @@ public final class ClassBuilder {
 
     public ClassBuilder withAnnotations(Iterable<Annotation> annotations) {
         withoutAnnotations(annotations);
-        this.annotations.addAll(ItemConverter.toList(annotations));
+        this.annotations.addAll(Converter.toList(annotations));
         return this;
     }
 
@@ -171,7 +171,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder setFields(Iterable<FieldDef> fields) {
-        this.fields = ItemConverter.toMutableNavigableSet(fields);
+        this.fields = Converter.mutableNavigableSet(fields);
         return this;
     }
 
@@ -181,7 +181,7 @@ public final class ClassBuilder {
 
     public ClassBuilder withFields(Iterable<FieldDef> fields) {
         withoutFields(fields);
-        this.fields.addAll(ItemConverter.toList(fields));
+        this.fields.addAll(Converter.toList(fields));
         return this;
     }
 
@@ -211,7 +211,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder setMethods(Iterable<MethodDef> methods) {
-        this.methods = ItemConverter.toMutableNavigableSet(methods);
+        this.methods = Converter.mutableNavigableSet(methods);
         return this;
     }
 
@@ -221,7 +221,7 @@ public final class ClassBuilder {
 
     public ClassBuilder withMethods(Iterable<MethodDef> methods) {
         withoutMethods(methods);
-        this.methods.addAll(ItemConverter.toList(methods));
+        this.methods.addAll(Converter.toList(methods));
         return this;
     }
 

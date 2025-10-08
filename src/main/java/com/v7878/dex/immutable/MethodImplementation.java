@@ -1,8 +1,9 @@
 package com.v7878.dex.immutable;
 
+import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.debug.DebugItem;
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.List;
@@ -16,22 +17,29 @@ public final class MethodImplementation {
     private final List<DebugItem> debug_items;
 
     private MethodImplementation(
-            int register_count, Iterable<Instruction> instructions,
-            Iterable<TryBlock> try_blocks, Iterable<DebugItem> debug_items) {
+            int register_count, List<Instruction> instructions,
+            NavigableSet<TryBlock> try_blocks, List<DebugItem> debug_items) {
         this.register_count = Preconditions.checkMethodRegisterCount(register_count);
-        this.instructions = ItemConverter.toList(instructions);
-        // TODO: try blocks must not overlap
-        this.try_blocks = ItemConverter.toNavigableSet(try_blocks);
-        // TODO: deduplicate and remove unused AdvancePC items
-        this.debug_items = ItemConverter.toList(debug_items);
+        this.instructions = Objects.requireNonNull(instructions);
+        this.try_blocks = Objects.requireNonNull(try_blocks);
+        this.debug_items = Objects.requireNonNull(debug_items);
+    }
+
+    @Internal
+    public static MethodImplementation raw(int register_count, List<Instruction> instructions,
+                                           NavigableSet<TryBlock> try_blocks, List<DebugItem> debug_items) {
+        return new MethodImplementation(register_count, instructions, try_blocks, debug_items);
     }
 
     public static MethodImplementation of(int register_count, Iterable<Instruction> instructions,
                                           Iterable<TryBlock> try_blocks, Iterable<DebugItem> debug_items) {
-        return new MethodImplementation(register_count, instructions, try_blocks, debug_items);
+        return new MethodImplementation(register_count,
+                Converter.toList(instructions),
+                // TODO: try blocks must not overlap
+                Converter.toNavigableSet(try_blocks),
+                // TODO: deduplicate and remove unused AdvancePC items
+                Converter.toList(debug_items));
     }
-
-    // TODO?: Add simpler constructor?
 
     public int getRegisterCount() {
         return register_count;

@@ -1,6 +1,7 @@
 package com.v7878.dex.util;
 
 import java.util.AbstractList;
+import java.util.Objects;
 
 public abstract class CachedFixedSizeList<T> extends AbstractList<T> {
     private final int size;
@@ -29,7 +30,7 @@ public abstract class CachedFixedSizeList<T> extends AbstractList<T> {
         T[] cache = getCache();
         T value = cache[index];
         if (value != null) return value;
-        return cache[index] = compute(index);
+        return cache[index] = Objects.requireNonNull(compute(index));
     }
 
     protected abstract T compute(int index);

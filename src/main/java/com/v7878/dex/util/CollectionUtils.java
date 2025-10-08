@@ -37,13 +37,12 @@ public class CollectionUtils {
         return Boolean.compare(i1.hasNext(), i2.hasNext());
     }
 
-    @SuppressWarnings("unchecked")
-    public static <E> E findValue(NavigableSet<E> set, E e) {
+    public static <E extends Comparable<E>> E findValue(NavigableSet<E> set, E e) {
         Objects.requireNonNull(e);
 
         var floor = set.floor(e);
         if (floor == null) return null;
-        return ((Comparable<E>) e).compareTo(floor) == 0 ? floor : null;
+        return e.compareTo(floor) == 0 ? floor : null;
     }
 
     public static <T> List<T> toUnmodifiableList(Stream<T> stream) {

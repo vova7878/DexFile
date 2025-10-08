@@ -2,8 +2,10 @@ package com.v7878.dex.immutable;
 
 import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
 
-import com.v7878.dex.util.ItemConverter;
+import com.v7878.dex.Internal;
+import com.v7878.dex.util.Converter;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
@@ -14,25 +16,31 @@ public final class Parameter implements Annotatable {
     private final String name;
     private final NavigableSet<Annotation> annotations;
 
-    private Parameter(TypeId type, String name, Iterable<Annotation> annotations) {
+    private Parameter(TypeId type, String name, NavigableSet<Annotation> annotations) {
         this.type = Objects.requireNonNull(type);
         this.name = name; // may be null
-        this.annotations = ItemConverter.toNavigableSet(annotations);
+        this.annotations = Objects.requireNonNull(annotations);
     }
 
-    public static Parameter of(TypeId type, String name, Iterable<Annotation> annotations) {
+    @Internal
+    public static Parameter raw(TypeId type, String name, NavigableSet<Annotation> annotations) {
         return new Parameter(type, name, annotations);
     }
 
+    public static Parameter of(TypeId type, String name, Iterable<Annotation> annotations) {
+        return new Parameter(type, name, Converter.toNavigableSet(annotations));
+    }
+
     public static Parameter of(TypeId type, String name) {
-        return of(type, name, null);
+        return new Parameter(type, name, Collections.emptyNavigableSet());
     }
 
     public static Parameter of(TypeId type) {
-        return of(type, null, null);
+        return of(type, null);
     }
 
     public static List<Parameter> listOf(Iterable<TypeId> types) {
+        // TODO: improve performance
         return toUnmodifiableList(StreamSupport
                 .stream(types.spliterator(), false)
                 .map(Parameter::of));

@@ -1,7 +1,11 @@
 package com.v7878.dex.util;
 
+import static com.v7878.dex.DexConstants.ACC_STATIC;
+
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.immutable.bytecode.Instruction;
+import com.v7878.dex.immutable.bytecode.iface.VariableRegisterInstruction;
 
 import java.util.List;
 
@@ -85,11 +89,33 @@ public class ShortyUtils {
         return out;
     }
 
+    public static int getInputRegisterCount(List<TypeId> parameters, int flags) {
+        int out = getInputRegisterCount(parameters);
+        out += (flags & ACC_STATIC) == 0 ? 1 : 0; // this
+        return out;
+    }
+
     public static int getDefInputRegisterCount(List<Parameter> parameters) {
         int out = 0;
         for (var tmp : parameters) {
             out += tmp.getType().getRegisterCount();
         }
         return out;
+    }
+
+    public static int getDefInputRegisterCount(List<Parameter> parameters, int flags) {
+        int ins = getDefInputRegisterCount(parameters);
+        ins += (flags & ACC_STATIC) == 0 ? 1 : 0; // this;
+        return ins;
+    }
+
+    public static int getOutputRegisters(List<Instruction> insns) {
+        int out_regs = 0;
+        for (var instruction : insns) {
+            if (instruction.getOpcode().isInvoke()) {
+                out_regs = Math.max(out_regs, ((VariableRegisterInstruction) instruction).getRegisterCount());
+            }
+        }
+        return out_regs;
     }
 }
