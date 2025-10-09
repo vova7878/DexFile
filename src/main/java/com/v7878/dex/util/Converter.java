@@ -19,11 +19,12 @@ public class Converter {
     }
 
     public static <T> List<T> mutableList(Iterable<T> iterable) {
+        var list = new ArrayList<T>();
+
         if (iterable == null) {
-            return new ArrayList<>();
+            return list;
         }
 
-        ArrayList<T> list;
         if (iterable instanceof Collection<T> collection) {
             list = new ArrayList<>(collection);
             list.forEach(Objects::requireNonNull);

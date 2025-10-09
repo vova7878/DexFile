@@ -46,10 +46,12 @@ import java.util.stream.Collectors;
 
 public class DexRewriter {
     private static <T> List<T> rewriteList(List<? extends T> value, Function<T, T> rewriter) {
+        // TODO: improve
         return value.stream().map(rewriter).collect(Collectors.toList());
     }
 
     private static <T> NavigableSet<T> rewriteNavigableSet(NavigableSet<? extends T> value, Function<T, T> rewriter) {
+        // TODO: improve
         return value.stream().map(rewriter).collect(Collectors.toCollection(TreeSet::new));
     }
 

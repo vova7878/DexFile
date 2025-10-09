@@ -49,7 +49,6 @@ import java.util.Objects;
 public class InstructionWriter {
     public static void writeInstruction(Instruction instruction, DexWriter writer, RandomOutput out) {
         var opcode = instruction.getOpcode();
-        // TODO: message if null
         int op = writer.opcodes().getOpcodeValue(opcode);
         switch (opcode.format()) {
             case Format10t -> write_10t(((Instruction10t) instruction), out, op);
@@ -527,7 +526,6 @@ public class InstructionWriter {
         out.fillZerosToAlignment(2); // unit size
     }
 
-    // TODO: simplify
     public static void write_array_payload(ArrayPayload value, RandomOutput out, int opcode) {
         var elements = value.getArrayElements();
         var element_width = value.getElementWidth();
@@ -547,10 +545,20 @@ public class InstructionWriter {
                 }
                 data = raw_data;
             }
-            case 4 -> data = elements.stream().mapToInt(
-                    element -> (Integer) element).toArray();
-            case 8 -> data = elements.stream().mapToLong(
-                    element -> (Long) element).toArray();
+            case 4 -> {
+                int[] raw_data = new int[elements.size()];
+                for (int i = 0; i < raw_data.length; i++) {
+                    raw_data[i] = (Integer) elements.get(i);
+                }
+                data = raw_data;
+            }
+            case 8 -> {
+                long[] raw_data = new long[elements.size()];
+                for (int i = 0; i < raw_data.length; i++) {
+                    raw_data[i] = (Long) elements.get(i);
+                }
+                data = raw_data;
+            }
             default -> throw new AssertionError();
         }
         write_array_payload(out, opcode, element_width, data);

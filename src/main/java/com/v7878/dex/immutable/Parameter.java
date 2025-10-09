@@ -5,6 +5,7 @@ import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.Converter;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
@@ -44,6 +45,11 @@ public final class Parameter implements Annotatable {
         return toUnmodifiableList(StreamSupport
                 .stream(types.spliterator(), false)
                 .map(Parameter::of));
+    }
+
+    public static List<Parameter> listOf(TypeId... types) {
+        // TODO: improve performance
+        return listOf(Arrays.asList(types));
     }
 
     public TypeId getType() {

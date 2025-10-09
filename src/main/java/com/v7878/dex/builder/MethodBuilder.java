@@ -1,7 +1,6 @@
 package com.v7878.dex.builder;
 
 import static com.v7878.dex.DexConstants.ACC_STATIC;
-import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
 
 import com.v7878.dex.AccessFlag;
 import com.v7878.dex.immutable.Annotation;
@@ -120,7 +119,7 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withParameters(Parameter... parameters) {
-        return withParameters(Arrays.asList(parameters));
+        return withParametersInternal(Converter.toList(parameters));
     }
 
     public MethodBuilder withParameterTypes(Iterable<TypeId> parameters) {
@@ -128,8 +127,7 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withParameterTypes(TypeId... parameters) {
-        return withParametersInternal(toUnmodifiableList(Arrays
-                .stream(parameters).map(Parameter::of)));
+        return withParametersInternal(Parameter.listOf(parameters));
     }
 
     public MethodBuilder withProto(ProtoId proto) {

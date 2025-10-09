@@ -87,7 +87,6 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public final class CodeBuilder {
     private static class InternalLabel {
@@ -278,9 +277,7 @@ public final class CodeBuilder {
     private MethodImplementation finish() {
         delayed_actions.forEach(Runnable::run);
 
-        List<Instruction> insns = instructions.stream()
-                .map(Supplier::get).collect(Collectors.toList());
-
+        List<Instruction> insns = Converter.transform(instructions, Supplier::get);
         List<TryBlock> try_blocks = mergeTryItems(try_items);
 
         return MethodImplementation.of(regs_size, insns, try_blocks, debug_items);

@@ -33,7 +33,6 @@ public class MemberUtils {
     }
 
     private static Annotation searchableAnnotation(TypeId type) {
-        // TODO: use raw constructor
         return Annotation.raw(AnnotationVisibility.RUNTIME, type, Collections.emptyNavigableSet());
     }
 

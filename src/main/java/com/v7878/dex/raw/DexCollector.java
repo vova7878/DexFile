@@ -86,7 +86,7 @@ public class DexCollector {
         }
 
         public static CallSiteIdContainer of(CallSiteId callsite) {
-            return new CallSiteIdContainer(callsite, EncodedArray.of(toList(callsite)));
+            return new CallSiteIdContainer(callsite, EncodedArray.raw(toList(callsite)));
         }
     }
 

@@ -51,7 +51,6 @@ public class InstructionReader {
             arg = 0;
         }
 
-        // TODO: message if null
         var opcode = reader.opcodes().getOpcodeByValue(raw_opcode);
 
         return switch (opcode.format()) {

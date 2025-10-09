@@ -350,16 +350,6 @@ public enum Opcode {
 
     ;
 
-    private record DexInfo(int api, boolean art, boolean odex, DexVersion dex) {
-    }
-
-    private static abstract class Constraint {
-        public abstract Integer opcode(DexInfo info);
-
-        @Override
-        public abstract String toString();
-    }
-
     // a flavor of invoke
     private static final int TYPE_INVOKE = 0x1;
     // returns, no additional statements
@@ -380,6 +370,18 @@ public enum Opcode {
     private static final int CAN_THROW = 0x100;
     // odex only instruction
     private static final int ODEX_ONLY = 0x200;
+
+    private record DexInfo(int api, boolean art, boolean odex, DexVersion dex) {
+    }
+
+    static abstract class Constraint {
+        public abstract boolean contains(int opcode);
+
+        public abstract Integer opcode(DexInfo info);
+
+        @Override
+        public abstract String toString();
+    }
 
     private final Constraint constraint;
     private final String name;
@@ -493,8 +495,17 @@ public enum Opcode {
         return constraint.opcode(new DexInfo(api, art, odex, dex));
     }
 
+    Constraint getConstraint() {
+        return constraint;
+    }
+
     private static Constraint value(int opcodeValue) {
         return new Constraint() {
+            @Override
+            public boolean contains(int opcode) {
+                return opcode == opcodeValue;
+            }
+
             @Override
             public Integer opcode(DexInfo info) {
                 return opcodeValue;
@@ -509,6 +520,11 @@ public enum Opcode {
 
     private static Constraint firstApi(Constraint constraint, int minApi) {
         return new Constraint() {
+            @Override
+            public boolean contains(int opcode) {
+                return constraint.contains(opcode);
+            }
+
             @Override
             public Integer opcode(DexInfo info) {
                 return info.api() < minApi ? null : constraint.opcode(info);
@@ -528,6 +544,11 @@ public enum Opcode {
     private static Constraint lastApi(Constraint constraint, int maxApi) {
         return new Constraint() {
             @Override
+            public boolean contains(int opcode) {
+                return constraint.contains(opcode);
+            }
+
+            @Override
             public Integer opcode(DexInfo info) {
                 return info.api() > maxApi ? null : constraint.opcode(info);
             }
@@ -545,6 +566,11 @@ public enum Opcode {
 
     private static Constraint betweenApi(Constraint constraint, int minApi, int maxApi) {
         return new Constraint() {
+            @Override
+            public boolean contains(int opcode) {
+                return constraint.contains(opcode);
+            }
+
             @Override
             public Integer opcode(DexInfo info) {
                 int api = info.api();
@@ -570,6 +596,11 @@ public enum Opcode {
     private static Constraint firstDex(DexVersion version, Constraint constraint) {
         return new Constraint() {
             @Override
+            public boolean contains(int opcode) {
+                return constraint.contains(opcode);
+            }
+
+            @Override
             public Integer opcode(DexInfo info) {
                 return !checkDexVersion(version, info.dex()) ? null : constraint.opcode(info);
             }
@@ -583,6 +614,11 @@ public enum Opcode {
 
     private static Constraint onlyOdex(Constraint constraint) {
         return new Constraint() {
+            @Override
+            public boolean contains(int opcode) {
+                return constraint.contains(opcode);
+            }
+
             @Override
             public Integer opcode(DexInfo info) {
                 return !info.odex() ? null : constraint.opcode(info);
@@ -598,6 +634,11 @@ public enum Opcode {
     private static Constraint onlyArt(Constraint constraint) {
         return new Constraint() {
             @Override
+            public boolean contains(int opcode) {
+                return constraint.contains(opcode);
+            }
+
+            @Override
             public Integer opcode(DexInfo info) {
                 return !info.art() ? null : constraint.opcode(info);
             }
@@ -611,6 +652,11 @@ public enum Opcode {
 
     private static Constraint onlyDalvik(Constraint constraint) {
         return new Constraint() {
+            @Override
+            public boolean contains(int opcode) {
+                return constraint.contains(opcode);
+            }
+
             @Override
             public Integer opcode(DexInfo info) {
                 return info.art() ? null : constraint.opcode(info);
@@ -629,6 +675,11 @@ public enum Opcode {
 
     private static Constraint combine(Constraint first, Constraint second) {
         return new Constraint() {
+            @Override
+            public boolean contains(int opcode) {
+                return first.contains(opcode) || second.contains(opcode);
+            }
+
             @Override
             public Integer opcode(DexInfo info) {
                 Integer opcode = first.opcode(info);
