@@ -37,6 +37,7 @@ import com.v7878.dex.immutable.bytecode.SwitchElement;
 import com.v7878.dex.io.RandomInput;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class InstructionReader {
@@ -109,7 +110,7 @@ public class InstructionReader {
         }
 
         insns.trimToSize();
-        return insns;
+        return Collections.unmodifiableList(insns);
     }
 
     private static Object indexToRef(ReferenceType type, DexReader context, int index) {

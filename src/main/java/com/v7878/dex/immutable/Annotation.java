@@ -46,8 +46,7 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
     }
 
     public static Annotation of(AnnotationVisibility visibility, CommonAnnotation annotation) {
-        return new Annotation(Objects.requireNonNull(visibility),
-                annotation.getType(), annotation.getElements());
+        return new Annotation(visibility, annotation.getType(), annotation.getElements());
     }
 
     public static Annotation FastNative() {

@@ -132,30 +132,30 @@ import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.util.CachedFixedSizeList;
-import com.v7878.dex.util.FixedSizeSet;
 import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.SparseArray;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
 public class DexReader implements DexIO.DexReaderCache {
-    private record AnnotationDirectory(Set<Annotation> class_annotations,
-                                       SparseArray<Set<Annotation>> field_annotations,
-                                       SparseArray<Set<Annotation>> method_annotations,
-                                       SparseArray<List<Set<Annotation>>> parameter_annotations) {
+    private record AnnotationDirectory(NavigableSet<Annotation> class_annotations,
+                                       SparseArray<NavigableSet<Annotation>> field_annotations,
+                                       SparseArray<NavigableSet<Annotation>> method_annotations,
+                                       SparseArray<List<NavigableSet<Annotation>>> parameter_annotations) {
         public static AnnotationDirectory empty() {
-            return new AnnotationDirectory(Set.of(), SparseArray.empty(),
-                    SparseArray.empty(), SparseArray.empty());
+            return new AnnotationDirectory(Collections.emptyNavigableSet(),
+                    SparseArray.empty(), SparseArray.empty(), SparseArray.empty());
         }
     }
 
     private record CodeItem(int registers, int ins, int outs, DebugInfo debug_info,
-                            List<Instruction> instructions, List<TryBlock> tries) {
+                            List<Instruction> instructions, NavigableSet<TryBlock> tries) {
     }
 
     private record CompactData(int offsets_pos,
@@ -174,8 +174,8 @@ public class DexReader implements DexIO.DexReaderCache {
     private final IntFunction<EncodedArray> encoded_array_cache;
     private final IntFunction<DebugInfo> debug_info_cache;
     private final IntFunction<Annotation> annotation_cache;
-    private final IntFunction<List<Annotation>> annotation_list_cache;
-    private final IntFunction<List<Set<Annotation>>> annotation_set_list_cache;
+    private final IntFunction<NavigableSet<Annotation>> annotation_set_cache;
+    private final IntFunction<List<NavigableSet<Annotation>>> annotation_set_list_cache;
     private final IntFunction<AnnotationDirectory> annotation_directory_cache;
     private final IntFunction<CodeItem> code_cache;
 
@@ -248,7 +248,7 @@ public class DexReader implements DexIO.DexReaderCache {
             debug_info_cache = null;
         }
         annotation_cache = makeOffsetCache(this::readAnnotation);
-        annotation_list_cache = makeOffsetCache(this::readAnnotationList);
+        annotation_set_cache = makeOffsetCache(this::readAnnotationSet);
         annotation_set_list_cache = makeOffsetCache(this::readAnnotationSetList);
         annotation_directory_cache = makeOffsetCache(this::readAnnotationDirectory);
         code_cache = makeOffsetCache(this::readCodeItem);
@@ -364,9 +364,10 @@ public class DexReader implements DexIO.DexReaderCache {
         for (int i = 0; i < map_size; i++) {
             out.add(i, readMapItem(in));
         }
-        return out;
+        return Collections.unmodifiableList(out);
     }
 
+    @Override
     public List<MapItem> getMapItems() {
         return map_items;
     }
@@ -398,7 +399,7 @@ public class DexReader implements DexIO.DexReaderCache {
         for (int i = 0; i < size; i++) {
             out.add(i, getType(in.readUShort()));
         }
-        return out;
+        return Collections.unmodifiableList(out);
     }
 
     public List<TypeId> getTypeList(int offset) {
@@ -407,11 +408,12 @@ public class DexReader implements DexIO.DexReaderCache {
 
     private EncodedArray readEncodedArray(RandomInput in) {
         int size = in.readSmallULeb128();
-        var value = new ArrayList<EncodedValue>(size);
+        List<EncodedValue> value = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             value.add(i, readEncodedValue(in));
         }
-        return EncodedArray.of(value);
+        value = Collections.unmodifiableList(value);
+        return EncodedArray.raw(value);
     }
 
     private EncodedArray readEncodedArray(int offset) {
@@ -431,11 +433,12 @@ public class DexReader implements DexIO.DexReaderCache {
     private EncodedAnnotation readEncodedAnnotation(RandomInput in) {
         TypeId type = getType(in.readSmallULeb128());
         int size = in.readSmallULeb128();
-        var elements = new HashSet<AnnotationElement>(size);
+        NavigableSet<AnnotationElement> elements = new TreeSet<>();
         for (int i = 0; i < size; i++) {
             elements.add(readAnnotationElement(in));
         }
-        return EncodedAnnotation.of(type, elements);
+        elements = Collections.unmodifiableNavigableSet(elements);
+        return EncodedAnnotation.raw(type, elements);
     }
 
     private EncodedValue readEncodedValue(RandomInput in) {
@@ -485,43 +488,39 @@ public class DexReader implements DexIO.DexReaderCache {
         return annotation_cache.apply(offset);
     }
 
-    private List<Annotation> readAnnotationList(int offset) {
+    private NavigableSet<Annotation> readAnnotationSet(int offset) {
         var in = dataAt(offset);
         int size = in.readSmallUInt();
-        var out = new ArrayList<Annotation>(size);
+        var out = new TreeSet<Annotation>();
         for (int i = 0; i < size; i++) {
-            out.add(i, getAnnotation(in.readSmallUInt()));
+            out.add(getAnnotation(in.readSmallUInt()));
         }
-        return out;
+        return Collections.unmodifiableNavigableSet(out);
     }
 
-    public List<Annotation> getAnnotationList(int offset) {
-        return annotation_list_cache.apply(offset);
+    public NavigableSet<Annotation> getAnnotationSet(int offset) {
+        return annotation_set_cache.apply(offset);
     }
 
-    public Set<Annotation> getAnnotationSet(int offset) {
-        return FixedSizeSet.ofList(getAnnotationList(offset));
-    }
-
-    private List<Set<Annotation>> readAnnotationSetList(int offset) {
+    private List<NavigableSet<Annotation>> readAnnotationSetList(int offset) {
         var in = dataAt(offset);
         int size = in.readSmallUInt();
-        var out = new ArrayList<Set<Annotation>>(size);
+        var out = new ArrayList<NavigableSet<Annotation>>(size);
         for (int i = 0; i < size; i++) {
             int annotations_off = in.readSmallUInt();
-            Set<Annotation> annotations = annotations_off == NO_OFFSET ?
-                    Set.of() : getAnnotationSet(annotations_off);
+            NavigableSet<Annotation> annotations = annotations_off == NO_OFFSET ?
+                    Collections.emptyNavigableSet() : getAnnotationSet(annotations_off);
             out.add(i, annotations);
         }
-        return out;
+        return Collections.unmodifiableList(out);
     }
 
-    public List<Set<Annotation>> getAnnotationSetList(int offset) {
+    public List<NavigableSet<Annotation>> getAnnotationSetList(int offset) {
         return annotation_set_list_cache.apply(offset);
     }
 
-    private SparseArray<Set<Annotation>> readAnnotationSetMap(RandomInput in, int size) {
-        var out = new SparseArray<Set<Annotation>>(size);
+    private SparseArray<NavigableSet<Annotation>> readAnnotationSetMap(RandomInput in, int size) {
+        var out = new SparseArray<NavigableSet<Annotation>>(size);
         for (int i = 0; i < size; i++) {
             int id = in.readSmallUInt();
             var set = getAnnotationSet(in.readSmallUInt());
@@ -530,8 +529,8 @@ public class DexReader implements DexIO.DexReaderCache {
         return out;
     }
 
-    private SparseArray<List<Set<Annotation>>> readAnnotationSetListMap(RandomInput in, int size) {
-        var out = new SparseArray<List<Set<Annotation>>>(size);
+    private SparseArray<List<NavigableSet<Annotation>>> readAnnotationSetListMap(RandomInput in, int size) {
+        var out = new SparseArray<List<NavigableSet<Annotation>>>(size);
         for (int i = 0; i < size; i++) {
             int id = in.readSmallUInt();
             var list = getAnnotationSetList(in.readSmallUInt());
@@ -546,13 +545,13 @@ public class DexReader implements DexIO.DexReaderCache {
         int fields_size = in.readSmallUInt();
         int methods_size = in.readSmallUInt();
         int parameters_size = in.readSmallUInt();
-        Set<Annotation> class_annotations = class_annotations_off == NO_OFFSET ?
-                Set.of() : getAnnotationSet(class_annotations_off);
-        SparseArray<Set<Annotation>> field_annotations = fields_size == 0 ?
+        NavigableSet<Annotation> class_annotations = class_annotations_off == NO_OFFSET ?
+                Collections.emptyNavigableSet() : getAnnotationSet(class_annotations_off);
+        SparseArray<NavigableSet<Annotation>> field_annotations = fields_size == 0 ?
                 SparseArray.empty() : readAnnotationSetMap(in, fields_size);
-        SparseArray<Set<Annotation>> method_annotations = methods_size == 0 ?
+        SparseArray<NavigableSet<Annotation>> method_annotations = methods_size == 0 ?
                 SparseArray.empty() : readAnnotationSetMap(in, methods_size);
-        SparseArray<List<Set<Annotation>>> parameter_annotations = parameters_size == 0 ?
+        SparseArray<List<NavigableSet<Annotation>>> parameter_annotations = parameters_size == 0 ?
                 SparseArray.empty() : readAnnotationSetListMap(in, parameters_size);
         return new AnnotationDirectory(class_annotations, field_annotations,
                 method_annotations, parameter_annotations);
@@ -615,8 +614,8 @@ public class DexReader implements DexIO.DexReaderCache {
         var return_type = getType(in.readSmallUInt());
         int parameters_off = in.readSmallUInt();
         var parameters = parameters_off == NO_OFFSET ?
-                null : getTypeList(parameters_off);
-        return ProtoId.of(return_type, parameters);
+                List.<TypeId>of() : getTypeList(parameters_off);
+        return ProtoId.raw(return_type, parameters);
     }
 
     @Override
@@ -693,7 +692,7 @@ public class DexReader implements DexIO.DexReaderCache {
             extra_args = array.size() <= 3 ? List.of() : array.subList(3, array.size());
         }
         String name = String.format("callsite_%s", index);
-        return CallSiteId.of(name, handle, method_name, proto, extra_args);
+        return CallSiteId.raw(name, handle, method_name, proto, extra_args);
     }
 
     @Override
@@ -787,7 +786,7 @@ public class DexReader implements DexIO.DexReaderCache {
                 yield true;
             }
         });
-        return out;
+        return Collections.unmodifiableList(out);
     }
 
     public DebugInfo readDebugInfo(int offset) {
@@ -802,6 +801,7 @@ public class DexReader implements DexIO.DexReaderCache {
                 parameter_names.add(name_idx == NO_INDEX ?
                         null : getString(name_idx));
             }
+            parameter_names = Collections.unmodifiableList(parameter_names);
         }
         var items = readDebugItemArray(in, line_start);
         return new DebugInfo(parameter_names, items);
@@ -841,7 +841,7 @@ public class DexReader implements DexIO.DexReaderCache {
 
     private List<FieldDef> readFieldDefList(
             RandomInput in, int count, IntSupplier hiddenapi,
-            SparseArray<Set<Annotation>> annotations_map,
+            SparseArray<NavigableSet<Annotation>> annotations_map,
             List<EncodedValue> static_values, boolean static_list) {
         List<FieldDef> out = new ArrayList<>(count);
         int index = 0;
@@ -864,21 +864,23 @@ public class DexReader implements DexIO.DexReaderCache {
                 initial_value = (static_values != null && i < static_values.size()) ?
                         static_values.get(i) : EncodedValue.defaultValue(id.getType());
             }
-            out.add(FieldDef.of(id.getName(), id.getType(), access_flags,
+            out.add(FieldDef.raw(id.getName(), id.getType(), access_flags,
                     hiddenapi_flags, initial_value, annotations_map.get(index)));
         }
+        // Note: mutable
         return out;
     }
 
     private CatchHandler readCatchHandler(RandomInput in) {
         int size = in.readSLeb128();
         int handlersCount = Math.abs(size);
-        var handlers = new ArrayList<ExceptionHandler>(handlersCount);
+        List<ExceptionHandler> handlers = new ArrayList<>(handlersCount);
         for (int i = 0; i < handlersCount; i++) {
             var type = getType(in.readSmallULeb128());
             int address = in.readSmallULeb128();
             handlers.add(ExceptionHandler.of(type, address));
         }
+        handlers = Collections.unmodifiableList(handlers);
         Integer catch_all_addr = null;
         if (size <= 0) {
             catch_all_addr = in.readSmallULeb128();
@@ -896,7 +898,7 @@ public class DexReader implements DexIO.DexReaderCache {
             throw new InvalidDexFile(
                     "Unable to find catch handler with offset " + handler_off);
         }
-        return TryBlock.of(start_addr, unit_count, handler.catch_all_addr(), handler.elements());
+        return TryBlock.raw(start_addr, unit_count, handler.catch_all_addr(), handler.elements());
     }
 
     private static int readUShortBackward(RandomInput in) {
@@ -965,7 +967,7 @@ public class DexReader implements DexIO.DexReaderCache {
         }
 
         var instructions = InstructionReader.readArray(this, in, insns_count);
-        var tries = new ArrayList<TryBlock>(tries_size);
+        NavigableSet<TryBlock> tries = new TreeSet<>();
 
         if (tries_size > 0) {
             in.alignPosition(TRY_ITEM_ALIGNMENT);
@@ -988,6 +990,8 @@ public class DexReader implements DexIO.DexReaderCache {
             }
         }
 
+        tries = Collections.unmodifiableNavigableSet(tries);
+
         return new CodeItem(registers_size, ins_size,
                 outs_size, debug_info, instructions, tries);
     }
@@ -998,22 +1002,23 @@ public class DexReader implements DexIO.DexReaderCache {
 
     private MethodImplementation toImplementation(CodeItem code, DebugInfo debug_info) {
         if (code == null) return null;
-        return MethodImplementation.of(code.registers(), code.instructions(),
-                code.tries(), debug_info == null ? null : debug_info.items());
+        return MethodImplementation.raw(code.registers(), code.instructions(),
+                code.tries(), debug_info == null ? List.of() : debug_info.items());
     }
 
     private List<Parameter> toParamaterList(List<String> names, List<TypeId> types,
-                                            List<Set<Annotation>> annotations_map) {
+                                            List<NavigableSet<Annotation>> annotations_map) {
         int types_size = types.size();
         int annotations_size = annotations_map.size();
         List<Parameter> out = new ArrayList<>(types.size());
         for (int i = 0; i < types_size; i++) {
             var type = types.get(i);
             String name = (names == null || i >= names.size()) ? null : names.get(i);
-            var annotations = i < annotations_size ? annotations_map.get(i) : null;
-            out.add(Parameter.of(type, name, annotations));
+            var annotations = i < annotations_size ? annotations_map.get(i) :
+                    Collections.<Annotation>emptyNavigableSet();
+            out.add(Parameter.raw(type, name, annotations));
         }
-        return out;
+        return Collections.unmodifiableList(out);
     }
 
     // TODO: cache blocks?
@@ -1048,8 +1053,8 @@ public class DexReader implements DexIO.DexReaderCache {
 
     private List<MethodDef> readMethodDefList(
             RandomInput in, int count, IntSupplier hiddenapi,
-            SparseArray<Set<Annotation>> method_annotations,
-            SparseArray<List<Set<Annotation>>> parameter_annotations) {
+            SparseArray<NavigableSet<Annotation>> method_annotations,
+            SparseArray<List<NavigableSet<Annotation>>> parameter_annotations) {
         List<MethodDef> out = new ArrayList<>(count);
         int index = 0;
         for (int i = 0; i < count; i++) {
@@ -1082,10 +1087,11 @@ public class DexReader implements DexIO.DexReaderCache {
                     debug_info == null ? null : debug_info.parameter_names(),
                     id.getParameterTypes(), parameter_annotations.get(index, List.of()));
             MethodImplementation implementation = toImplementation(code, debug_info);
-            out.add(MethodDef.of(id.getName(), id.getReturnType(),
+            out.add(MethodDef.raw(id.getName(), id.getReturnType(),
                     parameters, access_flags, hiddenapi_flags,
                     implementation, method_annotations.get(index)));
         }
+        // Note: mutable
         return out;
     }
 
@@ -1094,15 +1100,13 @@ public class DexReader implements DexIO.DexReaderCache {
 
         TypeId clazz = getType(in.readSmallUInt());
         int access_flags = in.readInt();
-        // TODO: readSmallUInt but with -1
-        int superclass_idx = in.readInt();
+        int superclass_idx = in.readSmallUIntWithM1();
         TypeId superclass = superclass_idx == NO_INDEX ?
                 null : getType(superclass_idx);
         int interfaces_off = in.readSmallUInt();
         List<TypeId> interfaces = interfaces_off == NO_OFFSET ?
-                null : getTypeList(interfaces_off);
-        // TODO: readSmallUInt but with -1
-        int source_file_idx = in.readInt();
+                List.of() : getTypeList(interfaces_off);
+        int source_file_idx = in.readSmallUIntWithM1();
         String source_file = source_file_idx == NO_INDEX ?
                 null : getString(source_file_idx);
         int annotations_off = in.readSmallUInt();
@@ -1135,7 +1139,7 @@ public class DexReader implements DexIO.DexReaderCache {
                     annotations.method_annotations(), annotations.parameter_annotations());
         }
 
-        return ClassDef.of(clazz, access_flags, superclass, interfaces, source_file,
+        return ClassDef.raw(clazz, access_flags, superclass, interfaces, source_file,
                 MemberUtils.mergeFields(static_fields, instance_fields),
                 MemberUtils.mergeMethods(direct_methods, virtual_methods),
                 annotations.class_annotations());

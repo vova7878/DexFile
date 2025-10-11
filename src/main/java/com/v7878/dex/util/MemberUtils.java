@@ -66,14 +66,14 @@ public class MemberUtils {
         var out = new TreeSet<FieldDef>();
         if (static_ != null) out.addAll(static_);
         if (instance != null) out.addAll(instance);
-        return out;
+        return Collections.unmodifiableNavigableSet(out);
     }
 
     public static NavigableSet<MethodDef> mergeMethods(List<MethodDef> direct, List<MethodDef> virtual) {
         var out = new TreeSet<MethodDef>();
         if (direct != null) out.addAll(direct);
         if (virtual != null) out.addAll(virtual);
-        return out;
+        return Collections.unmodifiableNavigableSet(out);
     }
 
     public static FieldDef findField(NavigableSet<FieldDef> fields, boolean is_static, String name, TypeId type) {

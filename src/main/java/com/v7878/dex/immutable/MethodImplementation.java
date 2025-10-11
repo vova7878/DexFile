@@ -21,7 +21,9 @@ public final class MethodImplementation {
             NavigableSet<TryBlock> try_blocks, List<DebugItem> debug_items) {
         this.register_count = Preconditions.checkMethodRegisterCount(register_count);
         this.instructions = Objects.requireNonNull(instructions);
+        // TODO: try blocks must not overlap
         this.try_blocks = Objects.requireNonNull(try_blocks);
+        // TODO: deduplicate and remove unused AdvancePC items
         this.debug_items = Objects.requireNonNull(debug_items);
     }
 
@@ -35,9 +37,7 @@ public final class MethodImplementation {
                                           Iterable<TryBlock> try_blocks, Iterable<DebugItem> debug_items) {
         return new MethodImplementation(register_count,
                 Converter.toList(instructions),
-                // TODO: try blocks must not overlap
                 Converter.toNavigableSet(try_blocks),
-                // TODO: deduplicate and remove unused AdvancePC items
                 Converter.toList(debug_items));
     }
 

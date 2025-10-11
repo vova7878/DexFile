@@ -28,6 +28,21 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             String name, TypeId return_type, List<Parameter> parameters,
             int access_flags, int hiddenapi_flags, MethodImplementation implementation,
             NavigableSet<Annotation> annotations) {
+        if ((access_flags & (ACC_ABSTRACT | ACC_NATIVE)) != 0) {
+            if (implementation != null) {
+                throw new IllegalArgumentException("Abstract or native methods should not have implementation");
+            }
+        } else {
+            if (implementation == null) {
+                throw new IllegalArgumentException("Implementation is null");
+            }
+            int ins = ShortyUtils.getDefInputRegisterCount(parameters, access_flags);
+            int regs = implementation.getRegisterCount();
+            if (regs < ins) {
+                throw new IllegalArgumentException(String.format(
+                        "Not enough registers for parameters. Required: %d, available: %d", ins, regs));
+            }
+        }
         this.name = Objects.requireNonNull(name);
         this.return_type = Objects.requireNonNull(return_type);
         this.parameters = Objects.requireNonNull(parameters);
@@ -50,26 +65,8 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             String name, TypeId return_type, Iterable<Parameter> parameters,
             int access_flags, int hiddenapi_flags, MethodImplementation implementation,
             Iterable<Annotation> annotations) {
-        // TODO: check that parameters do not contain names if implementation is null
-        var params = Converter.toList(parameters);
-        if ((access_flags & (ACC_ABSTRACT | ACC_NATIVE)) != 0) {
-            if (implementation != null) {
-                throw new IllegalArgumentException("Abstract or native methods should not have implementation");
-            }
-        } else {
-            if (implementation == null) {
-                throw new IllegalArgumentException("Implementation is null");
-            }
-            int ins = ShortyUtils.getDefInputRegisterCount(params, access_flags);
-            int regs = implementation.getRegisterCount();
-            if (regs < ins) {
-                throw new IllegalArgumentException(String.format(
-                        "Not enough registers for parameters. Required: %d, available: %d", ins, regs));
-            }
-        }
-        var annos = Converter.toNavigableSet(annotations);
-        return new MethodDef(name, return_type, params,
-                access_flags, hiddenapi_flags, implementation, annos);
+        return new MethodDef(name, return_type, Converter.toList(parameters), access_flags,
+                hiddenapi_flags, implementation, Converter.toNavigableSet(annotations));
     }
 
     // TODO?: Add simpler constructor?

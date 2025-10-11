@@ -138,6 +138,16 @@ public interface RandomInput extends RandomAccess {
         return out;
     }
 
+    default int readSmallUIntWithM1() {
+        int pos = position();
+        int out = readInt();
+        if (out != -1 && out < 0) {
+            throw new IllegalStateException(
+                    "Out of range small uint at position " + pos);
+        }
+        return out;
+    }
+
     default long readLong() {
         int shift = isBigEndian() ? 32 : 0;
         return (readInt() & 0xffffffffL) << shift | (readInt() & 0xffffffffL) << (32 - shift);

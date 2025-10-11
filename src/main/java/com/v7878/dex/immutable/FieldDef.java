@@ -21,6 +21,9 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
 
     private FieldDef(String name, TypeId type, int access_flags, int hiddenapi_flags,
                      EncodedValue initial_value, NavigableSet<Annotation> annotations) {
+        if ((access_flags & ACC_STATIC) == 0 && initial_value != null) {
+            throw new IllegalArgumentException("Instance fields can`t have initial value");
+        }
         this.name = Objects.requireNonNull(name);
         this.type = Objects.requireNonNull(type);
         this.access_flags = Preconditions.checkFieldAccessFlags(access_flags);
@@ -38,9 +41,6 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
 
     public static FieldDef of(String name, TypeId type, int access_flags, int hiddenapi_flags,
                               EncodedValue initial_value, Iterable<Annotation> annotations) {
-        if ((access_flags & ACC_STATIC) == 0 && initial_value != null) {
-            throw new IllegalArgumentException("Instance fields can`t have initial value");
-        }
         return new FieldDef(name, type, access_flags, hiddenapi_flags,
                 initial_value, Converter.toNavigableSet(annotations));
     }
