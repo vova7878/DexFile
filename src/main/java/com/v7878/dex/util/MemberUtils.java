@@ -40,7 +40,7 @@ public class MemberUtils {
         return AnnotationElement.of(name, EncodedNull.INSTANCE);
     }
 
-    private static final TypeId FIRST_TYPE = TypeId.raw("");
+    private static final TypeId FIRST_TYPE = TypeId.raw(0, "");
     private static final FieldDef FIRST_INSTANCE_FIELD =
             searchableField("", FIRST_TYPE, false);
     private static final MethodDef FIRST_VIRTUAL_METHOD =

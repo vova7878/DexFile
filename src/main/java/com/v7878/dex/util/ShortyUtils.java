@@ -10,12 +10,12 @@ import com.v7878.dex.immutable.bytecode.iface.VariableRegisterInstruction;
 import java.util.List;
 
 public class ShortyUtils {
-    public static RuntimeException unrecognizedType(String descriptor) {
-        throw new IllegalArgumentException("Unrecognized type: " + descriptor);
+    public static RuntimeException invalidType(String descriptor) {
+        throw new IllegalArgumentException("Invalid type descriptor: " + descriptor);
     }
 
-    public static RuntimeException unrecognizedShorty(char shorty) {
-        throw new IllegalArgumentException("Unrecognized shorty: " + shorty);
+    public static RuntimeException invalidShorty(char shorty) {
+        throw new IllegalArgumentException("Invalid shorty: " + shorty);
     }
 
     public static char getTypeShorty(String descriptor) {
@@ -33,7 +33,7 @@ public class ShortyUtils {
                 if (descriptor.startsWith("L") || descriptor.startsWith("[")) {
                     yield 'L';
                 }
-                throw unrecognizedType(descriptor);
+                throw invalidType(descriptor);
             }
         };
     }
@@ -47,7 +47,7 @@ public class ShortyUtils {
             case 'V' -> 0;
             case 'Z', 'B', 'C', 'S', 'I', 'F', 'L' -> 1;
             case 'J', 'D' -> 2;
-            default -> throw unrecognizedShorty(shorty);
+            default -> throw invalidShorty(shorty);
         };
     }
 

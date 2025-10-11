@@ -14,7 +14,7 @@ import static com.v7878.dex.builder.CodeBuilder.Op.PUT_CHAR;
 import static com.v7878.dex.builder.CodeBuilder.Op.PUT_OBJECT;
 import static com.v7878.dex.builder.CodeBuilder.Op.PUT_SHORT;
 import static com.v7878.dex.builder.CodeBuilder.Op.PUT_WIDE;
-import static com.v7878.dex.util.ShortyUtils.unrecognizedShorty;
+import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
@@ -873,7 +873,7 @@ public final class CodeBuilder {
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> move(dst_reg_or_pair, src_reg_or_pair);
             case 'J', 'D' -> move_wide(dst_reg_or_pair, src_reg_or_pair);
             case 'L' -> move_object(dst_reg_or_pair, src_reg_or_pair);
-            default -> throw unrecognizedShorty(shorty);
+            default -> throw invalidShorty(shorty);
         };
     }
 
@@ -915,7 +915,7 @@ public final class CodeBuilder {
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> move_result(dst_reg_or_pair);
             case 'J', 'D' -> move_result_wide(dst_reg_or_pair);
             case 'L' -> move_result_object(dst_reg_or_pair);
-            default -> throw unrecognizedShorty(shorty);
+            default -> throw invalidShorty(shorty);
         };
     }
 
@@ -948,7 +948,7 @@ public final class CodeBuilder {
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> return_(return_value_reg_or_pair);
             case 'J', 'D' -> return_wide(return_value_reg_or_pair);
             case 'L' -> return_object(return_value_reg_or_pair);
-            default -> throw unrecognizedShorty(shorty);
+            default -> throw invalidShorty(shorty);
         };
     }
 
@@ -1387,7 +1387,7 @@ public final class CodeBuilder {
             case 'I', 'F' -> GET;
             case 'J', 'D' -> GET_WIDE;
             case 'L' -> GET_OBJECT;
-            default -> throw unrecognizedShorty(shorty);
+            default -> throw invalidShorty(shorty);
         };
     }
 
@@ -1400,7 +1400,7 @@ public final class CodeBuilder {
             case 'I', 'F' -> PUT;
             case 'J', 'D' -> PUT_WIDE;
             case 'L' -> PUT_OBJECT;
-            default -> throw unrecognizedShorty(shorty);
+            default -> throw invalidShorty(shorty);
         };
     }
 
