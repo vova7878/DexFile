@@ -149,7 +149,7 @@ public final class TypeId implements Comparable<TypeId> {
     public static TypeId ofBinaryName(String name) {
         Objects.requireNonNull(name);
         if (name.startsWith("[")) {
-            return of(name);
+            return of(name.replace('.', '/'));
         }
         return switch (name) {
             case "void" -> V;
