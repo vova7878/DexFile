@@ -300,6 +300,7 @@ public class DexCollector {
         public int hashCode() {
             return isEmptyExceptForClass() ?
                     Objects.hashCode(class_annotations) :
+                    // TODO: type id hash
                     System.identityHashCode(this);
         }
 

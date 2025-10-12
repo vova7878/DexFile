@@ -1,6 +1,5 @@
 package com.v7878.dex.raw;
 
-import static com.v7878.dex.DexConstants.ACC_VISIBILITY_MASK;
 import static com.v7878.dex.DexConstants.DBG_ADVANCE_LINE;
 import static com.v7878.dex.DexConstants.DBG_ADVANCE_PC;
 import static com.v7878.dex.DexConstants.DBG_END_LOCAL;
@@ -14,10 +13,6 @@ import static com.v7878.dex.DexConstants.DBG_SET_FILE;
 import static com.v7878.dex.DexConstants.DBG_SET_PROLOGUE_END;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL_EXTENDED;
-import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_BLOCKED;
-import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_MAX_TARGET_O;
-import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_SDK;
-import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_UNSUPPORTED;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.DexConstants.TYPE_CALL_SITE_ID_ITEM;
@@ -68,14 +63,7 @@ import static com.v7878.dex.raw.CompactDexConstants.kInsnsSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kOutsSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.getSecondFlag;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.kBlacklist;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.kDarkGreylist;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.kLightGreylist;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.kWhitelist;
-import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
 import static com.v7878.dex.util.Checks.checkIndex;
-import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.DexIO;
@@ -811,34 +799,6 @@ public class DexReader implements DexIO.DexReaderCache {
         return debug_info_cache.apply(offset);
     }
 
-    private long fixLegacyHiddenApiFlags(int access_flags) {
-        int hiddenapi_flags = 0;
-        // First bit
-        {
-            if (!isPowerOfTwo(access_flags & ACC_VISIBILITY_MASK)) {
-                access_flags ^= ACC_VISIBILITY_MASK;
-                hiddenapi_flags |= 0x1;
-            }
-        }
-        // Second bit
-        {
-            int second_flag = getSecondFlag(access_flags);
-            if ((access_flags & second_flag) != 0) {
-                access_flags &= ~second_flag;
-                hiddenapi_flags |= 0x2;
-            }
-        }
-        hiddenapi_flags = switch (hiddenapi_flags) {
-            case kWhitelist -> HIDDENAPI_FLAG_SDK;
-            case kLightGreylist -> HIDDENAPI_FLAG_UNSUPPORTED;
-            case kDarkGreylist -> HIDDENAPI_FLAG_MAX_TARGET_O;
-            case kBlacklist -> HIDDENAPI_FLAG_BLOCKED;
-            default -> throw shouldNotReachHere();
-        };
-        return access_flags & 0xffffffffL |
-                (hiddenapi_flags & 0xffffffffL) << 32;
-    }
-
     private List<FieldDef> readFieldDefList(
             RandomInput in, int count, IntSupplier hiddenapi,
             SparseArray<NavigableSet<Annotation>> annotations_map,
@@ -851,7 +811,7 @@ public class DexReader implements DexIO.DexReaderCache {
             int access_flags = in.readULeb128();
             int hiddenapi_flags;
             if (options.getTargetApi() == 28) {
-                long common = fixLegacyHiddenApiFlags(access_flags);
+                long common = LegacyHiddenApiFlags.decrypt(access_flags);
                 access_flags = (int) common;
                 hiddenapi_flags = options.hasHiddenApiFlags() ?
                         (int) (common >> 32) : 0;
@@ -1063,7 +1023,7 @@ public class DexReader implements DexIO.DexReaderCache {
             int access_flags = in.readULeb128();
             int hiddenapi_flags;
             if (options.getTargetApi() == 28) {
-                long common = fixLegacyHiddenApiFlags(access_flags);
+                long common = LegacyHiddenApiFlags.decrypt(access_flags);
                 access_flags = (int) common;
                 hiddenapi_flags = options.hasHiddenApiFlags() ?
                         (int) (common >> 32) : 0;

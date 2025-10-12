@@ -224,7 +224,7 @@ public final class DexIO {
         return write(WriteOptions.defaultOptions(), data);
     }
 
-    public static byte[] writeDexContainer(WriteOptions options, Dex[] data) {
+    public static byte[] writeDexContainer(WriteOptions options, Dex... data) {
         Objects.requireNonNull(data);
         var version = options.getDexVersion();
         if (!version.isDexContainer()) {

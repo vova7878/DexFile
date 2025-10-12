@@ -1,6 +1,5 @@
 package com.v7878.dex.raw;
 
-import static com.v7878.dex.DexConstants.ACC_VISIBILITY_MASK;
 import static com.v7878.dex.DexConstants.DBG_ADVANCE_LINE;
 import static com.v7878.dex.DexConstants.DBG_ADVANCE_PC;
 import static com.v7878.dex.DexConstants.DBG_END_LOCAL;
@@ -16,10 +15,6 @@ import static com.v7878.dex.DexConstants.DBG_SET_PROLOGUE_END;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL_EXTENDED;
 import static com.v7878.dex.DexConstants.ENDIAN_CONSTANT;
-import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_BLOCKED;
-import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_MAX_TARGET_O;
-import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_SDK;
-import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_UNSUPPORTED;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM;
@@ -80,11 +75,6 @@ import static com.v7878.dex.raw.CompactDexConstants.kInsnsSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kOutsSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.getSecondFlag;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.kBlacklist;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.kDarkGreylist;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.kLightGreylist;
-import static com.v7878.dex.raw.LegacyHiddenApiFlags.kWhitelist;
 import static com.v7878.dex.util.AlignmentUtils.roundUp;
 
 import com.v7878.dex.DexVersion;
@@ -615,8 +605,13 @@ public class DexWriter {
         main_buffer.writeInt(map.method_ids_size > 0 ? map.method_ids_off : 0);
         main_buffer.writeInt(map.class_defs_size);
         main_buffer.writeInt(map.class_defs_size > 0 ? map.class_defs_off : 0);
-        main_buffer.writeInt(map.data_size);
-        main_buffer.writeInt(map.data_size > 0 ? map.data_off : 0);
+        if (isDexContainer()) {
+            main_buffer.writeInt(0); // unused data_size
+            main_buffer.writeInt(0); // unused data_off
+        } else {
+            main_buffer.writeInt(map.data_size);
+            main_buffer.writeInt(map.data_size > 0 ? map.data_off : 0);
+        }
 
         if (isCompact()) {
             main_buffer.writeInt(map.compact_feature_flags);
@@ -916,30 +911,11 @@ public class DexWriter {
         }
     }
 
-    private int fixLegacyHiddenApiFlags(int access_flags, int hiddenapi_flags) {
-        hiddenapi_flags = switch (hiddenapi_flags) {
-            case HIDDENAPI_FLAG_SDK -> kWhitelist;
-            case HIDDENAPI_FLAG_UNSUPPORTED -> kLightGreylist;
-            case HIDDENAPI_FLAG_MAX_TARGET_O -> kDarkGreylist;
-            case HIDDENAPI_FLAG_BLOCKED -> kBlacklist;
-            default -> throw new IllegalArgumentException(String.format(
-                    "Invalid hidden api flag: %d", hiddenapi_flags));
-        };
-        if ((hiddenapi_flags & 0x1) != 0) {
-            access_flags ^= ACC_VISIBILITY_MASK;
-        }
-        if ((hiddenapi_flags & 0x2) != 0) {
-            int second_flag = getSecondFlag(access_flags);
-            access_flags |= second_flag;
-        }
-        return access_flags;
-    }
-
     public void writeFieldDef(FieldDefContainer value) {
         int access_flags = value.value().getAccessFlags();
         if (options.hasHiddenApiFlags() && options.getTargetApi() == 28) {
             int hiddenapi_flags = value.value().getHiddenApiFlags();
-            access_flags = fixLegacyHiddenApiFlags(access_flags, hiddenapi_flags);
+            access_flags = LegacyHiddenApiFlags.encrypt(access_flags, hiddenapi_flags);
         }
         data_buffer.writeULeb128(access_flags);
     }
@@ -958,7 +934,7 @@ public class DexWriter {
         int access_flags = value.value().getAccessFlags();
         if (options.hasHiddenApiFlags() && options.getTargetApi() == 28) {
             int hiddenapi_flags = value.value().getHiddenApiFlags();
-            access_flags = fixLegacyHiddenApiFlags(access_flags, hiddenapi_flags);
+            access_flags = LegacyHiddenApiFlags.encrypt(access_flags, hiddenapi_flags);
         }
         data_buffer.writeULeb128(access_flags);
         var code = value.code();
