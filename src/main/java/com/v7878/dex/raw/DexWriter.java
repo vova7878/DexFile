@@ -993,6 +993,7 @@ public class DexWriter {
     public boolean writeClassData(ClassContainer value) {
         var def = value.def;
         if (def.isEmptyClassData()) {
+            value.offset = NO_OFFSET;
             return false;
         }
         value.offset = data_buffer.position();
