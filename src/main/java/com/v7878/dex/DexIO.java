@@ -14,6 +14,7 @@ import com.v7878.dex.io.ByteArrayIO;
 import com.v7878.dex.io.ByteArrayInput;
 import com.v7878.dex.raw.DexReader;
 import com.v7878.dex.raw.DexWriter;
+import com.v7878.dex.raw.SharedData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -159,7 +160,7 @@ public final class DexIO {
     public static Dex read(ReadOptions options, byte[] data,
                            int data_offset, int header_offset, int[] ids) {
         Objects.requireNonNull(options);
-        var input = new ByteArrayInput(data).sliceAt(data_offset);
+        var input = new ByteArrayInput(data).duplicateAt(data_offset).markAsStart();
         var reader = new DexReader(options, input, header_offset);
         var classes = reader.getClasses();
         if (ids == null) {
@@ -184,7 +185,7 @@ public final class DexIO {
     public static DexReaderCache readCache(ReadOptions options, byte[] data,
                                            int data_offset, int header_offset) {
         Objects.requireNonNull(options);
-        var input = new ByteArrayInput(data).sliceAt(data_offset);
+        var input = new ByteArrayInput(data).duplicateAt(data_offset).markAsStart();
         return new DexReader(options, input, header_offset);
     }
 
@@ -196,7 +197,7 @@ public final class DexIO {
 
     public static Dex[] readDexContainer(ReadOptions options, byte[] data, int data_offset) {
         Objects.requireNonNull(options);
-        var input = new ByteArrayInput(data).sliceAt(data_offset);
+        var input = new ByteArrayInput(data).duplicateAt(data_offset).markAsStart();
         var readers = new ArrayList<DexReader>();
         int header_offset = 0;
         while (header_offset != input.size()) {
@@ -215,8 +216,10 @@ public final class DexIO {
         Objects.requireNonNull(options);
         Objects.requireNonNull(data);
         var io = new ByteArrayIO();
-        DexWriter writer = new DexWriter(options, io, data, 0);
-        writer.finalizeHeader(writer.getFileSize());
+        var strings = new SharedData();
+        DexWriter writer = new DexWriter(options, strings, io, data, 0);
+        writer.writeData(writer.getMainEnd(), true);
+        writer.writeMain(writer.getFileSize());
         return io.toByteArray();
     }
 
@@ -232,16 +235,17 @@ public final class DexIO {
                     "Illegal dex container version " + version);
         }
         for (var dex : data) Objects.requireNonNull(dex);
-        // TODO: shared string section?
         var io = new ByteArrayIO();
+        var strings = new SharedData();
         var writers = new DexWriter[data.length];
         int header_offset = 0;
         for (int i = 0; i < data.length; i++) {
-            writers[i] = new DexWriter(options, io, data[i], header_offset);
-            header_offset += writers[i].getFileSize();
+            var writer = writers[i] = new DexWriter(options, strings, io, data[i], header_offset);
+            writer.writeData(writer.getMainEnd(), i == data.length - 1);
+            header_offset += writer.getFileSize();
         }
         for (var writer : writers) {
-            writer.finalizeHeader(header_offset);
+            writer.writeMain(header_offset);
         }
         return io.toByteArray();
     }

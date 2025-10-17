@@ -3,60 +3,7 @@ package com.v7878.dex.io;
 import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
 import static com.v7878.dex.util.AlignmentUtils.roundUp;
 
-import java.nio.ByteOrder;
 import java.util.Objects;
-
-class OffsetOutput implements RandomOutput {
-    private final RandomOutput delegate;
-    private final int offset;
-
-    OffsetOutput(RandomOutput delegate, int offset) {
-        this.delegate = delegate;
-        this.offset = offset;
-    }
-
-    @Override
-    public ByteOrder getByteOrder() {
-        return delegate.getByteOrder();
-    }
-
-    @Override
-    public void setByteOrder(ByteOrder order) {
-        delegate.setByteOrder(order);
-    }
-
-    @Override
-    public void writeByte(int value) {
-        delegate.writeByte(value);
-    }
-
-    @Override
-    public int size() {
-        return delegate.size() - offset;
-    }
-
-    @Override
-    public int position() {
-        return delegate.position() - offset;
-    }
-
-    @Override
-    public void position(int position) {
-        delegate.position(Math.addExact(offset, position));
-    }
-
-    @Override
-    public OffsetOutput duplicateAt(int position) {
-        position = Math.addExact(offset, position);
-        return new OffsetOutput(delegate.duplicateAt(position), offset);
-    }
-
-    @Override
-    public OffsetOutput sliceAt(int position) {
-        position = Math.addExact(offset, position);
-        return new OffsetOutput(delegate.duplicateAt(position), position);
-    }
-}
 
 public interface RandomOutput extends RandomAccess {
     default void writeByteArray(byte[] arr) {
@@ -173,17 +120,5 @@ public interface RandomOutput extends RandomAccess {
     RandomOutput duplicateAt(int position);
 
     @Override
-    default RandomOutput slice() {
-        return sliceAt(position());
-    }
-
-    @Override
-    default RandomOutput slice(int offset) {
-        return sliceAt(Math.addExact(position(), offset));
-    }
-
-    @Override
-    default RandomOutput sliceAt(int position) {
-        return new OffsetOutput(this.duplicateAt(position), position);
-    }
+    RandomOutput markAsStart();
 }

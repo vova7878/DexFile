@@ -36,6 +36,7 @@ import com.v7878.dex.immutable.value.EncodedMethodType;
 import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
+import com.v7878.dex.raw.SharedData.StringPosition;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.ShortyUtils;
@@ -371,7 +372,7 @@ public class DexCollector {
         }
     }
 
-    public final NavigableSet<String> strings;
+    public final NavigableSet<StringPosition> strings;
     public final NavigableSet<TypeId> types;
     public final NavigableSet<ProtoId> protos;
     public final NavigableSet<FieldId> fields;
@@ -390,10 +391,12 @@ public class DexCollector {
 
     public final List<ClassDefContainer> class_defs;
 
+    private final SharedData shared_data;
     private final boolean is_compact;
     private final boolean collect_debug_info;
 
-    public DexCollector(boolean is_compact, boolean collect_debug_info) {
+    public DexCollector(SharedData shared_data, boolean is_compact, boolean collect_debug_info) {
+        this.shared_data = shared_data;
         this.is_compact = is_compact;
         this.collect_debug_info = collect_debug_info;
 
@@ -418,7 +421,7 @@ public class DexCollector {
     }
 
     public void addString(String value) {
-        strings.add(value);
+        strings.add(shared_data.addString(value));
     }
 
     public void addType(TypeId value) {

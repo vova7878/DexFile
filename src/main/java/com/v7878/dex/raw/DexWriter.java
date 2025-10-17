@@ -129,6 +129,7 @@ import com.v7878.dex.raw.DexCollector.CodeContainer;
 import com.v7878.dex.raw.DexCollector.FieldDefContainer;
 import com.v7878.dex.raw.DexCollector.MethodDefContainer;
 import com.v7878.dex.raw.DexCollector.TryBlockContainer;
+import com.v7878.dex.raw.SharedData.StringPosition;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.EmptyArrays;
@@ -141,6 +142,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.zip.Adler32;
 
 public class DexWriter {
@@ -168,6 +170,8 @@ public class DexWriter {
         public int method_handles_size;
         public int method_handles_off;
 
+        public int main_end;
+
         public int data_size;
         public int data_off;
 
@@ -181,8 +185,8 @@ public class DexWriter {
         public int class_data_items_off;
         public int code_items_size;
         public int code_items_off;
-        public int string_data_items_size;
-        public int string_data_items_off;
+        // string_data_items_size belongs to SharedData
+        // string_data_items_off belongs to SharedData
         public int debug_info_items_size;
         public int debug_info_items_off;
         public int annotations_size;
@@ -205,23 +209,12 @@ public class DexWriter {
         public int header_off;
     }
 
-    private static class StringContainer {
-        public final String value;
-        public int offset;
-
-        private StringContainer(String value) {
-            this.value = value;
-            this.offset = -1;
-        }
-    }
-
-    // TODO: rename
-    private static class ClassContainer {
+    private static class ClassPosition {
         public final ClassDefContainer def;
         public int offset;
 
-        private ClassContainer(ClassDefContainer def) {
-            this.def = def;
+        ClassPosition(ClassDefContainer def) {
+            this.def = Objects.requireNonNull(def);
             this.offset = -1;
         }
     }
@@ -237,7 +230,9 @@ public class DexWriter {
 
     private final FileMap map;
 
-    private final StringContainer[] strings;
+    private final SharedData shared_data;
+
+    private final StringPosition[] strings;
     private final TypeId[] types;
     private final ProtoId[] protos;
     private final FieldId[] fields;
@@ -254,18 +249,30 @@ public class DexWriter {
     private final Map<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
     private final Map<AnnotationDirectory, Integer> annotation_directories;
 
-    private final ClassContainer[] class_defs;
+    private final ClassPosition[] class_defs;
 
     private final int[][] hiddenapi_flags;
 
     // Not null only for compact dex files
     private final CompactData compact_debug_info;
 
-    public DexWriter(WriteOptions options, RandomIO io, Dex dexfile, int header_offset) {
+    @SuppressWarnings("SameParameterValue")
+    private static void checkSizeLimit(int size, int limit, String name) {
+        if (size > limit) {
+            throw new IllegalStateException(String.format(
+                    "Size(%d) should not exceed limit(%d) for %s section",
+                    size, limit, name));
+        }
+    }
+
+    public DexWriter(WriteOptions options, SharedData shared_data,
+                     RandomIO io, Dex dexfile, int header_offset) {
         assert io.position() == 0;
         options.validate();
         this.options = options;
+        this.shared_data = shared_data;
         main_buffer = io.duplicate();
+        data_buffer = io.duplicate();
 
         opcodes = Opcodes.of(options.getDexVersion(), options.getTargetApi(),
                 options.isTargetForArt(), options.hasOdexInstructions());
@@ -281,11 +288,11 @@ public class DexWriter {
             map.compact_feature_flags = options.getCDEXFlags();
         }
 
-        var collector = new DexCollector(isCompact(), options.hasDebugInfo());
+        var collector = new DexCollector(shared_data, isCompact(), options.hasDebugInfo());
         collector.fillDex(dexfile);
 
         // The number of strings is limited to 32 bits, so no checks are needed.
-        strings = Converter.transform(collector.strings, StringContainer::new, StringContainer[]::new);
+        strings = collector.strings.toArray(EmptyArrays.STRING);
         types = collector.types.toArray(EmptyArrays.TYPE_ID);
         checkSizeLimit(types.length, 0xffff, "type");
         protos = collector.protos.toArray(EmptyArrays.PROTO_ID);
@@ -301,7 +308,7 @@ public class DexWriter {
 
         // TODO: "The classes must be ordered such that a given class's superclass
         //  and implemented interfaces appear in the list earlier than the referring class"
-        class_defs = Converter.transform(collector.class_defs, ClassContainer::new, ClassContainer[]::new);
+        class_defs = Converter.transform(collector.class_defs, ClassPosition::new, ClassPosition[]::new);
 
         type_lists = collector.type_lists;
         encoded_arrays = collector.encoded_arrays;
@@ -322,12 +329,22 @@ public class DexWriter {
         compact_debug_info = isCompact() ? new CompactData(new int[methods.length]) : null;
 
         initMap();
+    }
 
-        // Note: for compact dex, offsets are calculated from the data section, not the header
-        data_buffer = isCompact() ? io.sliceAt(map.data_off) : io.duplicateAt(map.data_off);
+    public void writeData(int data_offset, boolean primary) {
+        if (isDexContainer()) {
+            assert data_offset >= map.main_end;
+        } else {
+            assert data_offset == map.main_end;
+            map.data_off = data_offset;
+        }
 
-        // We want offset 0 to be reserved
+        data_buffer.position(data_offset);
+
         if (isCompact()) {
+            // Note: for compact dex, offsets are calculated from the data section, not the header
+            data_buffer.markAsStart();
+            // We want offset 0 to be reserved
             data_buffer.addPosition(DATA_SECTION_ALIGNMENT);
         }
 
@@ -340,22 +357,44 @@ public class DexWriter {
             writeDebugInfoSection();
             writeCodeItemSection();
         }
+        if (primary) {
+            writeStringDataSection();
+        }
         writeEncodedArraySection();
         writeAnnotationSection();
         writeAnnotationSetSection();
         writeAnnotationSetListSection();
         writeAnnotationDirectorySection();
         writeTypeListSection();
-        writeStringDataSection();
         writeClassDataSection();
         writeHiddenApiSection();
-        writeMap();
+        writeMap(false);
 
         if (isCompact()) {
             writeDebugInfoOffsetTable();
         }
 
-        // main section
+        data_buffer.alignPosition(DATA_SECTION_ALIGNMENT);
+
+        // Note: for compact dex, data section is placed
+        // after the entire file and isn`t included in its size
+        if (isCompact()) {
+            map.file_size = map.main_end;
+            map.data_size = data_buffer.position();
+            map.compact_owned_data_begin = 0;
+            map.compact_owned_data_end = map.data_size;
+        } else {
+            map.file_size = data_buffer.position();
+            if (!isDexContainer()) {
+                map.data_size = map.file_size - map.data_off;
+            }
+        }
+        map.file_size -= map.header_off;
+    }
+
+    public void writeMain(int container_size) {
+        writeMap(true);
+
         writeStringSection();
         writeTypeSection();
         writeFieldSection();
@@ -365,27 +404,39 @@ public class DexWriter {
         writeMethodHandleSection();
         writeClassDefSection();
 
-        data_buffer.alignPosition(DATA_SECTION_ALIGNMENT);
-        // Note: for compact dex, data section is placed
-        // after the entire file and isn`t included in its size
-        if (isCompact()) {
-            map.file_size = map.data_off;
-            map.data_size = data_buffer.position();
-            map.compact_owned_data_begin = 0;
-            map.compact_owned_data_end = map.data_size;
-        } else {
-            map.file_size = data_buffer.position();
-            map.data_size = map.file_size - map.data_off;
-        }
-        map.file_size -= map.header_off;
+        finalizeHeader(container_size);
     }
 
-    @SuppressWarnings("SameParameterValue")
-    private static void checkSizeLimit(int size, int limit, String name) {
-        if (size > limit) {
-            throw new IllegalStateException(String.format(
-                    "Size(%d) should not exceed limit(%d) for %s section",
-                    size, limit, name));
+    public void finalizeHeader(int container_size) {
+        if (isDexContainer()) {
+            assert container_size >= map.file_size;
+            map.container_size = container_size;
+        } else {
+            assert container_size == map.file_size;
+        }
+        writeHeader();
+        if (isCompact()) {
+            // TODO: How are the checksum and signature fields calculated for compact dex?
+        } else {
+            main_buffer.position(map.header_off + SIGNATURE_OFFSET);
+            MessageDigest md;
+            try {
+                md = MessageDigest.getInstance("SHA-1");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
+            }
+            byte[] signature = md.digest(main_buffer
+                    .duplicateAt(map.header_off + SIGNATURE_DATA_START_OFFSET)
+                    .readByteArray(map.file_size - SIGNATURE_DATA_START_OFFSET));
+            main_buffer.writeByteArray(signature);
+
+            main_buffer.position(map.header_off + CHECKSUM_OFFSET);
+            Adler32 adler = new Adler32();
+            int adler_length = map.file_size - CHECKSUM_DATA_START_OFFSET;
+            adler.update(main_buffer
+                    .duplicateAt(map.header_off + CHECKSUM_DATA_START_OFFSET)
+                    .readByteArray(adler_length), 0, adler_length);
+            main_buffer.writeInt((int) adler.getValue());
         }
     }
 
@@ -427,7 +478,7 @@ public class DexWriter {
         map.method_handles_size = method_handles.length;
         offset += map.method_handles_size * METHOD_HANDLE_ID_SIZE;
 
-        map.data_off = roundUp(offset, DATA_SECTION_ALIGNMENT);
+        map.main_end = roundUp(offset, DATA_SECTION_ALIGNMENT);
     }
 
     public int getStringIndex(String value) {
@@ -579,6 +630,10 @@ public class DexWriter {
         return map.file_size;
     }
 
+    public int getMainEnd() {
+        return map.main_end;
+    }
+
     public Opcodes opcodes() {
         return opcodes;
     }
@@ -601,14 +656,15 @@ public class DexWriter {
 
     public void writeHeader() {
         main_buffer.position(map.header_off);
+
         main_buffer.writeByteArray(version().getMagicArray());
         main_buffer.addPosition(4); // checksum
         main_buffer.addPosition(20); // signature
         main_buffer.writeInt(map.file_size);
         main_buffer.writeInt(map.header_size);
         main_buffer.writeInt(ENDIAN_CONSTANT);
-        main_buffer.writeInt(0); // link_size
-        main_buffer.writeInt(0); // link_off
+        main_buffer.writeInt(0); // unused link_size
+        main_buffer.writeInt(0); // unused link_off
 
         main_buffer.writeInt(map.map_list_off);
         main_buffer.writeInt(map.string_ids_size);
@@ -644,39 +700,6 @@ public class DexWriter {
         }
     }
 
-    public void finalizeHeader(int container_size) {
-        if (isDexContainer()) {
-            assert container_size >= map.file_size;
-            map.container_size = container_size;
-        } else {
-            assert container_size == map.file_size;
-        }
-        writeHeader();
-        if (isCompact()) {
-            // TODO: How are the checksum and signature fields calculated for compact dex?
-        } else {
-            main_buffer.position(map.header_off + SIGNATURE_OFFSET);
-            MessageDigest md;
-            try {
-                md = MessageDigest.getInstance("SHA-1");
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
-            }
-            byte[] signature = md.digest(main_buffer
-                    .duplicateAt(map.header_off + SIGNATURE_DATA_START_OFFSET)
-                    .readByteArray(map.file_size - SIGNATURE_DATA_START_OFFSET));
-            main_buffer.writeByteArray(signature);
-
-            main_buffer.position(map.header_off + CHECKSUM_OFFSET);
-            Adler32 adler = new Adler32();
-            int adler_length = map.file_size - CHECKSUM_DATA_START_OFFSET;
-            adler.update(main_buffer
-                    .duplicateAt(map.header_off + CHECKSUM_DATA_START_OFFSET)
-                    .readByteArray(adler_length), 0, adler_length);
-            main_buffer.writeInt((int) adler.getValue());
-        }
-    }
-
     public void writeMapItem(MapItem value) {
         data_buffer.writeShort(value.type());
         data_buffer.writeShort(0);
@@ -684,9 +707,13 @@ public class DexWriter {
         data_buffer.writeInt(value.offset());
     }
 
-    public void writeMap() {
-        data_buffer.alignPosition(MAP_ALIGNMENT);
-        map.map_list_off = data_buffer.position();
+    public void writeMap(boolean write) {
+        if (write) {
+            data_buffer.position(map.map_list_off);
+        } else {
+            data_buffer.alignPosition(MAP_ALIGNMENT);
+            map.map_list_off = data_buffer.position();
+        }
         var list = new ArrayList<MapItem>();
 
         // main section
@@ -745,9 +772,11 @@ public class DexWriter {
             list.add(new MapItem(TYPE_CODE_ITEM,
                     map.code_items_size, map.code_items_off));
         }
-        if (map.string_data_items_size > 0) {
+        // Note: When placing a map, the number of strings is already determined,
+        // but their location is not yet, so we will fix it later
+        if (shared_data.strings.size() > 0) {
             list.add(new MapItem(TYPE_STRING_DATA_ITEM,
-                    map.string_data_items_size, map.string_data_items_off));
+                    shared_data.strings.size(), shared_data.string_data_items_off));
         }
         if (map.debug_info_items_size > 0) {
             list.add(new MapItem(TYPE_DEBUG_INFO_ITEM,
@@ -774,9 +803,14 @@ public class DexWriter {
 
         list.sort(Comparator.comparingInt(MapItem::offset));
 
-        data_buffer.writeInt(list.size());
-        for (MapItem tmp : list) {
-            writeMapItem(tmp);
+        if (write) {
+            data_buffer.writeInt(list.size());
+            for (MapItem tmp : list) {
+                writeMapItem(tmp);
+            }
+        } else {
+            data_buffer.addPosition(4);
+            data_buffer.addPosition(12 * list.size());
         }
     }
 
@@ -834,7 +868,7 @@ public class DexWriter {
         map.compact_debug_info_base = base;
     }
 
-    public void writeString(StringContainer value) {
+    public void writeString(StringPosition value) {
         var offset = value.offset;
         if (offset < 0) {
             throw new IllegalStateException(String.format(
@@ -850,17 +884,17 @@ public class DexWriter {
         }
     }
 
-    public void writeStringData(StringContainer value) {
+    public void writeStringData(StringPosition value) {
         value.offset = data_buffer.position();
         data_buffer.writeMUtf8(value.value);
     }
 
     public void writeStringDataSection() {
-        if (strings.length != 0) {
-            map.string_data_items_off = data_buffer.position();
-            map.string_data_items_size = map.string_ids_size;
+        var strings = shared_data.strings;
+        if (strings.size() != 0) {
+            shared_data.string_data_items_off = data_buffer.position();
         }
-        for (var value : strings) {
+        for (var value : strings.values()) {
             writeStringData(value);
         }
     }
@@ -990,7 +1024,7 @@ public class DexWriter {
         }
     }
 
-    public boolean writeClassData(ClassContainer value) {
+    public boolean writeClassData(ClassPosition value) {
         var def = value.def;
         if (def.isEmptyClassData()) {
             value.offset = NO_OFFSET;
@@ -1020,7 +1054,7 @@ public class DexWriter {
         }
     }
 
-    public void writeClassDef(ClassContainer value) {
+    public void writeClassDef(ClassPosition value) {
         var def = value.def;
         main_buffer.writeInt(getTypeIndex(def.value().getType()));
         main_buffer.writeInt(def.value().getAccessFlags());

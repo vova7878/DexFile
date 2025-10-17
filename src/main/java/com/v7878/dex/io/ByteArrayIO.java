@@ -57,20 +57,22 @@ class ModifiableArray {
 public class ByteArrayIO implements RandomIO {
     private final ModifiableArray arr;
     private ByteOrder order;
+    private int start;
     private int offset;
 
-    private ByteArrayIO(ModifiableArray arr, int offset, ByteOrder order) {
+    private ByteArrayIO(ModifiableArray arr, int start, int offset, ByteOrder order) {
         this.arr = arr;
+        this.start = start;
         this.offset = offset;
         this.order = order;
     }
 
     public ByteArrayIO(byte[] data) {
-        this(new ModifiableArray(data), 0, ByteOrder.LITTLE_ENDIAN);
+        this(new ModifiableArray(data), 0, 0, ByteOrder.LITTLE_ENDIAN);
     }
 
     public ByteArrayIO(int size) {
-        this(new ModifiableArray(size), 0, ByteOrder.LITTLE_ENDIAN);
+        this(new ModifiableArray(size), 0, 0, ByteOrder.LITTLE_ENDIAN);
     }
 
     public ByteArrayIO() {
@@ -93,23 +95,26 @@ public class ByteArrayIO implements RandomIO {
     public void writeByte(int value) {
         int index = offset;
         position(index + 1);
-        arr.data()[index] = (byte) value;
+        arr.data()[start + index] = (byte) value;
     }
 
     @Override
     public byte readByte() {
         int index = offset;
         position(index + 1);
-        return arr.data()[index];
+        return arr.data()[start + index];
     }
 
     public byte[] toByteArray() {
+        if (start != 0) {
+            return null;
+        }
         return arr.copyData();
     }
 
     @Override
     public int size() {
-        return arr.size();
+        return arr.size() - start;
     }
 
     @Override
@@ -119,13 +124,20 @@ public class ByteArrayIO implements RandomIO {
 
     @Override
     public void position(int new_position) {
-        arr.ensureSize(new_position);
+        arr.ensureSize(start + new_position);
         offset = new_position;
     }
 
     @Override
     public ByteArrayIO duplicateAt(int new_position) {
-        arr.ensureSize(new_position);
-        return new ByteArrayIO(arr, new_position, order);
+        arr.ensureSize(start + new_position);
+        return new ByteArrayIO(arr, start, new_position, order);
+    }
+
+    @Override
+    public RandomIO markAsStart() {
+        this.start += offset;
+        this.offset = 0;
+        return this;
     }
 }

@@ -48,13 +48,5 @@ public interface RandomAccess {
 
     RandomAccess duplicateAt(int position);
 
-    default RandomAccess slice() {
-        return sliceAt(position());
-    }
-
-    default RandomAccess slice(int offset) {
-        return sliceAt(Math.addExact(position(), offset));
-    }
-
-    RandomAccess sliceAt(int position);
+    RandomAccess markAsStart();
 }

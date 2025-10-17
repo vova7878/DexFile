@@ -7,11 +7,12 @@ import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.raw.DexCollector.CallSiteIdContainer;
 import com.v7878.dex.raw.DexCollector.ClassDefContainer;
+import com.v7878.dex.raw.SharedData.StringPosition;
 
 public class EmptyArrays {
     public static final int[] INT = new int[0];
     public static final Object[] OBJECT = new Object[0];
-    public static final String[] STRING = new String[0];
+    public static final StringPosition[] STRING = new StringPosition[0];
 
     public static final TypeId[] TYPE_ID = new TypeId[0];
     public static final ProtoId[] PROTO_ID = new ProtoId[0];

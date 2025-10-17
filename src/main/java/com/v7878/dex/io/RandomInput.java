@@ -1,59 +1,6 @@
 package com.v7878.dex.io;
 
-import java.nio.ByteOrder;
 import java.util.Objects;
-
-class OffsetInput implements RandomInput {
-    private final RandomInput delegate;
-    private final int offset;
-
-    OffsetInput(RandomInput delegate, int offset) {
-        this.delegate = delegate;
-        this.offset = offset;
-    }
-
-    @Override
-    public ByteOrder getByteOrder() {
-        return delegate.getByteOrder();
-    }
-
-    @Override
-    public void setByteOrder(ByteOrder order) {
-        delegate.setByteOrder(order);
-    }
-
-    @Override
-    public byte readByte() {
-        return delegate.readByte();
-    }
-
-    @Override
-    public int size() {
-        return delegate.size() - offset;
-    }
-
-    @Override
-    public int position() {
-        return delegate.position() - offset;
-    }
-
-    @Override
-    public void position(int position) {
-        delegate.position(Math.addExact(offset, position));
-    }
-
-    @Override
-    public OffsetInput duplicateAt(int position) {
-        position = Math.addExact(offset, position);
-        return new OffsetInput(delegate.duplicateAt(position), offset);
-    }
-
-    @Override
-    public OffsetInput sliceAt(int position) {
-        position = Math.addExact(offset, position);
-        return new OffsetInput(delegate.duplicateAt(position), position);
-    }
-}
 
 public interface RandomInput extends RandomAccess {
     default void readFully(byte[] arr) {
@@ -207,17 +154,5 @@ public interface RandomInput extends RandomAccess {
     RandomInput duplicateAt(int position);
 
     @Override
-    default RandomInput slice() {
-        return sliceAt(position());
-    }
-
-    @Override
-    default RandomInput slice(int offset) {
-        return sliceAt(Math.addExact(position(), offset));
-    }
-
-    @Override
-    default RandomInput sliceAt(int position) {
-        return new OffsetInput(this.duplicateAt(position), position);
-    }
+    RandomInput markAsStart();
 }

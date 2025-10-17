@@ -226,7 +226,7 @@ public class DexReader implements DexIO.DexReaderCache {
         if (version.isCompact()) {
             data_off = mainAt(header_offset + DATA_START_OFFSET).readSmallUInt();
         }
-        data_buffer = main_buffer.sliceAt(data_off);
+        data_buffer = main_buffer.duplicateAt(data_off).markAsStart();
 
         typelist_cache = makeOffsetCache(this::readTypeList);
         encoded_array_cache = makeOffsetCache(this::readEncodedArray);
