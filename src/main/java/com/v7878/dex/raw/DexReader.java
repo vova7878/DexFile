@@ -698,7 +698,7 @@ public class DexReader implements DexIO.DexReaderCache {
                 address[1] = address[0];
             }
         };
-        int[] line = {line_start, 0};
+        int[] line = {line_start, -1};
         Runnable emit_line = () -> {
             if (line[0] != line[1]) {
                 out.add(LineNumber.of(line[0]));

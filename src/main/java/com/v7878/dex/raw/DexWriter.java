@@ -1121,10 +1121,10 @@ public class DexWriter {
                 address[1] = address[0];
             }
         };
-        int[] line = {0, 0};
+        int[] line = {0, -1};
         Runnable emit_position = () -> {
             if (line[0] != line[1]) {
-                if (line[1] == 0) first_line[0] = line[1] = line[0];
+                if (line[1] == -1) first_line[0] = line[1] = line[0];
 
                 int addr_diff = address[0] - address[1];
                 int line_diff = line[0] - line[1];

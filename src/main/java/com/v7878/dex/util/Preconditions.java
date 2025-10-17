@@ -114,9 +114,12 @@ public class Preconditions {
     }
 
     public static int checkDebugLine(int line) {
-        if (line <= 0) {
+        // Note: The dex documentation says that the line should not be less than 1.
+        // This is not actually a strict requirement, so some idiots have numbering
+        // starting with 0, despite the requirements
+        if (line < 0) {
             throw new IllegalArgumentException(
-                    String.format("Invalid line: %d. Must be greater than zero", line));
+                    String.format("Invalid line: %d. Must be greater than or equal to zero", line));
         }
         return line;
     }
