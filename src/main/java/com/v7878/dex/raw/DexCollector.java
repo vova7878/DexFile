@@ -279,11 +279,12 @@ public class DexCollector {
                     interfaces.isEmpty() ? null : interfaces,
                     static_fields, toStaticValuesList(static_fields),
                     instance_fields, direct_methods, virtual_methods,
-                    annotations.isEmpty() ? null : annotations);
+                    annotations);
         }
     }
 
     public record AnnotationDirectory(
+            TypeId declaring_class,
             NavigableSet<Annotation> class_annotations,
             NavigableMap<FieldId, NavigableSet<Annotation>> field_annotations,
             NavigableMap<MethodId, NavigableSet<Annotation>> method_annotations,
@@ -292,27 +293,14 @@ public class DexCollector {
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
-            return obj instanceof AnnotationDirectory that
-                    && isEmptyExceptForClass() && that.isEmptyExceptForClass()
-                    && Objects.equals(class_annotations, that.class_annotations);
+            return obj instanceof AnnotationDirectory other
+                    && Objects.equals(declaring_class, other.declaring_class)
+                    && Objects.equals(class_annotations, other.class_annotations);
         }
 
         @Override
         public int hashCode() {
-            return isEmptyExceptForClass() ?
-                    Objects.hashCode(class_annotations) :
-                    // TODO: type id hash
-                    System.identityHashCode(this);
-        }
-
-        public boolean isEmpty() {
-            return class_annotations == null && isEmptyExceptForClass();
-        }
-
-        public boolean isEmptyExceptForClass() {
-            return field_annotations.isEmpty() &&
-                    method_annotations.isEmpty() &&
-                    parameter_annotations.isEmpty();
+            return Objects.hash(declaring_class, class_annotations);
         }
 
         // TODO: simplify
@@ -333,24 +321,31 @@ public class DexCollector {
             return out;
         }
 
-        private static void fill(AnnotationDirectory dir, FieldDefContainer[] fields) {
+        private static void fill(
+                FieldDefContainer[] fields,
+                NavigableMap<FieldId, NavigableSet<Annotation>> field_annotations
+        ) {
             for (var field : fields) {
                 var annotations = field.value().getAnnotations();
                 if (!annotations.isEmpty()) {
-                    dir.field_annotations.put(field.id(), annotations);
+                    field_annotations.put(field.id(), annotations);
                 }
             }
         }
 
-        private static void fill(AnnotationDirectory dir, MethodDefContainer[] methods) {
+        private static void fill(
+                MethodDefContainer[] methods,
+                NavigableMap<MethodId, NavigableSet<Annotation>> method_annotations,
+                NavigableMap<MethodId, List<NavigableSet<Annotation>>> parameter_annotations
+        ) {
             for (var method : methods) {
-                var method_annotations = method.value().getAnnotations();
-                if (!method_annotations.isEmpty()) {
-                    dir.method_annotations.put(method.id(), method_annotations);
+                var m_annotations = method.value().getAnnotations();
+                if (!m_annotations.isEmpty()) {
+                    method_annotations.put(method.id(), m_annotations);
                 }
-                var parameter_annotations = toAnnotationsList(method.value().getParameters());
-                if (parameter_annotations != null) {
-                    dir.parameter_annotations.put(method.id(), parameter_annotations);
+                var p_annotations = toAnnotationsList(method.value().getParameters());
+                if (p_annotations != null) {
+                    parameter_annotations.put(method.id(), p_annotations);
                 }
             }
         }
@@ -361,14 +356,21 @@ public class DexCollector {
                                              MethodDefContainer[] direct_methods,
                                              MethodDefContainer[] virtual_methods) {
             var class_annotations = value.getAnnotations();
-            var out = new AnnotationDirectory(
-                    class_annotations.isEmpty() ? null : class_annotations,
-                    new TreeMap<>(), new TreeMap<>(), new TreeMap<>());
-            fill(out, static_fields);
-            fill(out, instance_fields);
-            fill(out, direct_methods);
-            fill(out, virtual_methods);
-            return out;
+            class_annotations = class_annotations.isEmpty() ? null : class_annotations;
+            var field_annotations = new TreeMap<FieldId, NavigableSet<Annotation>>();
+            var method_annotations = new TreeMap<MethodId, NavigableSet<Annotation>>();
+            var parameter_annotations = new TreeMap<MethodId, List<NavigableSet<Annotation>>>();
+            fill(static_fields, field_annotations);
+            fill(instance_fields, field_annotations);
+            fill(direct_methods, method_annotations, parameter_annotations);
+            fill(virtual_methods, method_annotations, parameter_annotations);
+            // If an AnnotationDirectory contains only class annotations,
+            // it can be used multiple times for different classes
+            var type = field_annotations.isEmpty() && method_annotations.isEmpty() &&
+                    parameter_annotations.isEmpty() ? null : value.getType();
+            if (type == null && class_annotations == null) return null;
+            return new AnnotationDirectory(type, class_annotations,
+                    field_annotations, method_annotations, parameter_annotations);
         }
     }
 
