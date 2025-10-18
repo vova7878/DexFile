@@ -119,22 +119,39 @@ public class DexCollector {
         }
     }
 
-    public record CodeContainer(MethodImplementation value,
-                                // Not null only for standard dex files
-                                DebugInfo debug_info,
-                                TryBlockContainer[] tries,
-                                int ins, int outs) {
-        public CodeContainer {
+    public static final class CodeContainer {
+        public final MethodImplementation value;
+        public final DebugInfo debug_info;
+        public final TryBlockContainer[] tries;
+        public final int ins;
+        public final int outs;
+
+        public int debug_info_offset;
+
+        private final int hash;
+
+        public CodeContainer(MethodImplementation value, DebugInfo debug_info, TryBlockContainer[] tries, int ins, int outs) {
             Objects.requireNonNull(value);
+            this.value = value;
+            this.debug_info = debug_info;
+            this.tries = tries;
+            this.ins = ins;
+            this.outs = outs;
+
+            this.debug_info_offset = -1;
+            this.hash = Objects.hash(ins, /* outs, */ value.getRegisterCount(),
+                    value.getInstructions(), value.getTryBlocks(), debug_info);
         }
 
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
             return obj instanceof CodeContainer other
+                    // This check is needed to speed up comparison
+                    && hash == other.hash
                     && ins == other.ins
-                    // 'outs' depends on instructions, exists because it can speed up the comparison
-                    && outs == other.outs
+                    // 'outs' depends on instructions
+                    // && outs == other.outs
                     && value.getRegisterCount() == other.value.getRegisterCount()
                     && Objects.equals(value.getInstructions(), other.value.getInstructions())
                     && Arrays.equals(tries, other.tries)
@@ -143,8 +160,7 @@ public class DexCollector {
 
         @Override
         public int hashCode() {
-            return Objects.hash(ins, /* outs (depends on instructions), */ value.getRegisterCount(),
-                    value.getInstructions(), value.getTryBlocks(), debug_info);
+            return hash;
         }
 
         private static TryBlockContainer[] toTriesArray(NavigableSet<TryBlock> tries) {
@@ -568,13 +584,13 @@ public class DexCollector {
 
     public void addCodeItem(CodeContainer value) {
         if (code_items.put(value, NO_OFFSET_I) == null) {
-            for (var tmp : value.value().getInstructions()) {
+            for (var tmp : value.value.getInstructions()) {
                 fillInstruction(tmp);
             }
-            for (var tmp : value.value().getTryBlocks()) {
+            for (var tmp : value.value.getTryBlocks()) {
                 fillTryBlock(tmp);
             }
-            var debug_info = value.debug_info();
+            var debug_info = value.debug_info;
             if (debug_info != null) addDebugInfo(debug_info);
         }
     }

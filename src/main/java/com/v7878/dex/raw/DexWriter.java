@@ -349,14 +349,8 @@ public class DexWriter {
         }
 
         // Write code item first to minimize the space required for encoded methods
-        if (isCompact()) {
-            // For cdex, the code items don't depend on the debug info
-            writeCodeItemSection();
-            writeDebugInfoSection();
-        } else {
-            writeDebugInfoSection();
-            writeCodeItemSection();
-        }
+        writeCodeItemSection();
+        writeDebugInfoSection();
         if (primary) {
             writeStringDataSection();
         }
@@ -801,16 +795,15 @@ public class DexWriter {
 
         list.add(new MapItem(TYPE_MAP_LIST, 1, map.map_list_off));
 
-        list.sort(Comparator.comparingInt(MapItem::offset));
-
         if (write) {
+            list.sort(Comparator.comparingInt(MapItem::offset));
+
             data_buffer.writeInt(list.size());
             for (MapItem tmp : list) {
                 writeMapItem(tmp);
             }
         } else {
-            data_buffer.addPosition(4);
-            data_buffer.addPosition(12 * list.size());
+            data_buffer.addPosition(4 + 12 * list.size());
         }
     }
 
@@ -1231,6 +1224,9 @@ public class DexWriter {
         for (var tmp : debug_infos.entrySet()) {
             writeDebugInfo(tmp);
         }
+        if (!isCompact()) {
+            fixDebugInfoOffsets();
+        }
     }
 
     private int countCodeUnits(List<Instruction> insns) {
@@ -1329,13 +1325,13 @@ public class DexWriter {
         var value = entry.getKey();
         data_buffer.alignPosition(isCompact() ? COMPACT_CODE_ITEM_ALIGNMENT : CODE_ITEM_ALIGNMENT);
 
-        var insns = value.value().getInstructions();
-        var tries = value.tries();
+        var insns = value.value.getInstructions();
+        var tries = value.tries;
 
-        int registers_size = value.value().getRegisterCount();
-        int ins_size = value.ins();
-        int outs_size = value.outs();
-        int tries_size = value.value().getTryBlocks().size();
+        int registers_size = value.value.getRegisterCount();
+        int ins_size = value.ins;
+        int outs_size = value.outs;
+        int tries_size = value.value.getTryBlocks().size();
         int insns_count = countCodeUnits(insns);
         boolean has_payloads = insns_count < 0;
         insns_count = has_payloads ? ~insns_count : insns_count;
@@ -1352,9 +1348,14 @@ public class DexWriter {
             data_buffer.writeShort(ins_size);
             data_buffer.writeShort(outs_size);
             data_buffer.writeShort(tries_size);
-            var debug_info = value.debug_info();
-            data_buffer.writeInt(debug_info == null ?
-                    NO_OFFSET : getDebugInfoOffset(debug_info));
+            if (value.debug_info == null) {
+                value.debug_info_offset = NO_OFFSET;
+                data_buffer.writeInt(NO_OFFSET);
+            } else {
+                // The correct offset will be writed later
+                value.debug_info_offset = data_buffer.position();
+                data_buffer.addPosition(4);
+            }
             data_buffer.writeInt(insns_count);
         }
 
@@ -1364,11 +1365,9 @@ public class DexWriter {
         }
         int insns_size = data_buffer.position() - insns_start;
 
-        if (insns_size != insns_count * 2) {
-            throw new IllegalStateException(String.format(
-                    "Calculated instructions size(%s) != written bytes(%s)",
-                    insns_count * 2, insns_size));
-        }
+        assert insns_size == insns_count * 2 : String.format(
+                "Calculated instructions size(%s) != written bytes(%s)",
+                insns_count * 2, insns_size);
 
         if (tries_size != 0) {
             data_buffer.fillZerosToAlignment(TRY_ITEM_ALIGNMENT);
@@ -1396,6 +1395,18 @@ public class DexWriter {
         }
 
         entry.setValue(code_item_start);
+    }
+
+    public void fixDebugInfoOffsets() {
+        var out = data_buffer.duplicate();
+        for (var tmp : code_items.keySet()) {
+            var offset = tmp.debug_info_offset;
+            assert offset >= 0;
+            if (offset != NO_OFFSET) {
+                out.position(offset);
+                out.writeInt(getDebugInfoOffset(tmp.debug_info));
+            }
+        }
     }
 
     public void writeCodeItemSection() {

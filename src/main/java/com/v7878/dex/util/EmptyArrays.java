@@ -1,6 +1,5 @@
 package com.v7878.dex.util;
 
-import com.v7878.dex.DexIO;
 import com.v7878.dex.DexIO.DexReaderCache;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MethodHandleId;
