@@ -69,8 +69,6 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 hiddenapi_flags, implementation, Converter.toNavigableSet(annotations));
     }
 
-    // TODO?: Add simpler constructor?
-
     @Override
     public String getName() {
         return name;

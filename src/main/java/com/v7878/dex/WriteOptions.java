@@ -20,7 +20,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
 
     @Override
     public void validate() {
-        //TODO: requireMinApi(dex_version.getMinApi());
+        dex_version.checkApi(api);
         if (!dex_version.isCompact() && compact_flags != 0) {
             throw new IllegalArgumentException("Compact dex flags is not 0 for " + dex_version);
         }
@@ -51,6 +51,4 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
     public static WriteOptions defaultOptions() {
         return new WriteOptions();
     }
-
-    //TODO: setByteOrder (see https://android.googlesource.com/platform/dalvik/+/kitkat-mr2-release/libdex/DexSwapVerify.cpp)
 }

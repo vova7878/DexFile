@@ -199,7 +199,7 @@ public class DexReader implements DexIO.DexReaderCache {
         }
         // TODO: add option? version = DexVersion.forMagic(mainAt(MAGIC_OFFSET).readLong());
         version = DexVersion.forMagic(mainAt(header_offset + MAGIC_OFFSET).readLong());
-        // TODO: check dex version min api
+        version.checkApi(options.getTargetApi());
         if (main_buffer.size() < Math.addExact(header_offset, getHeaderSize(version))) {
             throw new NotADexFile("File is too short");
         }

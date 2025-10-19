@@ -77,8 +77,6 @@ public final class ClassDef implements Annotatable {
                 Converter.toNavigableSet(methods), Converter.toNavigableSet(annotations));
     }
 
-    // TODO?: Add simpler constructor?
-
     public TypeId getType() {
         return type;
     }

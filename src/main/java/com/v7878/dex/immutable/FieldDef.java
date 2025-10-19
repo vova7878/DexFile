@@ -45,8 +45,6 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
                 initial_value, Converter.toNavigableSet(annotations));
     }
 
-    // TODO?: Add simpler constructor?
-
     @Override
     public String getName() {
         return name;

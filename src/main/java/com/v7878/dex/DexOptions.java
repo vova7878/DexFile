@@ -26,6 +26,9 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     DexOptions() {
         boolean is_android = Version.IS_ANDROID;
         int api = is_android ? Version.getSDK() : 26;
+        if (api > MAX_TARGET_API) {
+            api = MAX_TARGET_API;
+        }
         this.api = api;
         this.art = api > LAST_DALVIK_TARGET;
         this.odex = is_android;
@@ -38,10 +41,10 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
             throw new IllegalArgumentException("Unsupported target api: " + api);
         }
         if ((art && api < FIRST_ART_TARGET) || (!art && api > LAST_DALVIK_TARGET)) {
-            throw new IllegalArgumentException("Unsupported " + art + " targetArt option with targetApi: " + api);
+            throw new IllegalArgumentException("Unsupported " + art + " targetArt option with targetApi " + api);
         }
         if (hiddenapi && (api < FIRST_HIDDEN_API_TARGET)) {
-            throw new IllegalArgumentException("Unsupported " + art + " hiddenapi option with targetApi: " + api);
+            throw new IllegalArgumentException("Unsupported " + art + " hiddenapi option with targetApi " + api);
         }
     }
 

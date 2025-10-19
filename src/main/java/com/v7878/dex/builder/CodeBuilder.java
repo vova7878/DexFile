@@ -207,21 +207,21 @@ public final class CodeBuilder {
     private static List<TryBlock> mergeTryItems(List<BuilderTryItem> try_items) {
         int[] borders;
         {
-            // TODO: Maybe there is something better for storing integers?
-            var borders_set = new TreeSet<Integer>();
+            // TODO: IntSet
+            var borders_set = new SparseArray<>();
             for (int i = 0; i < try_items.size(); ) {
                 BuilderTryItem block = try_items.get(i);
                 int start = block.start(), end = block.end();
                 if (end <= start) {
-                    assert start == end; // It`s always true, but I want to make it explicit
+                    assert start == end;
                     try_items.remove(i);
                     continue;
                 }
-                borders_set.add(start);
-                borders_set.add(end);
+                borders_set.append(start, null);
+                borders_set.append(end, null);
                 i++;
             }
-            borders = borders_set.stream().mapToInt(v -> v).toArray();
+            borders = borders_set.keysArray();
         }
         if (borders.length == 0) return Collections.emptyList();
         int elements_size = borders.length - 1;

@@ -46,6 +46,13 @@ public enum DexVersion {
         return minApi;
     }
 
+    public void checkApi(int api) {
+        if (api < minApi) {
+            throw new IllegalArgumentException(String.format(
+                    "Target api(%d) is less than required(%d) for %s", api, minApi, this));
+        }
+    }
+
     public static DexVersion forApi(int api) {
         for (DexVersion version : values()) {
             if (api >= version.minApi) {

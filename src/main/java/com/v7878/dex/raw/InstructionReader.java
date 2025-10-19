@@ -349,7 +349,6 @@ public class InstructionReader {
         int element_width = in.readUShort();
         int size = in.readSmallUInt();
         var data = new ArrayList<Number>(size);
-        // TODO: Documentation doesn't say what byte order is used here
         switch (element_width) {
             case 1 -> {
                 for (int i = 0; i < size; i++) {
