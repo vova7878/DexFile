@@ -43,7 +43,6 @@ import com.v7878.dex.util.ShortyUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +120,7 @@ public class DexCollector {
 
     public static final class CodeContainer {
         public final MethodImplementation value;
+        // Not null only for standart dex files
         public final DebugInfo debug_info;
         public final TryBlockContainer[] tries;
         public final int ins;
@@ -131,8 +131,7 @@ public class DexCollector {
         private final int hash;
 
         public CodeContainer(MethodImplementation value, DebugInfo debug_info, TryBlockContainer[] tries, int ins, int outs) {
-            Objects.requireNonNull(value);
-            this.value = value;
+            this.value = Objects.requireNonNull(value);
             this.debug_info = debug_info;
             this.tries = tries;
             this.ins = ins;
@@ -183,21 +182,9 @@ public class DexCollector {
                                      CodeContainer code) {
         // equals and hashCode are not used
 
-        // TODO: simplify
         private static List<String> toNamesList(List<Parameter> parameters) {
-            int size = parameters.size();
-            for (; size > 0; size--) {
-                var name = parameters.get(size - 1).getName();
-                if (name != null) break;
-            }
-            if (size == 0) {
-                return Collections.emptyList();
-            }
-            var out = new ArrayList<String>(size);
-            for (int i = 0; i < size; i++) {
-                out.add(parameters.get(i).getName());
-            }
-            return out;
+            return Converter.minimize(parameters, Parameter::getName,
+                    value -> value, Objects::isNull);
         }
 
         private static DebugInfo toDebugInfo(List<String> names, List<DebugItem> items) {
@@ -261,23 +248,17 @@ public class DexCollector {
                     MethodDefContainer[]::new);
         }
 
-        // TODO: simplify
         private static EncodedArray toStaticValuesList(FieldDefContainer[] fields) {
-            int size = fields.length;
-            for (; size > 0; size--) {
-                var value = fields[size - 1].value().getInitialValue();
-                if (value != null && !value.isDefault()) break;
-            }
-            if (size == 0) {
-                return null;
-            }
-            var out = new ArrayList<EncodedValue>(size);
-            for (int i = 0; i < size; i++) {
-                var value = fields[i].value().getInitialValue();
-                out.add(value != null ? value : EncodedValue
-                        .defaultValue(fields[i].value().getType()));
-            }
-            return EncodedArray.of(out);
+            var out = Converter.minimize(Arrays.asList(fields),
+                    FieldDefContainer::value, field -> {
+                        var value = field.getInitialValue();
+                        return value != null ? value : EncodedValue
+                                .defaultValue(field.getType());
+                    }, field -> {
+                        var value = field.getInitialValue();
+                        return value == null || value.isDefault();
+                    });
+            return out.isEmpty() ? null : EncodedArray.raw(out);
         }
 
         public static ClassDefContainer of(boolean is_compact, boolean collect_debug_info, ClassDef value) {
@@ -319,22 +300,10 @@ public class DexCollector {
             return Objects.hash(declaring_class, class_annotations);
         }
 
-        // TODO: simplify
         private static List<NavigableSet<Annotation>> toAnnotationsList(List<Parameter> parameters) {
-            int size = parameters.size();
-            for (; size > 0; size--) {
-                var annotations = parameters.get(size - 1).getAnnotations();
-                if (!annotations.isEmpty()) break;
-            }
-            if (size == 0) {
-                return null;
-            }
-            var out = new ArrayList<NavigableSet<Annotation>>(size);
-            for (int i = 0; i < size; i++) {
-                var annotations = parameters.get(i).getAnnotations();
-                out.add(annotations.isEmpty() ? null : annotations);
-            }
-            return out;
+            return Converter.minimize(parameters, Parameter::getAnnotations,
+                    annos -> annos.isEmpty() ? null : annos,
+                    NavigableSet<Annotation>::isEmpty);
         }
 
         private static void fill(
@@ -360,7 +329,7 @@ public class DexCollector {
                     method_annotations.put(method.id(), m_annotations);
                 }
                 var p_annotations = toAnnotationsList(method.value().getParameters());
-                if (p_annotations != null) {
+                if (!p_annotations.isEmpty()) {
                     parameter_annotations.put(method.id(), p_annotations);
                 }
             }

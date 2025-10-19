@@ -10,6 +10,7 @@ import java.util.Objects;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.IntFunction;
+import java.util.function.Predicate;
 
 public class Converter {
     @SafeVarargs
@@ -124,5 +125,23 @@ public class Converter {
             i++;
         }
         return out;
+    }
+
+    public static <R, I, P> List<R> minimize(List<P> data, Function<P, I> transformer1,
+                                             Function<I, R> transformer2, Predicate<I> checker) {
+        int size = data.size();
+        for (; size > 0; size--) {
+            var tmp = transformer1.apply(data.get(size - 1));
+            if (!checker.test(tmp)) break;
+        }
+        if (size == 0) {
+            return Collections.emptyList();
+        }
+        var out = new ArrayList<R>(size);
+        for (int i = 0; i < size; i++) {
+            var tmp = transformer1.apply(data.get(i));
+            out.add(transformer2.apply(tmp));
+        }
+        return Collections.unmodifiableList(out);
     }
 }
