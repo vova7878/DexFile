@@ -5,6 +5,7 @@ public final class DexConstants {
     }
 
     public static final int ENDIAN_CONSTANT = 0x12345678;
+    public static final int REVERSE_ENDIAN_CONSTANT = 0x78563412;
     public static final int NO_INDEX = -1;
     public static final int NO_OFFSET = 0;
 

@@ -13,8 +13,10 @@ import static com.v7878.dex.DexConstants.DBG_SET_FILE;
 import static com.v7878.dex.DexConstants.DBG_SET_PROLOGUE_END;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL_EXTENDED;
+import static com.v7878.dex.DexConstants.ENDIAN_CONSTANT;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
+import static com.v7878.dex.DexConstants.REVERSE_ENDIAN_CONSTANT;
 import static com.v7878.dex.DexConstants.TYPE_CALL_SITE_ID_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_METHOD_HANDLE_ITEM;
@@ -29,6 +31,7 @@ import static com.v7878.dex.DexOffsets.DATA_START_OFFSET;
 import static com.v7878.dex.DexOffsets.DEBUG_INFO_BASE_OFFSET;
 import static com.v7878.dex.DexOffsets.DEBUG_INFO_OFFSETS_POS_OFFSET;
 import static com.v7878.dex.DexOffsets.DEBUG_INFO_OFFSETS_TABLE_OFFSET;
+import static com.v7878.dex.DexOffsets.ENDIAN_TAG_OFFSET;
 import static com.v7878.dex.DexOffsets.FIELD_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_START_OFFSET;
@@ -197,14 +200,22 @@ public class DexReader implements DexIO.DexReaderCache {
         if (main_buffer.size() < Math.addExact(header_offset, BASE_HEADER_SIZE)) {
             throw new NotADexFile("File is too short");
         }
-        // TODO: add option? version = DexVersion.forMagic(mainAt(MAGIC_OFFSET).readLong());
         version = DexVersion.forMagic(mainAt(header_offset + MAGIC_OFFSET).readLong());
         version.checkApi(options.getTargetApi());
         if (main_buffer.size() < Math.addExact(header_offset, getHeaderSize(version))) {
             throw new NotADexFile("File is too short");
         }
 
-        // TODO: check endian tag
+        int endian_tag = mainAt(header_offset + ENDIAN_TAG_OFFSET).readInt();
+        switch (endian_tag) {
+            case ENDIAN_CONSTANT -> { /* ok */ }
+            case REVERSE_ENDIAN_CONSTANT -> throw new InvalidDexFile(
+                    // The internet says that such dex`s never existed,
+                    // but I think that odex on BE machines contained exactly this format
+                    "Big endian dex files are not supported");
+            default -> throw new InvalidDexFile(String.format(
+                    "Invalid endian tag: 0x%x", endian_tag));
+        }
 
         file_size = mainAt(header_offset + FILE_SIZE_OFFSET).readSmallUInt();
         if (main_buffer.size() < Math.addExact(header_offset, file_size)) {
