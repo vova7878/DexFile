@@ -82,4 +82,16 @@ public final class ProtoId implements Comparable<ProtoId> {
         if (out != 0) return out;
         return CollectionUtils.compareLexicographically(getParameterTypes(), other.getParameterTypes());
     }
+
+    @Override
+    public String toString() {
+        var out = new StringBuilder();
+        out.append('(');
+        for (var type : getParameterTypes()) {
+            out.append(type);
+        }
+        out.append(')');
+        out.append(getReturnType());
+        return out.toString();
+    }
 }

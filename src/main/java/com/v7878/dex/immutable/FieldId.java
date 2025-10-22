@@ -70,4 +70,9 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
         if (out != 0) return out;
         return CollectionUtils.compareNonNull(getType(), other.getType());
     }
+
+    @Override
+    public String toString() {
+        return getDeclaringClass() + "." + getName() + ":" + getType();
+    }
 }

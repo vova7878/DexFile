@@ -111,4 +111,9 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         if (out != 0) return out;
         return CollectionUtils.compareNonNull(getProto(), other.getProto());
     }
+
+    @Override
+    public String toString() {
+        return getDeclaringClass() + "." + getName() + getProto();
+    }
 }

@@ -280,4 +280,9 @@ public final class TypeId implements Comparable<TypeId> {
         if (other == this) return 0;
         return CollectionUtils.compareNonNull(getDescriptor(), other.getDescriptor());
     }
+
+    @Override
+    public String toString() {
+        return getDescriptor();
+    }
 }

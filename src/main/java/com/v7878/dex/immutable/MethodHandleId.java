@@ -54,4 +54,9 @@ public final class MethodHandleId implements Comparable<MethodHandleId> {
             return CollectionUtils.compareNonNull((FieldId) getMember(), (FieldId) other.getMember());
         }
     }
+
+    @Override
+    public String toString() {
+        return getHandleType() + "->" + getMember();
+    }
 }
