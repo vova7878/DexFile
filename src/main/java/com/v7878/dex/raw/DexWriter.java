@@ -75,6 +75,7 @@ import static com.v7878.dex.raw.CompactDexConstants.kInsnsSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kOutsSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
+import static com.v7878.dex.raw.DexCollector.ClassDefContainer;
 import static com.v7878.dex.util.AlignmentUtils.roundUp;
 
 import com.v7878.dex.DexVersion;
@@ -124,14 +125,12 @@ import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.raw.DexCollector.AnnotationDirectory;
 import com.v7878.dex.raw.DexCollector.CallSiteIdContainer;
-import com.v7878.dex.raw.DexCollector.ClassDefContainer;
 import com.v7878.dex.raw.DexCollector.CodeContainer;
 import com.v7878.dex.raw.DexCollector.FieldDefContainer;
 import com.v7878.dex.raw.DexCollector.MethodDefContainer;
 import com.v7878.dex.raw.DexCollector.TryBlockContainer;
 import com.v7878.dex.raw.SharedData.StringPosition;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.EmptyArrays;
 
 import java.security.MessageDigest;
@@ -139,10 +138,13 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.Adler32;
 
 public class DexWriter {
@@ -209,16 +211,6 @@ public class DexWriter {
         public int header_off;
     }
 
-    private static class ClassPosition {
-        public final ClassDefContainer def;
-        public int offset;
-
-        ClassPosition(ClassDefContainer def) {
-            this.def = Objects.requireNonNull(def);
-            this.offset = -1;
-        }
-    }
-
     private record CompactData(int[] offsets) {
     }
 
@@ -249,7 +241,7 @@ public class DexWriter {
     private final Map<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
     private final Map<AnnotationDirectory, Integer> annotation_directories;
 
-    private final ClassPosition[] class_defs;
+    private final ClassDefContainer[] class_defs;
 
     private final int[][] hiddenapi_flags;
 
@@ -263,6 +255,52 @@ public class DexWriter {
                     "Size(%d) should not exceed limit(%d) for %s section",
                     size, limit, name));
         }
+    }
+
+    private static void add(TypeId type, Map<TypeId, ClassDefContainer> map,
+                            Set<TypeId> queue, List<ClassDefContainer> out) {
+        if (!queue.add(type)) {
+            throw new IllegalStateException("Cycle: " + Stream.concat(queue.stream(), Stream.of(type))
+                    .map(Object::toString).collect(Collectors.joining(" -> ", "[", "]")));
+        }
+        var container = map.remove(type);
+        if (container == null) {
+            return;
+        }
+        var def = container.value;
+        if (def.getSuperclass() != null) {
+            add(def.getSuperclass(), map, queue, out);
+        }
+        for (TypeId tmp : def.getInterfaces()) {
+            add(tmp, map, queue, out);
+        }
+        out.add(container);
+        queue.remove(type);
+    }
+
+    /**
+     * "The classes must be ordered such that a given class's superclass and
+     * implemented interfaces appear in the list earlier than the referring class"
+     */
+    private static ClassDefContainer[] sort(List<ClassDefContainer> class_defs) {
+        Map<TypeId, ClassDefContainer> map = new HashMap<>();
+        for (var container : class_defs) {
+            var type = container.value.getType();
+            if (map.putIfAbsent(type, container) != null) {
+                throw new IllegalStateException(
+                        "Duplicated class: " + type.getDescriptor());
+            }
+        }
+
+        var queue = new LinkedHashSet<TypeId>();
+        var out = new ArrayList<ClassDefContainer>(class_defs.size());
+
+        for (var container : class_defs) {
+            add(container.value.getType(), map, queue, out);
+        }
+
+        assert out.size() == class_defs.size();
+        return out.toArray(EmptyArrays.CLASS_DEF_CONTAINER);
     }
 
     public DexWriter(WriteOptions options, SharedData shared_data,
@@ -306,9 +344,8 @@ public class DexWriter {
         method_handles = collector.method_handles.toArray(EmptyArrays.METHOD_HANDLE_ID);
         checkSizeLimit(method_handles.length, 0xffff, "method handle");
 
-        // TODO: "The classes must be ordered such that a given class's superclass
-        //  and implemented interfaces appear in the list earlier than the referring class"
-        class_defs = Converter.transform(collector.class_defs, ClassPosition::new, ClassPosition[]::new);
+        class_defs = options.isClassSorting() ? sort(collector.class_defs) :
+                collector.class_defs.toArray(EmptyArrays.CLASS_DEF_CONTAINER);
 
         type_lists = collector.type_lists;
         encoded_arrays = collector.encoded_arrays;
@@ -1017,21 +1054,20 @@ public class DexWriter {
         }
     }
 
-    public boolean writeClassData(ClassPosition value) {
-        var def = value.def;
+    public boolean writeClassData(ClassDefContainer def) {
         if (def.isEmptyClassData()) {
-            value.offset = NO_OFFSET;
+            def.offset = NO_OFFSET;
             return false;
         }
-        value.offset = data_buffer.position();
-        data_buffer.writeULeb128(def.static_fields().length);
-        data_buffer.writeULeb128(def.instance_fields().length);
-        data_buffer.writeULeb128(def.direct_methods().length);
-        data_buffer.writeULeb128(def.virtual_methods().length);
-        writeFieldDefArray(def.static_fields());
-        writeFieldDefArray(def.instance_fields());
-        writeMethodDefArray(def.direct_methods());
-        writeMethodDefArray(def.virtual_methods());
+        def.offset = data_buffer.position();
+        data_buffer.writeULeb128(def.static_fields.length);
+        data_buffer.writeULeb128(def.instance_fields.length);
+        data_buffer.writeULeb128(def.direct_methods.length);
+        data_buffer.writeULeb128(def.virtual_methods.length);
+        writeFieldDefArray(def.static_fields);
+        writeFieldDefArray(def.instance_fields);
+        writeMethodDefArray(def.direct_methods);
+        writeMethodDefArray(def.virtual_methods);
         return true;
     }
 
@@ -1047,30 +1083,29 @@ public class DexWriter {
         }
     }
 
-    public void writeClassDef(ClassPosition value) {
-        var def = value.def;
-        main_buffer.writeInt(getTypeIndex(def.value().getType()));
-        main_buffer.writeInt(def.value().getAccessFlags());
-        var superclass = def.value().getSuperclass();
+    public void writeClassDef(ClassDefContainer def) {
+        main_buffer.writeInt(getTypeIndex(def.value.getType()));
+        main_buffer.writeInt(def.value.getAccessFlags());
+        var superclass = def.value.getSuperclass();
         main_buffer.writeInt(superclass == null ?
                 NO_INDEX : getTypeIndex(superclass));
-        var interfaces = def.interfaces();
+        var interfaces = def.interfaces;
         main_buffer.writeInt(interfaces == null ?
                 NO_OFFSET : getTypeListOffset(interfaces));
-        var source_file = def.value().getSourceFile();
+        var source_file = def.value.getSourceFile();
         main_buffer.writeInt(source_file == null ?
                 NO_INDEX : getStringIndex(source_file));
-        var annotations = def.annotations();
+        var annotations = def.annotations;
         main_buffer.writeInt(annotations == null ?
                 NO_OFFSET : getAnnotationDirectoryOffset(annotations));
-        int class_data_offset = value.offset;
+        int class_data_offset = def.offset;
         if (class_data_offset < 0) {
             throw new IllegalStateException(String.format(
                     "Unable to get offset of class data for %s",
-                    def.value().getType().getDescriptor()));
+                    def.value.getType().getDescriptor()));
         }
         main_buffer.writeInt(class_data_offset);
-        var static_values = def.static_values();
+        var static_values = def.static_values;
         main_buffer.writeInt(static_values == null ?
                 NO_OFFSET : getEncodedArrayOffset(static_values));
     }
@@ -1621,26 +1656,26 @@ public class DexWriter {
         int[][] out = new int[class_defs.length][];
         for (int i = 0; i < out.length; i++) {
             boolean def_empty = true;
-            var def = class_defs[i].def;
-            int[] arr = new int[def.static_fields().length + def.instance_fields().length +
-                    def.direct_methods().length + def.virtual_methods().length];
+            var def = class_defs[i];
+            int[] arr = new int[def.static_fields.length + def.instance_fields.length +
+                    def.direct_methods.length + def.virtual_methods.length];
             int index = 0;
-            for (var tmp : def.static_fields()) {
+            for (var tmp : def.static_fields) {
                 int flags = tmp.value().getHiddenApiFlags();
                 def_empty &= flags == 0;
                 arr[index++] = flags;
             }
-            for (var tmp : def.instance_fields()) {
+            for (var tmp : def.instance_fields) {
                 int flags = tmp.value().getHiddenApiFlags();
                 def_empty &= flags == 0;
                 arr[index++] = flags;
             }
-            for (var tmp : def.direct_methods()) {
+            for (var tmp : def.direct_methods) {
                 int flags = tmp.value().getHiddenApiFlags();
                 def_empty &= flags == 0;
                 arr[index++] = flags;
             }
-            for (var tmp : def.virtual_methods()) {
+            for (var tmp : def.virtual_methods) {
                 int flags = tmp.value().getHiddenApiFlags();
                 def_empty &= flags == 0;
                 arr[index++] = flags;

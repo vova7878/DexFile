@@ -130,7 +130,8 @@ public class DexCollector {
 
         private final int hash;
 
-        public CodeContainer(MethodImplementation value, DebugInfo debug_info, TryBlockContainer[] tries, int ins, int outs) {
+        public CodeContainer(MethodImplementation value, DebugInfo debug_info,
+                             TryBlockContainer[] tries, int ins, int outs) {
             this.value = Objects.requireNonNull(value);
             this.debug_info = debug_info;
             this.tries = tries;
@@ -207,14 +208,38 @@ public class DexCollector {
         }
     }
 
-    public record ClassDefContainer(ClassDef value,
-                                    List<TypeId> interfaces,
-                                    FieldDefContainer[] static_fields,
-                                    EncodedArray static_values,
-                                    FieldDefContainer[] instance_fields,
-                                    MethodDefContainer[] direct_methods,
-                                    MethodDefContainer[] virtual_methods,
-                                    AnnotationDirectory annotations) {
+    public static final class ClassDefContainer {
+        public final ClassDef value;
+        public final List<TypeId> interfaces;
+        public final FieldDefContainer[] static_fields;
+        public final EncodedArray static_values;
+        public final FieldDefContainer[] instance_fields;
+        public final MethodDefContainer[] direct_methods;
+        public final MethodDefContainer[] virtual_methods;
+        public final AnnotationDirectory annotations;
+
+        public int offset;
+
+        public ClassDefContainer(ClassDef value,
+                                 List<TypeId> interfaces,
+                                 FieldDefContainer[] static_fields,
+                                 EncodedArray static_values,
+                                 FieldDefContainer[] instance_fields,
+                                 MethodDefContainer[] direct_methods,
+                                 MethodDefContainer[] virtual_methods,
+                                 AnnotationDirectory annotations) {
+            this.value = value;
+            this.interfaces = interfaces;
+            this.static_fields = static_fields;
+            this.static_values = static_values;
+            this.instance_fields = instance_fields;
+            this.direct_methods = direct_methods;
+            this.virtual_methods = virtual_methods;
+            this.annotations = annotations;
+
+            this.offset = -1;
+        }
+
         @Override
         public boolean equals(Object obj) {
             if (this == obj) return true;
@@ -465,25 +490,25 @@ public class DexCollector {
         addType(value.getType());
         var superclass = value.getSuperclass();
         if (superclass != null) addType(superclass);
-        var interfaces = container.interfaces();
+        var interfaces = container.interfaces;
         if (interfaces != null) addTypeList(interfaces);
         var source_file = value.getSourceFile();
         if (source_file != null) addString(source_file);
-        var static_values = container.static_values();
+        var static_values = container.static_values;
         if (static_values != null) addEncodedArray(static_values);
-        for (var field : container.static_fields()) {
+        for (var field : container.static_fields) {
             fillFieldDef(field);
         }
-        for (var field : container.instance_fields()) {
+        for (var field : container.instance_fields) {
             fillFieldDef(field);
         }
-        for (var method : container.direct_methods()) {
+        for (var method : container.direct_methods) {
             fillMethodDef(method);
         }
-        for (var method : container.virtual_methods()) {
+        for (var method : container.virtual_methods) {
             fillMethodDef(method);
         }
-        var annotations = container.annotations();
+        var annotations = container.annotations;
         if (annotations != null) addAnnotationDirectory(annotations);
     }
 
