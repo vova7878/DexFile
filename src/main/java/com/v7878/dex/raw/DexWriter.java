@@ -264,17 +264,16 @@ public class DexWriter {
                     .map(Object::toString).collect(Collectors.joining(" -> ", "[", "]")));
         }
         var container = map.remove(type);
-        if (container == null) {
-            return;
+        if (container != null) {
+            var def = container.value;
+            if (def.getSuperclass() != null) {
+                add(def.getSuperclass(), map, queue, out);
+            }
+            for (TypeId tmp : def.getInterfaces()) {
+                add(tmp, map, queue, out);
+            }
+            out.add(container);
         }
-        var def = container.value;
-        if (def.getSuperclass() != null) {
-            add(def.getSuperclass(), map, queue, out);
-        }
-        for (TypeId tmp : def.getInterfaces()) {
-            add(tmp, map, queue, out);
-        }
-        out.add(container);
         queue.remove(type);
     }
 
