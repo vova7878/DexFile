@@ -322,7 +322,9 @@ public class DexWriter {
         map.header_off = header_offset;
 
         if (isCompact()) {
-            map.compact_feature_flags = options.getCDEXFlags();
+            final int defaultFlags = 0x1;
+            var flags = options.getCDEXFlags();
+            map.compact_feature_flags = flags == null ? defaultFlags : flags;
         }
 
         var collector = new DexCollector(shared_data, isCompact(), options.hasDebugInfo());
