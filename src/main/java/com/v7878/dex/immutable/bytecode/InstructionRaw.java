@@ -16,7 +16,7 @@ public final class InstructionRaw extends Instruction {
         return new InstructionRaw(value);
     }
 
-    public int getValue() {
+    public short getValue() {
         return value;
     }
 
