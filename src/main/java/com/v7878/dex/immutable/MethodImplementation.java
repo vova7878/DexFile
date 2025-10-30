@@ -21,8 +21,20 @@ public final class MethodImplementation {
             NavigableSet<TryBlock> try_blocks, List<DebugItem> debug_items) {
         this.register_count = Preconditions.checkMethodRegisterCount(register_count);
         this.instructions = Objects.requireNonNull(instructions);
-        // TODO: try blocks must not overlap
         this.try_blocks = Objects.requireNonNull(try_blocks);
+        if (try_blocks.size() > 1) {
+            var iterator = try_blocks.iterator();
+            var prev = iterator.next();
+            while (iterator.hasNext()) {
+                var curr = iterator.next();
+                if (curr.getStartAddress() < (prev.getStartAddress() + prev.getUnitCount())) {
+                    throw new IllegalArgumentException(
+                            String.format("Out of order try block (%s, %<s + %s)",
+                                    curr.getStartAddress(), curr.getUnitCount()));
+                }
+                prev = curr;
+            }
+        }
         // TODO: deduplicate and remove unused AdvancePC items
         this.debug_items = Objects.requireNonNull(debug_items);
     }

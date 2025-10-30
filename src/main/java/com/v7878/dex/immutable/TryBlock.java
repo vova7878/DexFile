@@ -18,6 +18,7 @@ public final class TryBlock implements Comparable<TryBlock> {
                      List<ExceptionHandler> handlers) {
         this.start_address = Preconditions.checkCodeAddress(start_address);
         this.unit_count = Preconditions.checkUnitCount(unit_count);
+        Preconditions.checkCodeAddress(start_address + unit_count);
         this.handlers = Objects.requireNonNull(handlers);
         this.catch_all_address = catch_all_address == null ? null :
                 Preconditions.checkCodeAddress(catch_all_address);
