@@ -30,6 +30,7 @@ import static com.v7878.dex.Format.Format3rc3rmi3rms;
 import static com.v7878.dex.Format.Format45cc;
 import static com.v7878.dex.Format.Format4rcc;
 import static com.v7878.dex.Format.Format51l;
+import static com.v7878.dex.Format.FormatRaw;
 import static com.v7878.dex.Format.PackedSwitchPayload;
 import static com.v7878.dex.Format.SparseSwitchPayload;
 
@@ -348,7 +349,7 @@ public enum Opcode {
     //TODO BOX_LAMBDA(onlyArt(betweenApi(0xf8, 24, 25)), "box-lambda", Format22x, EXPERIMENTAL_LAMBDA),
     //TODO UNBOX_LAMBDA(onlyArt(betweenApi(0xf9, 24, 25)), "unbox-lambda", Format22c(type), EXPERIMENTAL_LAMBDA)
 
-    ;
+    RAW(raw(), "raw", FormatRaw, 0);
 
     // a flavor of invoke
     private static final int TYPE_INVOKE = 0x1;
@@ -370,6 +371,8 @@ public enum Opcode {
     private static final int CAN_THROW = 0x100;
     // odex only instruction
     private static final int ODEX_ONLY = 0x200;
+    // single raw opcode
+    private static final int RAW_OPCODE = 0x400;
 
     private record DexInfo(int api, boolean art, boolean odex, DexVersion dex) {
     }
@@ -487,6 +490,10 @@ public enum Opcode {
         return format.isPayload();
     }
 
+    public final boolean isRaw() {
+        return (flags & RAW_OPCODE) != 0;
+    }
+
     public final boolean canInitializeReference() {
         return (flags & CAN_INITIALIZE_REFERENCE) != 0;
     }
@@ -514,6 +521,25 @@ public enum Opcode {
             @Override
             public String toString() {
                 return Integer.toHexString(opcodeValue);
+            }
+        };
+    }
+
+    private static Constraint raw() {
+        return new Constraint() {
+            @Override
+            public boolean contains(int opcode) {
+                return false;
+            }
+
+            @Override
+            public Integer opcode(DexInfo info) {
+                return null;
+            }
+
+            @Override
+            public String toString() {
+                return "raw -> false";
             }
         };
     }

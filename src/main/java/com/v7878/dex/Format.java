@@ -31,7 +31,9 @@ public enum Format {
     Format51l(5),
     ArrayPayload(),
     PackedSwitchPayload(),
-    SparseSwitchPayload();
+    SparseSwitchPayload(),
+    // special format
+    FormatRaw(1);
 
     private final int units;
     private final boolean payload;

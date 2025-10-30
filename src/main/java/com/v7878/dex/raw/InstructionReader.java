@@ -1,5 +1,7 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.util.Checks.shouldNotReachHere;
+
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.ArrayPayload;
@@ -87,6 +89,7 @@ public class InstructionReader {
             case ArrayPayload -> read_array_payload(opcode, in, arg);
             case PackedSwitchPayload -> read_packed_switch_payload(opcode, in, arg);
             case SparseSwitchPayload -> read_sparse_switch_payload(opcode, in, arg);
+            case FormatRaw -> throw shouldNotReachHere();
         };
     }
 
