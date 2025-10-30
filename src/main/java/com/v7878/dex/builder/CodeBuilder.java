@@ -56,6 +56,7 @@ import com.v7878.dex.immutable.bytecode.Instruction3rc3rmi3rms;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
+import com.v7878.dex.immutable.bytecode.InstructionRaw;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -226,7 +227,7 @@ public final class CodeBuilder {
         if (borders.length == 0) return Collections.emptyList();
         int elements_size = borders.length - 1;
 
-        var elements = new SparseArray<TryContainer>();
+        var elements = new SparseArray<TryContainer>(elements_size);
         for (int i = 0; i < elements_size; i++) {
             elements.put(borders[i], new TryContainer());
         }
@@ -550,9 +551,13 @@ public final class CodeBuilder {
                 "arg_count == 0, but arg_reg1 != 0");
     }
 
-    public CodeBuilder add_raw(Instruction instruction) {
+    public CodeBuilder raw(Instruction instruction) {
         add(instruction);
         return this;
+    }
+
+    public CodeBuilder raw(short instruction) {
+        return raw(InstructionRaw.of(instruction));
     }
 
     // <ØØ|op> op
@@ -1020,15 +1025,20 @@ public final class CodeBuilder {
         return raw_const_wide(dst_reg_pair, value);
     }
 
-    public CodeBuilder const_string(int dst_reg, String value) {
+    public CodeBuilder raw_const_string(int dst_reg, String value) {
         return f21c(Opcode.CONST_STRING, dst_reg, false, value);
     }
 
     // TODO: Should this instruction be explicitly stated here?
     //  When the constant number is exceeded,
     //  there should be an automatic correction of the instruction
-    public CodeBuilder const_string_jumbo(int dst_reg, String value) {
+    public CodeBuilder raw_const_string_jumbo(int dst_reg, String value) {
         return f31c(Opcode.CONST_STRING_JUMBO, dst_reg, false, value);
+    }
+
+    public CodeBuilder const_string(int dst_reg, String value) {
+        //TODO: Generate smaller instructions if possible
+        return raw_const_string_jumbo(dst_reg, value);
     }
 
     public CodeBuilder const_class(int dst_reg, TypeId value) {
