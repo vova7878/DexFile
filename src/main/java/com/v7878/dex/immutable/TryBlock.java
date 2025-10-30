@@ -52,6 +52,10 @@ public final class TryBlock implements Comparable<TryBlock> {
         return start_address;
     }
 
+    public int getEndAddress() {
+        return start_address + unit_count;
+    }
+
     public int getUnitCount() {
         return unit_count;
     }

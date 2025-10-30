@@ -27,7 +27,7 @@ public final class MethodImplementation {
             var prev = iterator.next();
             while (iterator.hasNext()) {
                 var curr = iterator.next();
-                if (curr.getStartAddress() < (prev.getStartAddress() + prev.getUnitCount())) {
+                if (curr.getStartAddress() < prev.getEndAddress()) {
                     throw new IllegalArgumentException(
                             String.format("Out of order try block (%s, %<s + %s)",
                                     curr.getStartAddress(), curr.getUnitCount()));
