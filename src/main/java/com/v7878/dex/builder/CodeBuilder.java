@@ -108,9 +108,9 @@ public final class CodeBuilder {
 
         private void initLabels() {
             if (start < 0 || end < 0 || handler < 0) {
-                int l1 = getLabelUnit(label1);
-                int l2 = getLabelUnit(label2);
-                int hl = getLabelUnit(handlerLabel);
+                int l1 = exactUnit(label1);
+                int l2 = exactUnit(label2);
+                int hl = exactUnit(handlerLabel);
                 if (l1 < l2) {
                     start = l1;
                     end = l2;
@@ -156,7 +156,7 @@ public final class CodeBuilder {
 
         private void initLabel() {
             if (position < 0) {
-                position = getLabelUnit(label);
+                position = exactUnit(label);
             }
         }
 
@@ -178,6 +178,27 @@ public final class CodeBuilder {
         }
     }
 
+    private static int assertSame(int a, int b) {
+        if (a == b) {
+            return a;
+        }
+        // TODO: msg
+        throw new IllegalStateException();
+    }
+
+    private static class BuilderPosition {
+        public int min_unit, max_unit;
+
+        public BuilderPosition(int min_unit, int max_unit) {
+            this.min_unit = min_unit;
+            this.max_unit = max_unit;
+        }
+
+        public int exactUnit() {
+            return assertSame(min_unit, max_unit);
+        }
+    }
+
     private static int checkRange(int value, int start, int length) {
         if (length < 0 || value < start || value >= start + length) {
             throw new IndexOutOfBoundsException(
@@ -192,10 +213,10 @@ public final class CodeBuilder {
     private final List<Runnable> delayed_actions;
     private final List<BuilderTryItem> try_items;
     private final List<BuilderDebugItem> debug_items;
-    private final Map<Object, Integer> labels;
+    private final Map<Object, BuilderPosition> labels;
     private final boolean has_this;
 
-    private int current_unit;
+    private int min_unit, max_unit;
 
     private boolean generate_lines;
 
@@ -209,7 +230,7 @@ public final class CodeBuilder {
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
-        this.current_unit = 0;
+        this.min_unit = max_unit = 0;
         this.generate_lines = false;
     }
 
@@ -432,12 +453,18 @@ public final class CodeBuilder {
         return check_reg(first_reg);
     }
 
-    private void add(Supplier<Instruction> instruction, int unit_count) {
+    private void add(Supplier<Instruction> instruction, int min_unit_count, int max_unit_count) {
         if (generate_lines) {
+            // Note: Numbering starts from one
             line(instructions.size() + 1);
         }
         instructions.add(instruction);
-        current_unit += unit_count;
+        min_unit += min_unit_count;
+        max_unit += max_unit_count;
+    }
+
+    private void add(Supplier<Instruction> instruction, int unit_count) {
+        add(instruction, unit_count, unit_count);
     }
 
     private void add(Instruction instruction) {
@@ -460,29 +487,35 @@ public final class CodeBuilder {
     }
 
     private void putLabel(Object label) {
-        if (labels.putIfAbsent(Objects.requireNonNull(label), current_unit) != null) {
+        var pos = new BuilderPosition(min_unit, max_unit);
+        if (labels.putIfAbsent(Objects.requireNonNull(label), pos) != null) {
             throw new IllegalArgumentException("Label " + label + " already exists");
         }
     }
 
-    private int getLabelUnit(Object label) {
-        Integer unit = labels.get(label);
-        if (unit == null) {
+    private BuilderPosition findLabel(Object label) {
+        var pos = labels.get(label);
+        if (pos == null) {
             throw new IllegalStateException("Can`t find label: " + label);
         }
-        return unit;
+        return pos;
     }
 
-    private int getLabelBranchOffset(Object label, int start_unit) {
-        return getLabelBranchOffset(label, start_unit, false);
+    private int exactCurrentUnit() {
+        return assertSame(min_unit, max_unit);
     }
 
-    private int getLabelBranchOffset(Object label, int start_unit, boolean allow_zero) {
-        int offset = getLabelUnit(label) - start_unit;
-        if (offset == 0) {
-            if (allow_zero) {
-                return 0;
-            }
+    private int exactUnit(Object label) {
+        return findLabel(label).exactUnit();
+    }
+
+    private int exactBranchOffset(Object from, Object to) {
+        return exactBranchOffset(from, to, false);
+    }
+
+    private int exactBranchOffset(Object from, Object to, boolean allow_zero) {
+        int offset = exactUnit(to) - exactUnit(from);
+        if (!allow_zero && offset == 0) {
             throw new IllegalStateException("Zero branch offset is not allowed");
         }
         return offset;
@@ -664,7 +697,7 @@ public final class CodeBuilder {
     private void format_35c_checks(int arg_count, int arg_reg1, int arg_reg2,
                                    int arg_reg3, int arg_reg4, int arg_reg5) {
         checkRange(arg_count, 0, 6);
-        if (arg_count == 5) check_reg(arg_reg5);
+        if (arg_count >= 5) check_reg(arg_reg5);
         else if (arg_reg5 != 0) throw new IllegalArgumentException(
                 "arg_count < 5, but arg_reg5 != 0");
 
@@ -710,8 +743,8 @@ public final class CodeBuilder {
     }
 
     // <B|A|op> op vA, #+B
-    private CodeBuilder f11n(@SuppressWarnings("SameParameterValue") Opcode op, int reg_or_pair,
-                             @SuppressWarnings("SameParameterValue") boolean is_reg_wide, int value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f11n(Opcode op, int reg_or_pair, boolean is_reg_wide, int value) {
         add(Instruction11n.of(op,
                 check_reg_or_pair(reg_or_pair, is_reg_wide), value));
         return this;
@@ -724,13 +757,15 @@ public final class CodeBuilder {
     }
 
     // <AA|op> op +AA
-    private CodeBuilder f10t(@SuppressWarnings("SameParameterValue") Opcode op, IntSupplier value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f10t(Opcode op, IntSupplier value) {
         add(op.format(), () -> Instruction10t.of(op, value.getAsInt()));
         return this;
     }
 
     // <ØØ|op AAAA> op +AAAA
-    private CodeBuilder f20t(@SuppressWarnings("SameParameterValue") Opcode op, IntSupplier value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f20t(Opcode op, IntSupplier value) {
         add(op.format(), () -> Instruction20t.of(op, value.getAsInt()));
         return this;
     }
@@ -748,7 +783,8 @@ public final class CodeBuilder {
     }
 
     // <AA|op BBBB> op vAA, +BBBB
-    private CodeBuilder f21t(Opcode op, int reg_or_pair, @SuppressWarnings("SameParameterValue") boolean is_reg_wide, IntSupplier value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f21t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntSupplier value) {
         check_reg_or_pair(reg_or_pair, is_reg_wide);
         add(op.format(), () -> Instruction21t.of(op, reg_or_pair, value.getAsInt()));
         return this;
@@ -762,13 +798,15 @@ public final class CodeBuilder {
     }
 
     // <AA|op BBBB> op vAA, #+BBBB0000
-    private CodeBuilder f21ih(@SuppressWarnings("SameParameterValue") Opcode op, int reg, int value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f21ih(Opcode op, int reg, int value) {
         add(Instruction21ih.of(op, check_reg(reg), value));
         return this;
     }
 
     // <AA|op BBBB> op vAA, #+BBBB000000000000
-    private CodeBuilder f21lh(@SuppressWarnings("SameParameterValue") Opcode op, int reg_pair, long value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f21lh(Opcode op, int reg_pair, long value) {
         add(Instruction21lh.of(op, check_reg_pair(reg_pair), value));
         return this;
     }
@@ -791,8 +829,9 @@ public final class CodeBuilder {
     }
 
     // <AA|op CC|BB> op vAA, vBB, #+CC
-    private CodeBuilder f22b(Opcode op, int reg_or_pair1, @SuppressWarnings("SameParameterValue") boolean is_reg1_wide,
-                             int reg_or_pair2, @SuppressWarnings("SameParameterValue") boolean is_reg2_wide, int value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f22b(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide, int value) {
         add(Instruction22b.of(op,
                 check_reg_or_pair(reg_or_pair1, is_reg1_wide),
                 check_reg_or_pair(reg_or_pair2, is_reg2_wide), value));
@@ -800,8 +839,9 @@ public final class CodeBuilder {
     }
 
     // <B|A|op CCCC> op vA, vB, +CCCC
-    private CodeBuilder f22t(Opcode op, int reg_or_pair1, @SuppressWarnings("SameParameterValue") boolean is_reg1_wide,
-                             int reg_or_pair2, @SuppressWarnings("SameParameterValue") boolean is_reg2_wide, IntSupplier value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f22t(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide, IntSupplier value) {
         check_reg_or_pair(reg_or_pair1, is_reg1_wide);
         check_reg_or_pair(reg_or_pair2, is_reg2_wide);
         add(op.format(), () -> Instruction22t.of(op, reg_or_pair1, reg_or_pair2, value.getAsInt()));
@@ -809,8 +849,9 @@ public final class CodeBuilder {
     }
 
     // <B|A|op CCCC> op vA, vB, #+CCCC
-    private CodeBuilder f22s(Opcode op, int reg_or_pair1, @SuppressWarnings("SameParameterValue") boolean is_reg1_wide,
-                             int reg_or_pair2, @SuppressWarnings("SameParameterValue") boolean is_reg2_wide, int value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f22s(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
+                             int reg_or_pair2, boolean is_reg2_wide, int value) {
         add(Instruction22s.of(op,
                 check_reg_or_pair(reg_or_pair1, is_reg1_wide),
                 check_reg_or_pair(reg_or_pair2, is_reg2_wide), value));
@@ -818,8 +859,9 @@ public final class CodeBuilder {
     }
 
     // <B|A|op CCCC> op vA, vB, @CCCC
+    @SuppressWarnings("SameParameterValue")
     private CodeBuilder f22c(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
-                             int reg_or_pair2, @SuppressWarnings("SameParameterValue") boolean is_reg2_wide, Object constant) {
+                             int reg_or_pair2, boolean is_reg2_wide, Object constant) {
         add(Instruction22c22cs.of(op,
                 check_reg_or_pair(reg_or_pair1, is_reg1_wide),
                 check_reg_or_pair(reg_or_pair2, is_reg2_wide), constant));
@@ -827,7 +869,8 @@ public final class CodeBuilder {
     }
 
     // <ØØ|op AAAAlo AAAAhi> op +AAAAAAAA
-    private CodeBuilder f30t(@SuppressWarnings("SameParameterValue") Opcode op, IntSupplier value) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f30t(Opcode op, IntSupplier value) {
         add(op.format(), () -> Instruction30t.of(op, value.getAsInt()));
         return this;
     }
@@ -849,15 +892,16 @@ public final class CodeBuilder {
     }
 
     // <AA|op BBBBlo BBBBhi> op vAA, +BBBBBBBB
-    private CodeBuilder f31t(Opcode op, int reg_or_pair, @SuppressWarnings("SameParameterValue") boolean is_reg_wide, IntSupplier value) {
+    @SuppressWarnings({"SameParameterValue", "UnusedReturnValue"})
+    private CodeBuilder f31t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntSupplier value) {
         check_reg_or_pair(reg_or_pair, is_reg_wide);
         add(op.format(), () -> Instruction31t.of(op, reg_or_pair, value.getAsInt()));
         return this;
     }
 
     // <AA|op BBBBlo BBBBhi> op vAA, @BBBBBBBB
-    private CodeBuilder f31c(@SuppressWarnings("SameParameterValue") Opcode op, int reg_or_pair,
-                             @SuppressWarnings("SameParameterValue") boolean is_reg_wide, Object constant) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f31c(Opcode op, int reg_or_pair, boolean is_reg_wide, Object constant) {
         add(Instruction31c.of(op,
                 check_reg_or_pair(reg_or_pair, is_reg_wide), constant));
         return this;
@@ -880,9 +924,9 @@ public final class CodeBuilder {
     }
 
     // <A|G|op BBBB F|E|D|C HHHH> [A] op {vC, vD, vE, vF, vG}, @BBBB
-    private CodeBuilder f45cc(@SuppressWarnings("SameParameterValue") Opcode op,
-                              Object constant1, Object constant2, int arg_count, int arg_reg1,
-                              int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f45cc(Opcode op, Object constant1, Object constant2, int arg_count,
+                              int arg_reg1, int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         format_35c_checks(arg_count, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
         add(Instruction45cc.of(op, arg_count,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5, constant1, constant2));
@@ -890,7 +934,8 @@ public final class CodeBuilder {
     }
 
     // <AA|op BBBB CCCC HHHH> op {vCCCC .. vNNNN}, @BBBB, @HHHH (where NNNN = CCCC+AA-1)
-    private CodeBuilder f4rcc(@SuppressWarnings("SameParameterValue") Opcode op, Object constant1,
+    @SuppressWarnings("SameParameterValue")
+    private CodeBuilder f4rcc(Opcode op, Object constant1,
                               Object constant2, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, arg_count);
         add(Instruction4rcc.of(op, arg_count, first_arg_reg, constant1, constant2));
@@ -905,13 +950,13 @@ public final class CodeBuilder {
     }
 
     private void align_current_unit2() {
-        if ((current_unit & 1) != 0) {
+        if ((exactCurrentUnit() & 1) != 0) {
             nop();
         }
     }
 
     private void check_current_unit_alignment2() {
-        if ((current_unit & 1) != 0) {
+        if ((exactCurrentUnit() & 1) != 0) {
             throw new IllegalStateException("Current position is not aligned by 2 code units");
         }
     }
@@ -1163,9 +1208,6 @@ public final class CodeBuilder {
         return f21c(Opcode.CONST_STRING, dst_reg, false, value);
     }
 
-    // TODO: Should this instruction be explicitly stated here?
-    //  When the constant number is exceeded,
-    //  there should be an automatic correction of the instruction
     public CodeBuilder raw_const_string_jumbo(int dst_reg, String value) {
         return f31c(Opcode.CONST_STRING_JUMBO, dst_reg, false, value);
     }
@@ -1241,16 +1283,19 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder fill_array_data_internal(int arr_ref_reg, int element_width, List<? extends Number> data) {
-        int start_unit = current_unit;
+        InternalLabel current = new InternalLabel();
         InternalLabel payload = new InternalLabel();
-        var insn = f31t(Opcode.FILL_ARRAY_DATA, arr_ref_reg, false,
-                () -> getLabelBranchOffset(payload, start_unit));
+
+        putLabel(current);
+        f31t(Opcode.FILL_ARRAY_DATA, arr_ref_reg, false,
+                () -> exactBranchOffset(current, payload));
+
         addDelayedAction(() -> {
             align_current_unit2();
             putLabel(payload);
             fill_array_data_payload(element_width, data);
         });
-        return insn;
+        return this;
     }
 
     public CodeBuilder fill_array_data(int arr_ref_reg, int element_width, Iterable<? extends Number> data) {
@@ -1344,8 +1389,9 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_goto_internal(Object label) {
-        int start_unit = current_unit;
-        return f10t(Opcode.GOTO, () -> getLabelBranchOffset(label, start_unit));
+        InternalLabel current = new InternalLabel();
+        putLabel(current);
+        return f10t(Opcode.GOTO, () -> exactBranchOffset(current, label));
     }
 
     public CodeBuilder raw_goto(String label) {
@@ -1353,8 +1399,9 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_goto_16_internal(Object label) {
-        int start_unit = current_unit;
-        return f20t(Opcode.GOTO_16, () -> getLabelBranchOffset(label, start_unit));
+        InternalLabel current = new InternalLabel();
+        putLabel(current);
+        return f20t(Opcode.GOTO_16, () -> exactBranchOffset(current, label));
     }
 
     public CodeBuilder raw_goto_16(String label) {
@@ -1362,8 +1409,9 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_goto_32_internal(Object label) {
-        int start_unit = current_unit;
-        return f30t(Opcode.GOTO_32, () -> getLabelBranchOffset(label, start_unit, true));
+        InternalLabel current = new InternalLabel();
+        putLabel(current);
+        return f30t(Opcode.GOTO_32, () -> exactBranchOffset(current, label, true));
     }
 
     public CodeBuilder raw_goto_32(String label) {
@@ -1372,15 +1420,18 @@ public final class CodeBuilder {
 
     private CodeBuilder packed_switch_internal(int reg_to_test, int first_key, Object... labels) {
         assert first_key + labels.length >= first_key;
-        int start_unit = current_unit;
+        InternalLabel current = new InternalLabel();
         InternalLabel payload = new InternalLabel();
+
+        putLabel(current);
         f31t(Opcode.PACKED_SWITCH, reg_to_test, false,
-                () -> getLabelBranchOffset(payload, start_unit));
+                () -> exactBranchOffset(current, payload));
+
         addDelayedAction(() -> {
             NavigableSet<SwitchElement> elements = new TreeSet<>();
             for (int i = 0; i < labels.length; i++) {
                 elements.add(SwitchElement.of(first_key + i,
-                        getLabelBranchOffset(labels[i], start_unit, true)));
+                        exactBranchOffset(current, labels[i], true)));
             }
             elements = Collections.unmodifiableNavigableSet(elements);
             align_current_unit2();
@@ -1392,15 +1443,18 @@ public final class CodeBuilder {
 
     private CodeBuilder sparse_switch_internal(int reg_to_test, int[] keys, Object... labels) {
         assert keys.length == labels.length;
-        int start_unit = current_unit;
+        InternalLabel current = new InternalLabel();
         InternalLabel payload = new InternalLabel();
+
+        putLabel(current);
         f31t(Opcode.SPARSE_SWITCH, reg_to_test, false,
-                () -> getLabelBranchOffset(payload, start_unit));
+                () -> exactBranchOffset(current, payload));
+
         addDelayedAction(() -> {
             NavigableSet<SwitchElement> elements = new TreeSet<>();
             for (int i = 0; i < labels.length; i++) {
                 elements.add(SwitchElement.of(keys[i],
-                        getLabelBranchOffset(labels[i], start_unit, true)));
+                        exactBranchOffset(current, labels[i], true)));
             }
             elements = Collections.unmodifiableNavigableSet(elements);
             align_current_unit2();
@@ -1412,11 +1466,11 @@ public final class CodeBuilder {
 
     public CodeBuilder switch_(int reg_to_test, Map<Integer, String> table) {
         check_reg(reg_to_test);
-        var map = new SparseArray<String>(table.size());
-        table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
-        if (map.isEmpty()) {
+        if (table.isEmpty()) {
             return this;
         }
+        var map = new SparseArray<String>(table.size());
+        table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
         if (map.size() <= 1 || (map.lastKey() - map.firstKey()) == (map.size() - 1)) {
             return packed_switch_internal(reg_to_test, map.firstKey(), map.valuesArray());
         }
@@ -1446,12 +1500,12 @@ public final class CodeBuilder {
     }
 
     public enum Test {
-        EQ(Opcode.IF_EQ, Opcode.IF_EQZ),
-        NE(Opcode.IF_NE, Opcode.IF_NEZ),
-        LT(Opcode.IF_LT, Opcode.IF_LTZ),
-        GE(Opcode.IF_GE, Opcode.IF_GEZ),
-        GT(Opcode.IF_GT, Opcode.IF_GTZ),
-        LE(Opcode.IF_LE, Opcode.IF_LEZ);
+        EQ(Opcode.IF_EQ, Opcode.IF_EQZ), // ==
+        NE(Opcode.IF_NE, Opcode.IF_NEZ), // !=
+        LT(Opcode.IF_LT, Opcode.IF_LTZ), // <
+        GE(Opcode.IF_GE, Opcode.IF_GEZ), // >=
+        GT(Opcode.IF_GT, Opcode.IF_GTZ), // >
+        LE(Opcode.IF_LE, Opcode.IF_LEZ); // <=
 
         private final Opcode test, testz;
 
@@ -1459,13 +1513,26 @@ public final class CodeBuilder {
             this.test = test;
             this.testz = testz;
         }
+
+        public Test inverse() {
+            return switch (this) {
+                case EQ -> NE; // == -> !=
+                case NE -> EQ; // != -> ==
+                case LT -> GE; // < -> >=
+                case GE -> LT; // >= -> <
+                case GT -> LE; // > -> <=
+                case LE -> GT; // <= -> >
+            };
+        }
     }
 
     private CodeBuilder if_test_internal(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
-        int start_unit = current_unit;
+        InternalLabel current = new InternalLabel();
+        putLabel(current);
+        // TODO? what if branch_offset > 0xffff?
         return f22t(test.test, first_reg_to_test, false,
                 second_reg_to_test, false,
-                () -> getLabelBranchOffset(label, start_unit));
+                () -> exactBranchOffset(current, label));
     }
 
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test, String label) {
@@ -1473,9 +1540,11 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder if_testz_internal(Test test, int reg_to_test, Object label) {
-        int start_unit = current_unit;
+        InternalLabel current = new InternalLabel();
+        putLabel(current);
+        // TODO? what if branch_offset > 0xffff?
         return f21t(test.testz, reg_to_test, false,
-                () -> getLabelBranchOffset(label, start_unit));
+                () -> exactBranchOffset(current, label));
     }
 
     public CodeBuilder if_testz(Test test, int reg_to_test, String label) {
