@@ -142,6 +142,42 @@ public final class CodeBuilder {
         }
     }
 
+    private class BuilderDebugItem implements Comparable<BuilderDebugItem> {
+        private final Object label;
+        private final DebugItem item;
+        private final int index;
+        private int position = -1;
+
+        BuilderDebugItem(int index, Object label, DebugItem item) {
+            this.index = index;
+            this.label = label;
+            this.item = item;
+        }
+
+        private void initLabel() {
+            if (position < 0) {
+                position = getLabelUnit(label);
+            }
+        }
+
+        public int position() {
+            initLabel();
+            return position;
+        }
+
+        public DebugItem item() {
+            return item;
+        }
+
+        @Override
+        public int compareTo(BuilderDebugItem other) {
+            if (other == this) return 0;
+            int out = Integer.compare(position(), other.position());
+            if (out != 0) return out;
+            return Integer.compare(index, other.index);
+        }
+    }
+
     private static int checkRange(int value, int start, int length) {
         if (length < 0 || value < start || value >= start + length) {
             throw new IndexOutOfBoundsException(
@@ -155,11 +191,11 @@ public final class CodeBuilder {
     private final List<Supplier<Instruction>> instructions;
     private final List<Runnable> delayed_actions;
     private final List<BuilderTryItem> try_items;
-    private final List<DebugItem> debug_items;
+    private final List<BuilderDebugItem> debug_items;
     private final Map<Object, Integer> labels;
     private final boolean has_this;
 
-    private int current_unit, current_debug_unit;
+    private int current_unit;
 
     private boolean generate_lines;
 
@@ -173,7 +209,7 @@ public final class CodeBuilder {
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
-        this.current_debug_unit = this.current_unit = 0;
+        this.current_unit = 0;
         this.generate_lines = false;
     }
 
@@ -199,13 +235,13 @@ public final class CodeBuilder {
     //             v
     // <========><***><+++><--->
 
-    private static class TryContainer {
-        final Set<TypeId> exceptions = new HashSet<>();
-        final List<ExceptionHandler> handlers = new ArrayList<>();
-        Integer catch_all_address = null;
-    }
-
     private static List<TryBlock> mergeTryItems(List<BuilderTryItem> try_items) {
+        class TryContainer {
+            final Set<TypeId> exceptions = new HashSet<>();
+            final List<ExceptionHandler> handlers = new ArrayList<>();
+            Integer catch_all_address = null;
+        }
+
         int[] borders;
         {
             // TODO: IntSet
@@ -275,13 +311,30 @@ public final class CodeBuilder {
         return out;
     }
 
+    private static List<DebugItem> mergeDebugItems(List<BuilderDebugItem> debug_items) {
+        Collections.sort(debug_items);
+
+        var out = new ArrayList<DebugItem>(debug_items.size());
+        int pc = 0;
+        for (var item : debug_items) {
+            int position = item.position();
+            if (pc != position) {
+                out.add(AdvancePC.of(position - pc));
+                pc = position;
+            }
+            out.add(item.item());
+        }
+        return out;
+    }
+
     private MethodImplementation finish() {
         delayed_actions.forEach(Runnable::run);
 
         List<Instruction> insns = Converter.transform(instructions, Supplier::get);
         List<TryBlock> try_blocks = mergeTryItems(try_items);
+        List<DebugItem> debug_info = mergeDebugItems(debug_items);
 
-        return MethodImplementation.of(regs_size, insns, try_blocks, debug_items);
+        return MethodImplementation.of(regs_size, insns, try_blocks, debug_info);
     }
 
     public static MethodImplementation build(int regs_size, int ins_size, boolean add_hidden_this,
@@ -480,34 +533,114 @@ public final class CodeBuilder {
         return this;
     }
 
-    private CodeBuilder addDebugItem(DebugItem item) {
+    private CodeBuilder addDebugItem(Object label, DebugItem item) {
+        Objects.requireNonNull(label);
         Objects.requireNonNull(item);
-        if (current_debug_unit != current_unit) {
-            debug_items.add(AdvancePC.of(current_unit - current_debug_unit));
-            current_debug_unit = current_unit;
-        }
-        debug_items.add(item);
+        debug_items.add(new BuilderDebugItem(debug_items.size(), label, item));
         return this;
     }
 
+    public CodeBuilder generate_lines() {
+        generate_lines = true;
+        return this;
+    }
+
+    public CodeBuilder line_internal(Object label, int line) {
+        if (generate_lines) {
+            throw new IllegalStateException("Autogeneration of lines is enabled; you cannot specify them explicitly");
+        }
+        return addDebugItem(label, LineNumber.of(line));
+    }
+
+    public CodeBuilder prologue_internal(Object label) {
+        return addDebugItem(label, SetPrologueEnd.INSTANCE);
+    }
+
+    public CodeBuilder epilogue_internal(Object label) {
+        return addDebugItem(label, SetEpilogueBegin.INSTANCE);
+    }
+
+    public CodeBuilder source_internal(Object label, String name) {
+        return addDebugItem(label, SetFile.of(name));
+    }
+
+    public CodeBuilder local_internal(Object label, int register, String name, TypeId type, String signature) {
+        return addDebugItem(label, StartLocal.of(register, name, type, signature));
+    }
+
+    public CodeBuilder end_local_internal(Object label, int register) {
+        return addDebugItem(label, EndLocal.of(register));
+    }
+
+    public CodeBuilder restart_local_internal(Object label, int register) {
+        return addDebugItem(label, RestartLocal.of(register));
+    }
+
+    public CodeBuilder line(String label, int line) {
+        return line_internal(label, line);
+    }
+
+    public CodeBuilder prologue(String label) {
+        return prologue_internal(label);
+    }
+
+    public CodeBuilder epilogue(String label) {
+        return epilogue_internal(label);
+    }
+
+    public CodeBuilder source(String label, String name) {
+        return source_internal(label, name);
+    }
+
+    public CodeBuilder local(String label, int register, String name, TypeId type, String signature) {
+        return local_internal(label, register, name, type, signature);
+    }
+
+    public CodeBuilder local(String label, int register, String name, TypeId type) {
+        return local(label, register, name, type, null);
+    }
+
+    public CodeBuilder end_local(String label, int register) {
+        return end_local_internal(label, register);
+    }
+
+    public CodeBuilder restart_local(String label, int register) {
+        return restart_local_internal(label, register);
+    }
+
     public CodeBuilder line(int line) {
-        return addDebugItem(LineNumber.of(line));
+        InternalLabel label = new InternalLabel();
+        line_internal(label, line);
+        putLabel(label);
+        return this;
     }
 
     public CodeBuilder prologue() {
-        return addDebugItem(SetPrologueEnd.INSTANCE);
+        InternalLabel label = new InternalLabel();
+        prologue_internal(label);
+        putLabel(label);
+        return this;
     }
 
     public CodeBuilder epilogue() {
-        return addDebugItem(SetEpilogueBegin.INSTANCE);
+        InternalLabel label = new InternalLabel();
+        epilogue_internal(label);
+        putLabel(label);
+        return this;
     }
 
     public CodeBuilder source(String name) {
-        return addDebugItem(SetFile.of(name));
+        InternalLabel label = new InternalLabel();
+        source_internal(label, name);
+        putLabel(label);
+        return this;
     }
 
     public CodeBuilder local(int register, String name, TypeId type, String signature) {
-        return addDebugItem(StartLocal.of(register, name, type, signature));
+        InternalLabel label = new InternalLabel();
+        local_internal(label, register, name, type, signature);
+        putLabel(label);
+        return this;
     }
 
     public CodeBuilder local(int register, String name, TypeId type) {
@@ -515,15 +648,16 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder end_local(int register) {
-        return addDebugItem(EndLocal.of(register));
+        InternalLabel label = new InternalLabel();
+        end_local_internal(label, register);
+        putLabel(label);
+        return this;
     }
 
     public CodeBuilder restart_local(int register) {
-        return addDebugItem(RestartLocal.of(register));
-    }
-
-    public CodeBuilder generate_lines() {
-        generate_lines = true;
+        InternalLabel label = new InternalLabel();
+        restart_local_internal(label, register);
+        putLabel(label);
         return this;
     }
 
