@@ -1,5 +1,6 @@
 package com.v7878.dex.builder;
 
+import static com.v7878.dex.Opcode.*;
 import static com.v7878.dex.builder.CodeBuilder.Op.GET;
 import static com.v7878.dex.builder.CodeBuilder.Op.GET_BOOLEAN;
 import static com.v7878.dex.builder.CodeBuilder.Op.GET_BYTE;
@@ -571,7 +572,7 @@ public final class CodeBuilder {
                 var value = factory.get();
                 assert value.getOpcode().isPayload();
                 if (odd_position) {
-                    return List.of(Instruction10x.of(Opcode.NOP), value);
+                    return List.of(Instruction10x.of(NOP), value);
                 }
                 return List.of(value);
             }
@@ -1080,19 +1081,19 @@ public final class CodeBuilder {
 
     @SuppressWarnings("UnusedReturnValue")
     public CodeBuilder nop() {
-        return f10x(Opcode.NOP);
+        return f10x(NOP);
     }
 
     public CodeBuilder raw_move(int dst_reg, int src_reg) {
-        return f12x(Opcode.MOVE, dst_reg, false, src_reg, false);
+        return f12x(MOVE, dst_reg, false, src_reg, false);
     }
 
     public CodeBuilder raw_move_from16(int dst_reg, int src_reg) {
-        return f22x(Opcode.MOVE_FROM16, dst_reg, false, src_reg, false);
+        return f22x(MOVE_FROM16, dst_reg, false, src_reg, false);
     }
 
     public CodeBuilder raw_move_16(int dst_reg, int src_reg) {
-        return f32x(Opcode.MOVE_16, dst_reg, false, src_reg, false);
+        return f32x(MOVE_16, dst_reg, false, src_reg, false);
     }
 
     public CodeBuilder move(int dst_reg, int src_reg) {
@@ -1106,15 +1107,15 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder raw_move_wide(int dst_reg_pair, int src_reg_pair) {
-        return f12x(Opcode.MOVE_WIDE, dst_reg_pair, true, src_reg_pair, true);
+        return f12x(MOVE_WIDE, dst_reg_pair, true, src_reg_pair, true);
     }
 
     public CodeBuilder raw_move_wide_from16(int dst_reg_pair, int src_reg_pair) {
-        return f22x(Opcode.MOVE_WIDE_FROM16, dst_reg_pair, true, src_reg_pair, true);
+        return f22x(MOVE_WIDE_FROM16, dst_reg_pair, true, src_reg_pair, true);
     }
 
     public CodeBuilder raw_move_wide_16(int dst_reg_pair, int src_reg_pair) {
-        return f32x(Opcode.MOVE_WIDE_16, dst_reg_pair, true, src_reg_pair, true);
+        return f32x(MOVE_WIDE_16, dst_reg_pair, true, src_reg_pair, true);
     }
 
     public CodeBuilder move_wide(int dst_reg_pair, int src_reg_pair) {
@@ -1128,15 +1129,15 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder raw_move_object(int dst_reg, int src_reg) {
-        return f12x(Opcode.MOVE_OBJECT, dst_reg, false, src_reg, false);
+        return f12x(MOVE_OBJECT, dst_reg, false, src_reg, false);
     }
 
     public CodeBuilder raw_move_object_from16(int dst_reg, int src_reg) {
-        return f22x(Opcode.MOVE_OBJECT_FROM16, dst_reg, false, src_reg, false);
+        return f22x(MOVE_OBJECT_FROM16, dst_reg, false, src_reg, false);
     }
 
     public CodeBuilder raw_move_object_16(int dst_reg, int src_reg) {
-        return f32x(Opcode.MOVE_OBJECT_16, dst_reg, false, src_reg, false);
+        return f32x(MOVE_OBJECT_16, dst_reg, false, src_reg, false);
     }
 
     public CodeBuilder move_object(int dst_reg, int src_reg) {
@@ -1181,15 +1182,15 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder move_result(int dst_reg) {
-        return f11x(Opcode.MOVE_RESULT, dst_reg, false);
+        return f11x(MOVE_RESULT, dst_reg, false);
     }
 
     public CodeBuilder move_result_wide(int dst_reg_peir) {
-        return f11x(Opcode.MOVE_RESULT_WIDE, dst_reg_peir, true);
+        return f11x(MOVE_RESULT_WIDE, dst_reg_peir, true);
     }
 
     public CodeBuilder move_result_object(int dst_reg) {
-        return f11x(Opcode.MOVE_RESULT_OBJECT, dst_reg, false);
+        return f11x(MOVE_RESULT_OBJECT, dst_reg, false);
     }
 
     public CodeBuilder move_result_shorty(char shorty, int dst_reg_or_pair) {
@@ -1206,23 +1207,23 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder move_exception(int dst_reg) {
-        return f11x(Opcode.MOVE_EXCEPTION, dst_reg, false);
+        return f11x(MOVE_EXCEPTION, dst_reg, false);
     }
 
     public CodeBuilder return_void() {
-        return f10x(Opcode.RETURN_VOID);
+        return f10x(RETURN_VOID);
     }
 
     public CodeBuilder return_(int return_value_reg) {
-        return f11x(Opcode.RETURN, return_value_reg, false);
+        return f11x(RETURN, return_value_reg, false);
     }
 
     public CodeBuilder return_wide(int return_value_reg_peir) {
-        return f11x(Opcode.RETURN_WIDE, return_value_reg_peir, true);
+        return f11x(RETURN_WIDE, return_value_reg_peir, true);
     }
 
     public CodeBuilder return_object(int return_value_reg) {
-        return f11x(Opcode.RETURN_OBJECT, return_value_reg, false);
+        return f11x(RETURN_OBJECT, return_value_reg, false);
     }
 
     public CodeBuilder return_shorty(char shorty, int return_value_reg_or_pair) {
@@ -1239,19 +1240,19 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder raw_const_4(int dst_reg, int value) {
-        return f11n(Opcode.CONST_4, dst_reg, false, value);
+        return f11n(CONST_4, dst_reg, false, value);
     }
 
     public CodeBuilder raw_const_16(int dst_reg, int value) {
-        return f21s(Opcode.CONST_16, dst_reg, false, value);
+        return f21s(CONST_16, dst_reg, false, value);
     }
 
     public CodeBuilder raw_const(int dst_reg, int value) {
-        return f31i(Opcode.CONST, dst_reg, false, value);
+        return f31i(CONST, dst_reg, false, value);
     }
 
     public CodeBuilder raw_const_high16(int dst_reg, int value) {
-        return f21ih(Opcode.CONST_HIGH16, dst_reg, value);
+        return f21ih(CONST_HIGH16, dst_reg, value);
     }
 
     private static boolean check_width_int(int value, int width) {
@@ -1273,19 +1274,19 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder raw_const_wide_16(int dst_reg_pair, int value) {
-        return f21s(Opcode.CONST_WIDE_16, dst_reg_pair, true, value);
+        return f21s(CONST_WIDE_16, dst_reg_pair, true, value);
     }
 
     public CodeBuilder raw_const_wide_32(int dst_reg_pair, int value) {
-        return f31i(Opcode.CONST_WIDE_32, dst_reg_pair, true, value);
+        return f31i(CONST_WIDE_32, dst_reg_pair, true, value);
     }
 
     public CodeBuilder raw_const_wide(int dst_reg_pair, long value) {
-        return f51l(Opcode.CONST_WIDE, dst_reg_pair, value);
+        return f51l(CONST_WIDE, dst_reg_pair, value);
     }
 
     public CodeBuilder raw_const_wide_high16(int dst_reg_pair, long value) {
-        return f21lh(Opcode.CONST_WIDE_HIGH16, dst_reg_pair, value);
+        return f21lh(CONST_WIDE_HIGH16, dst_reg_pair, value);
     }
 
     private static boolean check_width_long(long value, int width) {
@@ -1307,11 +1308,11 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder raw_const_string(int dst_reg, String value) {
-        return f21c(Opcode.CONST_STRING, dst_reg, false, value);
+        return f21c(CONST_STRING, dst_reg, false, value);
     }
 
     public CodeBuilder raw_const_string_jumbo(int dst_reg, String value) {
-        return f31c(Opcode.CONST_STRING_JUMBO, dst_reg, false, value);
+        return f31c(CONST_STRING_JUMBO, dst_reg, false, value);
     }
 
     public CodeBuilder const_string(int dst_reg, String value) {
@@ -1320,36 +1321,36 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder const_class(int dst_reg, TypeId value) {
-        return f21c(Opcode.CONST_CLASS, dst_reg, false, value);
+        return f21c(CONST_CLASS, dst_reg, false, value);
     }
 
     public CodeBuilder monitor_enter(int ref_reg) {
-        return f11x(Opcode.MONITOR_ENTER, ref_reg, false);
+        return f11x(MONITOR_ENTER, ref_reg, false);
     }
 
     public CodeBuilder monitor_exit(int ref_reg) {
-        return f11x(Opcode.MONITOR_EXIT, ref_reg, false);
+        return f11x(MONITOR_EXIT, ref_reg, false);
     }
 
     public CodeBuilder check_cast(int ref_reg, TypeId value) {
-        return f21c(Opcode.CHECK_CAST, ref_reg, false, value);
+        return f21c(CHECK_CAST, ref_reg, false, value);
     }
 
     public CodeBuilder instance_of(int dst_reg, int ref_reg, TypeId value) {
-        return f22c(Opcode.INSTANCE_OF, dst_reg, false, ref_reg, false, value);
+        return f22c(INSTANCE_OF, dst_reg, false, ref_reg, false, value);
     }
 
     public CodeBuilder new_instance(int dst_reg, TypeId value) {
-        return f21c(Opcode.NEW_INSTANCE, dst_reg, false, value);
+        return f21c(NEW_INSTANCE, dst_reg, false, value);
     }
 
     public CodeBuilder new_array(int dst_reg, int size_reg, TypeId value) {
-        return f22c(Opcode.NEW_ARRAY, dst_reg, false, size_reg, false, value);
+        return f22c(NEW_ARRAY, dst_reg, false, size_reg, false, value);
     }
 
     public CodeBuilder filled_new_array(TypeId type, int arr_size, int arg_reg1,
                                         int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
-        return f35c(Opcode.FILLED_NEW_ARRAY, type, arr_size,
+        return f35c(FILLED_NEW_ARRAY, type, arr_size,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
@@ -1381,13 +1382,13 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder filled_new_array_range(TypeId type, int arr_size, int first_arg_reg) {
-        return f3rc(Opcode.FILLED_NEW_ARRAY_RANGE, type, arr_size, first_arg_reg);
+        return f3rc(FILLED_NEW_ARRAY_RANGE, type, arr_size, first_arg_reg);
     }
 
     private CodeBuilder fill_array_data_internal(int arr_ref_reg, int element_width, List<? extends Number> data) {
         InternalLabel payload = new InternalLabel();
 
-        f31t(Opcode.FILL_ARRAY_DATA, arr_ref_reg, false,
+        f31t(FILL_ARRAY_DATA, arr_ref_reg, false,
                 self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
@@ -1476,7 +1477,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder throw_(int ex_reg) {
-        return f11x(Opcode.THROW, ex_reg, false);
+        return f11x(THROW, ex_reg, false);
     }
 
     private CodeBuilder goto_internal(Object label) {
@@ -1494,26 +1495,26 @@ public final class CodeBuilder {
             public int units() {
                 int diff = target - position;
                 if (diff == 0 || !check_width_int(diff, 16)) {
-                    return Opcode.GOTO_32.format().getUnitCount();
+                    return GOTO_32.format().getUnitCount();
                 }
                 if (!check_width_int(diff, 8)) {
-                    return Opcode.GOTO_16.format().getUnitCount();
+                    return GOTO_16.format().getUnitCount();
                 }
-                return Opcode.GOTO.format().getUnitCount();
+                return GOTO.format().getUnitCount();
             }
 
             @Override
             public List<Instruction> generate() {
                 int diff = target - position;
                 if (diff == 0 || !check_width_int(diff, 16)) {
-                    return List.of(Instruction30t.of(Opcode.GOTO_32, diff));
+                    return List.of(Instruction30t.of(GOTO_32, diff));
                 }
                 if (!check_width_int(diff, 8)) {
-                    return List.of(Instruction20t.of(Opcode.GOTO_16, diff));
+                    return List.of(Instruction20t.of(GOTO_16, diff));
                 }
-                return List.of(Instruction10t.of(Opcode.GOTO, diff));
+                return List.of(Instruction10t.of(GOTO, diff));
             }
-        }, Opcode.GOTO.format().getUnitCount());
+        }, GOTO.format().getUnitCount());
         return this;
     }
 
@@ -1522,7 +1523,7 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_goto_internal(Object label) {
-        return f10t(Opcode.GOTO, self -> branchOffset(self, label));
+        return f10t(GOTO, self -> branchOffset(self, label));
     }
 
     public CodeBuilder raw_goto(String label) {
@@ -1530,7 +1531,7 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_goto_16_internal(Object label) {
-        return f20t(Opcode.GOTO_16, self -> branchOffset(self, label));
+        return f20t(GOTO_16, self -> branchOffset(self, label));
     }
 
     public CodeBuilder raw_goto_16(String label) {
@@ -1538,7 +1539,7 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_goto_32_internal(Object label) {
-        return f30t(Opcode.GOTO_32, self -> branchOffset(self, label, true));
+        return f30t(GOTO_32, self -> branchOffset(self, label, true));
     }
 
     public CodeBuilder raw_goto_32(String label) {
@@ -1551,7 +1552,7 @@ public final class CodeBuilder {
         InternalLabel payload = new InternalLabel();
 
         putLabel(current);
-        f31t(Opcode.PACKED_SWITCH, reg_to_test, false,
+        f31t(PACKED_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
@@ -1568,7 +1569,7 @@ public final class CodeBuilder {
         InternalLabel payload = new InternalLabel();
 
         putLabel(current);
-        f31t(Opcode.SPARSE_SWITCH, reg_to_test, false,
+        f31t(SPARSE_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
@@ -1615,12 +1616,12 @@ public final class CodeBuilder {
     }
 
     public enum Test {
-        EQ(Opcode.IF_EQ, Opcode.IF_EQZ), // ==
-        NE(Opcode.IF_NE, Opcode.IF_NEZ), // !=
-        LT(Opcode.IF_LT, Opcode.IF_LTZ), // <
-        GE(Opcode.IF_GE, Opcode.IF_GEZ), // >=
-        GT(Opcode.IF_GT, Opcode.IF_GTZ), // >
-        LE(Opcode.IF_LE, Opcode.IF_LEZ); // <=
+        EQ(IF_EQ, IF_EQZ), // ==
+        NE(IF_NE, IF_NEZ), // !=
+        LT(IF_LT, IF_LTZ), // <
+        GE(IF_GE, IF_GEZ), // >=
+        GT(IF_GT, IF_GTZ), // >
+        LE(IF_LE, IF_LEZ); // <=
 
         private final Opcode test, testz;
 
@@ -1659,10 +1660,10 @@ public final class CodeBuilder {
                 int diff = target - position;
                 int units = test.test.format().getUnitCount();
                 if (diff == 0) {
-                    return units + Opcode.GOTO.format().getUnitCount();
+                    return units + GOTO.format().getUnitCount();
                 }
                 if (!check_width_int(diff, 16)) {
-                    return units + Opcode.GOTO_32.format().getUnitCount();
+                    return units + GOTO_32.format().getUnitCount();
                 }
                 return units;
             }
@@ -1674,8 +1675,8 @@ public final class CodeBuilder {
                     return List.of(
                             Instruction22t.of(test.inverse().test,
                                     first_reg_to_test, second_reg_to_test,
-                                    Opcode.GOTO.format().getUnitCount()),
-                            Instruction10t.of(Opcode.GOTO, -test.test.format().getUnitCount())
+                                    GOTO.format().getUnitCount()),
+                            Instruction10t.of(GOTO, -test.test.format().getUnitCount())
                     );
                 }
                 if (!check_width_int(diff, 16)) {
@@ -1685,8 +1686,8 @@ public final class CodeBuilder {
                     return List.of(
                             Instruction22t.of(test.inverse().test,
                                     first_reg_to_test, second_reg_to_test,
-                                    Opcode.GOTO_32.format().getUnitCount()),
-                            Instruction30t.of(Opcode.GOTO_32, diff)
+                                    GOTO_32.format().getUnitCount()),
+                            Instruction30t.of(GOTO_32, diff)
                     );
                 }
                 return List.of(Instruction22t.of(test.test,
@@ -1727,10 +1728,10 @@ public final class CodeBuilder {
                 int diff = target - position;
                 int units = test.testz.format().getUnitCount();
                 if (diff == 0) {
-                    return units + Opcode.GOTO.format().getUnitCount();
+                    return units + GOTO.format().getUnitCount();
                 }
                 if (!check_width_int(diff, 16)) {
-                    return units + Opcode.GOTO_32.format().getUnitCount();
+                    return units + GOTO_32.format().getUnitCount();
                 }
                 return units;
             }
@@ -1741,8 +1742,8 @@ public final class CodeBuilder {
                 if (diff == 0) {
                     return List.of(
                             Instruction21t.of(test.inverse().testz, reg_to_test,
-                                    Opcode.GOTO.format().getUnitCount()),
-                            Instruction10t.of(Opcode.GOTO, -test.testz.format().getUnitCount())
+                                    GOTO.format().getUnitCount()),
+                            Instruction10t.of(GOTO, -test.testz.format().getUnitCount())
                     );
                 }
                 if (!check_width_int(diff, 16)) {
@@ -1751,8 +1752,8 @@ public final class CodeBuilder {
                     }
                     return List.of(
                             Instruction21t.of(test.inverse().testz, reg_to_test,
-                                    Opcode.GOTO_32.format().getUnitCount()),
-                            Instruction30t.of(Opcode.GOTO_32, diff)
+                                    GOTO_32.format().getUnitCount()),
+                            Instruction30t.of(GOTO_32, diff)
                     );
                 }
                 return List.of(Instruction21t.of(test.testz, reg_to_test, diff));
@@ -1775,20 +1776,20 @@ public final class CodeBuilder {
     }
 
     public enum Op {
-        GET(Opcode.AGET, Opcode.IGET, Opcode.SGET, false),
-        GET_WIDE(Opcode.AGET_WIDE, Opcode.IGET_WIDE, Opcode.SGET_WIDE, true),
-        GET_OBJECT(Opcode.AGET_OBJECT, Opcode.IGET_OBJECT, Opcode.SGET_OBJECT, false),
-        GET_BOOLEAN(Opcode.AGET_BOOLEAN, Opcode.IGET_BOOLEAN, Opcode.SGET_BOOLEAN, false),
-        GET_BYTE(Opcode.AGET_BYTE, Opcode.IGET_BYTE, Opcode.SGET_BYTE, false),
-        GET_CHAR(Opcode.AGET_CHAR, Opcode.IGET_CHAR, Opcode.SGET_CHAR, false),
-        GET_SHORT(Opcode.AGET_SHORT, Opcode.IGET_SHORT, Opcode.SGET_SHORT, false),
-        PUT(Opcode.APUT, Opcode.IPUT, Opcode.SPUT, false),
-        PUT_WIDE(Opcode.APUT_WIDE, Opcode.IPUT_WIDE, Opcode.SPUT_WIDE, true),
-        PUT_OBJECT(Opcode.APUT_OBJECT, Opcode.IPUT_OBJECT, Opcode.SPUT_OBJECT, false),
-        PUT_BOOLEAN(Opcode.APUT_BOOLEAN, Opcode.IPUT_BOOLEAN, Opcode.SPUT_BOOLEAN, false),
-        PUT_BYTE(Opcode.APUT_BYTE, Opcode.IPUT_BYTE, Opcode.SPUT_BYTE, false),
-        PUT_CHAR(Opcode.APUT_CHAR, Opcode.IPUT_CHAR, Opcode.SPUT_CHAR, false),
-        PUT_SHORT(Opcode.APUT_SHORT, Opcode.IPUT_SHORT, Opcode.SPUT_SHORT, false);
+        GET(AGET, IGET, SGET, false),
+        GET_WIDE(AGET_WIDE, IGET_WIDE, SGET_WIDE, true),
+        GET_OBJECT(AGET_OBJECT, IGET_OBJECT, SGET_OBJECT, false),
+        GET_BOOLEAN(AGET_BOOLEAN, IGET_BOOLEAN, SGET_BOOLEAN, false),
+        GET_BYTE(AGET_BYTE, IGET_BYTE, SGET_BYTE, false),
+        GET_CHAR(AGET_CHAR, IGET_CHAR, SGET_CHAR, false),
+        GET_SHORT(AGET_SHORT, IGET_SHORT, SGET_SHORT, false),
+        PUT(APUT, IPUT, SPUT, false),
+        PUT_WIDE(APUT_WIDE, IPUT_WIDE, SPUT_WIDE, true),
+        PUT_OBJECT(APUT_OBJECT, IPUT_OBJECT, SPUT_OBJECT, false),
+        PUT_BOOLEAN(APUT_BOOLEAN, IPUT_BOOLEAN, SPUT_BOOLEAN, false),
+        PUT_BYTE(APUT_BYTE, IPUT_BYTE, SPUT_BYTE, false),
+        PUT_CHAR(APUT_CHAR, IPUT_CHAR, SPUT_CHAR, false),
+        PUT_SHORT(APUT_SHORT, IPUT_SHORT, SPUT_SHORT, false);
 
         private final Opcode aop, iop, sop;
         private final boolean isWide;
@@ -1869,11 +1870,11 @@ public final class CodeBuilder {
     }
 
     public enum InvokeKind {
-        VIRTUAL(Opcode.INVOKE_VIRTUAL, Opcode.INVOKE_VIRTUAL_RANGE),
-        SUPER(Opcode.INVOKE_SUPER, Opcode.INVOKE_SUPER_RANGE),
-        DIRECT(Opcode.INVOKE_DIRECT, Opcode.INVOKE_DIRECT_RANGE),
-        STATIC(Opcode.INVOKE_STATIC, Opcode.INVOKE_STATIC_RANGE),
-        INTERFACE(Opcode.INVOKE_INTERFACE, Opcode.INVOKE_INTERFACE_RANGE);
+        VIRTUAL(INVOKE_VIRTUAL, INVOKE_VIRTUAL_RANGE),
+        SUPER(INVOKE_SUPER, INVOKE_SUPER_RANGE),
+        DIRECT(INVOKE_DIRECT, INVOKE_DIRECT_RANGE),
+        STATIC(INVOKE_STATIC, INVOKE_STATIC_RANGE),
+        INTERFACE(INVOKE_INTERFACE, INVOKE_INTERFACE_RANGE);
 
         private final Opcode regular, range;
 
@@ -1943,7 +1944,7 @@ public final class CodeBuilder {
 
         DOUBLE_TO_INT(Opcode.DOUBLE_TO_INT, true, false),
         DOUBLE_TO_LONG(Opcode.DOUBLE_TO_LONG, true, true),
-        DOUBLE_TO_DOUBLE(Opcode.DOUBLE_TO_FLOAT, true, false),
+        DOUBLE_TO_DOUBLE(DOUBLE_TO_FLOAT, true, false),
 
         INT_TO_BYTE(Opcode.INT_TO_BYTE, false, false),
         INT_TO_CHAR(Opcode.INT_TO_CHAR, false, false),
@@ -1964,42 +1965,42 @@ public final class CodeBuilder {
     }
 
     public enum BinOp {
-        ADD_INT(Opcode.ADD_INT, Opcode.ADD_INT_2ADDR, Opcode.ADD_INT_LIT16, Opcode.ADD_INT_LIT8, false, false),
-        RSUB_INT(null, null, Opcode.RSUB_INT, Opcode.RSUB_INT_LIT8, false, false),
-        SUB_INT(Opcode.SUB_INT, Opcode.SUB_INT_2ADDR, null, null, false, false),
-        MUL_INT(Opcode.MUL_INT, Opcode.MUL_INT_2ADDR, Opcode.MUL_INT_LIT16, Opcode.MUL_INT_LIT8, false, false),
-        DIV_INT(Opcode.DIV_INT, Opcode.DIV_INT_2ADDR, Opcode.DIV_INT_LIT16, Opcode.DIV_INT_LIT8, false, false),
-        REM_INT(Opcode.REM_INT, Opcode.REM_INT_2ADDR, Opcode.REM_INT_LIT16, Opcode.REM_INT_LIT8, false, false),
-        AND_INT(Opcode.AND_INT, Opcode.AND_INT_2ADDR, Opcode.AND_INT_LIT16, Opcode.AND_INT_LIT8, false, false),
-        OR_INT(Opcode.OR_INT, Opcode.OR_INT_2ADDR, Opcode.OR_INT_LIT16, Opcode.OR_INT_LIT8, false, false),
-        XOR_INT(Opcode.XOR_INT, Opcode.XOR_INT_2ADDR, Opcode.XOR_INT_LIT16, Opcode.XOR_INT_LIT8, false, false),
-        SHL_INT(Opcode.SHL_INT, Opcode.SHL_INT_2ADDR, null, Opcode.SHL_INT_LIT8, false, false),
-        SHR_INT(Opcode.SHR_INT, Opcode.SHR_INT_2ADDR, null, Opcode.SHR_INT_LIT8, false, false),
-        USHR_INT(Opcode.USHR_INT, Opcode.USHR_INT_2ADDR, null, Opcode.USHR_INT_LIT8, false, false),
+        ADD_INT(Opcode.ADD_INT, ADD_INT_2ADDR, ADD_INT_LIT16, ADD_INT_LIT8, false, false),
+        RSUB_INT(null, null, Opcode.RSUB_INT, RSUB_INT_LIT8, false, false),
+        SUB_INT(Opcode.SUB_INT, SUB_INT_2ADDR, null, null, false, false),
+        MUL_INT(Opcode.MUL_INT, MUL_INT_2ADDR, MUL_INT_LIT16, MUL_INT_LIT8, false, false),
+        DIV_INT(Opcode.DIV_INT, DIV_INT_2ADDR, DIV_INT_LIT16, DIV_INT_LIT8, false, false),
+        REM_INT(Opcode.REM_INT, REM_INT_2ADDR, REM_INT_LIT16, REM_INT_LIT8, false, false),
+        AND_INT(Opcode.AND_INT, AND_INT_2ADDR, AND_INT_LIT16, AND_INT_LIT8, false, false),
+        OR_INT(Opcode.OR_INT, OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8, false, false),
+        XOR_INT(Opcode.XOR_INT, XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8, false, false),
+        SHL_INT(Opcode.SHL_INT, SHL_INT_2ADDR, null, SHL_INT_LIT8, false, false),
+        SHR_INT(Opcode.SHR_INT, SHR_INT_2ADDR, null, SHR_INT_LIT8, false, false),
+        USHR_INT(Opcode.USHR_INT, USHR_INT_2ADDR, null, USHR_INT_LIT8, false, false),
 
-        ADD_LONG(Opcode.ADD_LONG, Opcode.ADD_LONG_2ADDR, true, true),
-        SUB_LONG(Opcode.SUB_LONG, Opcode.SUB_LONG_2ADDR, true, true),
-        MUL_LONG(Opcode.MUL_LONG, Opcode.MUL_LONG_2ADDR, true, true),
-        DIV_LONG(Opcode.DIV_LONG, Opcode.DIV_LONG_2ADDR, true, true),
-        REM_LONG(Opcode.REM_LONG, Opcode.REM_LONG_2ADDR, true, true),
-        AND_LONG(Opcode.AND_LONG, Opcode.AND_LONG_2ADDR, true, true),
-        OR_LONG(Opcode.OR_LONG, Opcode.OR_LONG_2ADDR, true, true),
-        XOR_LONG(Opcode.XOR_LONG, Opcode.XOR_LONG_2ADDR, true, true),
-        SHL_LONG(Opcode.SHL_LONG, Opcode.SHL_LONG_2ADDR, true, false),
-        SHR_LONG(Opcode.SHR_LONG, Opcode.SHR_LONG_2ADDR, true, false),
-        USHR_LONG(Opcode.USHR_LONG, Opcode.USHR_LONG_2ADDR, true, false),
+        ADD_LONG(Opcode.ADD_LONG, ADD_LONG_2ADDR, true, true),
+        SUB_LONG(Opcode.SUB_LONG, SUB_LONG_2ADDR, true, true),
+        MUL_LONG(Opcode.MUL_LONG, MUL_LONG_2ADDR, true, true),
+        DIV_LONG(Opcode.DIV_LONG, DIV_LONG_2ADDR, true, true),
+        REM_LONG(Opcode.REM_LONG, REM_LONG_2ADDR, true, true),
+        AND_LONG(Opcode.AND_LONG, AND_LONG_2ADDR, true, true),
+        OR_LONG(Opcode.OR_LONG, OR_LONG_2ADDR, true, true),
+        XOR_LONG(Opcode.XOR_LONG, XOR_LONG_2ADDR, true, true),
+        SHL_LONG(Opcode.SHL_LONG, SHL_LONG_2ADDR, true, false),
+        SHR_LONG(Opcode.SHR_LONG, SHR_LONG_2ADDR, true, false),
+        USHR_LONG(Opcode.USHR_LONG, USHR_LONG_2ADDR, true, false),
 
-        ADD_FLOAT(Opcode.ADD_FLOAT, Opcode.ADD_FLOAT_2ADDR, false, false),
-        SUB_FLOAT(Opcode.SUB_FLOAT, Opcode.SUB_FLOAT_2ADDR, false, false),
-        MUL_FLOAT(Opcode.MUL_FLOAT, Opcode.MUL_FLOAT_2ADDR, false, false),
-        DIV_FLOAT(Opcode.DIV_FLOAT, Opcode.DIV_FLOAT_2ADDR, false, false),
-        REM_FLOAT(Opcode.REM_FLOAT, Opcode.REM_FLOAT_2ADDR, false, false),
+        ADD_FLOAT(Opcode.ADD_FLOAT, ADD_FLOAT_2ADDR, false, false),
+        SUB_FLOAT(Opcode.SUB_FLOAT, SUB_FLOAT_2ADDR, false, false),
+        MUL_FLOAT(Opcode.MUL_FLOAT, MUL_FLOAT_2ADDR, false, false),
+        DIV_FLOAT(Opcode.DIV_FLOAT, DIV_FLOAT_2ADDR, false, false),
+        REM_FLOAT(Opcode.REM_FLOAT, REM_FLOAT_2ADDR, false, false),
 
-        ADD_DOUBLE(Opcode.ADD_DOUBLE, Opcode.ADD_DOUBLE_2ADDR, true, true),
-        SUB_DOUBLE(Opcode.SUB_DOUBLE, Opcode.SUB_DOUBLE_2ADDR, true, true),
-        MUL_DOUBLE(Opcode.MUL_DOUBLE, Opcode.MUL_DOUBLE_2ADDR, true, true),
-        DIV_DOUBLE(Opcode.DIV_DOUBLE, Opcode.DIV_DOUBLE_2ADDR, true, true),
-        REM_DOUBLE(Opcode.REM_DOUBLE, Opcode.REM_DOUBLE_2ADDR, true, true);
+        ADD_DOUBLE(Opcode.ADD_DOUBLE, ADD_DOUBLE_2ADDR, true, true),
+        SUB_DOUBLE(Opcode.SUB_DOUBLE, SUB_DOUBLE_2ADDR, true, true),
+        MUL_DOUBLE(Opcode.MUL_DOUBLE, MUL_DOUBLE_2ADDR, true, true),
+        DIV_DOUBLE(Opcode.DIV_DOUBLE, DIV_DOUBLE_2ADDR, true, true),
+        REM_DOUBLE(Opcode.REM_DOUBLE, REM_DOUBLE_2ADDR, true, true);
 
         private final Opcode regular, _2addr, lit16, lit8;
         private final boolean isDstAndSrc1Wide, isSrc2Wide;
@@ -2060,7 +2061,7 @@ public final class CodeBuilder {
 
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_count, int arg_reg1,
                                           int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
-        return f45cc(Opcode.INVOKE_POLYMORPHIC, method, proto, arg_count,
+        return f45cc(INVOKE_POLYMORPHIC, method, proto, arg_count,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
@@ -2100,12 +2101,12 @@ public final class CodeBuilder {
 
     public CodeBuilder invoke_polymorphic_range(
             MethodId method, ProtoId proto, int arg_count, int first_arg_reg) {
-        return f4rcc(Opcode.INVOKE_POLYMORPHIC_RANGE, method, proto, arg_count, first_arg_reg);
+        return f4rcc(INVOKE_POLYMORPHIC_RANGE, method, proto, arg_count, first_arg_reg);
     }
 
     public CodeBuilder invoke_custom(CallSiteId callsite, int arg_count, int arg_reg1,
                                      int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
-        return f35c(Opcode.INVOKE_CUSTOM, callsite, arg_count,
+        return f35c(INVOKE_CUSTOM, callsite, arg_count,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
@@ -2143,14 +2144,14 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder invoke_custom_range(CallSiteId callsite, int arg_count, int first_arg_reg) {
-        return f3rc(Opcode.INVOKE_POLYMORPHIC_RANGE, callsite, arg_count, first_arg_reg);
+        return f3rc(INVOKE_POLYMORPHIC_RANGE, callsite, arg_count, first_arg_reg);
     }
 
     public CodeBuilder const_method_handle(int dst_reg, MethodHandleId value) {
-        return f21c(Opcode.CONST_METHOD_HANDLE, dst_reg, false, value);
+        return f21c(CONST_METHOD_HANDLE, dst_reg, false, value);
     }
 
     public CodeBuilder const_method_type(int dst_reg, ProtoId value) {
-        return f21c(Opcode.CONST_METHOD_TYPE, dst_reg, false, value);
+        return f21c(CONST_METHOD_TYPE, dst_reg, false, value);
     }
 }
