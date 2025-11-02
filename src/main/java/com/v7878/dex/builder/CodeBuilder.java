@@ -1480,8 +1480,41 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder goto_internal(Object label) {
-        //TODO: Generate smaller instructions if possible
-        return raw_goto_32_internal(label);
+        add(new BuilderNode() {
+            int position;
+            int target;
+
+            @Override
+            public void update(int position) {
+                this.position = position;
+                this.target = findUnit(label);
+            }
+
+            @Override
+            public int units() {
+                int diff = target - position;
+                if (diff == 0 || !check_width_int(diff, 16)) {
+                    return Opcode.GOTO_32.format().getUnitCount();
+                }
+                if (!check_width_int(diff, 8)) {
+                    return Opcode.GOTO_16.format().getUnitCount();
+                }
+                return Opcode.GOTO.format().getUnitCount();
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                int diff = target - position;
+                if (diff == 0 || !check_width_int(diff, 16)) {
+                    return List.of(Instruction30t.of(Opcode.GOTO_32, diff));
+                }
+                if (!check_width_int(diff, 8)) {
+                    return List.of(Instruction20t.of(Opcode.GOTO_16, diff));
+                }
+                return List.of(Instruction10t.of(Opcode.GOTO, diff));
+            }
+        }, Opcode.GOTO.format().getUnitCount());
+        return this;
     }
 
     public CodeBuilder goto_(String label) {
