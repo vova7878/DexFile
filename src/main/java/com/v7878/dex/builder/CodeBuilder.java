@@ -354,19 +354,23 @@ public final class CodeBuilder {
         var begin = first;
         var end = last;
 
-        boolean changed = false;
+        boolean changed;
         do {
+            changed = false;
             for (var current = begin; current != end; current = current.next) {
                 var node = current.node;
                 node.update(current.position);
                 var units = node.units();
                 if (current.units != units) {
                     changed = true;
-                    current.label_offset = node.label_offset();
                     int diff = units - current.units;
-                    // The node size may decrease if it is a payload whose position has become even
-                    // assert diff > 0;
-                    for (var tmp = current; tmp != end; tmp = tmp.next) {
+                    // The node size may decrease if it is a payload whose position has become even.
+                    // Since all payloads are located after the main instructions,
+                    // such change cannot lead to an infinite loop of corrections
+                    assert diff > 0 || diff == -1;
+                    current.units = units;
+                    current.label_offset = node.label_offset();
+                    for (var tmp = current.next; tmp != end; tmp = tmp.next) {
                         tmp.position += diff;
                     }
                 }
