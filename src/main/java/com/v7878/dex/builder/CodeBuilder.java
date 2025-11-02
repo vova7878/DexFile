@@ -678,9 +678,6 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder line_internal(Object label, int line) {
-        if (generate_lines) {
-            throw new IllegalStateException("Autogeneration of lines is enabled; you cannot specify them explicitly");
-        }
         return addDebugItem(label, LineNumber.of(line));
     }
 
