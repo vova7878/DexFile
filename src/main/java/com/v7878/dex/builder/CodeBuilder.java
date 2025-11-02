@@ -1642,24 +1642,136 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder if_test_internal(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
-        // TODO? what if branch_offset > 0xffff?
-        return f22t(test.test, first_reg_to_test, false,
-                second_reg_to_test, false,
-                self -> branchOffset(self, label));
+        check_reg_or_pair(first_reg_to_test, false);
+        check_reg_or_pair(second_reg_to_test, false);
+        add(new BuilderNode() {
+            int position;
+            int target;
+
+            @Override
+            public void update(int position) {
+                this.position = position;
+                this.target = findUnit(label);
+            }
+
+            @Override
+            public int units() {
+                int diff = target - position;
+                int units = test.test.format().getUnitCount();
+                if (diff == 0) {
+                    return units + Opcode.GOTO.format().getUnitCount();
+                }
+                if (!check_width_int(diff, 16)) {
+                    return units + Opcode.GOTO_32.format().getUnitCount();
+                }
+                return units;
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                int diff = target - position;
+                if (diff == 0) {
+                    return List.of(
+                            Instruction22t.of(test.inverse().test,
+                                    first_reg_to_test, second_reg_to_test,
+                                    Opcode.GOTO.format().getUnitCount()),
+                            Instruction10t.of(Opcode.GOTO, -test.test.format().getUnitCount())
+                    );
+                }
+                if (!check_width_int(diff, 16)) {
+                    if (diff <= 0) {
+                        diff -= test.test.format().getUnitCount();
+                    }
+                    return List.of(
+                            Instruction22t.of(test.inverse().test,
+                                    first_reg_to_test, second_reg_to_test,
+                                    Opcode.GOTO_32.format().getUnitCount()),
+                            Instruction30t.of(Opcode.GOTO_32, diff)
+                    );
+                }
+                return List.of(Instruction22t.of(test.test,
+                        first_reg_to_test, second_reg_to_test, diff));
+            }
+        }, test.test.format().getUnitCount());
+        return this;
     }
 
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test, String label) {
         return if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
     }
 
-    private CodeBuilder if_testz_internal(Test test, int reg_to_test, Object label) {
-        // TODO? what if branch_offset > 0xffff?
-        return f21t(test.testz, reg_to_test, false,
+    private CodeBuilder raw_if_test_internal(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
+        return f22t(test.test, first_reg_to_test, false,
+                second_reg_to_test, false,
                 self -> branchOffset(self, label));
+    }
+
+    public CodeBuilder raw_if_test(Test test, int first_reg_to_test, int second_reg_to_test, String label) {
+        return raw_if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
+    }
+
+    private CodeBuilder if_testz_internal(Test test, int reg_to_test, Object label) {
+        check_reg_or_pair(reg_to_test, false);
+        add(new BuilderNode() {
+            int position;
+            int target;
+
+            @Override
+            public void update(int position) {
+                this.position = position;
+                this.target = findUnit(label);
+            }
+
+            @Override
+            public int units() {
+                int diff = target - position;
+                int units = test.testz.format().getUnitCount();
+                if (diff == 0) {
+                    return units + Opcode.GOTO.format().getUnitCount();
+                }
+                if (!check_width_int(diff, 16)) {
+                    return units + Opcode.GOTO_32.format().getUnitCount();
+                }
+                return units;
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                int diff = target - position;
+                if (diff == 0) {
+                    return List.of(
+                            Instruction21t.of(test.inverse().testz, reg_to_test,
+                                    Opcode.GOTO.format().getUnitCount()),
+                            Instruction10t.of(Opcode.GOTO, -test.testz.format().getUnitCount())
+                    );
+                }
+                if (!check_width_int(diff, 16)) {
+                    if (diff <= 0) {
+                        diff -= test.testz.format().getUnitCount();
+                    }
+                    return List.of(
+                            Instruction21t.of(test.inverse().testz, reg_to_test,
+                                    Opcode.GOTO_32.format().getUnitCount()),
+                            Instruction30t.of(Opcode.GOTO_32, diff)
+                    );
+                }
+                return List.of(Instruction21t.of(test.testz, reg_to_test, diff));
+            }
+        }, test.testz.format().getUnitCount());
+        return this;
     }
 
     public CodeBuilder if_testz(Test test, int reg_to_test, String label) {
         return if_testz_internal(test, reg_to_test, label);
+    }
+
+    private CodeBuilder raw_if_testz_internal(Test test, int reg_to_test, Object label) {
+        return f21t(test.testz, reg_to_test, false,
+                self -> branchOffset(self, label));
+    }
+
+    public CodeBuilder raw_if_testz(Test test, int reg_to_test, String label) {
+        return raw_if_testz_internal(test, reg_to_test, label);
     }
 
     public enum Op {
