@@ -44,7 +44,7 @@ public final class ArrayPayload extends Instruction implements ArrayPayloadInstr
 
     @Override
     public int getUnitCount() {
-        return (getArrayElements().size() * getElementWidth() + 1) / 2 + 4;
+        return Preconditions.getArrayPayloadUnitCount(element_width, elements.size());
     }
 
     @Override

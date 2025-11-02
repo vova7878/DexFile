@@ -36,7 +36,7 @@ public final class PackedSwitchPayload extends Instruction implements SwitchPayl
 
     @Override
     public int getUnitCount() {
-        return getSwitchElements().size() * 2 + 4;
+        return Preconditions.getPackedSwitchPayloadUnitCount(getSwitchElements().size());
     }
 
     @Override

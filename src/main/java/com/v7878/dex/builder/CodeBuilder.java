@@ -86,7 +86,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
-import java.util.function.IntSupplier;
+import java.util.function.IntFunction;
+import java.util.function.IntUnaryOperator;
 import java.util.function.Supplier;
 
 public final class CodeBuilder {
@@ -108,9 +109,9 @@ public final class CodeBuilder {
 
         private void initLabels() {
             if (start < 0 || end < 0 || handler < 0) {
-                int l1 = exactUnit(label1);
-                int l2 = exactUnit(label2);
-                int hl = exactUnit(handlerLabel);
+                int l1 = findUnit(label1);
+                int l2 = findUnit(label2);
+                int hl = findUnit(handlerLabel);
                 if (l1 < l2) {
                     start = l1;
                     end = l2;
@@ -156,7 +157,7 @@ public final class CodeBuilder {
 
         private void initLabel() {
             if (position < 0) {
-                position = exactUnit(label);
+                position = findUnit(label);
             }
         }
 
@@ -178,24 +179,26 @@ public final class CodeBuilder {
         }
     }
 
-    private static int assertSame(int a, int b) {
-        if (a == b) {
-            return a;
+    private interface BuilderNode {
+        default void update(int position) {
         }
-        // TODO: msg
-        throw new IllegalStateException();
+
+        default int label_offset() {
+            return 0;
+        }
+
+        int units();
+
+        List<Instruction> generate();
     }
 
     private static class BuilderPosition {
-        public int min_unit, max_unit;
+        public int position, units, label_offset;
+        public BuilderPosition next;
+        public BuilderNode node;
 
-        public BuilderPosition(int min_unit, int max_unit) {
-            this.min_unit = min_unit;
-            this.max_unit = max_unit;
-        }
-
-        public int exactUnit() {
-            return assertSame(min_unit, max_unit);
+        public BuilderPosition(int position) {
+            this.position = position;
         }
     }
 
@@ -209,14 +212,14 @@ public final class CodeBuilder {
     }
 
     private final int regs_size, ins_size;
-    private final List<Supplier<Instruction>> instructions;
+    private final boolean has_this;
+
     private final List<Runnable> delayed_actions;
     private final List<BuilderTryItem> try_items;
     private final List<BuilderDebugItem> debug_items;
     private final Map<Object, BuilderPosition> labels;
-    private final boolean has_this;
-
-    private int min_unit, max_unit;
+    private final BuilderPosition first;
+    private BuilderPosition last;
 
     private boolean generate_lines;
 
@@ -225,12 +228,11 @@ public final class CodeBuilder {
         int this_reg = add_hidden_this ? 1 : 0;
         this.regs_size = checkRange(regs_size, 0, (1 << 16) - this_reg) + this_reg;
         this.ins_size = checkRange(ins_size, 0, regs_size + 1) + this_reg;
-        this.instructions = new ArrayList<>();
         this.delayed_actions = new ArrayList<>();
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
-        this.min_unit = max_unit = 0;
+        this.first = this.last = new BuilderPosition(0);
         this.generate_lines = false;
     }
 
@@ -348,10 +350,40 @@ public final class CodeBuilder {
         return out;
     }
 
+    private List<Instruction> mergeInstructions() {
+        var begin = first;
+        var end = last;
+
+        boolean changed = false;
+        do {
+            for (var current = begin; current != end; current = current.next) {
+                var node = current.node;
+                node.update(current.position);
+                var units = node.units();
+                if (current.units != units) {
+                    changed = true;
+                    current.label_offset = node.label_offset();
+                    int diff = units - current.units;
+                    // The node size may decrease if it is a payload whose position has become even
+                    // assert diff > 0;
+                    for (var tmp = current; tmp != end; tmp = tmp.next) {
+                        tmp.position += diff;
+                    }
+                }
+            }
+        } while (changed);
+
+        var out = new ArrayList<Instruction>();
+        for (var current = begin; current != end; current = current.next) {
+            out.addAll(current.node.generate());
+        }
+        return out;
+    }
+
     private MethodImplementation finish() {
         delayed_actions.forEach(Runnable::run);
 
-        List<Instruction> insns = Converter.transform(instructions, Supplier::get);
+        List<Instruction> insns = mergeInstructions();
         List<TryBlock> try_blocks = mergeTryItems(try_items);
         List<DebugItem> debug_info = mergeDebugItems(debug_items);
 
@@ -453,33 +485,93 @@ public final class CodeBuilder {
         return check_reg(first_reg);
     }
 
-    private void add(Supplier<Instruction> instruction, int min_unit_count, int max_unit_count) {
+    private void add(BuilderNode node, int initial_units) {
         if (generate_lines) {
             // Note: Numbering starts from one
-            line(instructions.size() + 1);
+            line(currentUnit() + 1);
         }
-        instructions.add(instruction);
-        min_unit += min_unit_count;
-        max_unit += max_unit_count;
-    }
 
-    private void add(Supplier<Instruction> instruction, int unit_count) {
-        add(instruction, unit_count, unit_count);
+        var current = last;
+        current.units = initial_units;
+        current.node = node;
+
+        var next = new BuilderPosition(current.position + current.units);
+        current.next = next;
+        last = next;
     }
 
     private void add(Instruction instruction) {
-        add(() -> instruction, instruction.getUnitCount());
+        int units = instruction.getUnitCount();
+        add(new BuilderNode() {
+            @Override
+            public int units() {
+                return units;
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                return List.of(instruction);
+            }
+        }, units);
     }
 
-    private void add(Format format, Supplier<Instruction> factory) {
+    private void add(Format format, IntFunction<Instruction> factory) {
         if (format.isPayload()) {
             throw new AssertionError();
         }
-        add(() -> {
-            var instruction = factory.get();
-            assert instruction.getOpcode().format() == format;
-            return instruction;
-        }, format.getUnitCount());
+
+        int units = format.getUnitCount();
+        add(new BuilderNode() {
+            int position;
+
+            @Override
+            public void update(int position) {
+                this.position = position;
+            }
+
+            @Override
+            public int units() {
+                return units;
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                var instruction = factory.apply(position);
+                assert instruction.getOpcode().format() == format;
+                return List.of(instruction);
+            }
+        }, units);
+    }
+
+    private void addPayload(int unit_count, Supplier<Instruction> factory) {
+        add(new BuilderNode() {
+            boolean odd_position;
+
+            @Override
+            public void update(int position) {
+                odd_position = (position & 0x1) == 1;
+            }
+
+            @Override
+            public int label_offset() {
+                return odd_position ? 1 : 0;
+            }
+
+            @Override
+            public int units() {
+                return unit_count + label_offset();
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                var value = factory.get();
+                assert value.getOpcode().isPayload();
+                if (odd_position) {
+                    return List.of(Instruction10x.of(Opcode.NOP), value);
+                }
+                return List.of(value);
+            }
+        }, unit_count);
     }
 
     private void addDelayedAction(Runnable action) {
@@ -487,38 +579,38 @@ public final class CodeBuilder {
     }
 
     private void putLabel(Object label) {
-        var pos = new BuilderPosition(min_unit, max_unit);
-        if (labels.putIfAbsent(Objects.requireNonNull(label), pos) != null) {
+        if (labels.putIfAbsent(Objects.requireNonNull(label), last) != null) {
             throw new IllegalArgumentException("Label " + label + " already exists");
         }
     }
 
-    private BuilderPosition findLabel(Object label) {
+    private int currentUnit() {
+        return last.position;
+    }
+
+    private int findUnit(Object label) {
         var pos = labels.get(label);
         if (pos == null) {
             throw new IllegalStateException("Can`t find label: " + label);
         }
-        return pos;
+        return pos.position + pos.label_offset;
     }
 
-    private int exactCurrentUnit() {
-        return assertSame(min_unit, max_unit);
-    }
-
-    private int exactUnit(Object label) {
-        return findLabel(label).exactUnit();
-    }
-
-    private int exactBranchOffset(Object from, Object to) {
-        return exactBranchOffset(from, to, false);
-    }
-
-    private int exactBranchOffset(Object from, Object to, boolean allow_zero) {
-        int offset = exactUnit(to) - exactUnit(from);
+    private int branchOffset(int from, Object to, boolean allow_zero) {
+        int offset = findUnit(to) - from;
         if (!allow_zero && offset == 0) {
             throw new IllegalStateException("Zero branch offset is not allowed");
         }
         return offset;
+    }
+
+    private int branchOffset(int from, Object to) {
+        return branchOffset(from, to, false);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private int branchOffset(Object from, Object to, boolean allow_zero) {
+        return branchOffset(findUnit(from), to, allow_zero);
     }
 
     public CodeBuilder label(String label) {
@@ -758,15 +850,15 @@ public final class CodeBuilder {
 
     // <AA|op> op +AA
     @SuppressWarnings("SameParameterValue")
-    private CodeBuilder f10t(Opcode op, IntSupplier value) {
-        add(op.format(), () -> Instruction10t.of(op, value.getAsInt()));
+    private CodeBuilder f10t(Opcode op, IntUnaryOperator value) {
+        add(op.format(), position -> Instruction10t.of(op, value.applyAsInt(position)));
         return this;
     }
 
     // <ØØ|op AAAA> op +AAAA
     @SuppressWarnings("SameParameterValue")
-    private CodeBuilder f20t(Opcode op, IntSupplier value) {
-        add(op.format(), () -> Instruction20t.of(op, value.getAsInt()));
+    private CodeBuilder f20t(Opcode op, IntUnaryOperator value) {
+        add(op.format(), position -> Instruction20t.of(op, value.applyAsInt(position)));
         return this;
     }
 
@@ -784,9 +876,9 @@ public final class CodeBuilder {
 
     // <AA|op BBBB> op vAA, +BBBB
     @SuppressWarnings("SameParameterValue")
-    private CodeBuilder f21t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntSupplier value) {
+    private CodeBuilder f21t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntUnaryOperator value) {
         check_reg_or_pair(reg_or_pair, is_reg_wide);
-        add(op.format(), () -> Instruction21t.of(op, reg_or_pair, value.getAsInt()));
+        add(op.format(), position -> Instruction21t.of(op, reg_or_pair, value.applyAsInt(position)));
         return this;
     }
 
@@ -841,10 +933,11 @@ public final class CodeBuilder {
     // <B|A|op CCCC> op vA, vB, +CCCC
     @SuppressWarnings("SameParameterValue")
     private CodeBuilder f22t(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
-                             int reg_or_pair2, boolean is_reg2_wide, IntSupplier value) {
+                             int reg_or_pair2, boolean is_reg2_wide, IntUnaryOperator value) {
         check_reg_or_pair(reg_or_pair1, is_reg1_wide);
         check_reg_or_pair(reg_or_pair2, is_reg2_wide);
-        add(op.format(), () -> Instruction22t.of(op, reg_or_pair1, reg_or_pair2, value.getAsInt()));
+        add(op.format(), position -> Instruction22t.of(
+                op, reg_or_pair1, reg_or_pair2, value.applyAsInt(position)));
         return this;
     }
 
@@ -870,8 +963,8 @@ public final class CodeBuilder {
 
     // <ØØ|op AAAAlo AAAAhi> op +AAAAAAAA
     @SuppressWarnings("SameParameterValue")
-    private CodeBuilder f30t(Opcode op, IntSupplier value) {
-        add(op.format(), () -> Instruction30t.of(op, value.getAsInt()));
+    private CodeBuilder f30t(Opcode op, IntUnaryOperator value) {
+        add(op.format(), position -> Instruction30t.of(op, value.applyAsInt(position)));
         return this;
     }
 
@@ -893,9 +986,10 @@ public final class CodeBuilder {
 
     // <AA|op BBBBlo BBBBhi> op vAA, +BBBBBBBB
     @SuppressWarnings({"SameParameterValue", "UnusedReturnValue"})
-    private CodeBuilder f31t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntSupplier value) {
+    private CodeBuilder f31t(Opcode op, int reg_or_pair, boolean is_reg_wide, IntUnaryOperator value) {
         check_reg_or_pair(reg_or_pair, is_reg_wide);
-        add(op.format(), () -> Instruction31t.of(op, reg_or_pair, value.getAsInt()));
+        add(op.format(), position -> Instruction31t.of(
+                op, reg_or_pair, value.applyAsInt(position)));
         return this;
     }
 
@@ -949,31 +1043,35 @@ public final class CodeBuilder {
         return this;
     }
 
-    private void align_current_unit2() {
-        if ((exactCurrentUnit() & 1) != 0) {
-            nop();
-        }
+    private void packed_switch_payload(int first_key, Object target, Object[] labels) {
+        int units = Preconditions.getPackedSwitchPayloadUnitCount(labels.length);
+        addPayload(units, () -> {
+            NavigableSet<SwitchElement> elements = new TreeSet<>();
+            for (int i = 0; i < labels.length; i++) {
+                elements.add(SwitchElement.of(first_key + i,
+                        branchOffset(target, labels[i], true)));
+            }
+            elements = Collections.unmodifiableNavigableSet(elements);
+            return PackedSwitchPayload.raw(elements);
+        });
     }
 
-    private void check_current_unit_alignment2() {
-        if ((exactCurrentUnit() & 1) != 0) {
-            throw new IllegalStateException("Current position is not aligned by 2 code units");
-        }
-    }
-
-    private void packed_switch_payload(NavigableSet<SwitchElement> elements) {
-        check_current_unit_alignment2();
-        add(PackedSwitchPayload.raw(elements));
-    }
-
-    private void sparse_switch_payload(NavigableSet<SwitchElement> elements) {
-        check_current_unit_alignment2();
-        add(SparseSwitchPayload.raw(elements));
+    private void sparse_switch_payload(int[] keys, Object target, Object[] labels) {
+        int units = Preconditions.getSparseSwitchPayloadUnitCount(labels.length);
+        addPayload(units, () -> {
+            NavigableSet<SwitchElement> elements = new TreeSet<>();
+            for (int i = 0; i < labels.length; i++) {
+                elements.add(SwitchElement.of(keys[i],
+                        branchOffset(target, labels[i], true)));
+            }
+            elements = Collections.unmodifiableNavigableSet(elements);
+            return SparseSwitchPayload.raw(elements);
+        });
     }
 
     private void fill_array_data_payload(int element_width, List<? extends Number> data) {
-        check_current_unit_alignment2();
-        add(ArrayPayload.raw(element_width, data));
+        int units = Preconditions.getArrayPayloadUnitCount(element_width, data.size());
+        addPayload(units, () -> ArrayPayload.raw(element_width, data));
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -1283,18 +1381,16 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder fill_array_data_internal(int arr_ref_reg, int element_width, List<? extends Number> data) {
-        InternalLabel current = new InternalLabel();
         InternalLabel payload = new InternalLabel();
 
-        putLabel(current);
         f31t(Opcode.FILL_ARRAY_DATA, arr_ref_reg, false,
-                () -> exactBranchOffset(current, payload));
+                self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
-            align_current_unit2();
             putLabel(payload);
             fill_array_data_payload(element_width, data);
         });
+
         return this;
     }
 
@@ -1389,9 +1485,7 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_goto_internal(Object label) {
-        InternalLabel current = new InternalLabel();
-        putLabel(current);
-        return f10t(Opcode.GOTO, () -> exactBranchOffset(current, label));
+        return f10t(Opcode.GOTO, self -> branchOffset(self, label));
     }
 
     public CodeBuilder raw_goto(String label) {
@@ -1399,9 +1493,7 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_goto_16_internal(Object label) {
-        InternalLabel current = new InternalLabel();
-        putLabel(current);
-        return f20t(Opcode.GOTO_16, () -> exactBranchOffset(current, label));
+        return f20t(Opcode.GOTO_16, self -> branchOffset(self, label));
     }
 
     public CodeBuilder raw_goto_16(String label) {
@@ -1409,9 +1501,7 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_goto_32_internal(Object label) {
-        InternalLabel current = new InternalLabel();
-        putLabel(current);
-        return f30t(Opcode.GOTO_32, () -> exactBranchOffset(current, label, true));
+        return f30t(Opcode.GOTO_32, self -> branchOffset(self, label, true));
     }
 
     public CodeBuilder raw_goto_32(String label) {
@@ -1425,19 +1515,13 @@ public final class CodeBuilder {
 
         putLabel(current);
         f31t(Opcode.PACKED_SWITCH, reg_to_test, false,
-                () -> exactBranchOffset(current, payload));
+                self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
-            NavigableSet<SwitchElement> elements = new TreeSet<>();
-            for (int i = 0; i < labels.length; i++) {
-                elements.add(SwitchElement.of(first_key + i,
-                        exactBranchOffset(current, labels[i], true)));
-            }
-            elements = Collections.unmodifiableNavigableSet(elements);
-            align_current_unit2();
             putLabel(payload);
-            packed_switch_payload(elements);
+            packed_switch_payload(first_key, current, labels);
         });
+
         return this;
     }
 
@@ -1448,19 +1532,13 @@ public final class CodeBuilder {
 
         putLabel(current);
         f31t(Opcode.SPARSE_SWITCH, reg_to_test, false,
-                () -> exactBranchOffset(current, payload));
+                self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
-            NavigableSet<SwitchElement> elements = new TreeSet<>();
-            for (int i = 0; i < labels.length; i++) {
-                elements.add(SwitchElement.of(keys[i],
-                        exactBranchOffset(current, labels[i], true)));
-            }
-            elements = Collections.unmodifiableNavigableSet(elements);
-            align_current_unit2();
             putLabel(payload);
-            sparse_switch_payload(elements);
+            sparse_switch_payload(keys, current, labels);
         });
+
         return this;
     }
 
@@ -1527,12 +1605,10 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder if_test_internal(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
-        InternalLabel current = new InternalLabel();
-        putLabel(current);
         // TODO? what if branch_offset > 0xffff?
         return f22t(test.test, first_reg_to_test, false,
                 second_reg_to_test, false,
-                () -> exactBranchOffset(current, label));
+                self -> branchOffset(self, label));
     }
 
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test, String label) {
@@ -1540,11 +1616,9 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder if_testz_internal(Test test, int reg_to_test, Object label) {
-        InternalLabel current = new InternalLabel();
-        putLabel(current);
         // TODO? what if branch_offset > 0xffff?
         return f21t(test.testz, reg_to_test, false,
-                () -> exactBranchOffset(current, label));
+                self -> branchOffset(self, label));
     }
 
     public CodeBuilder if_testz(Test test, int reg_to_test, String label) {

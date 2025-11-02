@@ -12,6 +12,18 @@ import java.util.List;
 import java.util.NavigableSet;
 
 public class Preconditions {
+    public static int getPackedSwitchPayloadUnitCount(int element_count) {
+        return element_count * 2 + 4;
+    }
+
+    public static int getSparseSwitchPayloadUnitCount(int element_count) {
+        return element_count * 4 + 2;
+    }
+
+    public static int getArrayPayloadUnitCount(int element_width, int element_count) {
+        return (element_count * element_width + 1) / 2 + 4;
+    }
+
     private static boolean checkVisibilityFlags(int access_flags) {
         return isPowerOfTwo(access_flags & ACC_VISIBILITY_MASK);
     }

@@ -35,7 +35,7 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
 
     @Override
     public int getUnitCount() {
-        return getSwitchElements().size() * 4 + 2;
+        return Preconditions.getSparseSwitchPayloadUnitCount(getSwitchElements().size());
     }
 
     @Override
