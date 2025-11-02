@@ -10,6 +10,6 @@ public sealed interface InstructionI permits Instruction, BranchOffsetInstructio
 
     default int getUnitCount() {
         assert !getOpcode().isPayload();
-        return getOpcode().format().getUnitCount();
+        return getOpcode().getUnitCount();
     }
 }

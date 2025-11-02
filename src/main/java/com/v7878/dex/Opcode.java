@@ -434,6 +434,10 @@ public enum Opcode {
         return format;
     }
 
+    public int getUnitCount() {
+        return format.getUnitCount();
+    }
+
     public ReferenceType getReferenceType1() {
         return reference1;
     }

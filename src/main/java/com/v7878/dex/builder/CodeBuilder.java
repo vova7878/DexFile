@@ -1,5 +1,7 @@
 package com.v7878.dex.builder;
 
+import static com.v7878.dex.Format.Format21t;
+import static com.v7878.dex.Format.Format22t;
 import static com.v7878.dex.Opcode.*;
 import static com.v7878.dex.builder.CodeBuilder.Op.GET;
 import static com.v7878.dex.builder.CodeBuilder.Op.GET_BOOLEAN;
@@ -1495,12 +1497,12 @@ public final class CodeBuilder {
             public int units() {
                 int diff = target - position;
                 if (diff == 0 || !check_width_int(diff, 16)) {
-                    return GOTO_32.format().getUnitCount();
+                    return GOTO_32.getUnitCount();
                 }
                 if (!check_width_int(diff, 8)) {
-                    return GOTO_16.format().getUnitCount();
+                    return GOTO_16.getUnitCount();
                 }
-                return GOTO.format().getUnitCount();
+                return GOTO.getUnitCount();
             }
 
             @Override
@@ -1514,7 +1516,7 @@ public final class CodeBuilder {
                 }
                 return List.of(Instruction10t.of(GOTO, diff));
             }
-        }, GOTO.format().getUnitCount());
+        }, GOTO.getUnitCount());
         return this;
     }
 
@@ -1658,12 +1660,12 @@ public final class CodeBuilder {
             @Override
             public int units() {
                 int diff = target - position;
-                int units = test.test.format().getUnitCount();
+                int units = Format22t.getUnitCount();
                 if (diff == 0) {
-                    return units + GOTO.format().getUnitCount();
+                    return units + GOTO.getUnitCount();
                 }
                 if (!check_width_int(diff, 16)) {
-                    return units + GOTO_32.format().getUnitCount();
+                    return units + GOTO_32.getUnitCount();
                 }
                 return units;
             }
@@ -1673,27 +1675,25 @@ public final class CodeBuilder {
                 int diff = target - position;
                 if (diff == 0) {
                     return List.of(
-                            Instruction22t.of(test.inverse().test,
-                                    first_reg_to_test, second_reg_to_test,
-                                    GOTO.format().getUnitCount()),
-                            Instruction10t.of(GOTO, -test.test.format().getUnitCount())
+                            Instruction22t.of(test.inverse().test, first_reg_to_test,
+                                    second_reg_to_test, GOTO.getUnitCount()),
+                            Instruction10t.of(GOTO, -Format22t.getUnitCount())
                     );
                 }
                 if (!check_width_int(diff, 16)) {
                     if (diff <= 0) {
-                        diff -= test.test.format().getUnitCount();
+                        diff -= Format22t.getUnitCount();
                     }
                     return List.of(
-                            Instruction22t.of(test.inverse().test,
-                                    first_reg_to_test, second_reg_to_test,
-                                    GOTO_32.format().getUnitCount()),
+                            Instruction22t.of(test.inverse().test, first_reg_to_test,
+                                    second_reg_to_test, GOTO_32.getUnitCount()),
                             Instruction30t.of(GOTO_32, diff)
                     );
                 }
                 return List.of(Instruction22t.of(test.test,
                         first_reg_to_test, second_reg_to_test, diff));
             }
-        }, test.test.format().getUnitCount());
+        }, Format22t.getUnitCount());
         return this;
     }
 
@@ -1726,12 +1726,12 @@ public final class CodeBuilder {
             @Override
             public int units() {
                 int diff = target - position;
-                int units = test.testz.format().getUnitCount();
+                int units = Format21t.getUnitCount();
                 if (diff == 0) {
-                    return units + GOTO.format().getUnitCount();
+                    return units + GOTO.getUnitCount();
                 }
                 if (!check_width_int(diff, 16)) {
-                    return units + GOTO_32.format().getUnitCount();
+                    return units + GOTO_32.getUnitCount();
                 }
                 return units;
             }
@@ -1741,24 +1741,24 @@ public final class CodeBuilder {
                 int diff = target - position;
                 if (diff == 0) {
                     return List.of(
-                            Instruction21t.of(test.inverse().testz, reg_to_test,
-                                    GOTO.format().getUnitCount()),
-                            Instruction10t.of(GOTO, -test.testz.format().getUnitCount())
+                            Instruction21t.of(test.inverse().testz,
+                                    reg_to_test, GOTO.getUnitCount()),
+                            Instruction10t.of(GOTO, -Format21t.getUnitCount())
                     );
                 }
                 if (!check_width_int(diff, 16)) {
                     if (diff <= 0) {
-                        diff -= test.testz.format().getUnitCount();
+                        diff -= Format21t.getUnitCount();
                     }
                     return List.of(
-                            Instruction21t.of(test.inverse().testz, reg_to_test,
-                                    GOTO_32.format().getUnitCount()),
+                            Instruction21t.of(test.inverse().testz,
+                                    reg_to_test, GOTO_32.getUnitCount()),
                             Instruction30t.of(GOTO_32, diff)
                     );
                 }
                 return List.of(Instruction21t.of(test.testz, reg_to_test, diff));
             }
-        }, test.testz.format().getUnitCount());
+        }, Format21t.getUnitCount());
         return this;
     }
 
