@@ -1673,18 +1673,15 @@ public final class CodeBuilder {
                 if (diff == 0) {
                     return List.of(
                             Instruction22t.of(test.inverse().test, first_reg_to_test,
-                                    second_reg_to_test, GOTO.getUnitCount()),
+                                    second_reg_to_test, Format22t.getUnitCount() + GOTO.getUnitCount()),
                             Instruction10t.of(GOTO, -Format22t.getUnitCount())
                     );
                 }
                 if (!check_width_int(diff, 16)) {
-                    if (diff <= 0) {
-                        diff -= Format22t.getUnitCount();
-                    }
                     return List.of(
                             Instruction22t.of(test.inverse().test, first_reg_to_test,
-                                    second_reg_to_test, GOTO_32.getUnitCount()),
-                            Instruction30t.of(GOTO_32, diff)
+                                    second_reg_to_test, Format22t.getUnitCount() + GOTO_32.getUnitCount()),
+                            Instruction30t.of(GOTO_32, diff - Format22t.getUnitCount())
                     );
                 }
                 return List.of(Instruction22t.of(test.test,
@@ -1739,18 +1736,15 @@ public final class CodeBuilder {
                 if (diff == 0) {
                     return List.of(
                             Instruction21t.of(test.inverse().testz,
-                                    reg_to_test, GOTO.getUnitCount()),
+                                    reg_to_test, Format21t.getUnitCount() + GOTO.getUnitCount()),
                             Instruction10t.of(GOTO, -Format21t.getUnitCount())
                     );
                 }
                 if (!check_width_int(diff, 16)) {
-                    if (diff <= 0) {
-                        diff -= Format21t.getUnitCount();
-                    }
                     return List.of(
                             Instruction21t.of(test.inverse().testz,
-                                    reg_to_test, GOTO_32.getUnitCount()),
-                            Instruction30t.of(GOTO_32, diff)
+                                    reg_to_test, Format21t.getUnitCount() + GOTO_32.getUnitCount()),
+                            Instruction30t.of(GOTO_32, diff - Format21t.getUnitCount())
                     );
                 }
                 return List.of(Instruction21t.of(test.testz, reg_to_test, diff));
