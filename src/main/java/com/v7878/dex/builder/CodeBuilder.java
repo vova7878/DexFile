@@ -1641,6 +1641,28 @@ public final class CodeBuilder {
         }
     }
 
+    public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test,
+                               Consumer<CodeBuilder> true_branch, Consumer<CodeBuilder> false_branch) {
+        var true_label = new InternalLabel();
+        var end_label = new InternalLabel();
+        if_test_internal(test, first_reg_to_test, second_reg_to_test, true_label);
+        false_branch.accept(this);
+        goto_internal(end_label);
+        putLabel(true_label);
+        true_branch.accept(this);
+        putLabel(end_label);
+        return this;
+    }
+
+    public CodeBuilder if_test(Test test, int first_reg_to_test,
+                               int second_reg_to_test, Consumer<CodeBuilder> true_branch) {
+        var end_label = new InternalLabel();
+        if_test_internal(test.inverse(), first_reg_to_test, second_reg_to_test, end_label);
+        true_branch.accept(this);
+        putLabel(end_label);
+        return this;
+    }
+
     private CodeBuilder if_test_internal(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
         check_reg_or_pair(first_reg_to_test, false);
         check_reg_or_pair(second_reg_to_test, false);
@@ -1703,6 +1725,28 @@ public final class CodeBuilder {
 
     public CodeBuilder raw_if_test(Test test, int first_reg_to_test, int second_reg_to_test, String label) {
         return raw_if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
+    }
+
+    public CodeBuilder if_testz(Test test, int reg_to_test,
+                                Consumer<CodeBuilder> true_branch,
+                                Consumer<CodeBuilder> false_branch) {
+        var true_label = new InternalLabel();
+        var end_label = new InternalLabel();
+        if_testz_internal(test, reg_to_test, true_label);
+        false_branch.accept(this);
+        goto_internal(end_label);
+        putLabel(true_label);
+        true_branch.accept(this);
+        putLabel(end_label);
+        return this;
+    }
+
+    public CodeBuilder if_testz(Test test, int reg_to_test, Consumer<CodeBuilder> true_branch) {
+        var end_label = new InternalLabel();
+        if_testz_internal(test.inverse(), reg_to_test, end_label);
+        true_branch.accept(this);
+        putLabel(end_label);
+        return this;
     }
 
     private CodeBuilder if_testz_internal(Test test, int reg_to_test, Object label) {
