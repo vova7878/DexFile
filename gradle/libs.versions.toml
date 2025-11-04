@@ -1,8 +1,8 @@
 [versions]
-android-misc = "v0.0.7"
+android-misc = "v1.0.0"
 
 [libraries]
-android-misc = { module = "com.github.vova7878:AndroidMisc", version.ref = "android-misc" }
+android-misc = { module = "io.github.vova7878:AndroidMisc", version.ref = "android-misc" }
 
 [plugins]
 java-library = { id = 'java-library' }
