@@ -1,10 +1,11 @@
 [versions]
 android-misc = "v1.0.0"
+maven-publish = "0.34.0"
 
 [libraries]
 android-misc = { module = "io.github.vova7878:AndroidMisc", version.ref = "android-misc" }
 
 [plugins]
 java-library = { id = 'java-library' }
-maven-publish = { id = 'maven-publish' }
+maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
 
