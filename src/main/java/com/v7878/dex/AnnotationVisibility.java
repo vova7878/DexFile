@@ -20,11 +20,12 @@ public enum AnnotationVisibility {
     }
 
     public static AnnotationVisibility of(int value) {
-        for (AnnotationVisibility type : values()) {
-            if (value == type.value) {
-                return type;
-            }
-        }
-        throw new IllegalArgumentException("Unknown annotation visibility: " + value);
+        return switch (value) {
+            case VISIBILITY_BUILD -> BUILD;
+            case VISIBILITY_RUNTIME -> RUNTIME;
+            case VISIBILITY_SYSTEM -> SYSTEM;
+            default -> throw new IllegalArgumentException(
+                    "Unknown annotation visibility: " + value);
+        };
     }
 }

@@ -3,6 +3,7 @@ package com.v7878.dex.immutable;
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.ProtoDescriptor;
 import com.v7878.dex.util.ShortyUtils;
 
 import java.lang.invoke.MethodType;
@@ -46,6 +47,22 @@ public final class ProtoId implements Comparable<ProtoId> {
                 Converter.transform(value.parameterList(), TypeId::of));
     }
 
+    public static ProtoId of(String descriptor) {
+        Objects.requireNonNull(descriptor);
+        return ProtoDescriptor.parseProto(descriptor);
+    }
+
+    public String getDescriptor() {
+        var out = new StringBuilder();
+        out.append('(');
+        for (var type : getParameterTypes()) {
+            out.append(type);
+        }
+        out.append(')');
+        out.append(getReturnType());
+        return out.toString();
+    }
+
     public TypeId getReturnType() {
         return return_type;
     }
@@ -85,13 +102,6 @@ public final class ProtoId implements Comparable<ProtoId> {
 
     @Override
     public String toString() {
-        var out = new StringBuilder();
-        out.append('(');
-        for (var type : getParameterTypes()) {
-            out.append(type);
-        }
-        out.append(')');
-        out.append(getReturnType());
-        return out.toString();
+        return getDescriptor();
     }
 }

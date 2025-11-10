@@ -33,6 +33,25 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
         return new FieldId(declaring_class, e.name(), declaring_class);
     }
 
+    public static FieldId of(String descriptor) {
+        Objects.requireNonNull(descriptor);
+        int point = descriptor.indexOf('.');
+        int colon = descriptor.lastIndexOf(':');
+        if ((point | colon) < 0 || !(point < colon)) {
+            throw new IllegalArgumentException(
+                    "Not a field descriptor: " + descriptor);
+        }
+        return FieldId.of(
+                TypeId.of(descriptor.substring(0, point)),
+                descriptor.substring(point + 1, colon),
+                TypeId.of(descriptor.substring(colon + 1))
+        );
+    }
+
+    public String getDescriptor() {
+        return getDeclaringClass() + "." + getName() + ":" + getType();
+    }
+
     @Override
     public TypeId getDeclaringClass() {
         return declaring_class;
@@ -73,6 +92,6 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
 
     @Override
     public String toString() {
-        return getDeclaringClass() + "." + getName() + ":" + getType();
+        return getDescriptor();
     }
 }

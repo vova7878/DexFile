@@ -77,5 +77,4 @@ public enum Format {
     public boolean hasReferenceType2() {
         return reference2;
     }
-
 }

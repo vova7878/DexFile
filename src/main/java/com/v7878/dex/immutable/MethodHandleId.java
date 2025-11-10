@@ -22,6 +22,22 @@ public final class MethodHandleId implements Comparable<MethodHandleId> {
         return new MethodHandleId(handle_type, member);
     }
 
+    public static MethodHandleId of(String descriptor) {
+        Objects.requireNonNull(descriptor);
+        var parts = descriptor.split("@", 2);
+        if (parts.length != 2) {
+            throw new IllegalArgumentException(
+                    "Not a method handle descriptor: " + descriptor);
+        }
+        var type = MethodHandleType.of(parts[0]);
+        return MethodHandleId.of(type, type.isMethodAccess() ?
+                MethodId.of(parts[1]) : FieldId.of(parts[1]));
+    }
+
+    public String getDescriptor() {
+        return getHandleType() + "@" + getMember();
+    }
+
     public MethodHandleType getHandleType() {
         return handle_type;
     }
@@ -57,6 +73,6 @@ public final class MethodHandleId implements Comparable<MethodHandleId> {
 
     @Override
     public String toString() {
-        return getHandleType() + "->" + getMember();
+        return getDescriptor();
     }
 }

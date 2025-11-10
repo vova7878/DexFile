@@ -50,12 +50,28 @@ public enum ValueType {
     }
 
     public static ValueType of(int value) {
-        for (ValueType type : values()) {
-            if (value == type.value) {
-                return type;
-            }
-        }
-        throw new IllegalStateException("Unknown encoded value type: " + value);
+        return switch (value) {
+            case VALUE_BYTE -> BYTE;
+            case VALUE_SHORT -> SHORT;
+            case VALUE_CHAR -> CHAR;
+            case VALUE_INT -> INT;
+            case VALUE_LONG -> LONG;
+            case VALUE_FLOAT -> FLOAT;
+            case VALUE_DOUBLE -> DOUBLE;
+            case VALUE_METHOD_TYPE -> METHOD_TYPE;
+            case VALUE_METHOD_HANDLE -> METHOD_HANDLE;
+            case VALUE_STRING -> STRING;
+            case VALUE_TYPE -> TYPE;
+            case VALUE_FIELD -> FIELD;
+            case VALUE_METHOD -> METHOD;
+            case VALUE_ENUM -> ENUM;
+            case VALUE_ARRAY -> ARRAY;
+            case VALUE_ANNOTATION -> ANNOTATION;
+            case VALUE_NULL -> NULL;
+            case VALUE_BOOLEAN -> BOOLEAN;
+            default -> throw new IllegalArgumentException(
+                    "Unknown encoded value type: " + value);
+        };
     }
 
     public static int compare(ValueType left, ValueType right) {

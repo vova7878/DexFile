@@ -58,6 +58,25 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         return new MethodId(TypeId.of(ex.getDeclaringClass()), getName(ex), ProtoId.of(ex));
     }
 
+    public static MethodId of(String descriptor) {
+        Objects.requireNonNull(descriptor);
+        int point = descriptor.indexOf('.');
+        int bracket = descriptor.lastIndexOf('(');
+        if ((point | bracket) < 0 || !(point < bracket)) {
+            throw new IllegalArgumentException(
+                    "Not a method descriptor: " + descriptor);
+        }
+        return MethodId.of(
+                TypeId.of(descriptor.substring(0, point)),
+                descriptor.substring(point + 1, bracket),
+                TypeId.of(descriptor.substring(bracket))
+        );
+    }
+
+    public String getDescriptor() {
+        return getDeclaringClass() + "." + getName() + getProto();
+    }
+
     @Override
     public TypeId getDeclaringClass() {
         return declaring_class;
@@ -114,6 +133,6 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
 
     @Override
     public String toString() {
-        return getDeclaringClass() + "." + getName() + getProto();
+        return getDescriptor();
     }
 }
