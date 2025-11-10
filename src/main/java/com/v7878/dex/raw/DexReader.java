@@ -27,6 +27,7 @@ import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_START_OFFSET;
+import static com.v7878.dex.DexOffsets.CONTAINER_SIZE_OFFSET;
 import static com.v7878.dex.DexOffsets.DATA_START_OFFSET;
 import static com.v7878.dex.DexOffsets.DEBUG_INFO_BASE_OFFSET;
 import static com.v7878.dex.DexOffsets.DEBUG_INFO_OFFSETS_POS_OFFSET;
@@ -223,11 +224,16 @@ public class DexReader implements DexIO.DexReaderCache {
         }
 
         int container_off = 0;
+        int container_size = file_size;
         if (version.isDexContainer()) {
             container_off = mainAt(header_offset + HEADER_OFF_OFFSET).readSmallUInt();
+            container_size = mainAt(header_offset + CONTAINER_SIZE_OFFSET).readSmallUInt();
         }
         if (container_off != header_offset) {
             throw new InvalidDexFile("Unexpected header offset " + container_off);
+        }
+        if (main_buffer.size() < container_size) {
+            throw new InvalidDexFile("Truncated dex file");
         }
 
         opcodes = Opcodes.of(version, options.getTargetApi(),
