@@ -374,7 +374,7 @@ public enum Opcode {
     // single raw opcode
     private static final int RAW_OPCODE = 0x400;
 
-    private record DexInfo(int api, boolean art, boolean odex, DexVersion dex) {
+    record DexInfo(int api, boolean art, boolean odex, DexVersion dex) {
     }
 
     static abstract class Constraint {

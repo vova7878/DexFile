@@ -806,7 +806,7 @@ public class DexWriter {
         }
         // Note: When placing a map, the number of strings is already determined,
         // but their location is not yet, so we will fix it later
-        if (shared_data.strings.size() > 0) {
+        if (!shared_data.strings.isEmpty()) {
             list.add(new MapItem(TYPE_STRING_DATA_ITEM,
                     shared_data.strings.size(), shared_data.string_data_items_off));
         }
@@ -922,7 +922,7 @@ public class DexWriter {
 
     public void writeStringDataSection() {
         var strings = shared_data.strings;
-        if (strings.size() != 0) {
+        if (!strings.isEmpty()) {
             shared_data.string_data_items_off = data_buffer.position();
         }
         for (var value : strings.values()) {
