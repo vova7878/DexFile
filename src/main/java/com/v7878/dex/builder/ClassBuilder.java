@@ -201,6 +201,13 @@ public final class ClassBuilder {
         );
     }
 
+    public ClassBuilder withField(String descriptor, int flags) {
+        return withField(fb -> fb
+                .of(descriptor)
+                .withFlags(flags)
+        );
+    }
+
     public ClassBuilder withoutFields(Iterable<FieldDef> fields) {
         CollectionUtils.removeAll(this.fields, fields);
         return this;
@@ -243,11 +250,29 @@ public final class ClassBuilder {
         );
     }
 
+    public ClassBuilder withMethodBody(String descriptor, int flags,
+                                       MethodImplementation code) {
+        return withMethod(b -> b
+                .of(descriptor)
+                .withFlags(flags)
+                .withCode(code)
+        );
+    }
+
     public ClassBuilder withMethodBody(String name, ProtoId proto, int flags,
                                        int locals, Consumer<CodeBuilder> consumer) {
         return withMethod(b -> b
                 .withName(name)
                 .withProto(proto)
+                .withFlags(flags)
+                .withCode(locals, consumer)
+        );
+    }
+
+    public ClassBuilder withMethodBody(String descriptor, int flags,
+                                       int locals, Consumer<CodeBuilder> consumer) {
+        return withMethod(b -> b
+                .of(descriptor)
                 .withFlags(flags)
                 .withCode(locals, consumer)
         );

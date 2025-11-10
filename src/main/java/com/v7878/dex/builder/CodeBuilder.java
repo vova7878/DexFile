@@ -2054,8 +2054,8 @@ public final class CodeBuilder {
         }
     }
 
-    public CodeBuilder binop(BinOp op, int dst_reg_or_pair,
-                             int first_src_reg_or_pair, int second_src_reg_or_pair) {
+    public CodeBuilder raw_binop(BinOp op, int dst_reg_or_pair,
+                                 int first_src_reg_or_pair, int second_src_reg_or_pair) {
         if (op.regular == null) {
             throw new IllegalArgumentException("There is no regular version of " + op);
         }
@@ -2071,6 +2071,16 @@ public final class CodeBuilder {
         }
         return f12x(op._2addr, dst_and_first_src_reg_or_pair,
                 op.isDstAndSrc1Wide, second_src_reg_or_pair, op.isSrc2Wide);
+    }
+
+    public CodeBuilder binop(BinOp op, int dst_reg_or_pair,
+                             int first_src_reg_or_pair, int second_src_reg_or_pair) {
+        if (dst_reg_or_pair == first_src_reg_or_pair
+                && check_width_int(first_src_reg_or_pair, 4)
+                && check_width_int(second_src_reg_or_pair, 4)) {
+            return binop_2addr(op, first_src_reg_or_pair, second_src_reg_or_pair);
+        }
+        return raw_binop(op, dst_reg_or_pair, first_src_reg_or_pair, second_src_reg_or_pair);
     }
 
     public CodeBuilder raw_binop_lit16(BinOp op, int dst_reg, int src_reg, int value) {

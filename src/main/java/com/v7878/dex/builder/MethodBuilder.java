@@ -90,6 +90,17 @@ public final class MethodBuilder {
                 .withParameterTypes(id.getParameterTypes());
     }
 
+    public MethodBuilder of(String descriptor) {
+        Objects.requireNonNull(descriptor);
+        int bracket = descriptor.lastIndexOf('(');
+        if (bracket < 0) {
+            throw new IllegalArgumentException(
+                    "Not a method def descriptor: " + descriptor);
+        }
+        return withName(descriptor.substring(0, bracket))
+                .withProto(ProtoId.of(descriptor.substring(bracket)));
+    }
+
     public MethodBuilder withName(String name) {
         this.name = Objects.requireNonNull(name);
         return this;
@@ -133,6 +144,10 @@ public final class MethodBuilder {
     public MethodBuilder withProto(ProtoId proto) {
         return withReturnType(proto.getReturnType())
                 .withParameterTypes(proto.getParameterTypes());
+    }
+
+    public MethodBuilder withProto(String descriptor) {
+        return withProto(ProtoId.of(descriptor));
     }
 
     public MethodBuilder withFlags(int flags) {

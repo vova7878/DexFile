@@ -81,6 +81,17 @@ public final class FieldBuilder {
                 .withType(id.getType());
     }
 
+    public FieldBuilder of(String descriptor) {
+        Objects.requireNonNull(descriptor);
+        int colon = descriptor.lastIndexOf(':');
+        if (colon < 0) {
+            throw new IllegalArgumentException(
+                    "Not a field def descriptor: " + descriptor);
+        }
+        return withName(descriptor.substring(0, colon))
+                .withType(TypeId.of(descriptor.substring(colon + 1)));
+    }
+
     public FieldBuilder withName(String name) {
         this.name = Objects.requireNonNull(name);
         return this;

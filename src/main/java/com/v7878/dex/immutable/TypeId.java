@@ -1,12 +1,16 @@
 package com.v7878.dex.immutable;
 
+import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
 import static com.v7878.dex.util.ShortyUtils.invalidType;
 
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.ShortyUtils;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.StreamSupport;
 
 public final class TypeId implements Comparable<TypeId> {
     public static final TypeId V = new TypeId(0, "V");
@@ -192,6 +196,18 @@ public final class TypeId implements Comparable<TypeId> {
             case "double" -> D;
             default -> raw(0, "L" + class_name.replace('.', '/') + ";");
         };
+    }
+
+    public static List<TypeId> listOf(Iterable<String> descriptors) {
+        // TODO: improve performance
+        return toUnmodifiableList(StreamSupport
+                .stream(descriptors.spliterator(), false)
+                .map(TypeId::of));
+    }
+
+    public static List<TypeId> listOf(String... descriptors) {
+        // TODO: improve performance
+        return listOf(Arrays.asList(descriptors));
     }
 
     public String getDescriptor() {

@@ -93,16 +93,16 @@ public class Converter {
         };
     }
 
-    public static <R, P> List<R> mutableTransform(List<P> list, Function<P, R> transformer) {
-        var out = new ArrayList<R>(list.size());
-        for (var tmp : list) {
+    public static <R, P> List<R> mutableTransform(Collection<P> data, Function<P, R> transformer) {
+        var out = new ArrayList<R>(data.size());
+        for (var tmp : data) {
             out.add(transformer.apply(tmp));
         }
         return out;
     }
 
-    public static <R, P> List<R> transform(List<P> list, Function<P, R> transformer) {
-        return Collections.unmodifiableList(mutableTransform(list, transformer));
+    public static <R, P> List<R> transform(Collection<P> data, Function<P, R> transformer) {
+        return Collections.unmodifiableList(mutableTransform(data, transformer));
     }
 
     public static <R, P> List<R> mutableTransform(P[] array, Function<P, R> transformer) {

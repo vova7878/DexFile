@@ -69,7 +69,7 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         return MethodId.of(
                 TypeId.of(descriptor.substring(0, point)),
                 descriptor.substring(point + 1, bracket),
-                TypeId.of(descriptor.substring(bracket))
+                ProtoId.of(descriptor.substring(bracket))
         );
     }
 
