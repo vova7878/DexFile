@@ -2064,8 +2064,8 @@ public final class CodeBuilder {
                 second_src_reg_or_pair, op.isSrc2Wide);
     }
 
-    public CodeBuilder binop_2addr(BinOp op, int dst_and_first_src_reg_or_pair,
-                                   int second_src_reg_or_pair) {
+    public CodeBuilder raw_binop_2addr(BinOp op, int dst_and_first_src_reg_or_pair,
+                                       int second_src_reg_or_pair) {
         if (op._2addr == null) {
             throw new IllegalArgumentException("There is no 2addr version of " + op);
         }
@@ -2078,7 +2078,7 @@ public final class CodeBuilder {
         if (dst_reg_or_pair == first_src_reg_or_pair
                 && check_width_int(first_src_reg_or_pair, 4)
                 && check_width_int(second_src_reg_or_pair, 4)) {
-            return binop_2addr(op, first_src_reg_or_pair, second_src_reg_or_pair);
+            return raw_binop_2addr(op, first_src_reg_or_pair, second_src_reg_or_pair);
         }
         return raw_binop(op, dst_reg_or_pair, first_src_reg_or_pair, second_src_reg_or_pair);
     }
@@ -2098,6 +2098,9 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder binop_lit(BinOp op, int dst_reg, int src_reg, int value) {
+        if (op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT) {
+            value &= 0x1f;
+        }
         if (check_width_int(value, 8)) {
             return raw_binop_lit8(op, dst_reg, src_reg, value);
         }
