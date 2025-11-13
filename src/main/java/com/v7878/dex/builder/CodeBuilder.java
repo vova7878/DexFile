@@ -1979,7 +1979,7 @@ public final class CodeBuilder {
 
         DOUBLE_TO_INT(Opcode.DOUBLE_TO_INT, true, false),
         DOUBLE_TO_LONG(Opcode.DOUBLE_TO_LONG, true, true),
-        DOUBLE_TO_DOUBLE(DOUBLE_TO_FLOAT, true, false),
+        DOUBLE_TO_FLOAT(Opcode.DOUBLE_TO_FLOAT, true, false),
 
         INT_TO_BYTE(Opcode.INT_TO_BYTE, false, false),
         INT_TO_CHAR(Opcode.INT_TO_CHAR, false, false),
@@ -1997,6 +1997,115 @@ public final class CodeBuilder {
 
     public CodeBuilder unop(UnOp op, int dst_reg_or_pair, int src_reg_or_pair) {
         return f12x(op.opcode, dst_reg_or_pair, op.isDstWide, src_reg_or_pair, op.isSrcWide);
+    }
+
+    public CodeBuilder neg(char shorty, int dst_reg_or_pair, int src_reg_or_pair) {
+        return switch (shorty) {
+            case 'B' -> unop(UnOp.NEG_INT, dst_reg_or_pair, src_reg_or_pair).
+                    unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, dst_reg_or_pair);
+            case 'S' -> unop(UnOp.NEG_INT, dst_reg_or_pair, src_reg_or_pair).
+                    unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, dst_reg_or_pair);
+            case 'C' -> unop(UnOp.NEG_INT, dst_reg_or_pair, src_reg_or_pair).
+                    unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, dst_reg_or_pair);
+            case 'I' -> unop(UnOp.NEG_INT, dst_reg_or_pair, src_reg_or_pair);
+            case 'F' -> unop(UnOp.NEG_FLOAT, dst_reg_or_pair, src_reg_or_pair);
+            case 'J' -> unop(UnOp.NEG_LONG, dst_reg_or_pair, src_reg_or_pair);
+            case 'D' -> unop(UnOp.NEG_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
+            default -> throw invalidShorty(shorty);
+        };
+    }
+
+    public CodeBuilder not(char shorty, int dst_reg_or_pair, int src_reg_or_pair) {
+        return switch (shorty) {
+            case 'Z' -> binop_lit(BinOp.XOR_INT, dst_reg_or_pair, src_reg_or_pair, 0x1);
+            case 'B' -> unop(UnOp.NOT_INT, dst_reg_or_pair, src_reg_or_pair).
+                    unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, dst_reg_or_pair);
+            case 'S' -> unop(UnOp.NOT_INT, dst_reg_or_pair, src_reg_or_pair).
+                    unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, dst_reg_or_pair);
+            case 'C' -> unop(UnOp.NOT_INT, dst_reg_or_pair, src_reg_or_pair).
+                    unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, dst_reg_or_pair);
+            case 'I' -> unop(UnOp.NOT_INT, dst_reg_or_pair, src_reg_or_pair);
+            case 'J' -> unop(UnOp.NOT_LONG, dst_reg_or_pair, src_reg_or_pair);
+            default -> throw invalidShorty(shorty);
+        };
+    }
+
+    public CodeBuilder cast_numeric(char dst_shorty, int dst_reg_or_pair,
+                                    char src_shorty, int src_reg_or_pair) {
+        return switch (dst_shorty) {
+            case 'Z' -> switch (src_shorty) {
+                case 'Z' -> this;
+                case 'B', 'S', 'C', 'I', 'F', 'J', 'D' ->
+                        cast_numeric('I', dst_reg_or_pair, src_shorty, src_reg_or_pair)
+                                .binop_lit(BinOp.AND_INT, dst_reg_or_pair, dst_reg_or_pair, 0x1);
+                default -> throw invalidShorty(dst_shorty);
+            };
+            case 'B' -> switch (src_shorty) {
+                case 'Z', 'B' -> this;
+                case 'S', 'C', 'I' -> unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, src_reg_or_pair);
+                case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair)
+                        .unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, dst_reg_or_pair);
+                case 'J' -> unop(UnOp.LONG_TO_INT, dst_reg_or_pair, src_reg_or_pair)
+                        .unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, dst_reg_or_pair);
+                case 'D' -> unop(UnOp.DOUBLE_TO_INT, dst_reg_or_pair, src_reg_or_pair)
+                        .unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, dst_reg_or_pair);
+                default -> throw invalidShorty(dst_shorty);
+            };
+            case 'S' -> switch (src_shorty) {
+                case 'Z', 'B', 'S' -> this;
+                case 'C', 'I' -> unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, src_reg_or_pair);
+                case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair)
+                        .unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, dst_reg_or_pair);
+                case 'J' -> unop(UnOp.LONG_TO_INT, dst_reg_or_pair, src_reg_or_pair)
+                        .unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, dst_reg_or_pair);
+                case 'D' -> unop(UnOp.DOUBLE_TO_INT, dst_reg_or_pair, src_reg_or_pair)
+                        .unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, dst_reg_or_pair);
+                default -> throw invalidShorty(dst_shorty);
+            };
+            case 'C' -> switch (src_shorty) {
+                case 'Z', 'C' -> this;
+                case 'B', 'S', 'I' -> unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, src_reg_or_pair);
+                case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair)
+                        .unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, dst_reg_or_pair);
+                case 'J' -> unop(UnOp.LONG_TO_INT, dst_reg_or_pair, src_reg_or_pair)
+                        .unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, dst_reg_or_pair);
+                case 'D' -> unop(UnOp.DOUBLE_TO_INT, dst_reg_or_pair, src_reg_or_pair)
+                        .unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, dst_reg_or_pair);
+                default -> throw invalidShorty(dst_shorty);
+            };
+            case 'I' -> switch (src_shorty) {
+                case 'Z', 'B', 'S', 'C', 'I' -> this;
+                case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair);
+                case 'J' -> unop(UnOp.LONG_TO_INT, dst_reg_or_pair, src_reg_or_pair);
+                case 'D' -> unop(UnOp.DOUBLE_TO_INT, dst_reg_or_pair, src_reg_or_pair);
+                default -> throw invalidShorty(dst_shorty);
+            };
+            case 'F' -> switch (src_shorty) {
+                case 'Z', 'B', 'S', 'C', 'I' ->
+                        unop(UnOp.INT_TO_FLOAT, dst_reg_or_pair, src_reg_or_pair);
+                case 'F' -> this;
+                case 'J' -> unop(UnOp.LONG_TO_FLOAT, dst_reg_or_pair, src_reg_or_pair);
+                case 'D' -> unop(UnOp.DOUBLE_TO_FLOAT, dst_reg_or_pair, src_reg_or_pair);
+                default -> throw invalidShorty(dst_shorty);
+            };
+            case 'J' -> switch (src_shorty) {
+                case 'Z', 'B', 'S', 'C', 'I' ->
+                        unop(UnOp.INT_TO_LONG, dst_reg_or_pair, src_reg_or_pair);
+                case 'F' -> unop(UnOp.FLOAT_TO_LONG, dst_reg_or_pair, src_reg_or_pair);
+                case 'J' -> this;
+                case 'D' -> unop(UnOp.DOUBLE_TO_LONG, dst_reg_or_pair, src_reg_or_pair);
+                default -> throw invalidShorty(dst_shorty);
+            };
+            case 'D' -> switch (src_shorty) {
+                case 'Z', 'B', 'S', 'C', 'I' ->
+                        unop(UnOp.INT_TO_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
+                case 'F' -> unop(UnOp.FLOAT_TO_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
+                case 'J' -> unop(UnOp.LONG_TO_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
+                case 'D' -> this;
+                default -> throw invalidShorty(dst_shorty);
+            };
+            default -> throw invalidShorty(dst_shorty);
+        };
     }
 
     public enum BinOp {
