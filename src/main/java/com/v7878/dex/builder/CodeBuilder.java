@@ -677,31 +677,31 @@ public final class CodeBuilder {
         return this;
     }
 
-    public CodeBuilder line_internal(Object label, int line) {
+    private CodeBuilder line_internal(Object label, int line) {
         return addDebugItem(label, LineNumber.of(line));
     }
 
-    public CodeBuilder prologue_internal(Object label) {
+    private CodeBuilder prologue_internal(Object label) {
         return addDebugItem(label, SetPrologueEnd.INSTANCE);
     }
 
-    public CodeBuilder epilogue_internal(Object label) {
+    private CodeBuilder epilogue_internal(Object label) {
         return addDebugItem(label, SetEpilogueBegin.INSTANCE);
     }
 
-    public CodeBuilder source_internal(Object label, String name) {
+    private CodeBuilder source_internal(Object label, String name) {
         return addDebugItem(label, SetFile.of(name));
     }
 
-    public CodeBuilder local_internal(Object label, int register, String name, TypeId type, String signature) {
+    private CodeBuilder local_internal(Object label, int register, String name, TypeId type, String signature) {
         return addDebugItem(label, StartLocal.of(register, name, type, signature));
     }
 
-    public CodeBuilder end_local_internal(Object label, int register) {
+    private CodeBuilder end_local_internal(Object label, int register) {
         return addDebugItem(label, EndLocal.of(register));
     }
 
-    public CodeBuilder restart_local_internal(Object label, int register) {
+    private CodeBuilder restart_local_internal(Object label, int register) {
         return addDebugItem(label, RestartLocal.of(register));
     }
 
@@ -1083,18 +1083,34 @@ public final class CodeBuilder {
         return f10x(NOP);
     }
 
+    /**
+     * @param dst_reg u4
+     * @param src_reg u4
+     */
     public CodeBuilder raw_move(int dst_reg, int src_reg) {
         return f12x(MOVE, dst_reg, false, src_reg, false);
     }
 
+    /**
+     * @param dst_reg u8
+     * @param src_reg u16
+     */
     public CodeBuilder raw_move_from16(int dst_reg, int src_reg) {
         return f22x(MOVE_FROM16, dst_reg, false, src_reg, false);
     }
 
+    /**
+     * @param dst_reg u16
+     * @param src_reg u16
+     */
     public CodeBuilder raw_move_16(int dst_reg, int src_reg) {
         return f32x(MOVE_16, dst_reg, false, src_reg, false);
     }
 
+    /**
+     * @param dst_reg u16
+     * @param src_reg u16
+     */
     public CodeBuilder move(int dst_reg, int src_reg) {
         if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
             return raw_move(dst_reg, src_reg);
@@ -1105,18 +1121,34 @@ public final class CodeBuilder {
         return raw_move_16(dst_reg, src_reg);
     }
 
+    /**
+     * @param dst_reg_pair u4
+     * @param src_reg_pair u4
+     */
     public CodeBuilder raw_move_wide(int dst_reg_pair, int src_reg_pair) {
         return f12x(MOVE_WIDE, dst_reg_pair, true, src_reg_pair, true);
     }
 
+    /**
+     * @param dst_reg_pair u8
+     * @param src_reg_pair u16
+     */
     public CodeBuilder raw_move_wide_from16(int dst_reg_pair, int src_reg_pair) {
         return f22x(MOVE_WIDE_FROM16, dst_reg_pair, true, src_reg_pair, true);
     }
 
+    /**
+     * @param dst_reg_pair u16
+     * @param src_reg_pair u16
+     */
     public CodeBuilder raw_move_wide_16(int dst_reg_pair, int src_reg_pair) {
         return f32x(MOVE_WIDE_16, dst_reg_pair, true, src_reg_pair, true);
     }
 
+    /**
+     * @param dst_reg_pair u16
+     * @param src_reg_pair u16
+     */
     public CodeBuilder move_wide(int dst_reg_pair, int src_reg_pair) {
         if (src_reg_pair < 1 << 4 && dst_reg_pair < 1 << 4) {
             return raw_move_wide(dst_reg_pair, src_reg_pair);
@@ -1127,18 +1159,34 @@ public final class CodeBuilder {
         return raw_move_wide_16(dst_reg_pair, src_reg_pair);
     }
 
+    /**
+     * @param dst_reg u4
+     * @param src_reg u4
+     */
     public CodeBuilder raw_move_object(int dst_reg, int src_reg) {
         return f12x(MOVE_OBJECT, dst_reg, false, src_reg, false);
     }
 
+    /**
+     * @param dst_reg u8
+     * @param src_reg u16
+     */
     public CodeBuilder raw_move_object_from16(int dst_reg, int src_reg) {
         return f22x(MOVE_OBJECT_FROM16, dst_reg, false, src_reg, false);
     }
 
+    /**
+     * @param dst_reg u16
+     * @param src_reg u16
+     */
     public CodeBuilder raw_move_object_16(int dst_reg, int src_reg) {
         return f32x(MOVE_OBJECT_16, dst_reg, false, src_reg, false);
     }
 
+    /**
+     * @param dst_reg u16
+     * @param src_reg u16
+     */
     public CodeBuilder move_object(int dst_reg, int src_reg) {
         if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
             return raw_move_object(dst_reg, src_reg);
@@ -1149,6 +1197,11 @@ public final class CodeBuilder {
         return raw_move_object_16(dst_reg, src_reg);
     }
 
+    /**
+     * @param shorty          any of V Z B S C I F J D L
+     * @param dst_reg_or_pair u16
+     * @param src_reg_or_pair u16
+     */
     public CodeBuilder move_shorty(char shorty, int dst_reg_or_pair, int src_reg_or_pair) {
         return switch (shorty) {
             case 'V' -> {
@@ -1163,6 +1216,11 @@ public final class CodeBuilder {
         };
     }
 
+    /**
+     * @param shorty        array of V Z B S C I F J D L
+     * @param first_dst_reg u16
+     * @param first_src_reg u16
+     */
     public CodeBuilder move_range(String shorty, int first_dst_reg, int first_src_reg) {
         char[] chars = shorty.toCharArray();
         int size = 0;
@@ -1180,18 +1238,31 @@ public final class CodeBuilder {
         return this;
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder move_result(int dst_reg) {
         return f11x(MOVE_RESULT, dst_reg, false);
     }
 
+    /**
+     * @param dst_reg_peir u8
+     */
     public CodeBuilder move_result_wide(int dst_reg_peir) {
         return f11x(MOVE_RESULT_WIDE, dst_reg_peir, true);
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder move_result_object(int dst_reg) {
         return f11x(MOVE_RESULT_OBJECT, dst_reg, false);
     }
 
+    /**
+     * @param shorty          any of V Z B S C I F J D L
+     * @param dst_reg_or_pair u8
+     */
     public CodeBuilder move_result_shorty(char shorty, int dst_reg_or_pair) {
         return switch (shorty) {
             case 'V' -> {
@@ -1205,6 +1276,9 @@ public final class CodeBuilder {
         };
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder move_exception(int dst_reg) {
         return f11x(MOVE_EXCEPTION, dst_reg, false);
     }
@@ -1213,18 +1287,31 @@ public final class CodeBuilder {
         return f10x(RETURN_VOID);
     }
 
+    /**
+     * @param return_value_reg u8
+     */
     public CodeBuilder return_(int return_value_reg) {
         return f11x(RETURN, return_value_reg, false);
     }
 
+    /**
+     * @param return_value_reg_peir u8
+     */
     public CodeBuilder return_wide(int return_value_reg_peir) {
         return f11x(RETURN_WIDE, return_value_reg_peir, true);
     }
 
+    /**
+     * @param return_value_reg u8
+     */
     public CodeBuilder return_object(int return_value_reg) {
         return f11x(RETURN_OBJECT, return_value_reg, false);
     }
 
+    /**
+     * @param shorty                   any of V Z B S C I F J D L
+     * @param return_value_reg_or_pair u8
+     */
     public CodeBuilder return_shorty(char shorty, int return_value_reg_or_pair) {
         return switch (shorty) {
             case 'V' -> {
@@ -1238,18 +1325,34 @@ public final class CodeBuilder {
         };
     }
 
+    /**
+     * @param dst_reg u4
+     * @param value   s4
+     */
     public CodeBuilder raw_const_4(int dst_reg, int value) {
         return f11n(CONST_4, dst_reg, false, value);
     }
 
+    /**
+     * @param dst_reg u8
+     * @param value   s16
+     */
     public CodeBuilder raw_const_16(int dst_reg, int value) {
         return f21s(CONST_16, dst_reg, false, value);
     }
 
+    /**
+     * @param dst_reg u8
+     * @param value   s32
+     */
     public CodeBuilder raw_const(int dst_reg, int value) {
         return f31i(CONST, dst_reg, false, value);
     }
 
+    /**
+     * @param dst_reg u8
+     * @param value   s32 with zeros in low 16 bits
+     */
     public CodeBuilder raw_const_high16(int dst_reg, int value) {
         return f21ih(CONST_HIGH16, dst_reg, value);
     }
@@ -1259,6 +1362,10 @@ public final class CodeBuilder {
         return value << empty_width >> empty_width == value;
     }
 
+    /**
+     * @param dst_reg u8
+     * @param value   s32
+     */
     public CodeBuilder const_(int dst_reg, int value) {
         if (dst_reg < 1 << 4 && check_width_int(value, 4)) {
             return raw_const_4(dst_reg, value);
@@ -1272,18 +1379,34 @@ public final class CodeBuilder {
         return raw_const(dst_reg, value);
     }
 
+    /**
+     * @param dst_reg_pair u8
+     * @param value        s16
+     */
     public CodeBuilder raw_const_wide_16(int dst_reg_pair, int value) {
         return f21s(CONST_WIDE_16, dst_reg_pair, true, value);
     }
 
+    /**
+     * @param dst_reg_pair u8
+     * @param value        s32
+     */
     public CodeBuilder raw_const_wide_32(int dst_reg_pair, int value) {
         return f31i(CONST_WIDE_32, dst_reg_pair, true, value);
     }
 
+    /**
+     * @param dst_reg_pair u8
+     * @param value        s64
+     */
     public CodeBuilder raw_const_wide(int dst_reg_pair, long value) {
         return f51l(CONST_WIDE, dst_reg_pair, value);
     }
 
+    /**
+     * @param dst_reg_pair u8
+     * @param value        s64 with zeros in low 48 bits
+     */
     public CodeBuilder raw_const_wide_high16(int dst_reg_pair, long value) {
         return f21lh(CONST_WIDE_HIGH16, dst_reg_pair, value);
     }
@@ -1293,6 +1416,10 @@ public final class CodeBuilder {
         return value << empty_width >> empty_width == value;
     }
 
+    /**
+     * @param dst_reg_pair u8
+     * @param value        s64
+     */
     public CodeBuilder const_wide(int dst_reg_pair, long value) {
         if (check_width_long(value, 16)) {
             return raw_const_wide_16(dst_reg_pair, (int) value);
@@ -1306,72 +1433,137 @@ public final class CodeBuilder {
         return raw_const_wide(dst_reg_pair, value);
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder raw_const_string(int dst_reg, String value) {
         return f21c(CONST_STRING, dst_reg, false, value);
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder raw_const_string_jumbo(int dst_reg, String value) {
         return f31c(CONST_STRING_JUMBO, dst_reg, false, value);
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder const_string(int dst_reg, String value) {
         //TODO: Generate smaller instructions if possible
         return raw_const_string_jumbo(dst_reg, value);
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder const_class(int dst_reg, TypeId value) {
         return f21c(CONST_CLASS, dst_reg, false, value);
     }
 
+    /**
+     * @param ref_reg u8
+     */
     public CodeBuilder monitor_enter(int ref_reg) {
         return f11x(MONITOR_ENTER, ref_reg, false);
     }
 
+    /**
+     * @param ref_reg u8
+     */
     public CodeBuilder monitor_exit(int ref_reg) {
         return f11x(MONITOR_EXIT, ref_reg, false);
     }
 
+    /**
+     * @param ref_reg u8
+     */
     public CodeBuilder check_cast(int ref_reg, TypeId value) {
         return f21c(CHECK_CAST, ref_reg, false, value);
     }
 
+    /**
+     * @param dst_reg u4
+     * @param ref_reg u4
+     */
     public CodeBuilder instance_of(int dst_reg, int ref_reg, TypeId value) {
         return f22c(INSTANCE_OF, dst_reg, false, ref_reg, false, value);
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder new_instance(int dst_reg, TypeId value) {
         return f21c(NEW_INSTANCE, dst_reg, false, value);
     }
 
+    /**
+     * @param dst_reg  u4
+     * @param size_reg u4
+     */
     public CodeBuilder new_array(int dst_reg, int size_reg, TypeId value) {
         return f22c(NEW_ARRAY, dst_reg, false, size_reg, false, value);
     }
 
+    /**
+     * @param arr_size 0 - 5
+     * @param arg_reg1 u4, must be 0 if arr_size < 1
+     * @param arg_reg2 u4, must be 0 if arr_size < 2
+     * @param arg_reg3 u4, must be 0 if arr_size < 3
+     * @param arg_reg4 u4, must be 0 if arr_size < 4
+     * @param arg_reg5 u4, must be 0 if arr_size < 5
+     */
     public CodeBuilder filled_new_array(TypeId type, int arr_size, int arg_reg1,
                                         int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         return f35c(FILLED_NEW_ARRAY, type, arr_size,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     * @param arg_reg4 u4
+     * @param arg_reg5 u4
+     */
     public CodeBuilder filled_new_array(TypeId type, int arg_reg1, int arg_reg2,
                                         int arg_reg3, int arg_reg4, int arg_reg5) {
         return filled_new_array(type, 5, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     * @param arg_reg4 u4
+     */
     public CodeBuilder filled_new_array(TypeId type, int arg_reg1, int arg_reg2,
                                         int arg_reg3, int arg_reg4) {
         return filled_new_array(type, 4, arg_reg1, arg_reg2, arg_reg3, arg_reg4, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     */
     public CodeBuilder filled_new_array(TypeId type,
                                         int arg_reg1, int arg_reg2, int arg_reg3) {
         return filled_new_array(type, 3, arg_reg1, arg_reg2, arg_reg3, 0, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     */
     public CodeBuilder filled_new_array(TypeId type, int arg_reg1, int arg_reg2) {
         return filled_new_array(type, 2, arg_reg1, arg_reg2, 0, 0, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     */
     public CodeBuilder filled_new_array(TypeId type, int arg_reg1) {
         return filled_new_array(type, 1, arg_reg1, 0, 0, 0, 0);
     }
@@ -1380,6 +1572,10 @@ public final class CodeBuilder {
         return filled_new_array(type, 0, 0, 0, 0, 0, 0);
     }
 
+    /**
+     * @param arr_size      u8
+     * @param first_arg_reg u16
+     */
     public CodeBuilder filled_new_array_range(TypeId type, int arr_size, int first_arg_reg) {
         return f3rc(FILLED_NEW_ARRAY_RANGE, type, arr_size, first_arg_reg);
     }
@@ -1398,11 +1594,18 @@ public final class CodeBuilder {
         return this;
     }
 
+    /**
+     * @param arr_ref_reg   u8
+     * @param element_width 1, 2, 4 or 8
+     */
     public CodeBuilder fill_array_data(int arr_ref_reg, int element_width, Iterable<? extends Number> data) {
         var checked_data = Preconditions.checkArrayPayloadElements(element_width, Converter.toList(data));
         return fill_array_data_internal(arr_ref_reg, element_width, checked_data);
     }
 
+    /**
+     * @param arr_ref_reg u8
+     */
     public CodeBuilder fill_array_data(int arr_ref_reg, boolean[] data) {
         List<Byte> list = new ArrayList<>(data.length);
         for (var value : data) {
@@ -1412,6 +1615,9 @@ public final class CodeBuilder {
         return fill_array_data_internal(arr_ref_reg, 1, list);
     }
 
+    /**
+     * @param arr_ref_reg u8
+     */
     public CodeBuilder fill_array_data(int arr_ref_reg, byte[] data) {
         List<Byte> list = new ArrayList<>(data.length);
         for (var value : data) {
@@ -1421,6 +1627,9 @@ public final class CodeBuilder {
         return fill_array_data_internal(arr_ref_reg, 1, list);
     }
 
+    /**
+     * @param arr_ref_reg u8
+     */
     public CodeBuilder fill_array_data(int arr_ref_reg, short[] data) {
         List<Short> list = new ArrayList<>(data.length);
         for (var value : data) {
@@ -1430,6 +1639,9 @@ public final class CodeBuilder {
         return fill_array_data_internal(arr_ref_reg, 2, list);
     }
 
+    /**
+     * @param arr_ref_reg u8
+     */
     public CodeBuilder fill_array_data(int arr_ref_reg, char[] data) {
         List<Short> list = new ArrayList<>(data.length);
         for (var value : data) {
@@ -1439,6 +1651,9 @@ public final class CodeBuilder {
         return fill_array_data_internal(arr_ref_reg, 2, list);
     }
 
+    /**
+     * @param arr_ref_reg u8
+     */
     public CodeBuilder fill_array_data(int arr_ref_reg, int[] data) {
         List<Integer> list = new ArrayList<>(data.length);
         for (var value : data) {
@@ -1448,6 +1663,9 @@ public final class CodeBuilder {
         return fill_array_data_internal(arr_ref_reg, 4, list);
     }
 
+    /**
+     * @param arr_ref_reg u8
+     */
     public CodeBuilder fill_array_data(int arr_ref_reg, float[] data) {
         List<Integer> list = new ArrayList<>(data.length);
         for (var value : data) {
@@ -1457,6 +1675,9 @@ public final class CodeBuilder {
         return fill_array_data_internal(arr_ref_reg, 4, list);
     }
 
+    /**
+     * @param arr_ref_reg u8
+     */
     public CodeBuilder fill_array_data(int arr_ref_reg, long[] data) {
         List<Long> list = new ArrayList<>(data.length);
         for (var value : data) {
@@ -1466,6 +1687,9 @@ public final class CodeBuilder {
         return fill_array_data_internal(arr_ref_reg, 8, list);
     }
 
+    /**
+     * @param arr_ref_reg u8
+     */
     public CodeBuilder fill_array_data(int arr_ref_reg, double[] data) {
         List<Long> list = new ArrayList<>(data.length);
         for (var value : data) {
@@ -1475,6 +1699,9 @@ public final class CodeBuilder {
         return fill_array_data_internal(arr_ref_reg, 8, list);
     }
 
+    /**
+     * @param ex_reg u8
+     */
     public CodeBuilder throw_(int ex_reg) {
         return f11x(THROW, ex_reg, false);
     }
@@ -1579,6 +1806,9 @@ public final class CodeBuilder {
         return this;
     }
 
+    /**
+     * @param reg_to_test u8
+     */
     public CodeBuilder switch_(int reg_to_test, Map<Integer, String> table) {
         check_reg(reg_to_test);
         if (table.isEmpty()) {
@@ -1608,6 +1838,11 @@ public final class CodeBuilder {
         }
     }
 
+    /**
+     * @param dst_reg                u8
+     * @param first_src_reg_or_pair  u8
+     * @param second_src_reg_or_pair u8
+     */
     public CodeBuilder cmp_kind(Cmp kind, int dst_reg, int first_src_reg_or_pair,
                                 int second_src_reg_or_pair) {
         return f23x(kind.opcode, dst_reg, false,
@@ -1641,6 +1876,10 @@ public final class CodeBuilder {
         }
     }
 
+    /**
+     * @param first_reg_to_test  u4
+     * @param second_reg_to_test u4
+     */
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test,
                                Consumer<CodeBuilder> true_branch, Consumer<CodeBuilder> false_branch) {
         var true_label = new InternalLabel();
@@ -1654,8 +1893,12 @@ public final class CodeBuilder {
         return this;
     }
 
-    public CodeBuilder if_test(Test test, int first_reg_to_test,
-                               int second_reg_to_test, Consumer<CodeBuilder> true_branch) {
+    /**
+     * @param first_reg_to_test  u4
+     * @param second_reg_to_test u4
+     */
+    public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test,
+                               Consumer<CodeBuilder> true_branch) {
         var end_label = new InternalLabel();
         if_test_internal(test.inverse(), first_reg_to_test, second_reg_to_test, end_label);
         true_branch.accept(this);
@@ -1663,7 +1906,8 @@ public final class CodeBuilder {
         return this;
     }
 
-    private CodeBuilder if_test_internal(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
+    private CodeBuilder if_test_internal(Test test, int first_reg_to_test,
+                                         int second_reg_to_test, Object label) {
         check_reg_or_pair(first_reg_to_test, false);
         check_reg_or_pair(second_reg_to_test, false);
         add(new BuilderNode() {
@@ -1713,20 +1957,34 @@ public final class CodeBuilder {
         return this;
     }
 
-    public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test, String label) {
+    /**
+     * @param first_reg_to_test  u4
+     * @param second_reg_to_test u4
+     */
+    public CodeBuilder if_test(Test test, int first_reg_to_test,
+                               int second_reg_to_test, String label) {
         return if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
     }
 
-    private CodeBuilder raw_if_test_internal(Test test, int first_reg_to_test, int second_reg_to_test, Object label) {
+    private CodeBuilder raw_if_test_internal(Test test, int first_reg_to_test,
+                                             int second_reg_to_test, Object label) {
         return f22t(test.test, first_reg_to_test, false,
                 second_reg_to_test, false,
                 self -> branchOffset(self, label));
     }
 
-    public CodeBuilder raw_if_test(Test test, int first_reg_to_test, int second_reg_to_test, String label) {
+    /**
+     * @param first_reg_to_test  u4
+     * @param second_reg_to_test u4
+     */
+    public CodeBuilder raw_if_test(Test test, int first_reg_to_test,
+                                   int second_reg_to_test, String label) {
         return raw_if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
     }
 
+    /**
+     * @param reg_to_test u8
+     */
     public CodeBuilder if_testz(Test test, int reg_to_test,
                                 Consumer<CodeBuilder> true_branch,
                                 Consumer<CodeBuilder> false_branch) {
@@ -1741,7 +1999,11 @@ public final class CodeBuilder {
         return this;
     }
 
-    public CodeBuilder if_testz(Test test, int reg_to_test, Consumer<CodeBuilder> true_branch) {
+    /**
+     * @param reg_to_test u8
+     */
+    public CodeBuilder if_testz(Test test, int reg_to_test,
+                                Consumer<CodeBuilder> true_branch) {
         var end_label = new InternalLabel();
         if_testz_internal(test.inverse(), reg_to_test, end_label);
         true_branch.accept(this);
@@ -1797,6 +2059,9 @@ public final class CodeBuilder {
         return this;
     }
 
+    /**
+     * @param reg_to_test u8
+     */
     public CodeBuilder if_testz(Test test, int reg_to_test, String label) {
         return if_testz_internal(test, reg_to_test, label);
     }
@@ -1806,6 +2071,9 @@ public final class CodeBuilder {
                 self -> branchOffset(self, label));
     }
 
+    /**
+     * @param reg_to_test u8
+     */
     public CodeBuilder raw_if_testz(Test test, int reg_to_test, String label) {
         return raw_if_testz_internal(test, reg_to_test, label);
     }
@@ -1837,15 +2105,27 @@ public final class CodeBuilder {
         }
     }
 
+    /**
+     * @param value_reg_or_pair u8
+     * @param array_reg         u8
+     * @param index_reg         u8
+     */
     public CodeBuilder aop(Op op, int value_reg_or_pair, int array_reg, int index_reg) {
         return f23x(op.aop, value_reg_or_pair, op.isWide,
                 array_reg, false, index_reg, false);
     }
 
+    /**
+     * @param value_reg_or_pair u4
+     * @param object_reg        u4
+     */
     public CodeBuilder iop(Op op, int value_reg_or_pair, int object_reg, FieldId instance_field) {
         return f22c(op.iop, value_reg_or_pair, op.isWide, object_reg, false, instance_field);
     }
 
+    /**
+     * @param value_reg_or_pair u8
+     */
     public CodeBuilder sop(Op op, int value_reg_or_pair, FieldId static_field) {
         return f21c(op.sop, value_reg_or_pair, op.isWide, static_field);
     }
@@ -1876,29 +2156,55 @@ public final class CodeBuilder {
         };
     }
 
+    /**
+     * @param shorty            any of Z B S C I F J D L
+     * @param value_reg_or_pair u8
+     * @param array_reg         u8
+     * @param index_reg         u8
+     */
     public CodeBuilder aget(char shorty, int value_reg_or_pair, int array_reg, int index_reg) {
         return aop(op_get_shorty(shorty), value_reg_or_pair, array_reg, index_reg);
     }
 
+    /**
+     * @param shorty            any of Z B S C I F J D L
+     * @param value_reg_or_pair u8
+     * @param array_reg         u8
+     * @param index_reg         u8
+     */
     public CodeBuilder aput(char shorty, int value_reg_or_pair, int array_reg, int index_reg) {
         return aop(op_put_shorty(shorty), value_reg_or_pair, array_reg, index_reg);
     }
 
+    /**
+     * @param value_reg_or_pair u4
+     * @param object_reg        u4
+     */
     public CodeBuilder iget(int value_reg_or_pair, int object_reg, FieldId instance_field) {
         return iop(op_get_shorty(instance_field.getType().getShorty()),
                 value_reg_or_pair, object_reg, instance_field);
     }
 
+    /**
+     * @param value_reg_or_pair u4
+     * @param object_reg        u4
+     */
     public CodeBuilder iput(int value_reg_or_pair, int object_reg, FieldId instance_field) {
         return iop(op_put_shorty(instance_field.getType().getShorty()),
                 value_reg_or_pair, object_reg, instance_field);
     }
 
+    /**
+     * @param value_reg_or_pair u8
+     */
     public CodeBuilder sget(int value_reg_or_pair, FieldId static_field) {
         return sop(op_get_shorty(static_field.getType().getShorty()),
                 value_reg_or_pair, static_field);
     }
 
+    /**
+     * @param value_reg_or_pair u8
+     */
     public CodeBuilder sput(int value_reg_or_pair, FieldId static_field) {
         return sop(op_put_shorty(static_field.getType().getShorty()),
                 value_reg_or_pair, static_field);
@@ -1919,31 +2225,64 @@ public final class CodeBuilder {
         }
     }
 
+    /**
+     * @param arg_count 0 - 5
+     * @param arg_reg1  u4, must be 0 if arg_count < 1
+     * @param arg_reg2  u4, must be 0 if arg_count < 2
+     * @param arg_reg3  u4, must be 0 if arg_count < 3
+     * @param arg_reg4  u4, must be 0 if arg_count < 4
+     * @param arg_reg5  u4, must be 0 if arg_count < 5
+     */
     public CodeBuilder invoke(InvokeKind kind, MethodId method, int arg_count, int arg_reg1,
                               int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         return f35c(kind.regular, method, arg_count,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     * @param arg_reg4 u4
+     * @param arg_reg5 u4
+     */
     public CodeBuilder invoke(InvokeKind kind, MethodId method, int arg_reg1,
                               int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         return invoke(kind, method, 5, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     * @param arg_reg4 u4
+     */
     public CodeBuilder invoke(InvokeKind kind, MethodId method, int arg_reg1,
                               int arg_reg2, int arg_reg3, int arg_reg4) {
         return invoke(kind, method, 4, arg_reg1, arg_reg2, arg_reg3, arg_reg4, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     */
     public CodeBuilder invoke(InvokeKind kind, MethodId method,
                               int arg_reg1, int arg_reg2, int arg_reg3) {
         return invoke(kind, method, 3, arg_reg1, arg_reg2, arg_reg3, 0, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     */
     public CodeBuilder invoke(InvokeKind kind, MethodId method, int arg_reg1, int arg_reg2) {
         return invoke(kind, method, 2, arg_reg1, arg_reg2, 0, 0, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     */
     public CodeBuilder invoke(InvokeKind kind, MethodId method, int arg_reg1) {
         return invoke(kind, method, 1, arg_reg1, 0, 0, 0, 0);
     }
@@ -1952,6 +2291,10 @@ public final class CodeBuilder {
         return invoke(kind, method, 0, 0, 0, 0, 0, 0);
     }
 
+    /**
+     * @param arg_count     u8
+     * @param first_arg_reg u16
+     */
     public CodeBuilder invoke_range(InvokeKind kind, MethodId method,
                                     int arg_count, int first_arg_reg) {
         return f3rc(kind.range, method, arg_count, first_arg_reg);
@@ -1995,10 +2338,19 @@ public final class CodeBuilder {
         }
     }
 
+    /**
+     * @param dst_reg_or_pair u4
+     * @param src_reg_or_pair u4
+     */
     public CodeBuilder unop(UnOp op, int dst_reg_or_pair, int src_reg_or_pair) {
         return f12x(op.opcode, dst_reg_or_pair, op.isDstWide, src_reg_or_pair, op.isSrcWide);
     }
 
+    /**
+     * @param shorty          any of B S C I F J D
+     * @param dst_reg_or_pair u4
+     * @param src_reg_or_pair u4
+     */
     public CodeBuilder neg(char shorty, int dst_reg_or_pair, int src_reg_or_pair) {
         return switch (shorty) {
             case 'B' -> unop(UnOp.NEG_INT, dst_reg_or_pair, src_reg_or_pair).
@@ -2015,6 +2367,11 @@ public final class CodeBuilder {
         };
     }
 
+    /**
+     * @param shorty          any of Z B S C I J
+     * @param dst_reg_or_pair u4
+     * @param src_reg_or_pair u4
+     */
     public CodeBuilder not(char shorty, int dst_reg_or_pair, int src_reg_or_pair) {
         return switch (shorty) {
             case 'Z' -> binop_lit(BinOp.XOR_INT, dst_reg_or_pair, src_reg_or_pair, 0x1);
@@ -2030,6 +2387,12 @@ public final class CodeBuilder {
         };
     }
 
+    /**
+     * @param dst_shorty      any of Z B S C I F J D
+     * @param dst_reg_or_pair u4
+     * @param src_shorty      any of Z B S C I F J D
+     * @param src_reg_or_pair u4
+     */
     public CodeBuilder cast_numeric(char dst_shorty, int dst_reg_or_pair,
                                     char src_shorty, int src_reg_or_pair) {
         return switch (dst_shorty) {
@@ -2149,7 +2512,8 @@ public final class CodeBuilder {
         private final Opcode regular, _2addr, lit16, lit8;
         private final boolean isDstAndSrc1Wide, isSrc2Wide;
 
-        BinOp(Opcode regular, Opcode _2addr, Opcode lit16, Opcode lit8, boolean isDstAndSrc1Wide, boolean isSrc2Wide) {
+        BinOp(Opcode regular, Opcode _2addr, Opcode lit16, Opcode lit8,
+              boolean isDstAndSrc1Wide, boolean isSrc2Wide) {
             this.regular = regular;
             this._2addr = _2addr;
             this.lit16 = lit16;
@@ -2163,6 +2527,11 @@ public final class CodeBuilder {
         }
     }
 
+    /**
+     * @param dst_reg_or_pair        u8
+     * @param first_src_reg_or_pair  u8
+     * @param second_src_reg_or_pair u8
+     */
     public CodeBuilder raw_binop(BinOp op, int dst_reg_or_pair,
                                  int first_src_reg_or_pair, int second_src_reg_or_pair) {
         if (op.regular == null) {
@@ -2173,6 +2542,10 @@ public final class CodeBuilder {
                 second_src_reg_or_pair, op.isSrc2Wide);
     }
 
+    /**
+     * @param dst_and_first_src_reg_or_pair u4
+     * @param second_src_reg_or_pair        u4
+     */
     public CodeBuilder raw_binop_2addr(BinOp op, int dst_and_first_src_reg_or_pair,
                                        int second_src_reg_or_pair) {
         if (op._2addr == null) {
@@ -2182,6 +2555,11 @@ public final class CodeBuilder {
                 op.isDstAndSrc1Wide, second_src_reg_or_pair, op.isSrc2Wide);
     }
 
+    /**
+     * @param dst_reg_or_pair        u8
+     * @param first_src_reg_or_pair  u8
+     * @param second_src_reg_or_pair u8
+     */
     public CodeBuilder binop(BinOp op, int dst_reg_or_pair,
                              int first_src_reg_or_pair, int second_src_reg_or_pair) {
         if (op == BinOp.RSUB_INT) {
@@ -2198,6 +2576,11 @@ public final class CodeBuilder {
         return raw_binop(op, dst_reg_or_pair, first_src_reg_or_pair, second_src_reg_or_pair);
     }
 
+    /**
+     * @param dst_reg u4
+     * @param src_reg u4
+     * @param value   s16
+     */
     public CodeBuilder raw_binop_lit16(BinOp op, int dst_reg, int src_reg, int value) {
         if (op.lit16 == null) {
             throw new IllegalArgumentException("There is no lit16 version of " + op);
@@ -2205,6 +2588,11 @@ public final class CodeBuilder {
         return f22s(op.lit16, dst_reg, false, src_reg, false, value);
     }
 
+    /**
+     * @param dst_reg u8
+     * @param src_reg u8
+     * @param value   s8
+     */
     public CodeBuilder raw_binop_lit8(BinOp op, int dst_reg, int src_reg, int value) {
         if (op.lit8 == null) {
             throw new IllegalArgumentException("There is no lit8 version of " + op);
@@ -2212,6 +2600,8 @@ public final class CodeBuilder {
         return f22b(op.lit8, dst_reg, false, src_reg, false, value);
     }
 
+    // TODO: javadoc
+    // TODO: binop_lit_wide
     public CodeBuilder binop_lit(BinOp op, int dst_reg, int src_reg, int value) {
         if (op == BinOp.SUB_INT) {
             op = BinOp.ADD_INT;
@@ -2226,36 +2616,69 @@ public final class CodeBuilder {
         return raw_binop_lit16(op, dst_reg, src_reg, value);
     }
 
+    /**
+     * @param arg_count 0 - 5
+     * @param arg_reg1  u4, must be 0 if arg_count < 1
+     * @param arg_reg2  u4, must be 0 if arg_count < 2
+     * @param arg_reg3  u4, must be 0 if arg_count < 3
+     * @param arg_reg4  u4, must be 0 if arg_count < 4
+     * @param arg_reg5  u4, must be 0 if arg_count < 5
+     */
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_count, int arg_reg1,
                                           int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         return f45cc(INVOKE_POLYMORPHIC, method, proto, arg_count,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     * @param arg_reg4 u4
+     * @param arg_reg5 u4
+     */
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_reg1,
                                           int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         return invoke_polymorphic(method, proto, 5, arg_reg1,
                 arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     * @param arg_reg4 u4
+     */
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_reg1,
                                           int arg_reg2, int arg_reg3, int arg_reg4) {
         return invoke_polymorphic(method, proto, 4, arg_reg1,
                 arg_reg2, arg_reg3, arg_reg4, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     */
     public CodeBuilder invoke_polymorphic(
             MethodId method, ProtoId proto, int arg_reg1, int arg_reg2, int arg_reg3) {
         return invoke_polymorphic(method, proto, 3, arg_reg1,
                 arg_reg2, arg_reg3, 0, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     */
     public CodeBuilder invoke_polymorphic(
             MethodId method, ProtoId proto, int arg_reg1, int arg_reg2) {
         return invoke_polymorphic(method, proto, 2, arg_reg1,
                 arg_reg2, 0, 0, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     */
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_reg1) {
         return invoke_polymorphic(method, proto, 1, arg_reg1,
                 0, 0, 0, 0);
@@ -2266,40 +2689,77 @@ public final class CodeBuilder {
                 0, 0, 0, 0);
     }
 
+    /**
+     * @param arg_count     u8
+     * @param first_arg_reg u16
+     */
     public CodeBuilder invoke_polymorphic_range(
             MethodId method, ProtoId proto, int arg_count, int first_arg_reg) {
         return f4rcc(INVOKE_POLYMORPHIC_RANGE, method, proto, arg_count, first_arg_reg);
     }
 
+    /**
+     * @param arg_count 0 - 5
+     * @param arg_reg1  u4, must be 0 if arg_count < 1
+     * @param arg_reg2  u4, must be 0 if arg_count < 2
+     * @param arg_reg3  u4, must be 0 if arg_count < 3
+     * @param arg_reg4  u4, must be 0 if arg_count < 4
+     * @param arg_reg5  u4, must be 0 if arg_count < 5
+     */
     public CodeBuilder invoke_custom(CallSiteId callsite, int arg_count, int arg_reg1,
                                      int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         return f35c(INVOKE_CUSTOM, callsite, arg_count,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     * @param arg_reg4 u4
+     * @param arg_reg5 u4
+     */
     public CodeBuilder invoke_custom(CallSiteId callsite, int arg_reg1, int arg_reg2,
                                      int arg_reg3, int arg_reg4, int arg_reg5) {
         return invoke_custom(callsite, 5,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     * @param arg_reg4 u4
+     */
     public CodeBuilder invoke_custom(CallSiteId callsite, int arg_reg1,
                                      int arg_reg2, int arg_reg3, int arg_reg4) {
         return invoke_custom(callsite, 4,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     * @param arg_reg3 u4
+     */
     public CodeBuilder invoke_custom(
             CallSiteId callsite, int arg_reg1, int arg_reg2, int arg_reg3) {
         return invoke_custom(callsite, 3,
                 arg_reg1, arg_reg2, arg_reg3, 0, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     * @param arg_reg2 u4
+     */
     public CodeBuilder invoke_custom(CallSiteId callsite, int arg_reg1, int arg_reg2) {
         return invoke_custom(callsite, 2,
                 arg_reg1, arg_reg2, 0, 0, 0);
     }
 
+    /**
+     * @param arg_reg1 u4
+     */
     public CodeBuilder invoke_custom(CallSiteId callsite, int arg_reg1) {
         return invoke_custom(callsite, 1,
                 arg_reg1, 0, 0, 0, 0);
@@ -2310,14 +2770,24 @@ public final class CodeBuilder {
                 0, 0, 0, 0, 0);
     }
 
+    /**
+     * @param arg_count     u8
+     * @param first_arg_reg u16
+     */
     public CodeBuilder invoke_custom_range(CallSiteId callsite, int arg_count, int first_arg_reg) {
         return f3rc(INVOKE_POLYMORPHIC_RANGE, callsite, arg_count, first_arg_reg);
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder const_method_handle(int dst_reg, MethodHandleId value) {
         return f21c(CONST_METHOD_HANDLE, dst_reg, false, value);
     }
 
+    /**
+     * @param dst_reg u8
+     */
     public CodeBuilder const_method_type(int dst_reg, ProtoId value) {
         return f21c(CONST_METHOD_TYPE, dst_reg, false, value);
     }

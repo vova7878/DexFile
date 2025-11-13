@@ -63,4 +63,6 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
     public static WriteOptions defaultOptions() {
         return new WriteOptions();
     }
+
+    // TODO: option for auto-rewrite const_string to const_string_jumbo
 }
