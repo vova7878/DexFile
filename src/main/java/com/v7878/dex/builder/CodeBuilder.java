@@ -814,15 +814,6 @@ public final class CodeBuilder {
                 "arg_count == 0, but arg_reg1 != 0");
     }
 
-    public CodeBuilder raw(Instruction instruction) {
-        add(instruction);
-        return this;
-    }
-
-    public CodeBuilder raw(short instruction) {
-        return raw(InstructionRaw.of(instruction));
-    }
-
     // <ØØ|op> op
     private CodeBuilder f10x(Opcode op) {
         add(Instruction10x.of(op));
@@ -1076,6 +1067,15 @@ public final class CodeBuilder {
     private void fill_array_data_payload(int element_width, List<? extends Number> data) {
         int units = Preconditions.getArrayPayloadUnitCount(element_width, data.size());
         addPayload(units, () -> ArrayPayload.raw(element_width, data));
+    }
+
+    public CodeBuilder raw(Instruction instruction) {
+        add(instruction);
+        return this;
+    }
+
+    public CodeBuilder raw(short instruction) {
+        return raw(InstructionRaw.of(instruction));
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -1435,6 +1435,7 @@ public final class CodeBuilder {
 
     /**
      * @param dst_reg u8
+     * @param value   u16 ref
      */
     public CodeBuilder raw_const_string(int dst_reg, String value) {
         return f21c(CONST_STRING, dst_reg, false, value);
@@ -1442,6 +1443,7 @@ public final class CodeBuilder {
 
     /**
      * @param dst_reg u8
+     * @param value   u32 ref
      */
     public CodeBuilder raw_const_string_jumbo(int dst_reg, String value) {
         return f31c(CONST_STRING_JUMBO, dst_reg, false, value);
@@ -1449,6 +1451,7 @@ public final class CodeBuilder {
 
     /**
      * @param dst_reg u8
+     * @param value   u32 ref
      */
     public CodeBuilder const_string(int dst_reg, String value) {
         //TODO: Generate smaller instructions if possible
@@ -1457,6 +1460,7 @@ public final class CodeBuilder {
 
     /**
      * @param dst_reg u8
+     * @param value   u16 ref
      */
     public CodeBuilder const_class(int dst_reg, TypeId value) {
         return f21c(CONST_CLASS, dst_reg, false, value);
@@ -1478,6 +1482,7 @@ public final class CodeBuilder {
 
     /**
      * @param ref_reg u8
+     * @param value   u16 ref
      */
     public CodeBuilder check_cast(int ref_reg, TypeId value) {
         return f21c(CHECK_CAST, ref_reg, false, value);
@@ -1486,6 +1491,7 @@ public final class CodeBuilder {
     /**
      * @param dst_reg u4
      * @param ref_reg u4
+     * @param value   u16 ref
      */
     public CodeBuilder instance_of(int dst_reg, int ref_reg, TypeId value) {
         return f22c(INSTANCE_OF, dst_reg, false, ref_reg, false, value);
@@ -1493,6 +1499,7 @@ public final class CodeBuilder {
 
     /**
      * @param dst_reg u8
+     * @param value   u16 ref
      */
     public CodeBuilder new_instance(int dst_reg, TypeId value) {
         return f21c(NEW_INSTANCE, dst_reg, false, value);
@@ -1501,12 +1508,14 @@ public final class CodeBuilder {
     /**
      * @param dst_reg  u4
      * @param size_reg u4
+     * @param value    u16 ref
      */
     public CodeBuilder new_array(int dst_reg, int size_reg, TypeId value) {
         return f22c(NEW_ARRAY, dst_reg, false, size_reg, false, value);
     }
 
     /**
+     * @param type     u16 ref
      * @param arr_size 0 - 5
      * @param arg_reg1 u4, must be 0 if arr_size < 1
      * @param arg_reg2 u4, must be 0 if arr_size < 2
@@ -1521,6 +1530,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param type     u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -1533,6 +1543,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param type     u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -1544,6 +1555,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param type     u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -1554,6 +1566,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param type     u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      */
@@ -1562,17 +1575,22 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param type     u16 ref
      * @param arg_reg1 u4
      */
     public CodeBuilder filled_new_array(TypeId type, int arg_reg1) {
         return filled_new_array(type, 1, arg_reg1, 0, 0, 0, 0);
     }
 
+    /**
+     * @param type u16 ref
+     */
     public CodeBuilder filled_new_array(TypeId type) {
         return filled_new_array(type, 0, 0, 0, 0, 0, 0);
     }
 
     /**
+     * @param type          u16 ref
      * @param arr_size      u8
      * @param first_arg_reg u16
      */
@@ -1744,6 +1762,9 @@ public final class CodeBuilder {
         return this;
     }
 
+    /**
+     * @param label s32 label
+     */
     public CodeBuilder goto_(String label) {
         return goto_internal(label);
     }
@@ -1752,6 +1773,9 @@ public final class CodeBuilder {
         return f10t(GOTO, self -> branchOffset(self, label));
     }
 
+    /**
+     * @param label s8 label
+     */
     public CodeBuilder raw_goto(String label) {
         return raw_goto_internal(label);
     }
@@ -1760,6 +1784,9 @@ public final class CodeBuilder {
         return f20t(GOTO_16, self -> branchOffset(self, label));
     }
 
+    /**
+     * @param label s16 label
+     */
     public CodeBuilder raw_goto_16(String label) {
         return raw_goto_16_internal(label);
     }
@@ -1768,6 +1795,9 @@ public final class CodeBuilder {
         return f30t(GOTO_32, self -> branchOffset(self, label, true));
     }
 
+    /**
+     * @param label s32 label
+     */
     public CodeBuilder raw_goto_32(String label) {
         return raw_goto_32_internal(label);
     }
@@ -1960,6 +1990,7 @@ public final class CodeBuilder {
     /**
      * @param first_reg_to_test  u4
      * @param second_reg_to_test u4
+     * @param label              s32 label
      */
     public CodeBuilder if_test(Test test, int first_reg_to_test,
                                int second_reg_to_test, String label) {
@@ -1976,6 +2007,7 @@ public final class CodeBuilder {
     /**
      * @param first_reg_to_test  u4
      * @param second_reg_to_test u4
+     * @param label              s16 label
      */
     public CodeBuilder raw_if_test(Test test, int first_reg_to_test,
                                    int second_reg_to_test, String label) {
@@ -2061,6 +2093,7 @@ public final class CodeBuilder {
 
     /**
      * @param reg_to_test u8
+     * @param label       s32 label
      */
     public CodeBuilder if_testz(Test test, int reg_to_test, String label) {
         return if_testz_internal(test, reg_to_test, label);
@@ -2073,6 +2106,7 @@ public final class CodeBuilder {
 
     /**
      * @param reg_to_test u8
+     * @param label       s16 label
      */
     public CodeBuilder raw_if_testz(Test test, int reg_to_test, String label) {
         return raw_if_testz_internal(test, reg_to_test, label);
@@ -2118,6 +2152,7 @@ public final class CodeBuilder {
     /**
      * @param value_reg_or_pair u4
      * @param object_reg        u4
+     * @param instance_field    u16 ref
      */
     public CodeBuilder iop(Op op, int value_reg_or_pair, int object_reg, FieldId instance_field) {
         return f22c(op.iop, value_reg_or_pair, op.isWide, object_reg, false, instance_field);
@@ -2125,6 +2160,7 @@ public final class CodeBuilder {
 
     /**
      * @param value_reg_or_pair u8
+     * @param static_field      u16 ref
      */
     public CodeBuilder sop(Op op, int value_reg_or_pair, FieldId static_field) {
         return f21c(op.sop, value_reg_or_pair, op.isWide, static_field);
@@ -2179,6 +2215,7 @@ public final class CodeBuilder {
     /**
      * @param value_reg_or_pair u4
      * @param object_reg        u4
+     * @param instance_field    u16 ref
      */
     public CodeBuilder iget(int value_reg_or_pair, int object_reg, FieldId instance_field) {
         return iop(op_get_shorty(instance_field.getType().getShorty()),
@@ -2188,6 +2225,7 @@ public final class CodeBuilder {
     /**
      * @param value_reg_or_pair u4
      * @param object_reg        u4
+     * @param instance_field    u16 ref
      */
     public CodeBuilder iput(int value_reg_or_pair, int object_reg, FieldId instance_field) {
         return iop(op_put_shorty(instance_field.getType().getShorty()),
@@ -2196,6 +2234,7 @@ public final class CodeBuilder {
 
     /**
      * @param value_reg_or_pair u8
+     * @param static_field      u16 ref
      */
     public CodeBuilder sget(int value_reg_or_pair, FieldId static_field) {
         return sop(op_get_shorty(static_field.getType().getShorty()),
@@ -2204,6 +2243,7 @@ public final class CodeBuilder {
 
     /**
      * @param value_reg_or_pair u8
+     * @param static_field      u16 ref
      */
     public CodeBuilder sput(int value_reg_or_pair, FieldId static_field) {
         return sop(op_put_shorty(static_field.getType().getShorty()),
@@ -2226,6 +2266,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method    u16 ref
      * @param arg_count 0 - 5
      * @param arg_reg1  u4, must be 0 if arg_count < 1
      * @param arg_reg2  u4, must be 0 if arg_count < 2
@@ -2240,6 +2281,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -2252,6 +2294,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -2263,6 +2306,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -2273,6 +2317,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      */
@@ -2281,17 +2326,22 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
      * @param arg_reg1 u4
      */
     public CodeBuilder invoke(InvokeKind kind, MethodId method, int arg_reg1) {
         return invoke(kind, method, 1, arg_reg1, 0, 0, 0, 0);
     }
 
+    /**
+     * @param method u16 ref
+     */
     public CodeBuilder invoke(InvokeKind kind, MethodId method) {
         return invoke(kind, method, 0, 0, 0, 0, 0, 0);
     }
 
     /**
+     * @param method        u16 ref
      * @param arg_count     u8
      * @param first_arg_reg u16
      */
@@ -2617,6 +2667,8 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method    u16 ref
+     * @param proto     u16 ref
      * @param arg_count 0 - 5
      * @param arg_reg1  u4, must be 0 if arg_count < 1
      * @param arg_reg2  u4, must be 0 if arg_count < 2
@@ -2631,6 +2683,8 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
+     * @param proto    u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -2644,6 +2698,8 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
+     * @param proto    u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -2656,6 +2712,8 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
+     * @param proto    u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -2667,6 +2725,8 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
+     * @param proto    u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      */
@@ -2677,6 +2737,8 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method   u16 ref
+     * @param proto    u16 ref
      * @param arg_reg1 u4
      */
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int arg_reg1) {
@@ -2684,12 +2746,18 @@ public final class CodeBuilder {
                 0, 0, 0, 0);
     }
 
+    /**
+     * @param method u16 ref
+     * @param proto  u16 ref
+     */
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto) {
         return invoke_polymorphic(method, proto, 0, 0,
                 0, 0, 0, 0);
     }
 
     /**
+     * @param method        u16 ref
+     * @param proto         u16 ref
      * @param arg_count     u8
      * @param first_arg_reg u16
      */
@@ -2699,6 +2767,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param callsite  u16 ref
      * @param arg_count 0 - 5
      * @param arg_reg1  u4, must be 0 if arg_count < 1
      * @param arg_reg2  u4, must be 0 if arg_count < 2
@@ -2713,6 +2782,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param callsite u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -2726,6 +2796,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param callsite u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -2738,6 +2809,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param callsite u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      * @param arg_reg3 u4
@@ -2749,6 +2821,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param callsite u16 ref
      * @param arg_reg1 u4
      * @param arg_reg2 u4
      */
@@ -2758,6 +2831,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param callsite u16 ref
      * @param arg_reg1 u4
      */
     public CodeBuilder invoke_custom(CallSiteId callsite, int arg_reg1) {
@@ -2765,12 +2839,16 @@ public final class CodeBuilder {
                 arg_reg1, 0, 0, 0, 0);
     }
 
+    /**
+     * @param callsite u16 ref
+     */
     public CodeBuilder invoke_custom(CallSiteId callsite) {
         return invoke_custom(callsite, 0,
                 0, 0, 0, 0, 0);
     }
 
     /**
+     * @param callsite      u16 ref
      * @param arg_count     u8
      * @param first_arg_reg u16
      */
@@ -2779,6 +2857,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param value   u16 ref
      * @param dst_reg u8
      */
     public CodeBuilder const_method_handle(int dst_reg, MethodHandleId value) {
@@ -2786,6 +2865,7 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param value   u16 ref
      * @param dst_reg u8
      */
     public CodeBuilder const_method_type(int dst_reg, ProtoId value) {
