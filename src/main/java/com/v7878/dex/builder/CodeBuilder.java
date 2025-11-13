@@ -2651,11 +2651,11 @@ public final class CodeBuilder {
     }
 
     /**
-     * @param dst_reg u8
-     * @param src_reg u8
-     * @param value   s32
+     * @param dst_reg_or_pair u8
+     * @param src_reg_or_pair u8
+     * @param value           s32
      */
-    public CodeBuilder binop_lit(BinOp op, int dst_reg, int src_reg, int value) {
+    public CodeBuilder binop_lit(BinOp op, int dst_reg_or_pair, int src_reg_or_pair, int value) {
         if (op == BinOp.SUB_INT) {
             op = BinOp.ADD_INT;
             value = -value;
@@ -2664,34 +2664,36 @@ public final class CodeBuilder {
             value &= 0x1f;
         }
         if (op.lit8 != null && check_width_int(value, 8)) {
-            return raw_binop_lit8(op, dst_reg, src_reg, value);
+            return raw_binop_lit8(op, dst_reg_or_pair, src_reg_or_pair, value);
         }
         // These operations should always be placed as binop_lit8
         assert !(op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT);
-        if (op.lit16 != null && (dst_reg < 1 << 4) && (src_reg < 1 << 4)
+        if (op.lit16 != null && (dst_reg_or_pair < 1 << 4)
+                && (src_reg_or_pair < 1 << 4)
                 && check_width_int(value, 16)) {
-            return raw_binop_lit16(op, dst_reg, src_reg, value);
+            return raw_binop_lit16(op, dst_reg_or_pair, src_reg_or_pair, value);
         }
         int final_value = value;
         return if_(op.isSrc2Wide, ib ->
-                const_wide(dst_reg, final_value), ib ->
-                const_(dst_reg, final_value))
-                .binop(op, dst_reg, src_reg, dst_reg);
+                const_wide(dst_reg_or_pair, final_value), ib ->
+                const_(dst_reg_or_pair, final_value))
+                .binop(op, dst_reg_or_pair, src_reg_or_pair, dst_reg_or_pair);
     }
 
     /**
-     * @param dst_reg u8
-     * @param src_reg u8
-     * @param value   s64
+     * @param dst_reg_pair u8
+     * @param src_reg_pair u8
+     * @param value        s64
      */
-    public CodeBuilder binop_lit_wide(BinOp op, int dst_reg, int src_reg, long value) {
+    public CodeBuilder binop_lit_wide(BinOp op, int dst_reg_pair, int src_reg_pair, long value) {
         if (!op.isDstAndSrc1Wide) {
             throw new IllegalArgumentException(op + " is not wide operation");
         }
         return if_(op.isSrc2Wide, ib ->
-                const_wide(dst_reg, value), ib ->
-                const_(dst_reg, (int) value))
-                .binop(op, dst_reg, src_reg, dst_reg);
+                const_wide(dst_reg_pair, value), ib ->
+                // only shift operations
+                const_(dst_reg_pair, (int) value))
+                .binop(op, dst_reg_pair, src_reg_pair, dst_reg_pair);
     }
 
     /**
