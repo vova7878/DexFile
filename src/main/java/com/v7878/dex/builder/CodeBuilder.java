@@ -2650,8 +2650,11 @@ public final class CodeBuilder {
         return f22b(op.lit8, dst_reg, false, src_reg, false, value);
     }
 
-    // TODO: javadoc
-    // TODO: binop_lit_wide
+    /**
+     * @param dst_reg u8
+     * @param src_reg u8
+     * @param value   s32
+     */
     public CodeBuilder binop_lit(BinOp op, int dst_reg, int src_reg, int value) {
         if (op == BinOp.SUB_INT) {
             op = BinOp.ADD_INT;
@@ -2660,10 +2663,32 @@ public final class CodeBuilder {
         if (op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT) {
             value &= 0x1f;
         }
-        if (check_width_int(value, 8)) {
+        if (op.lit8 != null && check_width_int(value, 8)) {
             return raw_binop_lit8(op, dst_reg, src_reg, value);
         }
-        return raw_binop_lit16(op, dst_reg, src_reg, value);
+        // These operations should always be placed as binop_lit8
+        assert !(op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT);
+        if (op.lit16 != null && (dst_reg < 1 << 4) && (src_reg < 1 << 4)
+                && check_width_int(value, 16)) {
+            return raw_binop_lit16(op, dst_reg, src_reg, value);
+        }
+        int final_value = value;
+        return if_(op.isDstAndSrc1Wide, ib ->
+                const_wide(dst_reg, final_value), ib ->
+                const_(dst_reg, final_value))
+                .binop(op, dst_reg, src_reg, dst_reg);
+    }
+
+    /**
+     * @param dst_reg u8
+     * @param src_reg u8
+     * @param value   s64
+     */
+    public CodeBuilder binop_lit_wide(BinOp op, int dst_reg, int src_reg, long value) {
+        if (!op.isDstAndSrc1Wide) {
+            throw new IllegalArgumentException(op + " is not wide operation");
+        }
+        return const_wide(dst_reg, value).binop(op, dst_reg, src_reg, dst_reg);
     }
 
     /**
