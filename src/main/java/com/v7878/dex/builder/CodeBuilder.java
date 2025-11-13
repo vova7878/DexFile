@@ -2184,6 +2184,12 @@ public final class CodeBuilder {
 
     public CodeBuilder binop(BinOp op, int dst_reg_or_pair,
                              int first_src_reg_or_pair, int second_src_reg_or_pair) {
+        if (op == BinOp.RSUB_INT) {
+            op = BinOp.SUB_INT;
+            int tmp = first_src_reg_or_pair;
+            first_src_reg_or_pair = second_src_reg_or_pair;
+            second_src_reg_or_pair = tmp;
+        }
         if (dst_reg_or_pair == first_src_reg_or_pair
                 && check_width_int(first_src_reg_or_pair, 4)
                 && check_width_int(second_src_reg_or_pair, 4)) {
@@ -2207,6 +2213,10 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder binop_lit(BinOp op, int dst_reg, int src_reg, int value) {
+        if (op == BinOp.SUB_INT) {
+            op = BinOp.ADD_INT;
+            value = -value;
+        }
         if (op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT) {
             value &= 0x1f;
         }
