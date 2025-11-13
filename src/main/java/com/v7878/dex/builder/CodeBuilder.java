@@ -2536,6 +2536,7 @@ public final class CodeBuilder {
         USHR_INT(Opcode.USHR_INT, USHR_INT_2ADDR, null, USHR_INT_LIT8, false, false),
 
         ADD_LONG(Opcode.ADD_LONG, ADD_LONG_2ADDR, true, true),
+        RSUB_LONG(null, null, null, null, true, true),
         SUB_LONG(Opcode.SUB_LONG, SUB_LONG_2ADDR, true, true),
         MUL_LONG(Opcode.MUL_LONG, MUL_LONG_2ADDR, true, true),
         DIV_LONG(Opcode.DIV_LONG, DIV_LONG_2ADDR, true, true),
@@ -2548,12 +2549,14 @@ public final class CodeBuilder {
         USHR_LONG(Opcode.USHR_LONG, USHR_LONG_2ADDR, true, false),
 
         ADD_FLOAT(Opcode.ADD_FLOAT, ADD_FLOAT_2ADDR, false, false),
+        RSUB_FLOAT(null, null, null, null, false, false),
         SUB_FLOAT(Opcode.SUB_FLOAT, SUB_FLOAT_2ADDR, false, false),
         MUL_FLOAT(Opcode.MUL_FLOAT, MUL_FLOAT_2ADDR, false, false),
         DIV_FLOAT(Opcode.DIV_FLOAT, DIV_FLOAT_2ADDR, false, false),
         REM_FLOAT(Opcode.REM_FLOAT, REM_FLOAT_2ADDR, false, false),
 
         ADD_DOUBLE(Opcode.ADD_DOUBLE, ADD_DOUBLE_2ADDR, true, true),
+        RSUB_DOUBLE(null, null, null, null, true, true),
         SUB_DOUBLE(Opcode.SUB_DOUBLE, SUB_DOUBLE_2ADDR, true, true),
         MUL_DOUBLE(Opcode.MUL_DOUBLE, MUL_DOUBLE_2ADDR, true, true),
         DIV_DOUBLE(Opcode.DIV_DOUBLE, DIV_DOUBLE_2ADDR, true, true),
@@ -2612,8 +2615,15 @@ public final class CodeBuilder {
      */
     public CodeBuilder binop(BinOp op, int dst_reg_or_pair,
                              int first_src_reg_or_pair, int second_src_reg_or_pair) {
-        if (op == BinOp.RSUB_INT) {
-            op = BinOp.SUB_INT;
+        boolean swap_src = true;
+        switch (op) {
+            case BinOp.RSUB_INT -> op = BinOp.SUB_INT;
+            case BinOp.RSUB_FLOAT -> op = BinOp.SUB_FLOAT;
+            case BinOp.RSUB_LONG -> op = BinOp.SUB_LONG;
+            case BinOp.RSUB_DOUBLE -> op = BinOp.SUB_DOUBLE;
+            default -> swap_src = false;
+        }
+        if (swap_src) {
             int tmp = first_src_reg_or_pair;
             first_src_reg_or_pair = second_src_reg_or_pair;
             second_src_reg_or_pair = tmp;
@@ -2624,6 +2634,16 @@ public final class CodeBuilder {
             return raw_binop_2addr(op, first_src_reg_or_pair, second_src_reg_or_pair);
         }
         return raw_binop(op, dst_reg_or_pair, first_src_reg_or_pair, second_src_reg_or_pair);
+    }
+
+    /**
+     * @param dst_and_first_src_reg_or_pair u8
+     * @param second_src_reg_or_pair        u8
+     */
+    public CodeBuilder binop_2addr(BinOp op, int dst_and_first_src_reg_or_pair,
+                                   int second_src_reg_or_pair) {
+        return binop(op, dst_and_first_src_reg_or_pair,
+                dst_and_first_src_reg_or_pair, second_src_reg_or_pair);
     }
 
     /**
@@ -2672,6 +2692,9 @@ public final class CodeBuilder {
                 && (src_reg_or_pair < 1 << 4)
                 && check_width_int(value, 16)) {
             return raw_binop_lit16(op, dst_reg_or_pair, src_reg_or_pair, value);
+        }
+        if (src_reg_or_pair == dst_reg_or_pair) {
+            throw new IllegalArgumentException("src and dst regs must be different");
         }
         int final_value = value;
         return if_(op.isSrc2Wide, ib ->
