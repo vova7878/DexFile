@@ -1516,7 +1516,7 @@ public final class CodeBuilder {
 
     /**
      * @param type     u16 ref
-     * @param arr_size 0 - 5
+     * @param arr_size [0, 5]
      * @param arg_reg1 u4, must be 0 if arr_size < 1
      * @param arg_reg2 u4, must be 0 if arr_size < 2
      * @param arg_reg3 u4, must be 0 if arr_size < 3
@@ -2267,7 +2267,7 @@ public final class CodeBuilder {
 
     /**
      * @param method    u16 ref
-     * @param arg_count 0 - 5
+     * @param arg_count [0, 5]
      * @param arg_reg1  u4, must be 0 if arg_count < 1
      * @param arg_reg2  u4, must be 0 if arg_count < 2
      * @param arg_reg3  u4, must be 0 if arg_count < 3
@@ -2669,7 +2669,7 @@ public final class CodeBuilder {
     /**
      * @param method    u16 ref
      * @param proto     u16 ref
-     * @param arg_count 0 - 5
+     * @param arg_count [0, 5]
      * @param arg_reg1  u4, must be 0 if arg_count < 1
      * @param arg_reg2  u4, must be 0 if arg_count < 2
      * @param arg_reg3  u4, must be 0 if arg_count < 3
@@ -2768,7 +2768,7 @@ public final class CodeBuilder {
 
     /**
      * @param callsite  u16 ref
-     * @param arg_count 0 - 5
+     * @param arg_count [0, 5]
      * @param arg_reg1  u4, must be 0 if arg_count < 1
      * @param arg_reg2  u4, must be 0 if arg_count < 2
      * @param arg_reg3  u4, must be 0 if arg_count < 3
