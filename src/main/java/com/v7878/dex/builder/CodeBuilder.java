@@ -2673,7 +2673,7 @@ public final class CodeBuilder {
             return raw_binop_lit16(op, dst_reg, src_reg, value);
         }
         int final_value = value;
-        return if_(op.isDstAndSrc1Wide, ib ->
+        return if_(op.isSrc2Wide, ib ->
                 const_wide(dst_reg, final_value), ib ->
                 const_(dst_reg, final_value))
                 .binop(op, dst_reg, src_reg, dst_reg);
@@ -2688,7 +2688,10 @@ public final class CodeBuilder {
         if (!op.isDstAndSrc1Wide) {
             throw new IllegalArgumentException(op + " is not wide operation");
         }
-        return const_wide(dst_reg, value).binop(op, dst_reg, src_reg, dst_reg);
+        return if_(op.isSrc2Wide, ib ->
+                const_wide(dst_reg, value), ib ->
+                const_(dst_reg, (int) value))
+                .binop(op, dst_reg, src_reg, dst_reg);
     }
 
     /**
