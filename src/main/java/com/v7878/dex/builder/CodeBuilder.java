@@ -2906,7 +2906,7 @@ public final class CodeBuilder {
      * @param first_arg_reg u16
      */
     public CodeBuilder invoke_custom_range(CallSiteId callsite, int arg_count, int first_arg_reg) {
-        return f3rc(INVOKE_POLYMORPHIC_RANGE, callsite, arg_count, first_arg_reg);
+        return f3rc(INVOKE_CUSTOM_RANGE, callsite, arg_count, first_arg_reg);
     }
 
     /**
