@@ -2617,10 +2617,10 @@ public final class CodeBuilder {
                              int first_src_reg_or_pair, int second_src_reg_or_pair) {
         boolean swap_src = true;
         switch (op) {
-            case BinOp.RSUB_INT -> op = BinOp.SUB_INT;
-            case BinOp.RSUB_FLOAT -> op = BinOp.SUB_FLOAT;
-            case BinOp.RSUB_LONG -> op = BinOp.SUB_LONG;
-            case BinOp.RSUB_DOUBLE -> op = BinOp.SUB_DOUBLE;
+            case RSUB_INT -> op = BinOp.SUB_INT;
+            case RSUB_FLOAT -> op = BinOp.SUB_FLOAT;
+            case RSUB_LONG -> op = BinOp.SUB_LONG;
+            case RSUB_DOUBLE -> op = BinOp.SUB_DOUBLE;
             default -> swap_src = false;
         }
         if (swap_src) {
