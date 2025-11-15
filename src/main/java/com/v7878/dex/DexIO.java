@@ -39,6 +39,8 @@ public final class DexIO {
             return section.get(index);
         }
 
+        DexVersion version();
+
         List<String> getStrings();
 
         List<TypeId> getTypes();

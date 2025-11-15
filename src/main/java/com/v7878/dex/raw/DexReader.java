@@ -345,6 +345,7 @@ public class DexReader implements DexIO.DexReaderCache {
         return options;
     }
 
+    @Override
     public DexVersion version() {
         return version;
     }
