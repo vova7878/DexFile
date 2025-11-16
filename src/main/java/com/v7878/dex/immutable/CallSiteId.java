@@ -58,7 +58,7 @@ public final class CallSiteId implements Comparable<CallSiteId> {
         return method_proto;
     }
 
-    public List<? extends EncodedValue> getExtraArguments() {
+    public List<EncodedValue> getExtraArguments() {
         return extra_arguments;
     }
 
