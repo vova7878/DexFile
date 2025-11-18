@@ -20,7 +20,7 @@ mavenPublishing {
     configure(
         JavaLibrary(
             sourcesJar = true,
-            javadocJar = JavadocJar.None(),
+            javadocJar = JavadocJar.Empty(),
         )
     )
 
