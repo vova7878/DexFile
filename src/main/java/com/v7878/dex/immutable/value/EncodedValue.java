@@ -1,5 +1,7 @@
 package com.v7878.dex.immutable.value;
 
+import static com.v7878.dex.util.ShortyUtils.invalidShorty;
+
 import com.v7878.dex.ValueType;
 import com.v7878.dex.immutable.CommonAnnotation;
 import com.v7878.dex.immutable.FieldId;
@@ -22,6 +24,10 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
         EncodedNull, EncodedShort, EncodedString, EncodedType {
     public abstract ValueType getValueType();
 
+    public TypeId getType() {
+        return getValueType().getType();
+    }
+
     public abstract boolean isDefault();
 
     public static EncodedValue defaultValue(TypeId type) {
@@ -37,7 +43,7 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
             case 'D' -> EncodedDouble.of(0);
             case 'L' -> EncodedNull.INSTANCE;
             // V - void
-            default -> throw new IllegalArgumentException("Unexpected shorty " + shorty);
+            default -> throw invalidShorty(shorty);
         };
     }
 
@@ -73,6 +79,7 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
             //TODO
             throw new UnsupportedOperationException("Not implemented yet");
         }
+        // TODO: use raw list constructor for arrays
         if (obj instanceof boolean[] array) {
             var list = new ArrayList<EncodedValue>(array.length);
             for (var value : array) {

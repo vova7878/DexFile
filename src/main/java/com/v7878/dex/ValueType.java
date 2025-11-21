@@ -19,34 +19,54 @@ import static com.v7878.dex.DexConstants.VALUE_SHORT;
 import static com.v7878.dex.DexConstants.VALUE_STRING;
 import static com.v7878.dex.DexConstants.VALUE_TYPE;
 
+import com.v7878.dex.immutable.TypeId;
+
+import java.lang.annotation.Annotation;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Array;
+import java.lang.reflect.Executable;
+import java.lang.reflect.Field;
+
 public enum ValueType {
-    BYTE(VALUE_BYTE),
-    SHORT(VALUE_SHORT),
-    CHAR(VALUE_CHAR),
-    INT(VALUE_INT),
-    LONG(VALUE_LONG),
-    FLOAT(VALUE_FLOAT),
-    DOUBLE(VALUE_DOUBLE),
-    METHOD_TYPE(VALUE_METHOD_TYPE),
-    METHOD_HANDLE(VALUE_METHOD_HANDLE),
-    STRING(VALUE_STRING),
-    TYPE(VALUE_TYPE),
-    FIELD(VALUE_FIELD),
-    METHOD(VALUE_METHOD),
-    ENUM(VALUE_ENUM),
-    ARRAY(VALUE_ARRAY),
-    ANNOTATION(VALUE_ANNOTATION),
-    NULL(VALUE_NULL),
-    BOOLEAN(VALUE_BOOLEAN);
+    BOOLEAN(VALUE_BOOLEAN, TypeId.Z),
+    BYTE(VALUE_BYTE, TypeId.B),
+    SHORT(VALUE_SHORT, TypeId.S),
+    CHAR(VALUE_CHAR, TypeId.C),
+    INT(VALUE_INT, TypeId.I),
+    FLOAT(VALUE_FLOAT, TypeId.F),
+    LONG(VALUE_LONG, TypeId.J),
+    DOUBLE(VALUE_DOUBLE, TypeId.D),
+    METHOD_TYPE(VALUE_METHOD_TYPE, TypeId.of(MethodType.class)),
+    METHOD_HANDLE(VALUE_METHOD_HANDLE, TypeId.of(MethodHandle.class)),
+    STRING(VALUE_STRING, TypeId.of(String.class)),
+    TYPE(VALUE_TYPE, TypeId.of(Class.class)),
+    FIELD(VALUE_FIELD, TypeId.of(Field.class)),
+    // Even though the value type is called a "method", it is a
+    // single entity for methods and constructors, i.e. Executable
+    METHOD(VALUE_METHOD, TypeId.of(Executable.class)),
+    ENUM(VALUE_ENUM, TypeId.of(Enum.class)),
+    // This is an untyped array; It can contain values of different types,
+    // and Java doesn't have a similar runtime construct.
+    // There isn't even a common supertype for all arrays
+    ARRAY(VALUE_ARRAY, TypeId.of(Array.class)),
+    ANNOTATION(VALUE_ANNOTATION, TypeId.of(Annotation.class)),
+    NULL(VALUE_NULL, TypeId.of(Object.class));
 
     private final int value;
+    private final TypeId type;
 
-    ValueType(int value) {
+    ValueType(int value, TypeId type) {
         this.value = value;
+        this.type = type;
     }
 
     public int value() {
         return value;
+    }
+
+    public TypeId getType() {
+        return type;
     }
 
     public static ValueType of(int value) {
