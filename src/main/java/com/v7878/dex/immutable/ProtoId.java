@@ -11,6 +11,7 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.UnaryOperator;
 
 public final class ProtoId implements Comparable<ProtoId> {
     private final TypeId return_type;
@@ -82,6 +83,26 @@ public final class ProtoId implements Comparable<ProtoId> {
     @Override
     public int hashCode() {
         return Objects.hash(getReturnType(), getParameterTypes());
+    }
+
+    public ProtoId erased() {
+        UnaryOperator<TypeId> erased = type ->
+                type.isPrimitive() ? type : TypeId.OBJECT;
+        return raw(
+                erased.apply(return_type),
+                Converter.transform(parameters, erased)
+        );
+    }
+
+    public ProtoId basic() {
+        UnaryOperator<TypeId> basic = type -> switch (type.getShorty()) {
+            case 'Z', 'B', 'S', 'C' -> TypeId.I;
+            default -> type.isPrimitive() ? type : TypeId.OBJECT;
+        };
+        return raw(
+                basic.apply(return_type),
+                Converter.transform(parameters, basic)
+        );
     }
 
     @Override
