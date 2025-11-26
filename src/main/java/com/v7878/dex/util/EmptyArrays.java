@@ -1,6 +1,7 @@
 package com.v7878.dex.util;
 
 import com.v7878.dex.DexIO.DexReaderCache;
+import com.v7878.dex.immutable.Dex;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MethodHandleId;
 import com.v7878.dex.immutable.MethodId;
@@ -23,5 +24,6 @@ public class EmptyArrays {
     public static final MethodHandleId[] METHOD_HANDLE_ID = new MethodHandleId[0];
     public static final ClassDefContainer[] CLASS_DEF_CONTAINER = new ClassDefContainer[0];
 
+    public static final Dex[] DEX = new Dex[0];
     public static final DexReaderCache[] DEX_READER_CACHE = new DexReaderCache[0];
 }

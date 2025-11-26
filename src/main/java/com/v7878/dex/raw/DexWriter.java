@@ -340,6 +340,20 @@ public class DexWriter {
         checkSizeLimit(fields.length, 0xffff, "field");
         methods = collector.methods.toArray(EmptyArrays.METHOD_ID);
         checkSizeLimit(methods.length, 0xffff, "method");
+        // Technically, the callsite and methodhandle sections are
+        // not limited from above in the number of elements.
+        // But unlike the similar case with strings, there are no jumbo
+        // instructions for them that accept a ref larger than 16 bits
+        //
+        // Perhaps the only indirect exception is the contents of the callsite itself,
+        // which allows methodhandle references to be up to 32 bits
+        // (but const-method-handle\jumbo still doesn't exist)
+        //
+        // If each methodhandle refers to either a field or a method
+        // (and they're limited to 16 bits), how do you create more methodhandles?
+        // Actually... it's quite simple. Duplicates are allowed. I understand why
+        // this is necessary for callsites - they can have state. But why this is
+        // necessary for methodhandles? I don't know. But that's what the documentation says
         call_sites = collector.call_sites.toArray(EmptyArrays.CALLSITE_ID_CONTAINER);
         checkSizeLimit(call_sites.length, 0xffff, "callsite");
         method_handles = collector.method_handles.toArray(EmptyArrays.METHOD_HANDLE_ID);

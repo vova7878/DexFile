@@ -1724,6 +1724,7 @@ public final class CodeBuilder {
         return f11x(THROW, ex_reg, false);
     }
 
+    // TODO: what if target is next instruction? Can we generate nothing?
     private CodeBuilder goto_internal(Object label) {
         add(new BuilderNode() {
             int position;
@@ -1839,6 +1840,7 @@ public final class CodeBuilder {
     /**
      * @param reg_to_test u8
      */
+    // TODO: what if all targets is next instruction? Can we generate nothing?
     public CodeBuilder switch_(int reg_to_test, Map<Integer, String> table) {
         check_reg(reg_to_test);
         if (table.isEmpty()) {
@@ -1846,6 +1848,9 @@ public final class CodeBuilder {
         }
         var map = new SparseArray<String>(table.size());
         table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
+        if (map.size() == 1 && map.keyAt(0) == 0) {
+            return if_testz(Test.EQ, reg_to_test, map.valueAt(0));
+        }
         if (map.size() <= 1 || (map.lastKey() - map.firstKey()) == (map.size() - 1)) {
             return packed_switch_internal(reg_to_test, map.firstKey(), map.valuesArray());
         }
@@ -1936,6 +1941,7 @@ public final class CodeBuilder {
         return this;
     }
 
+    // TODO: what if target is next instruction? Can we generate nothing?
     private CodeBuilder if_test_internal(Test test, int first_reg_to_test,
                                          int second_reg_to_test, Object label) {
         check_reg_or_pair(first_reg_to_test, false);
@@ -2043,6 +2049,7 @@ public final class CodeBuilder {
         return this;
     }
 
+    // TODO: what if target is next instruction? Can we generate nothing?
     private CodeBuilder if_testz_internal(Test test, int reg_to_test, Object label) {
         check_reg_or_pair(reg_to_test, false);
         add(new BuilderNode() {

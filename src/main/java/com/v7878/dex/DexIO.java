@@ -12,6 +12,7 @@ import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.io.ByteArrayIO;
 import com.v7878.dex.io.ByteArrayInput;
+import com.v7878.dex.raw.DexBalancer;
 import com.v7878.dex.raw.DexReader;
 import com.v7878.dex.raw.DexWriter;
 import com.v7878.dex.raw.SharedData;
@@ -216,6 +217,23 @@ public final class DexIO {
             out[i] = Dex.of(readers[i].getClasses());
         }
         return out;
+    }
+
+    public static int balance(WriteOptions options, List<ClassDef> classes,
+                              List<Dex> dexes, boolean last) {
+        return DexBalancer.balance(classes, dexes, options, last);
+    }
+
+    public static void balanceMove(WriteOptions options, List<ClassDef> classes,
+                                   List<Dex> dexes, boolean last) {
+        int count = balance(options, classes, dexes, last);
+        classes.subList(0, count).clear();
+    }
+
+    public static Dex[] balanceAll(WriteOptions options, List<ClassDef> classes) {
+        var dexes = new ArrayList<Dex>();
+        balance(options, classes, dexes, true);
+        return dexes.toArray(EmptyArrays.DEX);
     }
 
     public static byte[] write(WriteOptions options, Dex data) {
