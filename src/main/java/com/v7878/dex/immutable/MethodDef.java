@@ -94,6 +94,10 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
         return ShortyUtils.getDefShorty(return_type, parameters);
     }
 
+    public String computeFullShorty() {
+        return ShortyUtils.getDefShorty(return_type, parameters, access_flags);
+    }
+
     public int countInputRegisters() {
         return ShortyUtils.getDefInputRegisterCount(parameters);
     }

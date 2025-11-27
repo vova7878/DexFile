@@ -81,6 +81,19 @@ public class ShortyUtils {
         return out.toString();
     }
 
+    public static String getDefShorty(TypeId return_type, List<Parameter> parameters, int flags) {
+        var out = new StringBuilder(parameters.size() + 2);
+        out.append(return_type.getShorty());
+        if ((flags & ACC_STATIC) == 0) {
+            // this
+            out.append('L');
+        }
+        for (var tmp : parameters) {
+            out.append(tmp.getType().getShorty());
+        }
+        return out.toString();
+    }
+
     public static int getInputRegisterCount(List<TypeId> parameters) {
         int out = 0;
         for (var tmp : parameters) {
