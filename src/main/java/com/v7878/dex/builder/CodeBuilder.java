@@ -1229,11 +1229,26 @@ public final class CodeBuilder {
         }
         check_reg_range(first_dst_reg, size);
         check_reg_range(first_src_reg, size);
-        int offset = 0;
-        for (char value : chars) {
-            move_shorty(value, first_dst_reg + offset,
-                    first_src_reg + offset);
-            offset += ShortyUtils.getRegisterCount(value);
+        if (size <= 0 || (first_dst_reg == first_src_reg)) {
+            // nop
+            return this;
+        }
+        if (first_src_reg < first_dst_reg) {
+            // Copy backwards
+            int offset = size;
+            for (int i = chars.length - 1; i >= 0; i--) {
+                char value = chars[i];
+                offset -= ShortyUtils.getRegisterCount(value);
+                move_shorty(value, first_dst_reg + offset,
+                        first_src_reg + offset);
+            }
+        } else {
+            int offset = 0;
+            for (char value : chars) {
+                move_shorty(value, first_dst_reg + offset,
+                        first_src_reg + offset);
+                offset += ShortyUtils.getRegisterCount(value);
+            }
         }
         return this;
     }

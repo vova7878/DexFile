@@ -118,7 +118,7 @@ public class ShortyUtils {
 
     public static int getDefInputRegisterCount(List<Parameter> parameters, int flags) {
         int ins = getDefInputRegisterCount(parameters);
-        ins += (flags & ACC_STATIC) == 0 ? 1 : 0; // this;
+        ins += (flags & ACC_STATIC) == 0 ? 1 : 0; // this
         return ins;
     }
 
