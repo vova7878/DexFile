@@ -676,15 +676,16 @@ public final class CodeBuilder {
 
     public CodeBuilder try_catch(String label1, String label2, Map<TypeId, String> table) {
         for (var entry : table.entrySet()) {
-            var type = entry.getKey();
-            var handler = entry.getValue();
-            if (type == null) {
-                try_catch_all(label1, label2, handler);
-            } else {
-                try_catch(label1, label2, type, handler);
-            }
+            try_catch(label1, label2, entry.getKey(), entry.getValue());
         }
         return this;
+    }
+
+    public CodeBuilder try_catch(String label1, String label2,
+                                 String catch_all_handler,
+                                 Map<TypeId, String> table) {
+        return try_catch_all(label1, label2, catch_all_handler)
+                .try_catch(label1, label2, table);
     }
 
     private CodeBuilder addDebugItem(Object label, DebugItem item) {
