@@ -30,6 +30,12 @@ public final class EncodedArray extends EncodedValue {
         return new EncodedArray(value);
     }
 
+    public static EncodedArray of(EncodedValue... values) {
+        var value = Converter.toList(values);
+        if (value.isEmpty()) return EMPTY;
+        return new EncodedArray(value);
+    }
+
     @Override
     public ValueType getValueType() {
         return ValueType.ARRAY;

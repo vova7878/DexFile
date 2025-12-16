@@ -625,16 +625,16 @@ public final class CodeBuilder {
         return this;
     }
 
-    private void addTryBlock(Object start, Object end, TypeId exceptionType, Object handler) {
-        Objects.requireNonNull(start);
-        Objects.requireNonNull(end);
+    private void addTryBlock(Object label1, Object label2, TypeId exceptionType, Object handler) {
+        Objects.requireNonNull(label1);
+        Objects.requireNonNull(label2);
         Objects.requireNonNull(handler);
-        try_items.add(new BuilderTryItem(start, end, exceptionType, handler));
+        try_items.add(new BuilderTryItem(label1, label2, exceptionType, handler));
     }
 
-    private void try_catch_internal(Object start, Object end, TypeId exceptionType, Object handler) {
+    private void try_catch_internal(Object label1, Object label2, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(exceptionType);
-        addTryBlock(start, end, exceptionType, handler);
+        addTryBlock(label1, label2, exceptionType, handler);
     }
 
     public CodeBuilder try_catch(String label1, String label2, TypeId exceptionType, String handler) {
@@ -649,19 +649,32 @@ public final class CodeBuilder {
         return this;
     }
 
-    private void try_catch_all_internal(Object start, Object end, Object handler) {
-        addTryBlock(start, end, null, handler);
+    private void try_catch_all_internal(Object label1, Object label2, Object handler) {
+        addTryBlock(label1, label2, null, handler);
     }
 
-    public CodeBuilder try_catch_all(String start, String end, String handler) {
-        try_catch_all_internal(start, end, handler);
+    public CodeBuilder try_catch_all(String label1, String label2, String handler) {
+        try_catch_all_internal(label1, label2, handler);
         return this;
     }
 
-    public CodeBuilder try_catch_all(String start, String end) {
+    public CodeBuilder try_catch_all(String label1, String label2) {
         InternalLabel handler = new InternalLabel();
-        try_catch_all_internal(start, end, handler);
+        try_catch_all_internal(label1, label2, handler);
         putLabel(handler);
+        return this;
+    }
+
+    public CodeBuilder try_catch(String label1, String label2, Map<TypeId, String> table) {
+        for (var entry : table.entrySet()) {
+            var type = entry.getKey();
+            var handler = entry.getValue();
+            if (type == null) {
+                try_catch_all(label1, label2, handler);
+            } else {
+                try_catch(label1, label2, type, handler);
+            }
+        }
         return this;
     }
 
@@ -2372,6 +2385,16 @@ public final class CodeBuilder {
         return f3rc(kind.range, method, arg_count, first_arg_reg);
     }
 
+    /**
+     * @param method        u16 ref
+     * @param first_arg_reg u16
+     */
+    public CodeBuilder invoke_range(InvokeKind kind, MethodId method, int first_arg_reg) {
+        int arg_count = method.countInputRegisters();
+        arg_count += kind == InvokeKind.STATIC ? 0 : 1;
+        return invoke_range(kind, method, arg_count, first_arg_reg);
+    }
+
     public enum UnOp {
         NEG_INT(Opcode.NEG_INT, false, false),
         NOT_INT(Opcode.NOT_INT, false, false),
@@ -2842,6 +2865,17 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param method        u16 ref
+     * @param proto         u16 ref
+     * @param first_arg_reg u16
+     */
+    public CodeBuilder invoke_polymorphic_range(
+            MethodId method, ProtoId proto, int first_arg_reg) {
+        int arg_count = proto.countInputRegisters() + 1;
+        return invoke_polymorphic_range(method, proto, arg_count, first_arg_reg);
+    }
+
+    /**
      * @param callsite  u16 ref
      * @param arg_count [0, 5]
      * @param arg_reg1  u4, must be 0 if arg_count < 1
@@ -2929,6 +2963,15 @@ public final class CodeBuilder {
      */
     public CodeBuilder invoke_custom_range(CallSiteId callsite, int arg_count, int first_arg_reg) {
         return f3rc(INVOKE_CUSTOM_RANGE, callsite, arg_count, first_arg_reg);
+    }
+
+    /**
+     * @param callsite      u16 ref
+     * @param first_arg_reg u16
+     */
+    public CodeBuilder invoke_custom_range(CallSiteId callsite, int first_arg_reg) {
+        int arg_count = callsite.getMethodProto().countInputRegisters();
+        return invoke_custom_range(callsite, arg_count, first_arg_reg);
     }
 
     /**
