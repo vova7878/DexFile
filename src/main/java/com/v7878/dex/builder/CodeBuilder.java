@@ -17,6 +17,15 @@ import static com.v7878.dex.builder.CodeBuilder.Op.PUT_CHAR;
 import static com.v7878.dex.builder.CodeBuilder.Op.PUT_OBJECT;
 import static com.v7878.dex.builder.CodeBuilder.Op.PUT_SHORT;
 import static com.v7878.dex.builder.CodeBuilder.Op.PUT_WIDE;
+import static com.v7878.dex.util.Ids.BOOLEAN_TYPE;
+import static com.v7878.dex.util.Ids.BYTE_TYPE;
+import static com.v7878.dex.util.Ids.CHAR_TYPE;
+import static com.v7878.dex.util.Ids.DOUBLE_TYPE;
+import static com.v7878.dex.util.Ids.FLOAT_TYPE;
+import static com.v7878.dex.util.Ids.INT_TYPE;
+import static com.v7878.dex.util.Ids.LONG_TYPE;
+import static com.v7878.dex.util.Ids.SHORT_TYPE;
+import static com.v7878.dex.util.Ids.VOID_TYPE;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
 import com.v7878.dex.Format;
@@ -1490,8 +1499,27 @@ public final class CodeBuilder {
      * @param dst_reg u8
      * @param value   u16 ref
      */
-    public CodeBuilder const_class(int dst_reg, TypeId value) {
+    public CodeBuilder raw_const_class(int dst_reg, TypeId value) {
         return f21c(CONST_CLASS, dst_reg, false, value);
+    }
+
+    /**
+     * @param dst_reg u8
+     * @param value   u16 ref
+     */
+    public CodeBuilder const_class(int dst_reg, TypeId value) {
+        return switch (value.getShorty()) {
+            case 'V' -> sget(dst_reg, VOID_TYPE);
+            case 'Z' -> sget(dst_reg, BOOLEAN_TYPE);
+            case 'B' -> sget(dst_reg, BYTE_TYPE);
+            case 'S' -> sget(dst_reg, SHORT_TYPE);
+            case 'C' -> sget(dst_reg, CHAR_TYPE);
+            case 'I' -> sget(dst_reg, INT_TYPE);
+            case 'F' -> sget(dst_reg, FLOAT_TYPE);
+            case 'J' -> sget(dst_reg, LONG_TYPE);
+            case 'D' -> sget(dst_reg, DOUBLE_TYPE);
+            default -> raw_const_class(dst_reg, value);
+        };
     }
 
     /**
