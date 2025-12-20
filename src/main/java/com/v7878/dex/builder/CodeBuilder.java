@@ -370,6 +370,7 @@ public final class CodeBuilder {
         do {
             changed = false;
             for (var current = begin; current != end; current = current.next) {
+                assert current != null;
                 var node = current.node;
                 node.update(current.position);
                 var units = node.units();
@@ -382,7 +383,9 @@ public final class CodeBuilder {
                     assert diff > 0 || diff == -1;
                     current.units = units;
                     current.label_offset = node.label_offset();
-                    for (var tmp = current.next; tmp != end; tmp = tmp.next) {
+                    // We correct positions for all nodes, including the last one
+                    // (despite the fact that it does not contain any instructions)
+                    for (var tmp = current.next; tmp != null; tmp = tmp.next) {
                         tmp.position += diff;
                     }
                 }
