@@ -87,6 +87,21 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         return name;
     }
 
+    public boolean isConstructor() {
+        return switch (name) {
+            case "<init>", "<clinit>" -> true;
+            default -> false;
+        };
+    }
+
+    public boolean isInstanceInitializer() {
+        return "<init>".equals(name);
+    }
+
+    public boolean isClassInitializer() {
+        return "<clinit>".equals(name);
+    }
+
     public ProtoId getProto() {
         return proto;
     }

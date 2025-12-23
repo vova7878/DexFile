@@ -1,8 +1,10 @@
 package com.v7878.dex.immutable;
 
 import static com.v7878.dex.DexConstants.ACC_ABSTRACT;
+import static com.v7878.dex.DexConstants.ACC_CONSTRUCTOR;
 import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
 import static com.v7878.dex.DexConstants.ACC_NATIVE;
+import static com.v7878.dex.DexConstants.ACC_STATIC;
 
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
@@ -41,6 +43,41 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             if (regs < ins) {
                 throw new IllegalArgumentException(String.format(
                         "Not enough registers for parameters. Required: %d, available: %d", ins, regs));
+            }
+        }
+        // Android determines that method is a constructor by one of two signs:
+        // either the 'constructor' flag or one of the special names (<init> or <clinit>)
+        // The special name is required, but the flag is optional
+        switch (name) {
+            case "<init>" -> {
+                if ((access_flags & ACC_STATIC) != 0) {
+                    throw new IllegalArgumentException(
+                            "<init> must not have the 'static' flag");
+                }
+                if (!TypeId.V.equals(return_type)) {
+                    throw new IllegalArgumentException("<init> must be void");
+                }
+                access_flags |= ACC_CONSTRUCTOR;
+            }
+            case "<clinit>" -> {
+                // Note: <clinit> may not have the 'static' flag for dex035 and
+                // will behave like a regular non-static constructor. This is
+                // very bad behavior, so we reject it, even if Android allows it
+                if ((access_flags & ACC_STATIC) == 0) {
+                    throw new IllegalArgumentException(
+                            "<clinit> must have the 'static' flag");
+                }
+                if (!(TypeId.V.equals(return_type) && parameters.isEmpty())) {
+                    throw new IllegalArgumentException(
+                            "<clinit> must have descriptor ()V");
+                }
+                access_flags |= ACC_CONSTRUCTOR;
+            }
+            default -> {
+                if ((access_flags & ACC_CONSTRUCTOR) != 0) {
+                    throw new IllegalArgumentException(
+                            "The constructor must be named <init> or <clinit>");
+                }
             }
         }
         this.name = Objects.requireNonNull(name);
@@ -109,6 +146,20 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     @Override
     public int getAccessFlags() {
         return access_flags;
+    }
+
+    public boolean isConstructor() {
+        return (getAccessFlags() & ACC_CONSTRUCTOR) != 0;
+    }
+
+    public boolean isInstanceInitializer() {
+        var flags = ACC_CONSTRUCTOR | ACC_STATIC;
+        return (getAccessFlags() & flags) == ACC_CONSTRUCTOR;
+    }
+
+    public boolean isClassInitializer() {
+        var flags = ACC_CONSTRUCTOR | ACC_STATIC;
+        return (getAccessFlags() & flags) == flags;
     }
 
     public boolean isDirect() {
