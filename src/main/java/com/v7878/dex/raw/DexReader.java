@@ -69,6 +69,7 @@ import static com.v7878.dex.raw.CompactDexConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
 import static com.v7878.dex.util.Checks.checkIndex;
 
+import com.v7878.collections.SparseArray;
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.DexIO;
 import com.v7878.dex.DexVersion;
@@ -125,7 +126,6 @@ import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.util.CachedFixedSizeList;
 import com.v7878.dex.util.MemberUtils;
-import com.v7878.dex.util.SparseArray;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -140,10 +140,9 @@ public class DexReader implements DexIO.DexReaderCache {
                                        SparseArray<NavigableSet<Annotation>> field_annotations,
                                        SparseArray<NavigableSet<Annotation>> method_annotations,
                                        SparseArray<List<NavigableSet<Annotation>>> parameter_annotations) {
-        public static AnnotationDirectory empty() {
-            return new AnnotationDirectory(Collections.emptyNavigableSet(),
-                    SparseArray.empty(), SparseArray.empty(), SparseArray.empty());
-        }
+        public static final AnnotationDirectory EMPTY = new AnnotationDirectory(
+                Collections.emptyNavigableSet(), SparseArray.empty(),
+                SparseArray.empty(), SparseArray.empty());
     }
 
     private record CodeItem(int registers, int ins, int outs, DebugInfo debug_info,
@@ -1089,7 +1088,7 @@ public class DexReader implements DexIO.DexReaderCache {
                 null : getString(source_file_idx);
         int annotations_off = in.readSmallUInt();
         AnnotationDirectory annotations = annotations_off == NO_OFFSET ?
-                AnnotationDirectory.empty() : getAnnotationDirectory(annotations_off);
+                AnnotationDirectory.EMPTY : getAnnotationDirectory(annotations_off);
         int class_data_off = in.readSmallUInt();
         int static_values_off = in.readSmallUInt();
         List<EncodedValue> static_values = static_values_off == NO_OFFSET ?

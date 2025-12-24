@@ -62,7 +62,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             case "<clinit>" -> {
                 // Note: <clinit> may not have the 'static' flag for dex035 and
                 // will behave like a regular non-static constructor. This is
-                // very bad behavior, so we reject it, even if Android allows it
+                // very weird behavior, so we reject it, even if Android allows it
                 if ((access_flags & ACC_STATIC) == 0) {
                     throw new IllegalArgumentException(
                             "<clinit> must have the 'static' flag");

@@ -28,6 +28,7 @@ import static com.v7878.dex.util.Ids.SHORT_TYPE;
 import static com.v7878.dex.util.Ids.VOID_TYPE;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
+import com.v7878.collections.SparseArray;
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.CallSiteId;
@@ -84,7 +85,6 @@ import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
-import com.v7878.dex.util.SparseArray;
 
 import java.util.ArrayList;
 import java.util.Arrays;

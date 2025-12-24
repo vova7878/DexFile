@@ -1,13 +1,16 @@
-package com.v7878.dex.util;
+package com.v7878.collections;
+
+import com.v7878.dex.util.EmptyArrays;
 
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.IntFunction;
 
-public class SparseArray<E> implements Cloneable {
+public final class SparseArray<E> {
     private static final Object DELETED = new Object();
 
-    private boolean garbage = false;
+    private boolean garbage;
+    private boolean ro;
     private int[] keys;
     private Object[] values;
     private int size;
@@ -17,46 +20,59 @@ public class SparseArray<E> implements Cloneable {
     }
 
     public SparseArray(int initialCapacity) {
-        values = initialCapacity == 0 ? EmptyArrays.OBJECT : new Object[initialCapacity];
-        keys = initialCapacity == 0 ? EmptyArrays.INT : new int[initialCapacity];
+        keys = initialCapacity <= 0 ? EmptyArrays.INT : new int[initialCapacity];
+        values = initialCapacity <= 0 ? EmptyArrays.OBJECT : new Object[initialCapacity];
         size = 0;
+        garbage = false;
+        ro = false;
     }
 
-    @SuppressWarnings("CopyConstructorMissesField")
-    public SparseArray(SparseArray<E> sparseArray) {
-        this(sparseArray.size());
-        putAll(sparseArray);
+    public SparseArray(SparseArray<E> other) {
+        if (other.size == 0) {
+            keys = EmptyArrays.INT;
+            values = EmptyArrays.OBJECT;
+            size = 0;
+            garbage = false;
+        } else {
+            keys = other.keys.clone();
+            values = other.values.clone();
+            size = other.size;
+            garbage = other.garbage;
+        }
+        ro = false;
     }
 
+    private static final SparseArray<Object> EMPTY = new SparseArray<>().freeze();
+
+    @SuppressWarnings("unchecked")
     public static <T> SparseArray<T> empty() {
-        return new SparseArray<>();
+        return (SparseArray<T>) EMPTY;
+    }
+
+    public SparseArray<E> duplicate() {
+        return new SparseArray<>(this).freeze();
+    }
+
+    public SparseArray<E> freeze() {
+        if (ro) {
+            return this;
+        }
+        trimToSize();
+        ro = true;
+        return this;
+    }
+
+    private void checkWritable() {
+        if (ro) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     public void ensureCapacity(int minCapacity) {
+        checkWritable();
         if (minCapacity > keys.length) {
             keys = Arrays.copyOf(keys, minCapacity);
             values = Arrays.copyOf(values, minCapacity);
-        }
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public SparseArray<E> clone() {
-        SparseArray<E> clone = null;
-        try {
-            clone = (SparseArray<E>) super.clone();
-            clone.keys = keys.clone();
-            clone.values = values.clone();
-        } catch (CloneNotSupportedException cnse) {
-            /* ignore */
-        }
-        return clone;
-    }
-
-    private void checkIndex(int index) {
-        if (index >= size) {
-            // The array might be slightly bigger than size, in which case, indexing won't fail.
-            throw new ArrayIndexOutOfBoundsException(index);
         }
     }
 
@@ -76,6 +92,7 @@ public class SparseArray<E> implements Cloneable {
 
     @SuppressWarnings("unchecked")
     public E remove(int key) {
+        checkWritable();
         int i = Arrays.binarySearch(keys, 0, size, key);
         if (i >= 0) {
             Object last = values[i];
@@ -88,8 +105,7 @@ public class SparseArray<E> implements Cloneable {
         return null;
     }
 
-    private void removeAtNoGC(int index) {
-        checkIndex(index);
+    private void removeAtRaw(int index) {
         if (values[index] != DELETED) {
             values[index] = DELETED;
             garbage = true;
@@ -97,14 +113,18 @@ public class SparseArray<E> implements Cloneable {
     }
 
     public void removeAt(int index) {
-        gcIfNeeded();
-        removeAtNoGC(index);
+        checkWritable();
+        Objects.checkIndex(index, size());
+        // size() call above took care about gc() compaction
+        removeAtRaw(index);
     }
 
     public void removeAtRange(int index, int length) {
-        gcIfNeeded();
+        checkWritable();
+        Objects.checkFromIndexSize(index, length, size());
+        // size() call above took care about gc() compaction
         for (int i = 0; i < length; i++) {
-            removeAtNoGC(index + length);
+            removeAtRaw(index + length);
         }
     }
 
@@ -164,6 +184,7 @@ public class SparseArray<E> implements Cloneable {
 
     @SuppressWarnings("unchecked")
     public E put(int key, E value) {
+        checkWritable();
         int i = Arrays.binarySearch(keys, 0, size, key);
         if (i >= 0) {
             Object last = values[i];
@@ -178,7 +199,7 @@ public class SparseArray<E> implements Cloneable {
         }
         if (garbage && size >= keys.length) {
             gc();
-            // Search again because indices may have changed.
+            // Search again because indices may have changed
             i = ~Arrays.binarySearch(keys, 0, size, key);
         }
         keys = insert(keys, size, i, key);
@@ -188,16 +209,18 @@ public class SparseArray<E> implements Cloneable {
     }
 
     /**
-     * Puts a key/value pair into the array, optimizing for the case where
-     * the key is greater than all existing keys in the array.
+     * Puts a key/value pair into the array, optimizing for the case
+     * where the key is greater than all existing keys in the array
      */
     public E append(int key, E value) {
+        checkWritable();
         //TODO: optimize
         return put(key, value);
     }
 
     @SuppressWarnings("unchecked")
     public void putAll(SparseArray<? extends E> other) {
+        checkWritable();
         Objects.requireNonNull(other);
         int length = other.size;
         if (length == 0) {
@@ -223,27 +246,9 @@ public class SparseArray<E> implements Cloneable {
         return size() == 0;
     }
 
-    public int[] keysArray() {
-        int size = size();
-        // size() call above took care about gc() compaction.
-        return Arrays.copyOf(keys, size);
-    }
-
-    public <T> T[] valuesArray(IntFunction<T[]> factory) {
-        int length = size();
-        T[] array = factory.apply(length);
-        //noinspection SuspiciousSystemArraycopy
-        System.arraycopy(values, 0, array, 0, length);
-        return array;
-    }
-
-    public Object[] valuesArray() {
-        return valuesArray(Object[]::new);
-    }
-
     public int keyAt(int index) {
-        gcIfNeeded();
-        checkIndex(index);
+        Objects.checkIndex(index, size());
+        // size() call above took care about gc() compaction
         return keys[index];
     }
 
@@ -255,10 +260,18 @@ public class SparseArray<E> implements Cloneable {
         return keyAt(size() - 1);
     }
 
+    public int[] keysArray() {
+        int size = size();
+        // size() call above took care about gc() compaction
+        return Arrays.copyOf(keys, size);
+    }
+
+    // TODO: keySet() as IntSet
+
     @SuppressWarnings("unchecked")
     public E valueAt(int index) {
-        gcIfNeeded();
-        checkIndex(index);
+        Objects.checkIndex(index, size());
+        // size() call above took care about gc() compaction
         return (E) values[index];
     }
 
@@ -272,11 +285,43 @@ public class SparseArray<E> implements Cloneable {
 
     @SuppressWarnings("unchecked")
     public E setValueAt(int index, E value) {
-        gcIfNeeded();
-        checkIndex(index);
+        checkWritable();
+        Objects.checkIndex(index, size());
+        // size() call above took care about gc() compaction
         Object last = values[index];
         values[index] = value;
         return last == DELETED ? null : (E) last;
+    }
+
+    @SuppressWarnings("SuspiciousSystemArraycopy")
+    public <T> T[] valuesArray(IntFunction<T[]> factory) {
+        int length = size();
+        T[] array = factory.apply(length);
+        // size() calls above took care about gc() compaction
+        System.arraycopy(values, 0, array, 0, length);
+        return array;
+    }
+
+    public Object[] valuesArray() {
+        return valuesArray(Object[]::new);
+    }
+
+    public record Entry<T>(int key, T value) {
+    }
+
+    @SuppressWarnings("unchecked")
+    public Entry<E> entryAt(int index) {
+        Objects.checkIndex(index, size());
+        // size() call above took care about gc() compaction
+        return new Entry<>(keys[index], (E) values[index]);
+    }
+
+    public Entry<E> firstEntry() {
+        return entryAt(0);
+    }
+
+    public Entry<E> lastEntry() {
+        return entryAt(size() - 1);
     }
 
     public int indexOfKey(int key) {
@@ -305,6 +350,7 @@ public class SparseArray<E> implements Cloneable {
     }
 
     public void clear() {
+        checkWritable();
         Arrays.fill(values, 0, size, null);
         size = 0;
         garbage = false;
@@ -316,7 +362,7 @@ public class SparseArray<E> implements Cloneable {
         if (length <= 0) {
             return "{}";
         }
-        // size() calls above took care about gc() compaction.
+        // size() calls above took care about gc() compaction
         StringBuilder buffer = new StringBuilder(length * 28);
         buffer.append('{');
         for (int i = 0; i < length; i++) {
@@ -345,7 +391,7 @@ public class SparseArray<E> implements Cloneable {
         if (length != other.size()) {
             return false;
         }
-        // size() calls above took care about gc() compaction.
+        // size() calls above took care about gc() compaction
         for (int index = 0; index < length; index++) {
             if (keys[index] != other.keys[index] ||
                     !Objects.equals(values[index], other.values[index])) {
@@ -365,7 +411,7 @@ public class SparseArray<E> implements Cloneable {
     public int contentHashCode() {
         int hash = 0;
         int length = size();
-        // size() call above took care about gc() compaction.
+        // size() call above took care about gc() compaction
         for (int index = 0; index < length; index++) {
             int key = keys[index];
             Object value = values[index];
@@ -381,9 +427,12 @@ public class SparseArray<E> implements Cloneable {
     }
 
     public void trimToSize() {
+        checkWritable();
         int length = size();
-        // size() call above took care about gc() compaction.
-        keys = Arrays.copyOf(keys, length);
-        values = Arrays.copyOf(values, length);
+        if (keys.length > length) {
+            // size() call above took care about gc() compaction
+            keys = Arrays.copyOf(keys, length);
+            values = Arrays.copyOf(values, length);
+        }
     }
 }

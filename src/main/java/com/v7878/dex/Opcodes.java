@@ -1,6 +1,6 @@
 package com.v7878.dex;
 
-import com.v7878.dex.util.SparseArray;
+import com.v7878.collections.SparseArray;
 
 import java.util.ArrayList;
 import java.util.EnumMap;

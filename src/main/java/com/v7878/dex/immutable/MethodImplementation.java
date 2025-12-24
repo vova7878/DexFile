@@ -65,6 +65,10 @@ public final class MethodImplementation {
         return try_blocks;
     }
 
+    public TryBlock getTryBlock(int address) {
+        return try_blocks;
+    }
+
     public List<DebugItem> getDebugItems() {
         return debug_items;
     }
