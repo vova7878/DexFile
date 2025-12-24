@@ -28,6 +28,7 @@ import static com.v7878.dex.util.Ids.SHORT_TYPE;
 import static com.v7878.dex.util.Ids.VOID_TYPE;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
+import com.v7878.collections.IntSet;
 import com.v7878.collections.SparseArray;
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
@@ -279,9 +280,9 @@ public final class CodeBuilder {
 
         int[] borders;
         {
-            // TODO: IntSet
-            var borders_set = new SparseArray<>();
-            for (int i = 0; i < try_items.size(); ) {
+            int count = try_items.size();
+            var borders_set = new IntSet(count);
+            for (int i = 0; i < count; ) {
                 BuilderTryItem block = try_items.get(i);
                 int start = block.start(), end = block.end();
                 if (end <= start) {
@@ -289,11 +290,11 @@ public final class CodeBuilder {
                     try_items.remove(i);
                     continue;
                 }
-                borders_set.append(start, null);
-                borders_set.append(end, null);
+                borders_set.add(start);
+                borders_set.add(end);
                 i++;
             }
-            borders = borders_set.keysArray();
+            borders = borders_set.toArray();
         }
         if (borders.length == 0) return Collections.emptyList();
         int elements_size = borders.length - 1;

@@ -19,30 +19,61 @@ public final class SparseArray<E> {
         this(0);
     }
 
-    public SparseArray(int initialCapacity) {
-        keys = initialCapacity <= 0 ? EmptyArrays.INT : new int[initialCapacity];
-        values = initialCapacity <= 0 ? EmptyArrays.OBJECT : new Object[initialCapacity];
-        size = 0;
-        garbage = false;
-        ro = false;
+    public SparseArray(int capacity) {
+        this.keys = capacity <= 0 ? EmptyArrays.INT : new int[capacity];
+        this.values = capacity <= 0 ? EmptyArrays.OBJECT : new Object[capacity];
+        this.size = 0;
+        this.garbage = false;
+        this.ro = false;
     }
 
     public SparseArray(SparseArray<E> other) {
-        if (other.size == 0) {
-            keys = EmptyArrays.INT;
-            values = EmptyArrays.OBJECT;
-            size = 0;
-            garbage = false;
+        var length = other.size;
+        this.size = length;
+        if (length == 0) {
+            this.keys = EmptyArrays.INT;
+            this.values = EmptyArrays.OBJECT;
+            this.garbage = false;
         } else {
-            keys = other.keys.clone();
-            values = other.values.clone();
-            size = other.size;
-            garbage = other.garbage;
+            this.keys = other.keys.clone();
+            this.values = other.values.clone();
+            this.garbage = other.garbage;
         }
-        ro = false;
+        this.ro = false;
     }
 
-    private static final SparseArray<Object> EMPTY = new SparseArray<>().freeze();
+    SparseArray(SparseArray<E> other, boolean ro) {
+        var length = other.size;
+        this.size = length;
+        if (length == 0) {
+            this.keys = EmptyArrays.INT;
+            this.values = EmptyArrays.OBJECT;
+            this.garbage = false;
+        } else {
+            this.garbage = other.garbage;
+            if (ro && this.garbage) {
+                this.keys = other.keys;
+                this.values = other.values;
+                var trimmed = trimToSize();
+                assert trimmed;
+            } else {
+                this.keys = other.keys.clone();
+                this.values = other.values.clone();
+            }
+        }
+        this.ro = ro;
+    }
+
+    SparseArray(int[] keys, Object[] values, int size, boolean garbage, boolean ro) {
+        this.keys = keys;
+        this.values = values;
+        this.size = size;
+        this.garbage = garbage;
+        this.ro = ro;
+    }
+
+    private static final SparseArray<Object> EMPTY = new SparseArray<>(
+            EmptyArrays.INT, EmptyArrays.OBJECT, 0, false, true);
 
     @SuppressWarnings("unchecked")
     public static <T> SparseArray<T> empty() {
@@ -50,7 +81,7 @@ public final class SparseArray<E> {
     }
 
     public SparseArray<E> duplicate() {
-        return new SparseArray<>(this).freeze();
+        return new SparseArray<>(this, ro);
     }
 
     public SparseArray<E> freeze() {
@@ -68,12 +99,22 @@ public final class SparseArray<E> {
         }
     }
 
-    public void ensureCapacity(int minCapacity) {
+    public void ensureCapacity(int min_capacity) {
         checkWritable();
-        if (minCapacity > keys.length) {
-            keys = Arrays.copyOf(keys, minCapacity);
-            values = Arrays.copyOf(values, minCapacity);
+        if (min_capacity > keys.length) {
+            keys = Arrays.copyOf(keys, min_capacity);
+            values = Arrays.copyOf(values, min_capacity);
         }
+    }
+
+    private int indexOfKeyRaw(int key) {
+        gcIfNeeded();
+        return ArraySupport.binarySearch(keys, 0, size, key);
+    }
+
+    public int indexOfKey(int key) {
+        gcIfNeeded();
+        return indexOfKeyRaw(key);
     }
 
     public boolean contains(int key) {
@@ -86,14 +127,14 @@ public final class SparseArray<E> {
 
     @SuppressWarnings("unchecked")
     public E get(int key, E valueIfKeyNotFound) {
-        int i = Arrays.binarySearch(keys, 0, size, key);
+        int i = indexOfKeyRaw(key);
         return i < 0 || values[i] == DELETED ? valueIfKeyNotFound : (E) values[i];
     }
 
     @SuppressWarnings("unchecked")
     public E remove(int key) {
         checkWritable();
-        int i = Arrays.binarySearch(keys, 0, size, key);
+        int i = indexOfKeyRaw(key);
         if (i >= 0) {
             Object last = values[i];
             if (last != DELETED) {
@@ -105,27 +146,25 @@ public final class SparseArray<E> {
         return null;
     }
 
-    private void removeAtRaw(int index) {
+    public void removeAt(int index) {
+        checkWritable();
+        Objects.checkIndex(index, size());
+        // size() call above took care about gc() compaction
         if (values[index] != DELETED) {
             values[index] = DELETED;
             garbage = true;
         }
     }
 
-    public void removeAt(int index) {
-        checkWritable();
-        Objects.checkIndex(index, size());
-        // size() call above took care about gc() compaction
-        removeAtRaw(index);
-    }
-
     public void removeAtRange(int index, int length) {
         checkWritable();
         Objects.checkFromIndexSize(index, length, size());
-        // size() call above took care about gc() compaction
-        for (int i = 0; i < length; i++) {
-            removeAtRaw(index + length);
+        if (length <= 0) {
+            return;
         }
+        // size() call above took care about gc() compaction
+        Arrays.fill(values, index, index + length, DELETED);
+        garbage = true;
     }
 
     private void gc() {
@@ -152,40 +191,10 @@ public final class SparseArray<E> {
         }
     }
 
-    private static int growSize(int currentSize) {
-        return Math.max(currentSize + 1, currentSize * 2);
-    }
-
-    private static Object[] insert(Object[] array, int currentSize, int index, Object value) {
-        if (currentSize < array.length) {
-            System.arraycopy(array, index, array, index + 1, currentSize - index);
-            array[index] = value;
-            return array;
-        }
-        Object[] newArray = new Object[growSize(currentSize)];
-        System.arraycopy(array, 0, newArray, 0, index);
-        newArray[index] = value;
-        System.arraycopy(array, index, newArray, index + 1, array.length - index);
-        return newArray;
-    }
-
-    private static int[] insert(int[] array, int currentSize, int index, int value) {
-        if (currentSize < array.length) {
-            System.arraycopy(array, index, array, index + 1, currentSize - index);
-            array[index] = value;
-            return array;
-        }
-        int[] newArray = new int[growSize(currentSize)];
-        System.arraycopy(array, 0, newArray, 0, index);
-        newArray[index] = value;
-        System.arraycopy(array, index, newArray, index + 1, array.length - index);
-        return newArray;
-    }
-
     @SuppressWarnings("unchecked")
     public E put(int key, E value) {
         checkWritable();
-        int i = Arrays.binarySearch(keys, 0, size, key);
+        int i = indexOfKeyRaw(key);
         if (i >= 0) {
             Object last = values[i];
             values[i] = value;
@@ -200,10 +209,10 @@ public final class SparseArray<E> {
         if (garbage && size >= keys.length) {
             gc();
             // Search again because indices may have changed
-            i = ~Arrays.binarySearch(keys, 0, size, key);
+            i = ~indexOfKeyRaw(key);
         }
-        keys = insert(keys, size, i, key);
-        values = insert(values, size, i, value);
+        keys = ArraySupport.insert(keys, size, i, key);
+        values = ArraySupport.insert(values, size, i, value);
         size++;
         return null;
     }
@@ -221,7 +230,6 @@ public final class SparseArray<E> {
     @SuppressWarnings("unchecked")
     public void putAll(SparseArray<? extends E> other) {
         checkWritable();
-        Objects.requireNonNull(other);
         int length = other.size;
         if (length == 0) {
             return;
@@ -232,7 +240,7 @@ public final class SparseArray<E> {
         for (int i = 0; i < length; i++) {
             Object value = other_values[i];
             if (value != DELETED) {
-                append(other_keys[i], (E) value);
+                put(other_keys[i], (E) value);
             }
         }
     }
@@ -266,7 +274,10 @@ public final class SparseArray<E> {
         return Arrays.copyOf(keys, size);
     }
 
-    // TODO: keySet() as IntSet
+    public IntSet keysSet() {
+        var array = keysArray();
+        return new IntSet(array, array.length, false);
+    }
 
     @SuppressWarnings("unchecked")
     public E valueAt(int index) {
@@ -324,11 +335,6 @@ public final class SparseArray<E> {
         return entryAt(size() - 1);
     }
 
-    public int indexOfKey(int key) {
-        gcIfNeeded();
-        return Arrays.binarySearch(keys, 0, size, key);
-    }
-
     public int indexOfValue(E value) {
         gcIfNeeded();
         for (int i = 0; i < size; i++) {
@@ -369,10 +375,10 @@ public final class SparseArray<E> {
             if (i > 0) {
                 buffer.append(", ");
             }
-            int key = keyAt(i);
+            int key = keys[i];
             buffer.append(key);
             buffer.append('=');
-            Object value = valueAt(i);
+            Object value = values[i];
             if (value != this) {
                 buffer.append(value);
             } else {
@@ -426,13 +432,15 @@ public final class SparseArray<E> {
         return contentHashCode();
     }
 
-    public void trimToSize() {
+    public boolean trimToSize() {
         checkWritable();
         int length = size();
+        // size() call above took care about gc() compaction
         if (keys.length > length) {
-            // size() call above took care about gc() compaction
             keys = Arrays.copyOf(keys, length);
             values = Arrays.copyOf(values, length);
+            return true;
         }
+        return false;
     }
 }
