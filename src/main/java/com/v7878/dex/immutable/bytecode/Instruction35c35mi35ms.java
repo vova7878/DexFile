@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable.bytecode;
 
 import static com.v7878.dex.Format.Format35c35mi35ms;
+import static com.v7878.dex.Opcode.EXECUTE_INLINE;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
@@ -24,7 +25,9 @@ public final class Instruction35c35mi35ms extends Instruction
                                    int register2, int register3, int register4,
                                    int register5, Object reference1) {
         super(Preconditions.checkFormat(opcode, Format35c35mi35ms));
-        this.register_count = Preconditions.check35cAnd45ccRegisterCount(register_count);
+        this.register_count = opcode == EXECUTE_INLINE ?
+                Preconditions.checkExecuteInlineRegisterCount(register_count) :
+                Preconditions.check35cAnd45ccRegisterCount(register_count);
         this.register1 = (register_count > 0) ? Preconditions.checkNibbleRegister(register1) : 0;
         this.register2 = (register_count > 1) ? Preconditions.checkNibbleRegister(register2) : 0;
         this.register3 = (register_count > 2) ? Preconditions.checkNibbleRegister(register3) : 0;

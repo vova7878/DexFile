@@ -240,6 +240,14 @@ public class Preconditions {
         return registerCount;
     }
 
+    public static int checkExecuteInlineRegisterCount(int registerCount) {
+        if (registerCount < 0 || registerCount > 4) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid register count: %d. Must be between 0 and 4, inclusive", registerCount));
+        }
+        return registerCount;
+    }
+
     public static int checkRegisterRangeCount(int registerCount) {
         if ((registerCount & 0xFFFFFF00) != 0) {
             throw new IllegalArgumentException(

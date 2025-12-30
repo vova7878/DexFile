@@ -4,6 +4,8 @@ import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.TypeId;
 
 public class Ids {
+    public static final TypeId THROWABLE = TypeId.of(Throwable.class);
+
     public static TypeId VOID_WRAPPER = TypeId.of(Void.class);
     public static TypeId BOOLEAN_WRAPPER = TypeId.of(Boolean.class);
     public static TypeId BYTE_WRAPPER = TypeId.of(Byte.class);

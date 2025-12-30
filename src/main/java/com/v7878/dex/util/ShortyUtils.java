@@ -18,23 +18,16 @@ public class ShortyUtils {
         throw new IllegalArgumentException("Invalid shorty: " + shorty);
     }
 
-    public static char getTypeShorty(String descriptor) {
-        return switch (descriptor) {
-            case "V" -> 'V';
-            case "Z" -> 'Z';
-            case "B" -> 'B';
-            case "S" -> 'S';
-            case "C" -> 'C';
-            case "I" -> 'I';
-            case "J" -> 'J';
-            case "F" -> 'F';
-            case "D" -> 'D';
-            default -> {
-                if (descriptor.startsWith("L") || descriptor.startsWith("[")) {
-                    yield 'L';
-                }
-                throw invalidType(descriptor);
-            }
+    private static char getTypeShorty(String descriptor) {
+        int size = descriptor.length();
+        if (size < 1) {
+            throw invalidType(descriptor);
+        }
+        char first = descriptor.charAt(0);
+        return switch (first) {
+            case 'V', 'Z', 'B', 'S', 'C', 'I', 'J', 'F', 'D' -> first;
+            case 'L', '[' -> 'L';
+            default -> throw invalidType(descriptor);
         };
     }
 
@@ -55,7 +48,7 @@ public class ShortyUtils {
         return shorty == 'V' ? 0 : (shorty == 'D' || shorty == 'J' ? 2 : 1);
     }
 
-    public static int getRegisterCount(String descriptor) {
+    private static int getRegisterCount(String descriptor) {
         return getRegisterCount(getTypeShorty(descriptor));
     }
 
