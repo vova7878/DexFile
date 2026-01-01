@@ -89,6 +89,7 @@ public final class TryBlock implements Comparable<TryBlock> {
         // Note: TryBlocks should never intersects
         int out = CollectionUtils.compareNonNull(getStartAddress(), other.getStartAddress());
         if (out != 0) return out;
-        return CollectionUtils.compareNonNull(getUnitCount(), other.getUnitCount());
+        // The longest ones come first. This is necessary for searching
+        return -CollectionUtils.compareNonNull(getUnitCount(), other.getUnitCount());
     }
 }

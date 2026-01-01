@@ -11,6 +11,7 @@ import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
+import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.value.EncodedNull;
 
@@ -38,6 +39,10 @@ public class MemberUtils {
 
     private static AnnotationElement searchableAnnotationElement(String name) {
         return AnnotationElement.of(name, EncodedNull.INSTANCE);
+    }
+
+    private static TryBlock searchableTryBlock(int address) {
+        return TryBlock.raw(address, 0, 0, List.of());
     }
 
     private static final TypeId FIRST_TYPE = TypeId.raw(0, "");
@@ -97,5 +102,16 @@ public class MemberUtils {
     public static AnnotationElement findElement(NavigableSet<AnnotationElement> annotations, String name) {
         Objects.requireNonNull(name);
         return CollectionUtils.findValue(annotations, searchableAnnotationElement(name));
+    }
+
+    public static TryBlock findTryBlock(NavigableSet<TryBlock> blocks, int address) {
+        var block = searchableTryBlock(address);
+        var floor = blocks.floor(block);
+        if (floor == null) return null;
+        if (floor.getStartAddress() <= address
+                && address < floor.getEndAddress()) {
+            return floor;
+        }
+        return null;
     }
 }

@@ -4,6 +4,7 @@ import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.List;
@@ -66,7 +67,7 @@ public final class MethodImplementation {
     }
 
     public TryBlock getTryBlock(int address) {
-        return try_blocks;
+        return MemberUtils.findTryBlock(try_blocks, address);
     }
 
     public List<DebugItem> getDebugItems() {
