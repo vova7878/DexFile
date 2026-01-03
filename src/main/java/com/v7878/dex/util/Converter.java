@@ -93,6 +93,21 @@ public class Converter {
         };
     }
 
+    public static <T> List<T> listOf(int size, T value) {
+        return new AbstractList<>() {
+            @Override
+            public int size() {
+                return size;
+            }
+
+            @Override
+            public T get(int i) {
+                Objects.checkIndex(i, size);
+                return value;
+            }
+        };
+    }
+
     public static <R, P> List<R> mutableTransform(Collection<P> data, Function<P, R> transformer) {
         var out = new ArrayList<R>(data.size());
         for (var tmp : data) {

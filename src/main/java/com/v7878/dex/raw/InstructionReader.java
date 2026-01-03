@@ -71,7 +71,7 @@ public class InstructionReader {
             case Format21s -> read_21s(opcode, in, arg);
             case Format21t -> read_21t(opcode, in, arg);
             case Format22b -> read_22b(opcode, in, arg);
-            case Format22c22cs -> read_22c2cs(opcode, in, reader, arg);
+            case Format22c22cs -> read_22c22cs(opcode, in, reader, arg);
             case Format22s -> read_22s(opcode, in, arg);
             case Format22t -> read_22t(opcode, in, arg);
             case Format22x -> read_22x(opcode, in, arg);
@@ -199,7 +199,7 @@ public class InstructionReader {
         return Instruction21c.of(opcode, AA, indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
-    public static Instruction22c22cs read_22c2cs(
+    public static Instruction22c22cs read_22c22cs(
             Opcode opcode, RandomInput in, DexReader context, int BA) {
         int CCCC = in.readUShort();
         return Instruction22c22cs.of(opcode, BA & 0xf, BA >> 4,

@@ -28,8 +28,8 @@ import static com.v7878.dex.util.Ids.SHORT_TYPE;
 import static com.v7878.dex.util.Ids.VOID_TYPE;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
+import com.v7878.collections.IntMap;
 import com.v7878.collections.IntSet;
-import com.v7878.collections.SparseArray;
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.CallSiteId;
@@ -299,7 +299,7 @@ public final class CodeBuilder {
         if (borders.length == 0) return Collections.emptyList();
         int elements_size = borders.length - 1;
 
-        var elements = new SparseArray<TryContainer>(elements_size);
+        var elements = new IntMap<TryContainer>(elements_size);
         for (int i = 0; i < elements_size; i++) {
             elements.put(borders[i], new TryContainer());
         }
@@ -1559,6 +1559,14 @@ public final class CodeBuilder {
     }
 
     /**
+     * @param dst_reg     u4
+     * @param arr_ref_reg u4
+     */
+    public CodeBuilder array_length(int dst_reg, int arr_ref_reg) {
+        return f12x(ARRAY_LENGTH, dst_reg, false, arr_ref_reg, false);
+    }
+
+    /**
      * @param dst_reg u8
      * @param value   u16 ref
      */
@@ -1907,7 +1915,7 @@ public final class CodeBuilder {
         if (table.isEmpty()) {
             return this;
         }
-        var map = new SparseArray<String>(table.size());
+        var map = new IntMap<String>(table.size());
         table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
         if (map.size() == 1 && map.keyAt(0) == 0) {
             return if_testz(Test.EQ, reg_to_test, map.valueAt(0));

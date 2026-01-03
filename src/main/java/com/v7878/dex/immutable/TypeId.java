@@ -218,16 +218,37 @@ public final class TypeId implements Comparable<TypeId> {
         return ShortyUtils.getTypeShorty(this);
     }
 
-    public boolean isPrimitive() {
-        return getShorty() != 'L';
-    }
-
     public int getRegisterCount() {
         return ShortyUtils.getRegisterCount(this);
     }
 
     public boolean isArray() {
         return array_depth > 0;
+    }
+
+    public boolean isReference() {
+        return isArray() || getShorty() == 'L';
+    }
+
+    public boolean isPrimitive() {
+        return !isReference();
+    }
+
+    public boolean isVoid() {
+        return getShorty() == 'V';
+    }
+
+    public boolean isWidePrimitive() {
+        var shorty = getShorty();
+        return shorty == 'J' || shorty == 'D';
+    }
+
+    public boolean isThinPrimitive() {
+        var shorty = getShorty();
+        return switch (shorty) {
+            case 'Z', 'B', 'S', 'C', 'I', 'F' -> true;
+            default -> false;
+        };
     }
 
     public int getArrayDepth() {

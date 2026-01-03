@@ -508,6 +508,13 @@ public enum Opcode {
         return format.isPayload();
     }
 
+    public final boolean isVariableRegister() {
+        return format == Format35c35mi35ms
+                || format == Format3rc3rmi3rms
+                || format == Format45cc
+                || format == Format4rcc;
+    }
+
     public final boolean isRaw() {
         return this == RAW;
     }

@@ -127,6 +127,14 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
         return ProtoId.raw(return_type, getParameterTypes());
     }
 
+    public ProtoId callProto(TypeId declaring_class) {
+        var proto = getProto();
+        if ((access_flags & ACC_STATIC) == 0) {
+            return proto.insertThis(declaring_class);
+        }
+        return proto;
+    }
+
     public String computeShorty() {
         return ShortyUtils.getDefShorty(return_type, parameters);
     }

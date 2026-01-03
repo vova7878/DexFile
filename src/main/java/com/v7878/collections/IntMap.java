@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.IntFunction;
 
-public final class SparseArray<E> {
+public final class IntMap<E> {
     private static final Object DELETED = new Object();
 
     private boolean garbage;
@@ -15,11 +15,11 @@ public final class SparseArray<E> {
     private Object[] values;
     private int size;
 
-    public SparseArray() {
+    public IntMap() {
         this(0);
     }
 
-    public SparseArray(int capacity) {
+    public IntMap(int capacity) {
         this.keys = capacity <= 0 ? EmptyArrays.INT : new int[capacity];
         this.values = capacity <= 0 ? EmptyArrays.OBJECT : new Object[capacity];
         this.size = 0;
@@ -27,7 +27,7 @@ public final class SparseArray<E> {
         this.ro = false;
     }
 
-    public SparseArray(SparseArray<E> other) {
+    public IntMap(IntMap<E> other) {
         var length = other.size;
         this.size = length;
         if (length == 0) {
@@ -42,7 +42,7 @@ public final class SparseArray<E> {
         this.ro = false;
     }
 
-    SparseArray(SparseArray<E> other, boolean ro) {
+    IntMap(IntMap<E> other, boolean ro) {
         var length = other.size;
         this.size = length;
         if (length == 0) {
@@ -64,7 +64,7 @@ public final class SparseArray<E> {
         this.ro = ro;
     }
 
-    SparseArray(int[] keys, Object[] values, int size, boolean garbage, boolean ro) {
+    IntMap(int[] keys, Object[] values, int size, boolean garbage, boolean ro) {
         this.keys = keys;
         this.values = values;
         this.size = size;
@@ -72,19 +72,19 @@ public final class SparseArray<E> {
         this.ro = ro;
     }
 
-    private static final SparseArray<Object> EMPTY = new SparseArray<>(
+    private static final IntMap<Object> EMPTY = new IntMap<>(
             EmptyArrays.INT, EmptyArrays.OBJECT, 0, false, true);
 
     @SuppressWarnings("unchecked")
-    public static <T> SparseArray<T> empty() {
-        return (SparseArray<T>) EMPTY;
+    public static <T> IntMap<T> empty() {
+        return (IntMap<T>) EMPTY;
     }
 
-    public SparseArray<E> duplicate() {
-        return new SparseArray<>(this, ro);
+    public IntMap<E> duplicate() {
+        return new IntMap<>(this, ro);
     }
 
-    public SparseArray<E> freeze() {
+    public IntMap<E> freeze() {
         if (ro) {
             return this;
         }
@@ -156,14 +156,16 @@ public final class SparseArray<E> {
         }
     }
 
-    public void removeAtRange(int index, int length) {
+    // TODO: public void removeRange(int from_key, int to_key)
+
+    public void removeAtRange(int from_index, int to_index) {
         checkWritable();
-        Objects.checkFromIndexSize(index, length, size());
-        if (length <= 0) {
+        Objects.checkFromToIndex(from_index, to_index, size());
+        if (to_index <= from_index) {
             return;
         }
         // size() call above took care about gc() compaction
-        Arrays.fill(values, index, index + length, DELETED);
+        Arrays.fill(values, from_index, to_index, DELETED);
         garbage = true;
     }
 
@@ -228,7 +230,7 @@ public final class SparseArray<E> {
     }
 
     @SuppressWarnings("unchecked")
-    public void putAll(SparseArray<? extends E> other) {
+    public void putAll(IntMap<? extends E> other) {
         checkWritable();
         int length = other.size;
         if (length == 0) {
@@ -389,7 +391,7 @@ public final class SparseArray<E> {
         return buffer.toString();
     }
 
-    public boolean contentEquals(SparseArray<?> other) {
+    public boolean contentEquals(IntMap<?> other) {
         if (other == null) {
             return false;
         }
@@ -410,7 +412,7 @@ public final class SparseArray<E> {
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        return obj instanceof SparseArray<?> other
+        return obj instanceof IntMap<?> other
                 && contentEquals(other);
     }
 

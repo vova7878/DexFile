@@ -1,13 +1,13 @@
 package com.v7878.dex;
 
-import com.v7878.collections.SparseArray;
+import com.v7878.collections.IntMap;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Objects;
 
 public final class Opcodes {
-    private final SparseArray<Opcode> opcodesByValue;
+    private final IntMap<Opcode> opcodesByValue;
     private final EnumMap<Opcode, Integer> opcodeValues;
     private final DexVersion dex;
     private final int api;
@@ -22,7 +22,7 @@ public final class Opcodes {
 
         var opcodes = Opcode.values();
         opcodeValues = new EnumMap<>(Opcode.class);
-        opcodesByValue = new SparseArray<>(opcodes.length);
+        opcodesByValue = new IntMap<>(opcodes.length);
 
         for (var opcode : opcodes) {
             Integer value = opcode.getValue(dex, api, art, odex);

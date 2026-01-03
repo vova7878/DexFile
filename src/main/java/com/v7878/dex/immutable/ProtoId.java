@@ -9,6 +9,7 @@ import com.v7878.dex.util.ShortyUtils;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
+import java.util.AbstractList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
@@ -103,6 +104,26 @@ public final class ProtoId implements Comparable<ProtoId> {
                 basic.apply(return_type),
                 Converter.transform(parameters, basic)
         );
+    }
+
+    public ProtoId insertThis(TypeId thiz) {
+        Objects.requireNonNull(thiz);
+        var params = parameters;
+        var vparams = new AbstractList<TypeId>() {
+            @Override
+            public int size() {
+                return params.size() + 1;
+            }
+
+            @Override
+            public TypeId get(int i) {
+                if (i == 0) {
+                    return thiz;
+                }
+                return params.get(i - 1);
+            }
+        };
+        return ProtoId.raw(return_type, vparams);
     }
 
     @Override

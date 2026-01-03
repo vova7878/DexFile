@@ -106,6 +106,10 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         return proto;
     }
 
+    public ProtoId instanceProto() {
+        return proto.insertThis(declaring_class);
+    }
+
     public TypeId getReturnType() {
         return proto.getReturnType();
     }

@@ -69,7 +69,7 @@ import static com.v7878.dex.raw.CompactDexConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
 import static com.v7878.dex.util.Checks.checkIndex;
 
-import com.v7878.collections.SparseArray;
+import com.v7878.collections.IntMap;
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.DexIO;
 import com.v7878.dex.DexVersion;
@@ -137,12 +137,11 @@ import java.util.function.IntSupplier;
 
 public class DexReader implements DexIO.DexReaderCache {
     private record AnnotationDirectory(NavigableSet<Annotation> class_annotations,
-                                       SparseArray<NavigableSet<Annotation>> field_annotations,
-                                       SparseArray<NavigableSet<Annotation>> method_annotations,
-                                       SparseArray<List<NavigableSet<Annotation>>> parameter_annotations) {
+                                       IntMap<NavigableSet<Annotation>> field_annotations,
+                                       IntMap<NavigableSet<Annotation>> method_annotations,
+                                       IntMap<List<NavigableSet<Annotation>>> parameter_annotations) {
         public static final AnnotationDirectory EMPTY = new AnnotationDirectory(
-                Collections.emptyNavigableSet(), SparseArray.empty(),
-                SparseArray.empty(), SparseArray.empty());
+                Collections.emptyNavigableSet(), IntMap.empty(), IntMap.empty(), IntMap.empty());
     }
 
     private record CodeItem(int registers, int ins, int outs, DebugInfo debug_info,
@@ -387,7 +386,7 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private static <T> IntFunction<T> makeOffsetCache(IntFunction<T> reader) {
-        var cache = new SparseArray<T>();
+        var cache = new IntMap<T>();
         return offset -> {
             var out = cache.get(offset);
             if (out != null) return out;
@@ -524,8 +523,8 @@ public class DexReader implements DexIO.DexReaderCache {
         return annotation_set_list_cache.apply(offset);
     }
 
-    private SparseArray<NavigableSet<Annotation>> readAnnotationSetMap(RandomInput in, int size) {
-        var out = new SparseArray<NavigableSet<Annotation>>(size);
+    private IntMap<NavigableSet<Annotation>> readAnnotationSetMap(RandomInput in, int size) {
+        var out = new IntMap<NavigableSet<Annotation>>(size);
         for (int i = 0; i < size; i++) {
             int id = in.readSmallUInt();
             var set = getAnnotationSet(in.readSmallUInt());
@@ -534,8 +533,8 @@ public class DexReader implements DexIO.DexReaderCache {
         return out;
     }
 
-    private SparseArray<List<NavigableSet<Annotation>>> readAnnotationSetListMap(RandomInput in, int size) {
-        var out = new SparseArray<List<NavigableSet<Annotation>>>(size);
+    private IntMap<List<NavigableSet<Annotation>>> readAnnotationSetListMap(RandomInput in, int size) {
+        var out = new IntMap<List<NavigableSet<Annotation>>>(size);
         for (int i = 0; i < size; i++) {
             int id = in.readSmallUInt();
             var list = getAnnotationSetList(in.readSmallUInt());
@@ -552,12 +551,12 @@ public class DexReader implements DexIO.DexReaderCache {
         int parameters_size = in.readSmallUInt();
         NavigableSet<Annotation> class_annotations = class_annotations_off == NO_OFFSET ?
                 Collections.emptyNavigableSet() : getAnnotationSet(class_annotations_off);
-        SparseArray<NavigableSet<Annotation>> field_annotations = fields_size == 0 ?
-                SparseArray.empty() : readAnnotationSetMap(in, fields_size);
-        SparseArray<NavigableSet<Annotation>> method_annotations = methods_size == 0 ?
-                SparseArray.empty() : readAnnotationSetMap(in, methods_size);
-        SparseArray<List<NavigableSet<Annotation>>> parameter_annotations = parameters_size == 0 ?
-                SparseArray.empty() : readAnnotationSetListMap(in, parameters_size);
+        IntMap<NavigableSet<Annotation>> field_annotations = fields_size == 0 ?
+                IntMap.empty() : readAnnotationSetMap(in, fields_size);
+        IntMap<NavigableSet<Annotation>> method_annotations = methods_size == 0 ?
+                IntMap.empty() : readAnnotationSetMap(in, methods_size);
+        IntMap<List<NavigableSet<Annotation>>> parameter_annotations = parameters_size == 0 ?
+                IntMap.empty() : readAnnotationSetListMap(in, parameters_size);
         return new AnnotationDirectory(class_annotations, field_annotations,
                 method_annotations, parameter_annotations);
     }
@@ -818,7 +817,7 @@ public class DexReader implements DexIO.DexReaderCache {
 
     private List<FieldDef> readFieldDefList(
             RandomInput in, int count, IntSupplier hiddenapi,
-            SparseArray<NavigableSet<Annotation>> annotations_map,
+            IntMap<NavigableSet<Annotation>> annotations_map,
             List<EncodedValue> static_values, boolean static_list) {
         List<FieldDef> out = new ArrayList<>(count);
         int index = 0;
@@ -865,7 +864,7 @@ public class DexReader implements DexIO.DexReaderCache {
         return new CatchHandler(handlers, catch_all_addr);
     }
 
-    private TryBlock readTryBlock(RandomInput in, SparseArray<CatchHandler> handlers) {
+    private TryBlock readTryBlock(RandomInput in, IntMap<CatchHandler> handlers) {
         int start_addr = in.readSmallUInt(); // code units
         int unit_count = in.readUShort(); // code units
 
@@ -955,7 +954,7 @@ public class DexReader implements DexIO.DexReaderCache {
             int handlers_start = in.position();
             int handlers_size = in.readSmallULeb128();
 
-            var handlers = new SparseArray<CatchHandler>(handlers_size);
+            var handlers = new IntMap<CatchHandler>(handlers_size);
             for (int i = 0; i < handlers_size; i++) {
                 int handler_offset = in.position() - handlers_start;
                 handlers.put(handler_offset, readCatchHandler(in));
@@ -1030,8 +1029,8 @@ public class DexReader implements DexIO.DexReaderCache {
 
     private List<MethodDef> readMethodDefList(
             RandomInput in, int count, IntSupplier hiddenapi,
-            SparseArray<NavigableSet<Annotation>> method_annotations,
-            SparseArray<List<NavigableSet<Annotation>>> parameter_annotations) {
+            IntMap<NavigableSet<Annotation>> method_annotations,
+            IntMap<List<NavigableSet<Annotation>>> parameter_annotations) {
         List<MethodDef> out = new ArrayList<>(count);
         int index = 0;
         for (int i = 0; i < count; i++) {

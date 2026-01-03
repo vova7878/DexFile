@@ -123,17 +123,19 @@ public final class IntSet {
         removeAtRaw(index);
     }
 
-    public void removeAtRange(int index, int length) {
+    // TODO: public void removeRange(int from_value, int to_value)
+
+    public void removeAtRange(int from_index, int to_index) {
         checkWritable();
-        Objects.checkFromIndexSize(index, length, size);
-        if (length <= 0) {
+        Objects.checkFromToIndex(from_index, to_index, size);
+        if (to_index <= from_index) {
             return;
         }
-        int from = index + length;
-        if (from < size) {
-            System.arraycopy(array, from, array, index, size - from);
+        if (to_index < size) {
+            // Here the meaning of 'to' and 'from' is reversed
+            System.arraycopy(array, to_index, array, from_index, size - to_index);
         }
-        size -= length;
+        size -= to_index - from_index;
     }
 
     /**
@@ -150,6 +152,8 @@ public final class IntSet {
         size++;
         return true;
     }
+
+    // TODO: public void addRange(int from_value, int to_value)
 
     public void addAll(IntSet other) {
         checkWritable();

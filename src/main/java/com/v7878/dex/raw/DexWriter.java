@@ -746,19 +746,21 @@ public class DexWriter {
         }
     }
 
-    public void writeMapItem(MapItem value) {
-        data_buffer.writeShort(value.type());
-        data_buffer.writeShort(0);
-        data_buffer.writeInt(value.size());
-        data_buffer.writeInt(value.offset());
+    public void writeMapItem(RandomOutput out, MapItem value) {
+        out.writeShort(value.type());
+        out.writeShort(0);
+        out.writeInt(value.size());
+        out.writeInt(value.offset());
     }
 
     public void writeMap(boolean write) {
+        RandomOutput out;
         if (write) {
-            data_buffer.position(map.map_list_off);
+            out = data_buffer.duplicateAt(map.map_list_off);
         } else {
-            data_buffer.alignPosition(MAP_ALIGNMENT);
-            map.map_list_off = data_buffer.position();
+            out = data_buffer;
+            out.alignPosition(MAP_ALIGNMENT);
+            map.map_list_off = out.position();
         }
         var list = new ArrayList<MapItem>();
 
@@ -850,12 +852,12 @@ public class DexWriter {
         if (write) {
             list.sort(Comparator.comparingInt(MapItem::offset));
 
-            data_buffer.writeInt(list.size());
+            out.writeInt(list.size());
             for (MapItem tmp : list) {
-                writeMapItem(tmp);
+                writeMapItem(out, tmp);
             }
         } else {
-            data_buffer.addPosition(4 + 12 * list.size());
+            out.addPosition(4 + 12 * list.size());
         }
     }
 
