@@ -14,6 +14,7 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
         this.declaring_class = Objects.requireNonNull(declaring_class);
         this.name = Objects.requireNonNull(name);
         this.type = Objects.requireNonNull(type);
+        checkDeclaringClass();
     }
 
     public static FieldId of(TypeId declaring_class, String name, TypeId type) {
