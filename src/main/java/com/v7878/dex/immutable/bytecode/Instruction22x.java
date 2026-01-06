@@ -4,6 +4,7 @@ import static com.v7878.dex.Format.Format22x;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.TwoRegisterInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -44,5 +45,11 @@ public final class Instruction22x extends Instruction implements TwoRegisterInst
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
                 && getRegister2() == other.getRegister2();
+    }
+
+    @Override
+    public String toString() {
+        return getName() + " " + Formatter.register(register1)
+                + ", " + Formatter.register(register2);
     }
 }

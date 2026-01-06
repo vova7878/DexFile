@@ -6,6 +6,7 @@ import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.iface.DualReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.VariableFiveRegisterInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -101,5 +102,23 @@ public final class Instruction45cc extends Instruction
                 && getRegister5() == other.getRegister5()
                 && Objects.equals(getReference1(), other.getReference1())
                 && Objects.equals(getReference2(), other.getReference2());
+    }
+
+    @Override
+    public String toString() {
+        var builder = new StringBuilder();
+        builder.append(getName());
+        builder.append("{");
+        if (register_count > 0) builder.append(Formatter.register(register1));
+        if (register_count > 1) builder.append(", ").append(Formatter.register(register2));
+        if (register_count > 2) builder.append(", ").append(Formatter.register(register3));
+        if (register_count > 3) builder.append(", ").append(Formatter.register(register4));
+        if (register_count > 4) builder.append(", ").append(Formatter.register(register5));
+        builder.append("}");
+        builder.append(", ");
+        builder.append(ReferenceType.describe(getReferenceType1(), reference1));
+        builder.append(", ");
+        builder.append(ReferenceType.describe(getReferenceType2(), reference2));
+        return builder.toString();
     }
 }

@@ -5,6 +5,7 @@ import static com.v7878.dex.Format.Format31t;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
 import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -46,5 +47,11 @@ public final class Instruction31t extends Instruction
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
                 && getBranchOffset() == other.getBranchOffset();
+    }
+
+    @Override
+    public String toString() {
+        return getName() + " " + Formatter.register(register1)
+                + ", " + Formatter.signedHex(branch_offset);
     }
 }

@@ -1,5 +1,7 @@
 package com.v7878.dex.immutable.bytecode;
 
+import com.v7878.dex.util.Formatter;
+
 import java.util.Objects;
 
 public final class SwitchElement implements Comparable<SwitchElement> {
@@ -40,5 +42,10 @@ public final class SwitchElement implements Comparable<SwitchElement> {
     public int compareTo(SwitchElement other) {
         if (other == this) return 0;
         return Integer.compare(getKey(), other.getKey());
+    }
+
+    @Override
+    public String toString() {
+        return "case " + key + " -> " + Formatter.signedHex(offset);
     }
 }

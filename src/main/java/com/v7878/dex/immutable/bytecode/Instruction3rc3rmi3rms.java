@@ -7,6 +7,7 @@ import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -62,5 +63,13 @@ public final class Instruction3rc3rmi3rms extends Instruction
                 && getRegisterCount() == other.getRegisterCount()
                 && getStartRegister() == other.getStartRegister()
                 && Objects.equals(getReference1(), other.getReference1());
+    }
+
+    @Override
+    public String toString() {
+        var start = start_register;
+        var end = start + register_count;
+        return getName() + "{" + Formatter.register(start) + " .. " + Formatter.register(end) + "}"
+                + ", " + ReferenceType.describe(getReferenceType1(), reference1);
     }
 }

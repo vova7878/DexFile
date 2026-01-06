@@ -4,6 +4,7 @@ import static com.v7878.dex.Format.Format23x;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.ThreeRegisterInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -54,5 +55,12 @@ public final class Instruction23x extends Instruction implements ThreeRegisterIn
                 && getRegister1() == other.getRegister1()
                 && getRegister2() == other.getRegister2()
                 && getRegister3() == other.getRegister3();
+    }
+
+    @Override
+    public String toString() {
+        return getName() + " " + Formatter.register(register1)
+                + ", " + Formatter.register(register2)
+                + ", " + Formatter.register(register3);
     }
 }

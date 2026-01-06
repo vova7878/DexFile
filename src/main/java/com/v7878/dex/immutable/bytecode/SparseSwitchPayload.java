@@ -10,6 +10,7 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public final class SparseSwitchPayload extends Instruction implements SwitchPayloadInstruction {
     private final NavigableSet<SwitchElement> elements;
@@ -49,5 +50,19 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
         return obj instanceof SparseSwitchPayload other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && Objects.equals(getSwitchElements(), other.getSwitchElements());
+    }
+
+    @Override
+    public String toString() {
+        var builder = new StringBuilder();
+        builder.append(getName());
+        builder.append("{");
+        var cases = elements;
+        if (!cases.isEmpty()) {
+            builder.append(cases.stream().map(Objects::toString)
+                    .collect(Collectors.joining("\t\n", "\n", "\n")));
+        }
+        builder.append("}");
+        return builder.toString();
     }
 }

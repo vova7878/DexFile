@@ -4,6 +4,7 @@ import static com.v7878.dex.Format.Format11x;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -36,5 +37,10 @@ public final class Instruction11x extends Instruction implements OneRegisterInst
         return obj instanceof Instruction11x other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1();
+    }
+
+    @Override
+    public String toString() {
+        return getName() + " " + Formatter.register(register1);
     }
 }

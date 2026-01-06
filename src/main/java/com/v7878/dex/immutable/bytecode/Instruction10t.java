@@ -4,6 +4,7 @@ import static com.v7878.dex.Format.Format10t;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -36,5 +37,10 @@ public final class Instruction10t extends Instruction implements BranchOffsetIns
         return obj instanceof Instruction10t other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getBranchOffset() == other.getBranchOffset();
+    }
+
+    @Override
+    public String toString() {
+        return getName() + " " + Formatter.signedHex(branch_offset);
     }
 }
