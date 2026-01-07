@@ -72,7 +72,7 @@ public final class ArrayPayload extends Instruction implements ArrayPayloadInstr
         var cases = elements;
         if (!cases.isEmpty()) {
             builder.append(cases.stream().map(Objects::toString)
-                    .collect(Collectors.joining("\t\n,", "\n", "\n")));
+                    .collect(Collectors.joining("\n\t,", "\n\t", "\n")));
         }
         builder.append("}");
         return builder.toString();

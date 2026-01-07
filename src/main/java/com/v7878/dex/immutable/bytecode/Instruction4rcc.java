@@ -75,7 +75,7 @@ public final class Instruction4rcc extends Instruction
     public String toString() {
         var start = start_register;
         var end = start + register_count;
-        return getName() + "{" + Formatter.register(start) + " .. " + Formatter.register(end) + "}"
+        return getName() + " {" + Formatter.register(start) + " .. " + Formatter.register(end) + "}"
                 + ", " + ReferenceType.describe(getReferenceType1(), reference1)
                 + ", " + ReferenceType.describe(getReferenceType2(), reference2);
     }

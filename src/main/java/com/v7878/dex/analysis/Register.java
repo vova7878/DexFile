@@ -21,8 +21,11 @@ import java.util.Objects;
 
 public sealed abstract class Register {
     public record Identifier(int address, int slot) {
-        public Identifier(int slot) {
-            this(-1, slot);
+        public Identifier {
+            if (address != -1 && address < 0) {
+                throw new IllegalArgumentException(
+                        "Invalid address: " + address);
+            }
         }
 
         public boolean isParameter() {
@@ -31,7 +34,7 @@ public sealed abstract class Register {
 
         @Override
         public String toString() {
-            return address + "[" + slot + "]";
+            return (address < 0 ? "parameter" : Integer.toHexString(address)) + "[" + slot + "]";
         }
     }
 
@@ -309,39 +312,6 @@ public sealed abstract class Register {
             return SHORT;
         }
         return INT;
-    }
-
-    /*public static boolean isAssignable(TypeId type, ConstantKind value) {
-        return switch (type == null ? 'L' : type.getShorty()) {
-            case 'Z' -> value.isBool();
-            case 'B' -> value.isByte();
-            case 'S' -> value.isShort();
-            case 'C' -> value.isChar();
-            case 'I', 'F' -> value.isInt();
-            case 'J', 'D' -> value.isWide();
-            case 'L' -> value.isRef();
-            default -> false;
-        };
-    }*/
-
-    public static boolean isAssignable(ConstantKind reg, ConstantKind value) {
-        return switch (reg) {
-            case ZERO -> value.isZero();
-            case BOOL -> value.isBool();
-            case POSITIVE_BYTE -> value.isPositiveByte();
-            case POSITIVE_SHORT -> value.isPositiveShort();
-            case CHAR -> value.isChar();
-            case BYTE -> value.isByte();
-            case SHORT -> value.isShort();
-            case INT -> value.isInt();
-            case WIDE_LO -> value.isWideLo();
-            case WIDE_HI -> value.isWideHi();
-            case STRING -> value.isString();
-            case CLASS -> value.isClass();
-            case METHOD_TYPE -> value.isMethodType();
-            case METHOD_HANDLE -> value.isMethodHandle();
-            case NULL -> value.isNull();
-        };
     }
 
     public static abstract sealed class TypedRegister extends DynamicRegister {

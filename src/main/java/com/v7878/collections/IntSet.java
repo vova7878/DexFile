@@ -4,6 +4,7 @@ import com.v7878.dex.util.EmptyArrays;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.stream.IntStream;
 
 public final class IntSet {
     private boolean ro;
@@ -205,6 +206,10 @@ public final class IntSet {
 
     public int[] toArray() {
         return Arrays.copyOf(array, size);
+    }
+
+    public IntStream stream() {
+        return Arrays.stream(array, 0, size);
     }
 
     public void clear() {

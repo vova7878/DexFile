@@ -7,6 +7,7 @@ import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.iface.PayloadInstruction;
 import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.Formatter;
 
 import java.util.Collections;
 import java.util.NavigableSet;
@@ -31,7 +32,12 @@ public final class Position {
             if (other == this) return 0;
             int out = Integer.compare(address(), other.address());
             if (out != 0) return out;
-            return CollectionUtils.compareNonNull(exception(), other.exception());
+            return CollectionUtils.compareNullable(exception(), other.exception());
+        }
+
+        @Override
+        public String toString() {
+            return Formatter.unsignedHex(address) + (exception == null ? "" : " -> " + exception);
         }
     }
 
@@ -223,5 +229,22 @@ public final class Position {
     public boolean isNarrowingNop() {
         // TODO
         return false;
+    }
+
+    public String describe() {
+        return String.format("""
+                        %08X: %s
+                        structurally reachable: %s
+                        runtime reachable: %s
+                        inputs: %s
+                        outputs: %s
+                        state before: %s
+                        state after: %s
+                        predecessors: %s
+                        successors: %s
+                        """.trim(),
+                address, instruction, isStructurallyReachable(), isRuntimeReachable(),
+                Formatter.registers(inputs), Formatter.registers(outputs),
+                before.describe(), after.describe(), predecessors, successors);
     }
 }

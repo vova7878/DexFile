@@ -39,7 +39,6 @@ import com.v7878.dex.immutable.bytecode.Instruction12x;
 import com.v7878.dex.immutable.bytecode.Instruction21c;
 import com.v7878.dex.immutable.bytecode.Instruction21t;
 import com.v7878.dex.immutable.bytecode.Instruction22c22cs;
-import com.v7878.dex.immutable.bytecode.Instruction22s;
 import com.v7878.dex.immutable.bytecode.Instruction22t;
 import com.v7878.dex.immutable.bytecode.Instruction23x;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
@@ -51,10 +50,13 @@ import com.v7878.dex.immutable.bytecode.iface.ArrayPayloadInstruction;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
 import com.v7878.dex.immutable.bytecode.iface.LiteralInstruction;
 import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
+import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
 import com.v7878.dex.immutable.bytecode.iface.ThreeRegisterInstruction;
 import com.v7878.dex.immutable.bytecode.iface.TwoRegisterInstruction;
+import com.v7878.dex.immutable.bytecode.iface.VariableFiveRegisterInstruction;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.Formatter;
 
 import java.util.BitSet;
 import java.util.Objects;
@@ -164,7 +166,7 @@ public final class AnalyzedMethod {
     }
 
     private RegisterLine firstLine() {
-        final int address = 0;
+        final int address = -1;
         var line = new RegisterLine(register_count);
         var params = method.getParameterTypes();
         var count = params.size();
@@ -176,9 +178,13 @@ public final class AnalyzedMethod {
         }
         if ((method.getAccessFlags() & ACC_STATIC) == 0) {
             pos -= 1;
-            // TODO?
-            var ident = new Identifier(pos);
-            var value = UninitializedRef.of(ident, declaring_class, true);
+            var ident = new Identifier(address, pos);
+            Register value;
+            if (method.isInstanceInitializer()) {
+                value = UninitializedRef.of(ident, declaring_class, true);
+            } else {
+                value = Reference.of(ident, declaring_class);
+            }
             line.copy(address, pos, value);
         }
         return line;
@@ -812,6 +818,7 @@ public final class AnalyzedMethod {
             }
             case INVOKE_CUSTOM -> {
                 var tmp = (Instruction35c35mi35ms) insn;
+                // TODO? verify callsite
                 var ref = (CallSiteId) tmp.getReference1();
 
                 var proto = ref.getMethodProto();
@@ -850,6 +857,7 @@ public final class AnalyzedMethod {
             }
             case INVOKE_CUSTOM_RANGE -> {
                 var tmp = (Instruction3rc3rmi3rms) insn;
+                // TODO? verify callsite
                 var ref = (CallSiteId) tmp.getReference1();
 
                 var proto = ref.getMethodProto();
@@ -984,8 +992,10 @@ public final class AnalyzedMethod {
                  REM_INT_LIT16, AND_INT_LIT16, OR_INT_LIT16, XOR_INT_LIT16,
                  ADD_INT_LIT8, RSUB_INT_LIT8, MUL_INT_LIT8, DIV_INT_LIT8,
                  REM_INT_LIT8, AND_INT_LIT8, OR_INT_LIT8, XOR_INT_LIT8,
-                 SHL_INT_LIT8, SHR_INT_LIT8, USHR_INT_LIT8 -> {
-                var tmp = (Instruction22s) insn;
+                 SHL_INT_LIT8, SHR_INT_LIT8, USHR_INT_LIT8 ->
+            //noinspection DuplicateBranchesInSwitch
+            {
+                var tmp = (TwoRegisterInstruction) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
 
@@ -1040,8 +1050,7 @@ public final class AnalyzedMethod {
     }
 
     private static String describe(Position pos) {
-        //TODO
-        return pos.opcode().opname();
+        return Formatter.unsignedHex(pos.address()) + ": " + pos.instruction();
     }
 
     private static RuntimeException unexpectedReg(Position current, int slot, Register reg) {
@@ -1050,12 +1059,25 @@ public final class AnalyzedMethod {
         );
     }
 
-    private static RuntimeException unexpectedRegPair(Position current, int slot_lo, RegisterPair reg) {
-        int slot_hi = slot_lo + 1;
+    private static RuntimeException unexpectedRegPair(
+            Position current, int slot_lo, int slot_hi, Register reg_lo, Register reg_hi) {
         throw new AnalysisException(
                 String.format("Register pair v%s/v%s has unexpected type %s/%s as arg to %s",
-                        slot_lo, slot_hi, reg.lo(), reg.hi(), describe(current))
+                        slot_lo, slot_hi, reg_lo, reg_hi, describe(current))
         );
+    }
+
+    private static RuntimeException unexpectedRegPair(Position current, int slot_lo, RegisterPair reg) {
+        int slot_hi = slot_lo + 1;
+        throw unexpectedRegPair(current, slot_lo, slot_hi, reg.lo(), reg.hi());
+    }
+
+    private static RuntimeException unexpectedRegPair(
+            Position current, int index, int slot_lo, int slot_hi) {
+        throw new AnalysisException(String.format(
+                "Rejecting invocation, long or double parameter at index %s is not a pair v%s/v%s in %s",
+                index, slot_lo, slot_hi, describe(current)
+        ));
     }
 
     private static RuntimeException unexpectedType(Position current, TypeId type) {
@@ -1112,9 +1134,8 @@ public final class AnalyzedMethod {
         }
         var transition = predecessors.first();
         if (!transition.isNormal()) {
-            // TODO
-            var op = current.opcode();
-            throw new AnalysisException("Exception handler begins with " + op);
+            throw new AnalysisException(
+                    "Exception handler begins with " + describe(current));
         }
         var position = position(transition.address());
         if (position.index() + 1 != current.index()) {
@@ -1135,8 +1156,7 @@ public final class AnalyzedMethod {
         for (var transition : predecessors) {
             var exception = transition.exception();
             if (exception == null) {
-                // TODO
-                throw new AnalysisException("Can flow through to move-exception");
+                throw new AnalysisException("Can flow through to " + describe(current));
             }
             if (exception.isPrimitive() || !TypeResolver._instanceOf(exception, THROWABLE)) {
                 // TODO
@@ -1173,13 +1193,13 @@ public final class AnalyzedMethod {
     }
 
     private static void output(RegisterLine line, int address, int slot, TypeId type) {
-        if (type.isWidePrimitive()) {
+        if (type != null && type.isWidePrimitive()) {
             var value_lo = WidePrimitive.of(new Identifier(address, slot), type, true);
             var value_hi = WidePrimitive.of(new Identifier(address, slot + 1), type, false);
             line.copyWide(address, slot, value_lo, value_hi);
         } else {
             var ident = new Identifier(address, slot);
-            var value = type.isReference() ?
+            var value = (type == null || type.isReference()) ?
                     Reference.of(ident, type) :
                     Primitive.of(ident, type);
             line.copy(address, slot, value);
@@ -1309,6 +1329,74 @@ public final class AnalyzedMethod {
         output(current, idst, type);
     }
 
+    private static void verify35c_45ccArgs(Position current, boolean thiz, boolean check_this) {
+        VariableFiveRegisterInstruction tmp = current.instruction();
+        var proto = current.accessProto();
+
+        var regs = new int[]{
+                tmp.getRegister1(),
+                tmp.getRegister2(),
+                tmp.getRegister3(),
+                tmp.getRegister4(),
+                tmp.getRegister5()
+        };
+
+        int reg_index = 0;
+        for (var arg : proto.getParameterTypes()) {
+            if (thiz) {
+                thiz = false;
+                assert arg.isReference();
+                if (check_this) {
+                    int ithis_reg = regs[reg_index];
+                    var this_reg = current.before().at(ithis_reg);
+                    // TODO: In Android there is a rather complex
+                    //  check here depending on the type of call
+                    if (!this_reg.isInitializedRef()) {
+                        throw unexpectedReg(current, ithis_reg, this_reg);
+                    }
+                }
+            } else {
+                int ireg;
+                if (arg.isWidePrimitive()) {
+                    int ireg_lo = regs[reg_index];
+                    int ireg_hi = regs[reg_index + 1];
+                    if (ireg_hi != ireg_lo + 1) {
+                        throw unexpectedRegPair(current, reg_index, ireg_lo, ireg_hi);
+                    }
+                    ireg = ireg_lo;
+                } else {
+                    ireg = regs[reg_index];
+                }
+                verifyReg(current, ireg, arg);
+            }
+            reg_index += arg.getRegisterCount();
+        }
+    }
+
+    private static void verify3rc_4rccArgs(Position current, boolean thiz, boolean check_this) {
+        RegisterRangeInstruction tmp = current.instruction();
+        var proto = current.accessProto();
+
+        int ireg = tmp.getStartRegister();
+        for (var arg : proto.getParameterTypes()) {
+            if (thiz) {
+                thiz = false;
+                assert arg.isReference();
+                if (check_this) {
+                    var this_reg = current.before().at(ireg);
+                    // TODO: In Android there is a rather complex
+                    //  check here depending on the type of call
+                    if (!this_reg.isInitializedRef()) {
+                        throw unexpectedReg(current, ireg, this_reg);
+                    }
+                }
+            } else {
+                verifyReg(current, ireg, arg);
+            }
+            ireg += arg.getRegisterCount();
+        }
+    }
+
     // At this stage, there is no need to check the boundaries of
     // register indices, as they have already been checked earlier
     private void analyzePosition(BitSet touched, BitSet todo, int index) {
@@ -1316,9 +1404,9 @@ public final class AnalyzedMethod {
         int address = current.address();
         var insn = current.instruction();
         var opcode = insn.getOpcode();
-        if (opcode == THROW) {
-            // Note: We don't call current.passRegs() because
-            // the throw instruction never executes 'normally'
+        if (opcode == THROW || opcode.isReturn()) {
+            // Note: We don't call current.passRegs() here because
+            // these instructions never complete execution 'normally'
         } else {
             current.passRegs();
         }
@@ -1493,7 +1581,6 @@ public final class AnalyzedMethod {
                 var ireg = tmp.getRegister1();
                 var ref = (TypeId) tmp.getReference1();
 
-                // TODO?
                 var ident = new Identifier(address, ireg);
                 var value = UninitializedRef.of(ident, ref, false);
                 current.after().copy(address, ireg, value);
@@ -1511,12 +1598,8 @@ public final class AnalyzedMethod {
 
                 output(current, idst, ref);
             }
-            case FILLED_NEW_ARRAY -> {
-                // TODO: check args
-            }
-            case FILLED_NEW_ARRAY_RANGE -> {
-                // TODO: check args
-            }
+            case FILLED_NEW_ARRAY -> verify35c_45ccArgs(current, false, false);
+            case FILLED_NEW_ARRAY_RANGE -> verify3rc_4rccArgs(current, false, false);
             case FILL_ARRAY_DATA -> {
                 var tmp = (Instruction31t) insn;
 
@@ -1540,9 +1623,9 @@ public final class AnalyzedMethod {
                         default -> throw invalidShorty(shorty);
                     };
                     if (elem_width_data != elem_width_reg) {
-                        // TODO
                         throw new AnalysisException("array-data size mismatch: "
-                                + elem_width_data + " vs " + elem_width_reg);
+                                + elem_width_data + " vs " +
+                                elem_width_reg + " in " + describe(current));
                     }
                 }
             }
@@ -1660,14 +1743,13 @@ public final class AnalyzedMethod {
                 int argt = reg1t | reg2t;
 
                 if (argt == 0b11) {
-                    // TODO
                     throw new AnalysisException(
                             "Register v" + ireg1 + " of type " + reg1 + " and register v" +
-                                    ireg2 + " of type " + reg2 + " can`t be args to " + opcode.opname()
+                                    ireg2 + " of type " + reg2 + " can`t be args to " + describe(current)
                     );
                 }
 
-                boolean true_pass = true;
+                boolean true_pass = argt < 0b11; // always true
                 boolean false_pass = (argt != 0b00) && (ireg1 != ireg2)
                         && !Objects.equals(reg1, reg2);
 
@@ -1827,8 +1909,8 @@ public final class AnalyzedMethod {
                 var obj = current.before().at(iobj);
                 var ref = (FieldId) tmp.getReference1();
 
-                // TODO: check instanceOf decl class
-                //  Check that we are in the constructor and this is access
+                // TODO: check instanceOf decl class +
+                //  сheck that we are in the constructor and this is access
                 //  to field of the current class if obj is not initialized
                 if (!obj.isRef()) {
                     throw unexpectedReg(current, iobj, obj);
@@ -1847,8 +1929,8 @@ public final class AnalyzedMethod {
                 var obj = current.before().at(iobj);
                 var ref = (FieldId) tmp.getReference1();
 
-                // TODO: check instanceOf decl class
-                //  Check that we are in the constructor and this is access
+                // TODO: check instanceOf decl class +
+                //  сheck that we are in the constructor and this is access
                 //  to field of the current class if obj is not initialized
                 if (!obj.isRef()) {
                     throw unexpectedReg(current, iobj, obj);
@@ -1879,6 +1961,7 @@ public final class AnalyzedMethod {
                 var tmp = (Instruction35c35mi35ms) insn;
                 var ref = (MethodId) tmp.getReference1();
 
+                var check_this = true;
                 if (ref.isInstanceInitializer()) {
                     assert tmp.getRegisterCount() > 0;
                     int ithis_reg = tmp.getRegister1();
@@ -1887,14 +1970,16 @@ public final class AnalyzedMethod {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
                     markInitialized(current, ithis_reg, this_reg);
+                    check_this = false;
                 }
 
-                // TODO: check args
+                verify35c_45ccArgs(current, true, check_this);
             }
             case INVOKE_DIRECT_RANGE -> {
                 var tmp = (Instruction3rc3rmi3rms) insn;
                 var ref = (MethodId) tmp.getReference1();
 
+                var check_this = true;
                 if (ref.isInstanceInitializer()) {
                     assert tmp.getRegisterCount() > 0;
                     int ithis_reg = tmp.getStartRegister();
@@ -1903,46 +1988,21 @@ public final class AnalyzedMethod {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
                     markInitialized(current, ithis_reg, this_reg);
+                    check_this = false;
                 }
 
-                // TODO: check args
+                verify3rc_4rccArgs(current, true, check_this);
             }
-            case INVOKE_VIRTUAL -> {
-                // TODO: check args
-            }
-            case INVOKE_VIRTUAL_RANGE -> {
-                // TODO: check args
-            }
-            case INVOKE_SUPER -> {
-                // TODO: check args
-            }
-            case INVOKE_SUPER_RANGE -> {
-                // TODO: check args
-            }
-            case INVOKE_STATIC -> {
-                // TODO: check args
-            }
-            case INVOKE_STATIC_RANGE -> {
-                // TODO: check args
-            }
-            case INVOKE_INTERFACE -> {
-                // TODO: check args
-            }
-            case INVOKE_POLYMORPHIC -> {
-                // TODO: check args
-            }
-            case INVOKE_INTERFACE_RANGE -> {
-                // TODO: check args
-            }
-            case INVOKE_POLYMORPHIC_RANGE -> {
-                // TODO: check args
-            }
-            case INVOKE_CUSTOM -> {
-                // TODO: check args
-            }
-            case INVOKE_CUSTOM_RANGE -> {
-                // TODO: check args
-            }
+            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_INTERFACE,
+                 INVOKE_POLYMORPHIC -> verify35c_45ccArgs(current, true, true);
+            case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE, INVOKE_INTERFACE_RANGE,
+                 INVOKE_POLYMORPHIC_RANGE -> verify3rc_4rccArgs(current, true, true);
+            case INVOKE_STATIC, INVOKE_CUSTOM ->
+                //noinspection DuplicateBranchesInSwitch
+                    verify35c_45ccArgs(current, false, false);
+            case INVOKE_STATIC_RANGE, INVOKE_CUSTOM_RANGE ->
+                //noinspection DuplicateBranchesInSwitch
+                    verify3rc_4rccArgs(current, false, false);
             case NEG_INT, NOT_INT -> unop(current, TypeId.I, TypeId.I);
             case NEG_LONG, NOT_LONG -> unop(current, TypeId.J, TypeId.J);
             case NEG_FLOAT -> unop(current, TypeId.F, TypeId.F);

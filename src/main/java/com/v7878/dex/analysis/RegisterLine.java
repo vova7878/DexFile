@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public final class RegisterLine {
     private final Register[] registers;
@@ -117,8 +118,8 @@ public final class RegisterLine {
         return changed;
     }
 
-    @Override
-    public String toString() {
-        return Arrays.toString(registers);
+    public String describe() {
+        return Arrays.stream(registers).map(Objects::toString)
+                .collect(Collectors.joining(" | ", "[", "]"));
     }
 }

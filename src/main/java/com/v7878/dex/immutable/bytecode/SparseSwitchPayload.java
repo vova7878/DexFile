@@ -56,11 +56,11 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
     public String toString() {
         var builder = new StringBuilder();
         builder.append(getName());
-        builder.append("{");
+        builder.append(" {");
         var cases = elements;
         if (!cases.isEmpty()) {
             builder.append(cases.stream().map(Objects::toString)
-                    .collect(Collectors.joining("\t\n", "\n", "\n")));
+                    .collect(Collectors.joining("\n\t", "\n\t", "\n")));
         }
         builder.append("}");
         return builder.toString();

@@ -15,6 +15,12 @@ public class CollectionUtils {
         return left.compareTo(right);
     }
 
+    public static <T extends Comparable<? super T>> int compareNullable(T left, T right) {
+        return left == null ?
+                (right == null ? 0 : -1) :
+                (right == null ? 1 : left.compareTo(right));
+    }
+
     public static <T extends Comparable<? super T>> int compareLexicographically(
             Iterable<? extends T> left, Iterable<? extends T> right) {
         var i1 = left.iterator();

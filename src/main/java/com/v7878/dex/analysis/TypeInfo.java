@@ -17,7 +17,7 @@ public record TypeInfo(TypeId base, int array_depth) {
         return new TypeInfo(type.baseType(), type.getArrayDepth());
     }
 
-    public boolean isUnknown() {
+    public boolean isUnresolved() {
         return base == null;
     }
 

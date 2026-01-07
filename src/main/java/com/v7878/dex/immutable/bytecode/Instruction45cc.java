@@ -108,7 +108,7 @@ public final class Instruction45cc extends Instruction
     public String toString() {
         var builder = new StringBuilder();
         builder.append(getName());
-        builder.append("{");
+        builder.append(" {");
         if (register_count > 0) builder.append(Formatter.register(register1));
         if (register_count > 1) builder.append(", ").append(Formatter.register(register2));
         if (register_count > 2) builder.append(", ").append(Formatter.register(register3));
