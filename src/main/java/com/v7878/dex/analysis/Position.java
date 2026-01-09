@@ -81,8 +81,8 @@ public final class Position {
         before.copy(line);
     }
 
-    /* package */ boolean merge(RegisterLine line) {
-        return before.merge(address, line);
+    /* package */ boolean merge(TypeResolver resolver, RegisterLine line) {
+        return before.merge(resolver, address, line);
     }
 
     /* package */ void passRegs() {

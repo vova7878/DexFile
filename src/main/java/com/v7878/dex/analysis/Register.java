@@ -268,8 +268,12 @@ public sealed abstract class Register {
             return this == NULL;
         }
 
+        public boolean isZeroOrNull() {
+            return isZero() || isNull();
+        }
+
         public boolean isRef() {
-            return isZero() || isNull()
+            return isZeroOrNull()
                     || isNonZeroOrNullRef();
         }
 
@@ -566,7 +570,7 @@ public sealed abstract class Register {
         };
     }
 
-    public static Register merge(int address, int slot, Register a, Register b) {
+    public static Register merge(TypeResolver resolver, int address, int slot, Register a, Register b) {
         if (Objects.equals(a, b)) return a;
         if (a.isUndefined() || b.isUndefined()) {
             return Undefined.INSTANCE;
@@ -621,11 +625,19 @@ public sealed abstract class Register {
         if (a.isLongHi() && b.isLongHi()) return WidePrimitive.of(ident, TypeId.J, false);
         if (a.isDoubleLo() && b.isDoubleLo()) return WidePrimitive.of(ident, TypeId.D, true);
         if (a.isDoubleHi() && b.isDoubleHi()) return WidePrimitive.of(ident, TypeId.D, false);
-        var a_type = a.getTypeInfo();
-        var b_type = b.getTypeInfo();
-        if (a_type != null && a_type.isReference() &&
-                b_type != null && b_type.isReference()) {
-            return Reference.of(ident, TypeResolver._join(a_type, b_type));
+        if (a.isRef() && b.isRef()) {
+            var a_type = a.getTypeInfo();
+            var b_type = b.getTypeInfo();
+            if (a_type == null) {
+                assert a.isZeroOrNull();
+                return Reference.of(ident, b_type);
+            }
+            if (b_type == null) {
+                assert b.isZeroOrNull();
+                return Reference.of(ident, a_type);
+            }
+            assert a_type.isReference() && b_type.isReference();
+            return Reference.of(ident, TypeResolver._join(resolver, a_type, b_type));
         }
         return Conflict.of(ident);
     }
@@ -651,7 +663,7 @@ public sealed abstract class Register {
             return false;
         }
         var kind = c.classify();
-        return kind.isZero() || kind.isNull();
+        return kind.isZeroOrNull();
     }
 
     private static boolean isBool(TypeId type) {
@@ -860,5 +872,32 @@ public sealed abstract class Register {
 
     public final boolean isUninitializedRef() {
         return this instanceof UninitializedRef;
+    }
+
+    // Note: only for ref types
+    public final boolean instanceOf(TypeResolver resolver, TypeId type, boolean allow_uninitialized) {
+        Objects.requireNonNull(type);
+        if (!type.isReference()) {
+            return false;
+        }
+        if (this instanceof Constant constant) {
+            var kind = constant.classify();
+            if (kind.isZeroOrNull()) {
+                // All reference types can be assigned null
+                return true;
+            }
+            if (kind.isNonZeroOrNullRef()) {
+                var info = getRefTypeInfo(kind);
+                return TypeResolver._instanceOf(resolver, info, type);
+            }
+            return false;
+        }
+        if (this instanceof Reference ref) {
+            if (!allow_uninitialized && ref instanceof UninitializedRef) {
+                return false;
+            }
+            return TypeResolver._instanceOf(resolver, ref.typeInfo(), type);
+        }
+        return false;
     }
 }

@@ -107,13 +107,17 @@ public final class RegisterLine {
         System.arraycopy(line.registers, 0, registers, 0, length);
     }
 
-    /* package */ boolean merge(int address, RegisterLine line) {
+    /* package */ boolean merge(TypeResolver resolver, int address, RegisterLine line) {
         int length = assertSame(registers.length, line.registers.length);
         boolean changed = false;
         for (int i = 0; i < length; i++) {
             var current = registers[i];
-            var merged = Register.merge(address, i, current, line.registers[i]);
-            changed = changed || !Objects.equals(current, merged);
+            var merged = Register.merge(resolver, address, i, current, line.registers[i]);
+            boolean replace = !Objects.equals(current, merged);
+            if (replace) {
+                registers[i] = merged;
+            }
+            changed = changed || replace;
         }
         return changed;
     }
