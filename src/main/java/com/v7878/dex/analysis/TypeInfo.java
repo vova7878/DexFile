@@ -17,6 +17,10 @@ public record TypeInfo(TypeId base, int array_depth) {
         return new TypeInfo(type.baseType(), type.getArrayDepth());
     }
 
+    public TypeId exactType() {
+        return base == null ? null : base.array(array_depth);
+    }
+
     public boolean isUnresolved() {
         return base == null;
     }

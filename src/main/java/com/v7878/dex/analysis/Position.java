@@ -12,6 +12,7 @@ import com.v7878.dex.util.Formatter;
 import java.util.Collections;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.TreeSet;
 
 public final class Position {
@@ -96,25 +97,6 @@ public final class Position {
         outputs.freeze();
     }
 
-    public boolean isFirst() {
-        return index == 0;
-    }
-
-    public boolean isStructurallyReachable() {
-        return isFirst() || !predecessors.isEmpty();
-    }
-
-    private static final int REACHABLE = 0x1;
-
-    /* package */ void setRuntimeReachable() {
-        flags |= REACHABLE;
-    }
-
-    public boolean isRuntimeReachable() {
-        assert isStructurallyReachable();
-        return (flags & REACHABLE) != 0;
-    }
-
     @SuppressWarnings("unchecked")
     public <I extends Instruction> I instruction() {
         return (I) instruction;
@@ -170,24 +152,36 @@ public final class Position {
         return inputs;
     }
 
-    /* package */ void input(int reg) {
-        if (reg != RESULT_REGISTER && reg != EXCEPTION_REGISTER) {
-            Objects.checkIndex(reg, register_count);
+    private void checkRegs(int first, int count) {
+        if (count == 0 && first == 0) {
+            return;
         }
-        // TODO: check bounds
+        if (first == RESULT_REGISTER && (count == 1 || count == 2)) {
+            return;
+        }
+        if (first == EXCEPTION_REGISTER && count == 1) {
+            return;
+        }
+        try {
+            Objects.checkFromIndexSize(first, count, register_count);
+        } catch (IndexOutOfBoundsException e) {
+            throw new AnalysisException(e);
+        }
+    }
+
+    /* package */ void input(int reg) {
+        checkRegs(reg, 1);
         inputs.add(reg);
     }
 
     /* package */ void wideInput(int reg) {
-        if (reg != RESULT_REGISTER && reg != EXCEPTION_REGISTER) {
-            Objects.checkFromIndexSize(reg, 2, register_count);
-        }
-        // TODO: check bounds
+        checkRegs(reg, 2);
         inputs.add(reg);
         inputs.add(reg + 1);
     }
 
     /* package */ void rangeInput(int start_reg, int count) {
+        checkRegs(start_reg, count);
         for (int i = 0; i < count; i++) {
             // TODO: add range
             input(start_reg + i);
@@ -199,20 +193,39 @@ public final class Position {
     }
 
     /* package */ void output(int reg) {
-        if (reg != RESULT_REGISTER && reg != EXCEPTION_REGISTER) {
-            Objects.checkIndex(reg, register_count);
-        }
-        // TODO: check bounds
+        checkRegs(reg, 1);
         outputs.add(reg);
     }
 
     /* package */ void wideOutput(int reg) {
-        if (reg != RESULT_REGISTER && reg != EXCEPTION_REGISTER) {
-            Objects.checkFromIndexSize(reg, 2, register_count);
-        }
-        // TODO: check bounds
+        checkRegs(reg, 2);
         outputs.add(reg);
         outputs.add(reg + 1);
+    }
+
+    public boolean isFirst() {
+        return index == 0;
+    }
+
+    public boolean isStructurallyReachable() {
+        return isFirst() || !predecessors.isEmpty();
+    }
+
+    private static final int REACHABLE = 0b1;
+    private static final int NOP_EXACT = 0b10;
+    private static final int NOP_NAROWWING = 0b100;
+
+    /* package */ void setRuntimeReachable() {
+        flags |= REACHABLE;
+    }
+
+    public boolean isRuntimeReachable() {
+        assert isStructurallyReachable();
+        return (flags & REACHABLE) != 0;
+    }
+
+    /* package */ void setNopExact(boolean value) {
+        flags = (flags & ~NOP_EXACT) | (value ? NOP_EXACT : 0);
     }
 
     // for example const 0 to register with zero constant
@@ -220,22 +233,34 @@ public final class Position {
     // or goto/if/switch to next
     // or cast to itself
     public boolean isNopExact() {
-        // TODO
-        return false;
+        return (flags & NOP_EXACT) != 0;
+    }
+
+    /* package */ void setNarrowingNop(boolean value) {
+        flags = (flags & ~NOP_NAROWWING) | (value ? NOP_NAROWWING : 0);
     }
 
     // for example cast to j.l.Object
     // or cast zero to anything
     public boolean isNarrowingNop() {
-        // TODO
-        return false;
+        return (flags & NOP_NAROWWING) != 0;
+    }
+
+    private String printFlags() {
+        var sj = new StringJoiner(" | ", "{", "}");
+
+        if (isNopExact()) sj.add("nop");
+        if (isNarrowingNop()) sj.add("narrowing nop");
+        if (isStructurallyReachable()) sj.add("structurally reachable");
+        if (isRuntimeReachable()) sj.add("runtime reachable");
+
+        return sj.toString();
     }
 
     public String describe() {
         return String.format("""
                         %08X: %s
-                        structurally reachable: %s
-                        runtime reachable: %s
+                        flags: %s
                         inputs: %s
                         outputs: %s
                         state before: %s
@@ -243,7 +268,7 @@ public final class Position {
                         predecessors: %s
                         successors: %s
                         """.trim(),
-                address, instruction, isStructurallyReachable(), isRuntimeReachable(),
+                address, instruction, printFlags(),
                 Formatter.registers(inputs), Formatter.registers(outputs),
                 before.describe(), after.describe(), predecessors, successors);
     }
