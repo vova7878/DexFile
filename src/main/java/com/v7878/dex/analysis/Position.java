@@ -153,7 +153,8 @@ public final class Position {
     }
 
     private void checkRegs(int first, int count) {
-        if (count == 0 && first == 0) {
+        if (count == 0) {
+            // TODO? If the range size is 0, can the first register be invalid?
             return;
         }
         if (first == RESULT_REGISTER && (count == 1 || count == 2)) {
@@ -249,10 +250,19 @@ public final class Position {
     private String printFlags() {
         var sj = new StringJoiner(" | ", "{", "}");
 
-        if (isNopExact()) sj.add("nop");
-        if (isNarrowingNop()) sj.add("narrowing nop");
-        if (isStructurallyReachable()) sj.add("structurally reachable");
-        if (isRuntimeReachable()) sj.add("runtime reachable");
+        if (isRuntimeReachable()) {
+            sj.add("runtime reachable");
+        } else if (isStructurallyReachable()) {
+            sj.add("structurally reachable");
+        } else {
+            sj.add("unreachable");
+        }
+
+        if (isNopExact()) {
+            sj.add("exact nop");
+        } else if (isNarrowingNop()) {
+            sj.add("narrowing nop");
+        }
 
         return sj.toString();
     }

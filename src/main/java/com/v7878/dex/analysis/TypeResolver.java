@@ -29,13 +29,13 @@ public abstract class TypeResolver {
     /* package */
     private static boolean instanceOfFlat(TypeResolver resolver, TypeId a,
                                           TypeId b, boolean default_value) {
+        if (OBJECT.equals(b)) {
+            return true;
+        }
         if (a == null || b == null) {
             return default_value;
         }
         if (Objects.equals(a, b)) {
-            return true;
-        }
-        if (OBJECT.equals(b)) {
             return true;
         }
         var out = resolver.instanceOf(a, b);

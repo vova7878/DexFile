@@ -501,9 +501,7 @@ public final class AnalyzedMethod {
                 var tmp = (BranchOffsetInstruction) insn;
                 var target = position(address + tmp.getBranchOffset());
 
-                if (tmp.getUnitCount() == tmp.getBranchOffset()) {
-                    current.setNopExact(true);
-                }
+                current.setNopExact(tmp.getUnitCount() == tmp.getBranchOffset());
 
                 transition(todo, current, target, null);
             }
@@ -525,7 +523,7 @@ public final class AnalyzedMethod {
                     var target = position(address + offset);
                     transition(todo, current, target, null);
                 }
-                if (nop) current.setNopExact(true);
+                current.setNopExact(nop);
 
                 current.input(ireg);
             }
@@ -556,9 +554,7 @@ public final class AnalyzedMethod {
                 var target = position(address + tmp.getBranchOffset());
                 transition(todo, current, target, null);
 
-                if (tmp.getUnitCount() == tmp.getBranchOffset()) {
-                    current.setNopExact(true);
-                }
+                current.setNopExact(tmp.getUnitCount() == tmp.getBranchOffset());
 
                 current.input(ireg);
             }
@@ -570,9 +566,7 @@ public final class AnalyzedMethod {
                 var target = position(address + tmp.getBranchOffset());
                 transition(todo, current, target, null);
 
-                if (tmp.getUnitCount() == tmp.getBranchOffset()) {
-                    current.setNopExact(true);
-                }
+                current.setNopExact(tmp.getUnitCount() == tmp.getBranchOffset());
 
                 current.input(ireg1);
                 current.input(ireg2);
