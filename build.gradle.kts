@@ -1,5 +1,6 @@
 import com.vanniktech.maven.publish.JavaLibrary
 import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.SourcesJar
 
 plugins {
     alias(libs.plugins.java.library)
@@ -19,8 +20,8 @@ mavenPublishing {
     signAllPublications()
     configure(
         JavaLibrary(
-            sourcesJar = true,
             javadocJar = JavadocJar.Empty(),
+            sourcesJar = SourcesJar.Sources(),
         )
     )
 
