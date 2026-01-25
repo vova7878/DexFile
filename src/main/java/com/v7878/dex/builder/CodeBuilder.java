@@ -3,20 +3,6 @@ package com.v7878.dex.builder;
 import static com.v7878.dex.Format.Format21t;
 import static com.v7878.dex.Format.Format22t;
 import static com.v7878.dex.Opcode.*;
-import static com.v7878.dex.builder.CodeBuilder.Op.GET;
-import static com.v7878.dex.builder.CodeBuilder.Op.GET_BOOLEAN;
-import static com.v7878.dex.builder.CodeBuilder.Op.GET_BYTE;
-import static com.v7878.dex.builder.CodeBuilder.Op.GET_CHAR;
-import static com.v7878.dex.builder.CodeBuilder.Op.GET_OBJECT;
-import static com.v7878.dex.builder.CodeBuilder.Op.GET_SHORT;
-import static com.v7878.dex.builder.CodeBuilder.Op.GET_WIDE;
-import static com.v7878.dex.builder.CodeBuilder.Op.PUT;
-import static com.v7878.dex.builder.CodeBuilder.Op.PUT_BOOLEAN;
-import static com.v7878.dex.builder.CodeBuilder.Op.PUT_BYTE;
-import static com.v7878.dex.builder.CodeBuilder.Op.PUT_CHAR;
-import static com.v7878.dex.builder.CodeBuilder.Op.PUT_OBJECT;
-import static com.v7878.dex.builder.CodeBuilder.Op.PUT_SHORT;
-import static com.v7878.dex.builder.CodeBuilder.Op.PUT_WIDE;
 import static com.v7878.dex.util.Ids.BOOLEAN_TYPE;
 import static com.v7878.dex.util.Ids.BYTE_TYPE;
 import static com.v7878.dex.util.Ids.CHAR_TYPE;
@@ -288,6 +274,7 @@ public final class CodeBuilder {
                 if (end <= start) {
                     assert start == end;
                     try_items.remove(i);
+                    count--;
                     continue;
                 }
                 borders_set.add(start);
@@ -1940,6 +1927,21 @@ public final class CodeBuilder {
             this.opcode = opcode;
             this.isWide = isWide;
         }
+
+        public static Cmp of(Opcode op) {
+            return switch (op) {
+                case CMPL_FLOAT -> CMPL_FLOAT;
+                case CMPG_FLOAT -> CMPG_FLOAT;
+                case CMPL_DOUBLE -> CMPL_DOUBLE;
+                case CMPG_DOUBLE -> CMPG_DOUBLE;
+                case CMP_LONG -> CMP_LONG;
+                default -> throw new IllegalArgumentException("Unexpected opcode: " + op);
+            };
+        }
+
+        public Opcode opcode() {
+            return opcode;
+        }
     }
 
     /**
@@ -1977,6 +1979,26 @@ public final class CodeBuilder {
                 case GT -> LE; // > -> <=
                 case LE -> GT; // <= -> >
             };
+        }
+
+        public static Test of(Opcode op) {
+            return switch (op) {
+                case IF_EQ, IF_EQZ -> EQ;
+                case IF_NE, IF_NEZ -> NE;
+                case IF_LT, IF_LTZ -> LT;
+                case IF_GE, IF_GEZ -> GE;
+                case IF_GT, IF_GTZ -> GT;
+                case IF_LE, IF_LEZ -> LE;
+                default -> throw new IllegalArgumentException("Unexpected opcode: " + op);
+            };
+        }
+
+        public Opcode test() {
+            return test;
+        }
+
+        public Opcode testz() {
+            return testz;
         }
     }
 
@@ -2043,19 +2065,19 @@ public final class CodeBuilder {
                 int diff = target - position;
                 if (diff == 0) {
                     return List.of(
-                            Instruction22t.of(test.inverse().test, first_reg_to_test,
+                            Instruction22t.of(test.inverse().test(), first_reg_to_test,
                                     second_reg_to_test, Format22t.getUnitCount() + GOTO.getUnitCount()),
                             Instruction10t.of(GOTO, -Format22t.getUnitCount())
                     );
                 }
                 if (!check_width_int(diff, 16)) {
                     return List.of(
-                            Instruction22t.of(test.inverse().test, first_reg_to_test,
+                            Instruction22t.of(test.inverse().test(), first_reg_to_test,
                                     second_reg_to_test, Format22t.getUnitCount() + GOTO_32.getUnitCount()),
                             Instruction30t.of(GOTO_32, diff - Format22t.getUnitCount())
                     );
                 }
-                return List.of(Instruction22t.of(test.test,
+                return List.of(Instruction22t.of(test.test(),
                         first_reg_to_test, second_reg_to_test, diff));
             }
         }, Format22t.getUnitCount());
@@ -2074,7 +2096,7 @@ public final class CodeBuilder {
 
     private CodeBuilder raw_if_test_internal(Test test, int first_reg_to_test,
                                              int second_reg_to_test, Object label) {
-        return f22t(test.test, first_reg_to_test, false,
+        return f22t(test.test(), first_reg_to_test, false,
                 second_reg_to_test, false,
                 self -> branchOffset(self, label));
     }
@@ -2149,19 +2171,19 @@ public final class CodeBuilder {
                 int diff = target - position;
                 if (diff == 0) {
                     return List.of(
-                            Instruction21t.of(test.inverse().testz,
+                            Instruction21t.of(test.inverse().testz(),
                                     reg_to_test, Format21t.getUnitCount() + GOTO.getUnitCount()),
                             Instruction10t.of(GOTO, -Format21t.getUnitCount())
                     );
                 }
                 if (!check_width_int(diff, 16)) {
                     return List.of(
-                            Instruction21t.of(test.inverse().testz,
+                            Instruction21t.of(test.inverse().testz(),
                                     reg_to_test, Format21t.getUnitCount() + GOTO_32.getUnitCount()),
                             Instruction30t.of(GOTO_32, diff - Format21t.getUnitCount())
                     );
                 }
-                return List.of(Instruction21t.of(test.testz, reg_to_test, diff));
+                return List.of(Instruction21t.of(test.testz(), reg_to_test, diff));
             }
         }, Format21t.getUnitCount());
         return this;
@@ -2176,7 +2198,7 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder raw_if_testz_internal(Test test, int reg_to_test, Object label) {
-        return f21t(test.testz, reg_to_test, false,
+        return f21t(test.testz(), reg_to_test, false,
                 self -> branchOffset(self, label));
     }
 
@@ -2213,6 +2235,64 @@ public final class CodeBuilder {
             this.sop = sop;
             this.isWide = isWide;
         }
+
+        public static Op of(Opcode op) {
+            return switch (op) {
+                case AGET, IGET, SGET -> GET;
+                case AGET_WIDE, IGET_WIDE, SGET_WIDE -> GET_WIDE;
+                case AGET_OBJECT, IGET_OBJECT, SGET_OBJECT -> GET_OBJECT;
+                case AGET_BOOLEAN, IGET_BOOLEAN, SGET_BOOLEAN -> GET_BOOLEAN;
+                case AGET_BYTE, IGET_BYTE, SGET_BYTE -> GET_BYTE;
+                case AGET_CHAR, IGET_CHAR, SGET_CHAR -> GET_CHAR;
+                case AGET_SHORT, IGET_SHORT, SGET_SHORT -> GET_SHORT;
+                case APUT, IPUT, SPUT -> PUT;
+                case APUT_WIDE, IPUT_WIDE, SPUT_WIDE -> PUT_WIDE;
+                case APUT_OBJECT, IPUT_OBJECT, SPUT_OBJECT -> PUT_OBJECT;
+                case APUT_BOOLEAN, IPUT_BOOLEAN, SPUT_BOOLEAN -> PUT_BOOLEAN;
+                case APUT_BYTE, IPUT_BYTE, SPUT_BYTE -> PUT_BYTE;
+                case APUT_CHAR, IPUT_CHAR, SPUT_CHAR -> PUT_CHAR;
+                case APUT_SHORT, IPUT_SHORT, SPUT_SHORT -> PUT_SHORT;
+                default -> throw new IllegalArgumentException("Unexpected opcode: " + op);
+            };
+        }
+
+        public Opcode aop() {
+            return aop;
+        }
+
+        public Opcode iop() {
+            return iop;
+        }
+
+        public Opcode sop() {
+            return sop;
+        }
+
+        public static Op op_get(char shorty) {
+            return switch (shorty) {
+                case 'Z' -> GET_BOOLEAN;
+                case 'B' -> GET_BYTE;
+                case 'S' -> GET_SHORT;
+                case 'C' -> GET_CHAR;
+                case 'I', 'F' -> GET;
+                case 'J', 'D' -> GET_WIDE;
+                case 'L' -> GET_OBJECT;
+                default -> throw invalidShorty(shorty);
+            };
+        }
+
+        public static Op op_put(char shorty) {
+            return switch (shorty) {
+                case 'Z' -> PUT_BOOLEAN;
+                case 'B' -> PUT_BYTE;
+                case 'S' -> PUT_SHORT;
+                case 'C' -> PUT_CHAR;
+                case 'I', 'F' -> PUT;
+                case 'J', 'D' -> PUT_WIDE;
+                case 'L' -> PUT_OBJECT;
+                default -> throw invalidShorty(shorty);
+            };
+        }
     }
 
     /**
@@ -2242,32 +2322,6 @@ public final class CodeBuilder {
         return f21c(op.sop, value_reg_or_pair, op.isWide, static_field);
     }
 
-    private static Op op_get_shorty(char shorty) {
-        return switch (shorty) {
-            case 'Z' -> GET_BOOLEAN;
-            case 'B' -> GET_BYTE;
-            case 'S' -> GET_SHORT;
-            case 'C' -> GET_CHAR;
-            case 'I', 'F' -> GET;
-            case 'J', 'D' -> GET_WIDE;
-            case 'L' -> GET_OBJECT;
-            default -> throw invalidShorty(shorty);
-        };
-    }
-
-    private static Op op_put_shorty(char shorty) {
-        return switch (shorty) {
-            case 'Z' -> PUT_BOOLEAN;
-            case 'B' -> PUT_BYTE;
-            case 'S' -> PUT_SHORT;
-            case 'C' -> PUT_CHAR;
-            case 'I', 'F' -> PUT;
-            case 'J', 'D' -> PUT_WIDE;
-            case 'L' -> PUT_OBJECT;
-            default -> throw invalidShorty(shorty);
-        };
-    }
-
     /**
      * @param shorty            any of Z B S C I F J D L
      * @param value_reg_or_pair u8
@@ -2275,7 +2329,7 @@ public final class CodeBuilder {
      * @param index_reg         u8
      */
     public CodeBuilder aget(char shorty, int value_reg_or_pair, int array_reg, int index_reg) {
-        return aop(op_get_shorty(shorty), value_reg_or_pair, array_reg, index_reg);
+        return aop(Op.op_get(shorty), value_reg_or_pair, array_reg, index_reg);
     }
 
     /**
@@ -2285,7 +2339,7 @@ public final class CodeBuilder {
      * @param index_reg         u8
      */
     public CodeBuilder aput(char shorty, int value_reg_or_pair, int array_reg, int index_reg) {
-        return aop(op_put_shorty(shorty), value_reg_or_pair, array_reg, index_reg);
+        return aop(Op.op_put(shorty), value_reg_or_pair, array_reg, index_reg);
     }
 
     /**
@@ -2294,7 +2348,7 @@ public final class CodeBuilder {
      * @param instance_field    u16 ref
      */
     public CodeBuilder iget(int value_reg_or_pair, int object_reg, FieldId instance_field) {
-        return iop(op_get_shorty(instance_field.getType().getShorty()),
+        return iop(Op.op_get(instance_field.getType().getShorty()),
                 value_reg_or_pair, object_reg, instance_field);
     }
 
@@ -2304,7 +2358,7 @@ public final class CodeBuilder {
      * @param instance_field    u16 ref
      */
     public CodeBuilder iput(int value_reg_or_pair, int object_reg, FieldId instance_field) {
-        return iop(op_put_shorty(instance_field.getType().getShorty()),
+        return iop(Op.op_put(instance_field.getType().getShorty()),
                 value_reg_or_pair, object_reg, instance_field);
     }
 
@@ -2313,7 +2367,7 @@ public final class CodeBuilder {
      * @param static_field      u16 ref
      */
     public CodeBuilder sget(int value_reg_or_pair, FieldId static_field) {
-        return sop(op_get_shorty(static_field.getType().getShorty()),
+        return sop(Op.op_get(static_field.getType().getShorty()),
                 value_reg_or_pair, static_field);
     }
 
@@ -2322,7 +2376,7 @@ public final class CodeBuilder {
      * @param static_field      u16 ref
      */
     public CodeBuilder sput(int value_reg_or_pair, FieldId static_field) {
-        return sop(op_put_shorty(static_field.getType().getShorty()),
+        return sop(Op.op_put(static_field.getType().getShorty()),
                 value_reg_or_pair, static_field);
     }
 
@@ -2338,6 +2392,25 @@ public final class CodeBuilder {
         InvokeKind(Opcode regular, Opcode range) {
             this.regular = regular;
             this.range = range;
+        }
+
+        public static InvokeKind of(Opcode op) {
+            return switch (op) {
+                case INVOKE_VIRTUAL, INVOKE_VIRTUAL_RANGE -> VIRTUAL;
+                case INVOKE_SUPER, INVOKE_SUPER_RANGE -> SUPER;
+                case INVOKE_DIRECT, INVOKE_DIRECT_RANGE -> DIRECT;
+                case INVOKE_STATIC, INVOKE_STATIC_RANGE -> STATIC;
+                case INVOKE_INTERFACE, INVOKE_INTERFACE_RANGE -> INTERFACE;
+                default -> throw new IllegalArgumentException("Unexpected opcode: " + op);
+            };
+        }
+
+        public Opcode regular() {
+            return regular;
+        }
+
+        public Opcode range() {
+            return range;
         }
     }
 
@@ -2437,40 +2510,82 @@ public final class CodeBuilder {
     }
 
     public enum UnOp {
-        NEG_INT(Opcode.NEG_INT, false, false),
-        NOT_INT(Opcode.NOT_INT, false, false),
-        NEG_LONG(Opcode.NEG_LONG, true, true),
-        NOT_LONG(Opcode.NOT_LONG, true, true),
-        NEG_FLOAT(Opcode.NEG_FLOAT, false, false),
-        NEG_DOUBLE(Opcode.NEG_DOUBLE, true, true),
-
-        INT_TO_LONG(Opcode.INT_TO_LONG, false, true),
-        INT_TO_FLOAT(Opcode.INT_TO_FLOAT, false, false),
-        INT_TO_DOUBLE(Opcode.INT_TO_DOUBLE, false, true),
-
-        LONG_TO_INT(Opcode.LONG_TO_INT, true, false),
-        LONG_TO_FLOAT(Opcode.LONG_TO_FLOAT, true, false),
-        LONG_TO_DOUBLE(Opcode.LONG_TO_DOUBLE, true, true),
-
-        FLOAT_TO_INT(Opcode.FLOAT_TO_INT, false, false),
-        FLOAT_TO_LONG(Opcode.FLOAT_TO_LONG, false, true),
-        FLOAT_TO_DOUBLE(Opcode.FLOAT_TO_DOUBLE, false, true),
-
-        DOUBLE_TO_INT(Opcode.DOUBLE_TO_INT, true, false),
-        DOUBLE_TO_LONG(Opcode.DOUBLE_TO_LONG, true, true),
-        DOUBLE_TO_FLOAT(Opcode.DOUBLE_TO_FLOAT, true, false),
-
-        INT_TO_BYTE(Opcode.INT_TO_BYTE, false, false),
-        INT_TO_CHAR(Opcode.INT_TO_CHAR, false, false),
-        INT_TO_SHORT(Opcode.INT_TO_SHORT, false, false);
+        NEG_INT(Opcode.NEG_INT, TypeId.I, TypeId.I),
+        NOT_INT(Opcode.NOT_INT, TypeId.I, TypeId.I),
+        NEG_LONG(Opcode.NEG_LONG, TypeId.J, TypeId.J),
+        NOT_LONG(Opcode.NOT_LONG, TypeId.J, TypeId.J),
+        NEG_FLOAT(Opcode.NEG_FLOAT, TypeId.F, TypeId.F),
+        NEG_DOUBLE(Opcode.NEG_DOUBLE, TypeId.D, TypeId.D),
+        INT_TO_LONG(Opcode.INT_TO_LONG, TypeId.J, TypeId.I),
+        INT_TO_FLOAT(Opcode.INT_TO_FLOAT, TypeId.F, TypeId.I),
+        INT_TO_DOUBLE(Opcode.INT_TO_DOUBLE, TypeId.D, TypeId.I),
+        LONG_TO_INT(Opcode.LONG_TO_INT, TypeId.I, TypeId.J),
+        LONG_TO_FLOAT(Opcode.LONG_TO_FLOAT, TypeId.F, TypeId.J),
+        LONG_TO_DOUBLE(Opcode.LONG_TO_DOUBLE, TypeId.D, TypeId.J),
+        FLOAT_TO_INT(Opcode.FLOAT_TO_INT, TypeId.I, TypeId.F),
+        FLOAT_TO_LONG(Opcode.FLOAT_TO_LONG, TypeId.J, TypeId.F),
+        FLOAT_TO_DOUBLE(Opcode.FLOAT_TO_DOUBLE, TypeId.D, TypeId.F),
+        DOUBLE_TO_INT(Opcode.DOUBLE_TO_INT, TypeId.I, TypeId.D),
+        DOUBLE_TO_LONG(Opcode.DOUBLE_TO_LONG, TypeId.J, TypeId.D),
+        DOUBLE_TO_FLOAT(Opcode.DOUBLE_TO_FLOAT, TypeId.F, TypeId.D),
+        INT_TO_BYTE(Opcode.INT_TO_BYTE, TypeId.B, TypeId.I),
+        INT_TO_CHAR(Opcode.INT_TO_CHAR, TypeId.C, TypeId.I),
+        INT_TO_SHORT(Opcode.INT_TO_SHORT, TypeId.S, TypeId.I);
 
         private final Opcode opcode;
-        private final boolean isDstWide, isSrcWide;
+        private final TypeId dst, src;
 
-        UnOp(Opcode opcode, boolean isDstWide, boolean isSrcWide) {
+        UnOp(Opcode opcode, TypeId dst, TypeId src) {
             this.opcode = opcode;
-            this.isDstWide = isDstWide;
-            this.isSrcWide = isSrcWide;
+            this.dst = dst;
+            this.src = src;
+        }
+
+        public static UnOp of(Opcode op) {
+            return switch (op) {
+                case NEG_INT -> NEG_INT;
+                case NOT_INT -> NOT_INT;
+                case NEG_LONG -> NEG_LONG;
+                case NOT_LONG -> NOT_LONG;
+                case NEG_FLOAT -> NEG_FLOAT;
+                case NEG_DOUBLE -> NEG_DOUBLE;
+                case INT_TO_LONG -> INT_TO_LONG;
+                case INT_TO_FLOAT -> INT_TO_FLOAT;
+                case INT_TO_DOUBLE -> INT_TO_DOUBLE;
+                case LONG_TO_INT -> LONG_TO_INT;
+                case LONG_TO_FLOAT -> LONG_TO_FLOAT;
+                case LONG_TO_DOUBLE -> LONG_TO_DOUBLE;
+                case FLOAT_TO_INT -> FLOAT_TO_INT;
+                case FLOAT_TO_LONG -> FLOAT_TO_LONG;
+                case FLOAT_TO_DOUBLE -> FLOAT_TO_DOUBLE;
+                case DOUBLE_TO_INT -> DOUBLE_TO_INT;
+                case DOUBLE_TO_LONG -> DOUBLE_TO_LONG;
+                case DOUBLE_TO_FLOAT -> DOUBLE_TO_FLOAT;
+                case INT_TO_BYTE -> INT_TO_BYTE;
+                case INT_TO_CHAR -> INT_TO_CHAR;
+                case INT_TO_SHORT -> INT_TO_SHORT;
+                default -> throw new IllegalArgumentException("Unexpected opcode: " + op);
+            };
+        }
+
+        public Opcode opcode() {
+            return opcode;
+        }
+
+        public TypeId getDstId() {
+            return dst;
+        }
+
+        public boolean isDstWide() {
+            return dst.isWidePrimitive();
+        }
+
+        public TypeId getSrcId() {
+            return src;
+        }
+
+        public boolean isSrcWide() {
+            return src.isWidePrimitive();
         }
     }
 
@@ -2479,7 +2594,7 @@ public final class CodeBuilder {
      * @param src_reg_or_pair u4
      */
     public CodeBuilder unop(UnOp op, int dst_reg_or_pair, int src_reg_or_pair) {
-        return f12x(op.opcode, dst_reg_or_pair, op.isDstWide, src_reg_or_pair, op.isSrcWide);
+        return f12x(op.opcode(), dst_reg_or_pair, op.isDstWide(), src_reg_or_pair, op.isSrcWide());
     }
 
     /**
@@ -2608,61 +2723,135 @@ public final class CodeBuilder {
     }
 
     public enum BinOp {
-        ADD_INT(Opcode.ADD_INT, ADD_INT_2ADDR, ADD_INT_LIT16, ADD_INT_LIT8, false, false),
-        RSUB_INT(null, null, Opcode.RSUB_INT, RSUB_INT_LIT8, false, false),
-        SUB_INT(Opcode.SUB_INT, SUB_INT_2ADDR, null, null, false, false),
-        MUL_INT(Opcode.MUL_INT, MUL_INT_2ADDR, MUL_INT_LIT16, MUL_INT_LIT8, false, false),
-        DIV_INT(Opcode.DIV_INT, DIV_INT_2ADDR, DIV_INT_LIT16, DIV_INT_LIT8, false, false),
-        REM_INT(Opcode.REM_INT, REM_INT_2ADDR, REM_INT_LIT16, REM_INT_LIT8, false, false),
-        AND_INT(Opcode.AND_INT, AND_INT_2ADDR, AND_INT_LIT16, AND_INT_LIT8, false, false),
-        OR_INT(Opcode.OR_INT, OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8, false, false),
-        XOR_INT(Opcode.XOR_INT, XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8, false, false),
-        SHL_INT(Opcode.SHL_INT, SHL_INT_2ADDR, null, SHL_INT_LIT8, false, false),
-        SHR_INT(Opcode.SHR_INT, SHR_INT_2ADDR, null, SHR_INT_LIT8, false, false),
-        USHR_INT(Opcode.USHR_INT, USHR_INT_2ADDR, null, USHR_INT_LIT8, false, false),
+        ADD_INT(Opcode.ADD_INT, ADD_INT_2ADDR, ADD_INT_LIT16, ADD_INT_LIT8, TypeId.I, TypeId.I),
+        RSUB_INT(null, null, Opcode.RSUB_INT, RSUB_INT_LIT8, TypeId.I, TypeId.I),
+        SUB_INT(Opcode.SUB_INT, SUB_INT_2ADDR, null, null, TypeId.I, TypeId.I),
+        MUL_INT(Opcode.MUL_INT, MUL_INT_2ADDR, MUL_INT_LIT16, MUL_INT_LIT8, TypeId.I, TypeId.I),
+        DIV_INT(Opcode.DIV_INT, DIV_INT_2ADDR, DIV_INT_LIT16, DIV_INT_LIT8, TypeId.I, TypeId.I),
+        REM_INT(Opcode.REM_INT, REM_INT_2ADDR, REM_INT_LIT16, REM_INT_LIT8, TypeId.I, TypeId.I),
+        AND_INT(Opcode.AND_INT, AND_INT_2ADDR, AND_INT_LIT16, AND_INT_LIT8, TypeId.I, TypeId.I),
+        OR_INT(Opcode.OR_INT, OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8, TypeId.I, TypeId.I),
+        XOR_INT(Opcode.XOR_INT, XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8, TypeId.I, TypeId.I),
+        SHL_INT(Opcode.SHL_INT, SHL_INT_2ADDR, null, SHL_INT_LIT8, TypeId.I, TypeId.I),
+        SHR_INT(Opcode.SHR_INT, SHR_INT_2ADDR, null, SHR_INT_LIT8, TypeId.I, TypeId.I),
+        USHR_INT(Opcode.USHR_INT, USHR_INT_2ADDR, null, USHR_INT_LIT8, TypeId.I, TypeId.I),
 
-        ADD_LONG(Opcode.ADD_LONG, ADD_LONG_2ADDR, true, true),
-        RSUB_LONG(null, null, null, null, true, true),
-        SUB_LONG(Opcode.SUB_LONG, SUB_LONG_2ADDR, true, true),
-        MUL_LONG(Opcode.MUL_LONG, MUL_LONG_2ADDR, true, true),
-        DIV_LONG(Opcode.DIV_LONG, DIV_LONG_2ADDR, true, true),
-        REM_LONG(Opcode.REM_LONG, REM_LONG_2ADDR, true, true),
-        AND_LONG(Opcode.AND_LONG, AND_LONG_2ADDR, true, true),
-        OR_LONG(Opcode.OR_LONG, OR_LONG_2ADDR, true, true),
-        XOR_LONG(Opcode.XOR_LONG, XOR_LONG_2ADDR, true, true),
-        SHL_LONG(Opcode.SHL_LONG, SHL_LONG_2ADDR, true, false),
-        SHR_LONG(Opcode.SHR_LONG, SHR_LONG_2ADDR, true, false),
-        USHR_LONG(Opcode.USHR_LONG, USHR_LONG_2ADDR, true, false),
+        ADD_LONG(Opcode.ADD_LONG, ADD_LONG_2ADDR, TypeId.J, TypeId.J),
+        RSUB_LONG(null, null, TypeId.J, TypeId.J),
+        SUB_LONG(Opcode.SUB_LONG, SUB_LONG_2ADDR, TypeId.J, TypeId.J),
+        MUL_LONG(Opcode.MUL_LONG, MUL_LONG_2ADDR, TypeId.J, TypeId.J),
+        DIV_LONG(Opcode.DIV_LONG, DIV_LONG_2ADDR, TypeId.J, TypeId.J),
+        REM_LONG(Opcode.REM_LONG, REM_LONG_2ADDR, TypeId.J, TypeId.J),
+        AND_LONG(Opcode.AND_LONG, AND_LONG_2ADDR, TypeId.J, TypeId.J),
+        OR_LONG(Opcode.OR_LONG, OR_LONG_2ADDR, TypeId.J, TypeId.J),
+        XOR_LONG(Opcode.XOR_LONG, XOR_LONG_2ADDR, TypeId.J, TypeId.J),
+        SHL_LONG(Opcode.SHL_LONG, SHL_LONG_2ADDR, TypeId.J, TypeId.I),
+        SHR_LONG(Opcode.SHR_LONG, SHR_LONG_2ADDR, TypeId.J, TypeId.I),
+        USHR_LONG(Opcode.USHR_LONG, USHR_LONG_2ADDR, TypeId.J, TypeId.I),
 
-        ADD_FLOAT(Opcode.ADD_FLOAT, ADD_FLOAT_2ADDR, false, false),
-        RSUB_FLOAT(null, null, null, null, false, false),
-        SUB_FLOAT(Opcode.SUB_FLOAT, SUB_FLOAT_2ADDR, false, false),
-        MUL_FLOAT(Opcode.MUL_FLOAT, MUL_FLOAT_2ADDR, false, false),
-        DIV_FLOAT(Opcode.DIV_FLOAT, DIV_FLOAT_2ADDR, false, false),
-        REM_FLOAT(Opcode.REM_FLOAT, REM_FLOAT_2ADDR, false, false),
+        ADD_FLOAT(Opcode.ADD_FLOAT, ADD_FLOAT_2ADDR, TypeId.F, TypeId.F),
+        RSUB_FLOAT(null, null, TypeId.F, TypeId.F),
+        SUB_FLOAT(Opcode.SUB_FLOAT, SUB_FLOAT_2ADDR, TypeId.F, TypeId.F),
+        MUL_FLOAT(Opcode.MUL_FLOAT, MUL_FLOAT_2ADDR, TypeId.F, TypeId.F),
+        DIV_FLOAT(Opcode.DIV_FLOAT, DIV_FLOAT_2ADDR, TypeId.F, TypeId.F),
+        REM_FLOAT(Opcode.REM_FLOAT, REM_FLOAT_2ADDR, TypeId.F, TypeId.F),
 
-        ADD_DOUBLE(Opcode.ADD_DOUBLE, ADD_DOUBLE_2ADDR, true, true),
-        RSUB_DOUBLE(null, null, null, null, true, true),
-        SUB_DOUBLE(Opcode.SUB_DOUBLE, SUB_DOUBLE_2ADDR, true, true),
-        MUL_DOUBLE(Opcode.MUL_DOUBLE, MUL_DOUBLE_2ADDR, true, true),
-        DIV_DOUBLE(Opcode.DIV_DOUBLE, DIV_DOUBLE_2ADDR, true, true),
-        REM_DOUBLE(Opcode.REM_DOUBLE, REM_DOUBLE_2ADDR, true, true);
+        ADD_DOUBLE(Opcode.ADD_DOUBLE, ADD_DOUBLE_2ADDR, TypeId.D, TypeId.D),
+        RSUB_DOUBLE(null, null, TypeId.D, TypeId.D),
+        SUB_DOUBLE(Opcode.SUB_DOUBLE, SUB_DOUBLE_2ADDR, TypeId.D, TypeId.D),
+        MUL_DOUBLE(Opcode.MUL_DOUBLE, MUL_DOUBLE_2ADDR, TypeId.D, TypeId.D),
+        DIV_DOUBLE(Opcode.DIV_DOUBLE, DIV_DOUBLE_2ADDR, TypeId.D, TypeId.D),
+        REM_DOUBLE(Opcode.REM_DOUBLE, REM_DOUBLE_2ADDR, TypeId.D, TypeId.D);
 
         private final Opcode regular, _2addr, lit16, lit8;
-        private final boolean isDstAndSrc1Wide, isSrc2Wide;
+        private final TypeId dst_src1, src2;
 
         BinOp(Opcode regular, Opcode _2addr, Opcode lit16, Opcode lit8,
-              boolean isDstAndSrc1Wide, boolean isSrc2Wide) {
+              TypeId dst_src1, TypeId src2) {
             this.regular = regular;
             this._2addr = _2addr;
             this.lit16 = lit16;
             this.lit8 = lit8;
-            this.isDstAndSrc1Wide = isDstAndSrc1Wide;
-            this.isSrc2Wide = isSrc2Wide;
+            this.dst_src1 = dst_src1;
+            this.src2 = src2;
         }
 
-        BinOp(Opcode regular, Opcode _2addr, boolean isDstAndSrc1Wide, boolean isSrc2Wide) {
-            this(regular, _2addr, null, null, isDstAndSrc1Wide, isSrc2Wide);
+        BinOp(Opcode regular, Opcode _2addr, TypeId dst_src1, TypeId src2) {
+            this(regular, _2addr, null, null, dst_src1, src2);
+        }
+
+        public static BinOp of(Opcode op) {
+            return switch (op) {
+                case ADD_INT, ADD_INT_2ADDR, ADD_INT_LIT16, ADD_INT_LIT8 -> ADD_INT;
+                case RSUB_INT, RSUB_INT_LIT8 -> RSUB_INT;
+                case SUB_INT, SUB_INT_2ADDR -> SUB_INT;
+                case MUL_INT, MUL_INT_2ADDR, MUL_INT_LIT16, MUL_INT_LIT8 -> MUL_INT;
+                case DIV_INT, DIV_INT_2ADDR, DIV_INT_LIT16, DIV_INT_LIT8 -> DIV_INT;
+                case REM_INT, REM_INT_2ADDR, REM_INT_LIT16, REM_INT_LIT8 -> REM_INT;
+                case AND_INT, AND_INT_2ADDR, AND_INT_LIT16, AND_INT_LIT8 -> AND_INT;
+                case OR_INT, OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8 -> OR_INT;
+                case XOR_INT, XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8 -> XOR_INT;
+                case SHL_INT, SHL_INT_2ADDR, SHL_INT_LIT8 -> SHL_INT;
+                case SHR_INT, SHR_INT_2ADDR, SHR_INT_LIT8 -> SHR_INT;
+                case USHR_INT, USHR_INT_2ADDR, USHR_INT_LIT8 -> USHR_INT;
+
+                case ADD_LONG, ADD_LONG_2ADDR -> ADD_LONG;
+                case SUB_LONG, SUB_LONG_2ADDR -> SUB_LONG;
+                case MUL_LONG, MUL_LONG_2ADDR -> MUL_LONG;
+                case DIV_LONG, DIV_LONG_2ADDR -> DIV_LONG;
+                case REM_LONG, REM_LONG_2ADDR -> REM_LONG;
+                case AND_LONG, AND_LONG_2ADDR -> AND_LONG;
+                case OR_LONG, OR_LONG_2ADDR -> OR_LONG;
+                case XOR_LONG, XOR_LONG_2ADDR -> XOR_LONG;
+                case SHL_LONG, SHL_LONG_2ADDR -> SHL_LONG;
+                case SHR_LONG, SHR_LONG_2ADDR -> SHR_LONG;
+                case USHR_LONG, USHR_LONG_2ADDR -> USHR_LONG;
+
+                case ADD_FLOAT, ADD_FLOAT_2ADDR -> ADD_FLOAT;
+                case SUB_FLOAT, SUB_FLOAT_2ADDR -> SUB_FLOAT;
+                case MUL_FLOAT, MUL_FLOAT_2ADDR -> MUL_FLOAT;
+                case DIV_FLOAT, DIV_FLOAT_2ADDR -> DIV_FLOAT;
+                case REM_FLOAT, REM_FLOAT_2ADDR -> REM_FLOAT;
+
+                case ADD_DOUBLE, ADD_DOUBLE_2ADDR -> ADD_DOUBLE;
+                case SUB_DOUBLE, SUB_DOUBLE_2ADDR -> SUB_DOUBLE;
+                case MUL_DOUBLE, MUL_DOUBLE_2ADDR -> MUL_DOUBLE;
+                case DIV_DOUBLE, DIV_DOUBLE_2ADDR -> DIV_DOUBLE;
+                case REM_DOUBLE, REM_DOUBLE_2ADDR -> REM_DOUBLE;
+                default -> throw new IllegalArgumentException("Unexpected opcode: " + op);
+            };
+        }
+
+        public Opcode regular() {
+            return regular;
+        }
+
+        public Opcode _2addr() {
+            return _2addr;
+        }
+
+        public Opcode lit16() {
+            return lit16;
+        }
+
+        public Opcode lit8() {
+            return lit8;
+        }
+
+        public TypeId getDstAndSrc1Id() {
+            return dst_src1;
+        }
+
+        public boolean isDstAndSrc1Wide() {
+            return dst_src1.isWidePrimitive();
+        }
+
+        public TypeId getSrc2Id() {
+            return src2;
+        }
+
+        public boolean isSrc2Wide() {
+            return src2.isWidePrimitive();
         }
     }
 
@@ -2673,12 +2862,12 @@ public final class CodeBuilder {
      */
     public CodeBuilder raw_binop(BinOp op, int dst_reg_or_pair,
                                  int first_src_reg_or_pair, int second_src_reg_or_pair) {
-        if (op.regular == null) {
+        if (op.regular() == null) {
             throw new IllegalArgumentException("There is no regular version of " + op);
         }
-        return f23x(op.regular, dst_reg_or_pair, op.isDstAndSrc1Wide,
-                first_src_reg_or_pair, op.isDstAndSrc1Wide,
-                second_src_reg_or_pair, op.isSrc2Wide);
+        return f23x(op.regular(), dst_reg_or_pair, op.isDstAndSrc1Wide(),
+                first_src_reg_or_pair, op.isDstAndSrc1Wide(),
+                second_src_reg_or_pair, op.isSrc2Wide());
     }
 
     /**
@@ -2687,11 +2876,11 @@ public final class CodeBuilder {
      */
     public CodeBuilder raw_binop_2addr(BinOp op, int dst_and_first_src_reg_or_pair,
                                        int second_src_reg_or_pair) {
-        if (op._2addr == null) {
+        if (op._2addr() == null) {
             throw new IllegalArgumentException("There is no 2addr version of " + op);
         }
-        return f12x(op._2addr, dst_and_first_src_reg_or_pair,
-                op.isDstAndSrc1Wide, second_src_reg_or_pair, op.isSrc2Wide);
+        return f12x(op._2addr(), dst_and_first_src_reg_or_pair,
+                op.isDstAndSrc1Wide(), second_src_reg_or_pair, op.isSrc2Wide());
     }
 
     /**
@@ -2738,10 +2927,10 @@ public final class CodeBuilder {
      * @param value   s16
      */
     public CodeBuilder raw_binop_lit16(BinOp op, int dst_reg, int src_reg, int value) {
-        if (op.lit16 == null) {
+        if (op.lit16() == null) {
             throw new IllegalArgumentException("There is no lit16 version of " + op);
         }
-        return f22s(op.lit16, dst_reg, false, src_reg, false, value);
+        return f22s(op.lit16(), dst_reg, false, src_reg, false, value);
     }
 
     /**
@@ -2750,10 +2939,10 @@ public final class CodeBuilder {
      * @param value   s8
      */
     public CodeBuilder raw_binop_lit8(BinOp op, int dst_reg, int src_reg, int value) {
-        if (op.lit8 == null) {
+        if (op.lit8() == null) {
             throw new IllegalArgumentException("There is no lit8 version of " + op);
         }
-        return f22b(op.lit8, dst_reg, false, src_reg, false, value);
+        return f22b(op.lit8(), dst_reg, false, src_reg, false, value);
     }
 
     /**
@@ -2769,12 +2958,12 @@ public final class CodeBuilder {
         if (op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT) {
             value &= 0x1f;
         }
-        if (op.lit8 != null && check_width_int(value, 8)) {
+        if (op.lit8() != null && check_width_int(value, 8)) {
             return raw_binop_lit8(op, dst_reg_or_pair, src_reg_or_pair, value);
         }
         // These operations should always be placed as binop_lit8
         assert !(op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT);
-        if (op.lit16 != null && (dst_reg_or_pair < 1 << 4)
+        if (op.lit16() != null && (dst_reg_or_pair < 1 << 4)
                 && (src_reg_or_pair < 1 << 4)
                 && check_width_int(value, 16)) {
             return raw_binop_lit16(op, dst_reg_or_pair, src_reg_or_pair, value);
@@ -2783,7 +2972,7 @@ public final class CodeBuilder {
             throw new IllegalArgumentException("src and dst regs must be different");
         }
         int final_value = value;
-        return if_(op.isSrc2Wide, ib ->
+        return if_(op.isSrc2Wide(), ib ->
                 const_wide(dst_reg_or_pair, final_value), ib ->
                 const_(dst_reg_or_pair, final_value))
                 .binop(op, dst_reg_or_pair, src_reg_or_pair, dst_reg_or_pair);
@@ -2795,10 +2984,10 @@ public final class CodeBuilder {
      * @param value        s64
      */
     public CodeBuilder binop_lit_wide(BinOp op, int dst_reg_pair, int src_reg_pair, long value) {
-        if (!op.isDstAndSrc1Wide) {
+        if (!op.isDstAndSrc1Wide()) {
             throw new IllegalArgumentException(op + " is not wide operation");
         }
-        return if_(op.isSrc2Wide, ib ->
+        return if_(op.isSrc2Wide(), ib ->
                 const_wide(dst_reg_pair, value), ib ->
                 // only shift operations
                 const_(dst_reg_pair, (int) value))
