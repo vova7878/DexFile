@@ -8,6 +8,8 @@ public sealed interface InstructionI permits Instruction, BranchOffsetInstructio
         SingleReferenceInstruction, VariableRegisterInstruction, WideLiteralInstruction {
     Opcode getOpcode();
 
+    String getName();
+
     default int getUnitCount() {
         assert !getOpcode().isPayload();
         return getOpcode().getUnitCount();

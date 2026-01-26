@@ -5,6 +5,7 @@ import static com.v7878.dex.Format.Format22t;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
 import com.v7878.dex.immutable.bytecode.iface.TwoRegisterInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -56,5 +57,12 @@ public final class Instruction22t extends Instruction
                 && getRegister1() == other.getRegister1()
                 && getRegister2() == other.getRegister2()
                 && getBranchOffset() == other.getBranchOffset();
+    }
+
+    @Override
+    public String toString() {
+        return getName() + " " + Formatter.register(register1)
+                + ", " + Formatter.register(register2)
+                + ", " + Formatter.signedHex(branch_offset);
     }
 }

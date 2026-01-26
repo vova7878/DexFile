@@ -10,6 +10,7 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public final class ArrayPayload extends Instruction implements ArrayPayloadInstruction {
     private final int element_width;
@@ -59,5 +60,21 @@ public final class ArrayPayload extends Instruction implements ArrayPayloadInstr
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getElementWidth() == other.getElementWidth()
                 && Objects.equals(getArrayElements(), other.getArrayElements());
+    }
+
+    @Override
+    public String toString() {
+        var builder = new StringBuilder();
+        builder.append(getName());
+        builder.append(" ");
+        builder.append(element_width);
+        builder.append(" {");
+        var cases = elements;
+        if (!cases.isEmpty()) {
+            builder.append(cases.stream().map(Objects::toString)
+                    .collect(Collectors.joining("\n\t,", "\n\t", "\n")));
+        }
+        builder.append("}");
+        return builder.toString();
     }
 }

@@ -6,6 +6,7 @@ import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.iface.DualReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -68,5 +69,14 @@ public final class Instruction4rcc extends Instruction
                 && getStartRegister() == other.getStartRegister()
                 && Objects.equals(getReference1(), other.getReference1())
                 && Objects.equals(getReference2(), other.getReference2());
+    }
+
+    @Override
+    public String toString() {
+        var start = start_register;
+        var end = start + register_count;
+        return getName() + " {" + Formatter.register(start) + " .. " + Formatter.register(end) + "}"
+                + ", " + ReferenceType.describe(getReferenceType1(), reference1)
+                + ", " + ReferenceType.describe(getReferenceType2(), reference2);
     }
 }

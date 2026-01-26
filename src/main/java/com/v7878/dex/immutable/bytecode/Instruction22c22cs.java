@@ -6,6 +6,7 @@ import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.TwoRegisterInstruction;
+import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
@@ -57,5 +58,12 @@ public final class Instruction22c22cs extends Instruction
                 && getRegister1() == other.getRegister1()
                 && getRegister2() == other.getRegister2()
                 && Objects.equals(getReference1(), other.getReference1());
+    }
+
+    @Override
+    public String toString() {
+        return getName() + " " + Formatter.register(register1)
+                + ", " + Formatter.register(register2)
+                + ", " + ReferenceType.describe(getReferenceType1(), reference1);
     }
 }

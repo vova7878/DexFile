@@ -27,4 +27,9 @@ public final class Instruction10x extends Instruction {
         return obj instanceof Instruction10x other
                 && Objects.equals(getOpcode(), other.getOpcode());
     }
+
+    @Override
+    public String toString() {
+        return getName();
+    }
 }

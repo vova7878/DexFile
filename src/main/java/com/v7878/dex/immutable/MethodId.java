@@ -18,6 +18,7 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         this.declaring_class = Objects.requireNonNull(declaring_class);
         this.name = Objects.requireNonNull(name);
         this.proto = Objects.requireNonNull(proto);
+        checkDeclaringClass();
     }
 
     public static MethodId of(TypeId declaring_class, String name, ProtoId proto) {
