@@ -1,6 +1,8 @@
 package com.v7878.dex.analysis;
 
 import static com.v7878.dex.immutable.TypeId.OBJECT;
+import static com.v7878.dex.util.Ids.CLONEABLE;
+import static com.v7878.dex.util.Ids.SERIALIZABLE;
 
 import com.v7878.dex.immutable.TypeId;
 
@@ -54,12 +56,13 @@ public abstract class TypeResolver {
             assert unresolved == b.isUnresolved();
             return !unresolved || default_value;
         }
-        int depth = a.array_depth();
-        if (b.array_depth() < depth) {
-            // T[][] instanceof ?[] or T[][] instanceof Object[]
-            return b.base() == null ? default_value : OBJECT.equals(b.base());
+        if (b.array_depth() < a.array_depth()) {
+            // T[][] instanceof ?[] or
+            // T[][] instanceof any of Object[], Serializable[] or Cloneable[]
+            return b.base() == null ? default_value : (OBJECT.equals(b.base()) ||
+                    SERIALIZABLE.equals(b.base()) || CLONEABLE.equals(b.base()));
         }
-        if (b.array_depth() > depth) return false;
+        if (b.array_depth() > a.array_depth()) return false;
         if (a.isBasePrimitive() || b.isBasePrimitive()) {
             // Different primitive bases
             // int[]...[] instanceof float[]...[]
@@ -108,10 +111,17 @@ public abstract class TypeResolver {
                 || (b.array_depth() == depth && b.isBasePrimitive())) {
             depth--;
         }
-        if (depth < 0) {
-            throw new IllegalArgumentException("Conflicting types: " + a + " and " + b);
-        }
+        assert depth >= 0;
         if (a.array_depth() != depth || b.array_depth() != depth) {
+            // Note: All arrays implement Serializable and Cloneable
+            if (a.array_depth() == depth && (a.base() == null ||
+                    SERIALIZABLE.equals(a.base()) || CLONEABLE.equals(a.base()))) {
+                return a;
+            }
+            if (b.array_depth() == depth && (b.base() == null ||
+                    SERIALIZABLE.equals(b.base()) || CLONEABLE.equals(b.base()))) {
+                return b;
+            }
             return new TypeInfo(OBJECT, depth);
         }
         return new TypeInfo(joinFlat(resolver, a.base(), b.base()), depth);
