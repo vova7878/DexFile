@@ -90,7 +90,7 @@ import java.util.function.IntUnaryOperator;
 import java.util.function.Supplier;
 
 public final class CodeBuilder {
-    private static class InternalLabel {
+    private static class Label {
     }
 
     private class BuilderTryItem {
@@ -585,12 +585,6 @@ public final class CodeBuilder {
         delayed_actions.add(action);
     }
 
-    private void putLabel(Object label) {
-        if (labels.putIfAbsent(Objects.requireNonNull(label), last) != null) {
-            throw new IllegalArgumentException("Label " + label + " already exists");
-        }
-    }
-
     private int currentUnit() {
         return last.position;
     }
@@ -620,8 +614,14 @@ public final class CodeBuilder {
         return branchOffset(findUnit(from), to, allow_zero);
     }
 
-    public CodeBuilder label(String label) {
-        putLabel(label);
+    public static Object newLabel() {
+        return new Label();
+    }
+
+    public CodeBuilder label(Object label) {
+        if (labels.putIfAbsent(Objects.requireNonNull(label), last) != null) {
+            throw new IllegalArgumentException("Label " + label + " already exists");
+        }
         return this;
     }
 
@@ -632,49 +632,41 @@ public final class CodeBuilder {
         try_items.add(new BuilderTryItem(label1, label2, exceptionType, handler));
     }
 
-    private void try_catch_internal(Object label1, Object label2, TypeId exceptionType, Object handler) {
+    public CodeBuilder try_catch(Object label1, Object label2, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(exceptionType);
         addTryBlock(label1, label2, exceptionType, handler);
-    }
-
-    public CodeBuilder try_catch(String label1, String label2, TypeId exceptionType, String handler) {
-        try_catch_internal(label1, label2, exceptionType, handler);
         return this;
     }
 
-    public CodeBuilder try_catch(String label1, String label2, TypeId exceptionType) {
-        InternalLabel handler = new InternalLabel();
-        try_catch_internal(label1, label2, exceptionType, handler);
-        putLabel(handler);
+    public CodeBuilder try_catch(Object label1, Object label2, TypeId exceptionType) {
+        var handler = newLabel();
+        try_catch(label1, label2, exceptionType, handler);
+        label(handler);
         return this;
     }
 
-    private void try_catch_all_internal(Object label1, Object label2, Object handler) {
+    public CodeBuilder try_catch_all(Object label1, Object label2, Object handler) {
         addTryBlock(label1, label2, null, handler);
-    }
-
-    public CodeBuilder try_catch_all(String label1, String label2, String handler) {
-        try_catch_all_internal(label1, label2, handler);
         return this;
     }
 
-    public CodeBuilder try_catch_all(String label1, String label2) {
-        InternalLabel handler = new InternalLabel();
-        try_catch_all_internal(label1, label2, handler);
-        putLabel(handler);
+    public CodeBuilder try_catch_all(Object label1, Object label2) {
+        var handler = newLabel();
+        try_catch_all(label1, label2, handler);
+        label(handler);
         return this;
     }
 
-    public CodeBuilder try_catch(String label1, String label2, Map<TypeId, String> table) {
+    public CodeBuilder try_catch(Object label1, Object label2, Map<TypeId, ?> table) {
         for (var entry : table.entrySet()) {
             try_catch(label1, label2, entry.getKey(), entry.getValue());
         }
         return this;
     }
 
-    public CodeBuilder try_catch(String label1, String label2,
-                                 String catch_all_handler,
-                                 Map<TypeId, String> table) {
+    public CodeBuilder try_catch(Object label1, Object label2,
+                                 Object catch_all_handler,
+                                 Map<TypeId, ?> table) {
         return try_catch_all(label1, label2, catch_all_handler)
                 .try_catch(label1, label2, table);
     }
@@ -691,98 +683,70 @@ public final class CodeBuilder {
         return this;
     }
 
-    private CodeBuilder line_internal(Object label, int line) {
+    public CodeBuilder line(Object label, int line) {
         return addDebugItem(label, LineNumber.of(line));
     }
 
-    private CodeBuilder prologue_internal(Object label) {
+    public CodeBuilder prologue(Object label) {
         return addDebugItem(label, SetPrologueEnd.INSTANCE);
     }
 
-    private CodeBuilder epilogue_internal(Object label) {
+    public CodeBuilder epilogue(Object label) {
         return addDebugItem(label, SetEpilogueBegin.INSTANCE);
     }
 
-    private CodeBuilder source_internal(Object label, String name) {
+    public CodeBuilder source(Object label, String name) {
         return addDebugItem(label, SetFile.of(name));
     }
 
-    private CodeBuilder local_internal(Object label, int register, String name, TypeId type, String signature) {
+    public CodeBuilder local(Object label, int register, String name, TypeId type, String signature) {
         return addDebugItem(label, StartLocal.of(register, name, type, signature));
     }
 
-    private CodeBuilder end_local_internal(Object label, int register) {
-        return addDebugItem(label, EndLocal.of(register));
-    }
-
-    private CodeBuilder restart_local_internal(Object label, int register) {
-        return addDebugItem(label, RestartLocal.of(register));
-    }
-
-    public CodeBuilder line(String label, int line) {
-        return line_internal(label, line);
-    }
-
-    public CodeBuilder prologue(String label) {
-        return prologue_internal(label);
-    }
-
-    public CodeBuilder epilogue(String label) {
-        return epilogue_internal(label);
-    }
-
-    public CodeBuilder source(String label, String name) {
-        return source_internal(label, name);
-    }
-
-    public CodeBuilder local(String label, int register, String name, TypeId type, String signature) {
-        return local_internal(label, register, name, type, signature);
-    }
-
-    public CodeBuilder local(String label, int register, String name, TypeId type) {
+    public CodeBuilder local(Object label, int register, String name, TypeId type) {
         return local(label, register, name, type, null);
     }
 
-    public CodeBuilder end_local(String label, int register) {
-        return end_local_internal(label, register);
+    public CodeBuilder end_local(Object label, int register) {
+        return addDebugItem(label, EndLocal.of(register));
     }
 
-    public CodeBuilder restart_local(String label, int register) {
-        return restart_local_internal(label, register);
+    public CodeBuilder restart_local(Object label, int register) {
+        return addDebugItem(label, RestartLocal.of(register));
     }
 
     public CodeBuilder line(int line) {
-        InternalLabel label = new InternalLabel();
-        line_internal(label, line);
-        putLabel(label);
+        var label = newLabel();
+        line(label, line);
+        label(label);
         return this;
     }
 
     public CodeBuilder prologue() {
-        InternalLabel label = new InternalLabel();
-        prologue_internal(label);
-        putLabel(label);
+        var label = newLabel();
+        prologue(label);
+        label(label);
         return this;
     }
 
     public CodeBuilder epilogue() {
-        InternalLabel label = new InternalLabel();
-        epilogue_internal(label);
-        putLabel(label);
+        var label = newLabel();
+        epilogue(label);
+        label(label);
         return this;
     }
 
     public CodeBuilder source(String name) {
-        InternalLabel label = new InternalLabel();
-        source_internal(label, name);
-        putLabel(label);
+        var label = newLabel();
+        source(label, name);
+        label(label);
         return this;
     }
 
     public CodeBuilder local(int register, String name, TypeId type, String signature) {
-        InternalLabel label = new InternalLabel();
-        local_internal(label, register, name, type, signature);
-        putLabel(label);
+        var label = newLabel();
+        local(label, register, name, type, signature);
+        label(label);
         return this;
     }
 
@@ -791,16 +755,16 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder end_local(int register) {
-        InternalLabel label = new InternalLabel();
-        end_local_internal(label, register);
-        putLabel(label);
+        var label = newLabel();
+        end_local(label, register);
+        label(label);
         return this;
     }
 
     public CodeBuilder restart_local(int register) {
-        InternalLabel label = new InternalLabel();
-        restart_local_internal(label, register);
-        putLabel(label);
+        var label = newLabel();
+        restart_local(label, register);
+        label(label);
         return this;
     }
 
@@ -1655,13 +1619,13 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder fill_array_data_internal(int arr_ref_reg, int element_width, List<? extends Number> data) {
-        InternalLabel payload = new InternalLabel();
+        var payload = newLabel();
 
         f31t(FILL_ARRAY_DATA, arr_ref_reg, false,
                 self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
-            putLabel(payload);
+            label(payload);
             fill_array_data_payload(element_width, data);
         });
 
@@ -1780,8 +1744,11 @@ public final class CodeBuilder {
         return f11x(THROW, ex_reg, false);
     }
 
+    /**
+     * @param label s32 label
+     */
     // TODO: what if target is next instruction? Can we generate nothing?
-    private CodeBuilder goto_internal(Object label) {
+    public CodeBuilder goto_(Object label) {
         add(new BuilderNode() {
             int position;
             int target;
@@ -1820,56 +1787,37 @@ public final class CodeBuilder {
     }
 
     /**
-     * @param label s32 label
-     */
-    public CodeBuilder goto_(String label) {
-        return goto_internal(label);
-    }
-
-    private CodeBuilder raw_goto_internal(Object label) {
-        return f10t(GOTO, self -> branchOffset(self, label));
-    }
-
-    /**
      * @param label s8 label
      */
-    public CodeBuilder raw_goto(String label) {
-        return raw_goto_internal(label);
-    }
-
-    private CodeBuilder raw_goto_16_internal(Object label) {
-        return f20t(GOTO_16, self -> branchOffset(self, label));
+    public CodeBuilder raw_goto(Object label) {
+        return f10t(GOTO, self -> branchOffset(self, label));
     }
 
     /**
      * @param label s16 label
      */
-    public CodeBuilder raw_goto_16(String label) {
-        return raw_goto_16_internal(label);
-    }
-
-    private CodeBuilder raw_goto_32_internal(Object label) {
-        return f30t(GOTO_32, self -> branchOffset(self, label, true));
+    public CodeBuilder raw_goto_16(Object label) {
+        return f20t(GOTO_16, self -> branchOffset(self, label));
     }
 
     /**
      * @param label s32 label
      */
-    public CodeBuilder raw_goto_32(String label) {
-        return raw_goto_32_internal(label);
+    public CodeBuilder raw_goto_32(Object label) {
+        return f30t(GOTO_32, self -> branchOffset(self, label, true));
     }
 
     private CodeBuilder packed_switch_internal(int reg_to_test, int first_key, Object... labels) {
         assert first_key + labels.length >= first_key;
-        InternalLabel current = new InternalLabel();
-        InternalLabel payload = new InternalLabel();
+        var current = newLabel();
+        var payload = newLabel();
 
-        putLabel(current);
+        label(current);
         f31t(PACKED_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
-            putLabel(payload);
+            label(payload);
             packed_switch_payload(first_key, current, labels);
         });
 
@@ -1878,39 +1826,58 @@ public final class CodeBuilder {
 
     private CodeBuilder sparse_switch_internal(int reg_to_test, int[] keys, Object... labels) {
         assert keys.length == labels.length;
-        InternalLabel current = new InternalLabel();
-        InternalLabel payload = new InternalLabel();
+        var current = newLabel();
+        var payload = newLabel();
 
-        putLabel(current);
+        label(current);
         f31t(SPARSE_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
-            putLabel(payload);
+            label(payload);
             sparse_switch_payload(keys, current, labels);
         });
 
         return this;
     }
 
-    /**
-     * @param reg_to_test u8
-     */
-    // TODO: what if all targets is next instruction? Can we generate nothing?
-    public CodeBuilder switch_(int reg_to_test, Map<Integer, String> table) {
-        check_reg(reg_to_test);
+    private CodeBuilder switch_internal(int reg_to_test, IntMap<?> table) {
         if (table.isEmpty()) {
             return this;
         }
-        var map = new IntMap<String>(table.size());
+        if (table.size() == 1 && table.firstKey() == 0) {
+            return if_testz(Test.EQ, reg_to_test, table.valueAt(0));
+        }
+        // TODO: what if all targets is next instruction? Can we generate nothing?
+        if (table.size() <= 1 || (table.lastKey() - table.firstKey()) == (table.size() - 1)) {
+            return packed_switch_internal(reg_to_test, table.firstKey(), table.valuesArray());
+        }
+        return sparse_switch_internal(reg_to_test, table.keysArray(), table.valuesArray());
+    }
+
+    /**
+     * @param reg_to_test u8
+     */
+    public CodeBuilder switch_(int reg_to_test, IntMap<?> table) {
+        check_reg(reg_to_test);
+        if (table.isEmpty()) return this;
+        table = table.duplicate();
+        int size = table.size();
+        for (int i = 0; i < size; i++) {
+            Objects.requireNonNull(table.valueAt(i));
+        }
+        return switch_internal(reg_to_test, table);
+    }
+
+    /**
+     * @param reg_to_test u8
+     */
+    public CodeBuilder switch_(int reg_to_test, Map<Integer, ?> table) {
+        check_reg(reg_to_test);
+        if (table.isEmpty()) return this;
+        var map = new IntMap<>(table.size());
         table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
-        if (map.size() == 1 && map.keyAt(0) == 0) {
-            return if_testz(Test.EQ, reg_to_test, map.valueAt(0));
-        }
-        if (map.size() <= 1 || (map.lastKey() - map.firstKey()) == (map.size() - 1)) {
-            return packed_switch_internal(reg_to_test, map.firstKey(), map.valuesArray());
-        }
-        return sparse_switch_internal(reg_to_test, map.keysArray(), map.valuesArray());
+        return switch_internal(reg_to_test, map);
     }
 
     public enum Cmp {
@@ -2008,14 +1975,14 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test,
                                Consumer<CodeBuilder> true_branch, Consumer<CodeBuilder> false_branch) {
-        var true_label = new InternalLabel();
-        var end_label = new InternalLabel();
-        if_test_internal(test, first_reg_to_test, second_reg_to_test, true_label);
+        var true_label = newLabel();
+        var end_label = newLabel();
+        if_test(test, first_reg_to_test, second_reg_to_test, true_label);
         false_branch.accept(this);
-        goto_internal(end_label);
-        putLabel(true_label);
+        goto_(end_label);
+        label(true_label);
         true_branch.accept(this);
-        putLabel(end_label);
+        label(end_label);
         return this;
     }
 
@@ -2025,16 +1992,21 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test,
                                Consumer<CodeBuilder> true_branch) {
-        var end_label = new InternalLabel();
-        if_test_internal(test.inverse(), first_reg_to_test, second_reg_to_test, end_label);
+        var end_label = newLabel();
+        if_test(test.inverse(), first_reg_to_test, second_reg_to_test, end_label);
         true_branch.accept(this);
-        putLabel(end_label);
+        label(end_label);
         return this;
     }
 
+    /**
+     * @param first_reg_to_test  u4
+     * @param second_reg_to_test u4
+     * @param label              s32 label
+     */
     // TODO: what if target is next instruction? Can we generate nothing?
-    private CodeBuilder if_test_internal(Test test, int first_reg_to_test,
-                                         int second_reg_to_test, Object label) {
+    public CodeBuilder if_test(Test test, int first_reg_to_test,
+                               int second_reg_to_test, Object label) {
         check_reg_or_pair(first_reg_to_test, false);
         check_reg_or_pair(second_reg_to_test, false);
         add(new BuilderNode() {
@@ -2087,28 +2059,13 @@ public final class CodeBuilder {
     /**
      * @param first_reg_to_test  u4
      * @param second_reg_to_test u4
-     * @param label              s32 label
-     */
-    public CodeBuilder if_test(Test test, int first_reg_to_test,
-                               int second_reg_to_test, String label) {
-        return if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
-    }
-
-    private CodeBuilder raw_if_test_internal(Test test, int first_reg_to_test,
-                                             int second_reg_to_test, Object label) {
-        return f22t(test.test(), first_reg_to_test, false,
-                second_reg_to_test, false,
-                self -> branchOffset(self, label));
-    }
-
-    /**
-     * @param first_reg_to_test  u4
-     * @param second_reg_to_test u4
      * @param label              s16 label
      */
     public CodeBuilder raw_if_test(Test test, int first_reg_to_test,
-                                   int second_reg_to_test, String label) {
-        return raw_if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
+                                   int second_reg_to_test, Object label) {
+        return f22t(test.test(), first_reg_to_test, false,
+                second_reg_to_test, false,
+                self -> branchOffset(self, label));
     }
 
     /**
@@ -2117,14 +2074,14 @@ public final class CodeBuilder {
     public CodeBuilder if_testz(Test test, int reg_to_test,
                                 Consumer<CodeBuilder> true_branch,
                                 Consumer<CodeBuilder> false_branch) {
-        var true_label = new InternalLabel();
-        var end_label = new InternalLabel();
-        if_testz_internal(test, reg_to_test, true_label);
+        var true_label = newLabel();
+        var end_label = newLabel();
+        if_testz(test, reg_to_test, true_label);
         false_branch.accept(this);
-        goto_internal(end_label);
-        putLabel(true_label);
+        goto_(end_label);
+        label(true_label);
         true_branch.accept(this);
-        putLabel(end_label);
+        label(end_label);
         return this;
     }
 
@@ -2133,15 +2090,19 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_testz(Test test, int reg_to_test,
                                 Consumer<CodeBuilder> true_branch) {
-        var end_label = new InternalLabel();
-        if_testz_internal(test.inverse(), reg_to_test, end_label);
+        var end_label = newLabel();
+        if_testz(test.inverse(), reg_to_test, end_label);
         true_branch.accept(this);
-        putLabel(end_label);
+        label(end_label);
         return this;
     }
 
+    /**
+     * @param reg_to_test u8
+     * @param label       s32 label
+     */
     // TODO: what if target is next instruction? Can we generate nothing?
-    private CodeBuilder if_testz_internal(Test test, int reg_to_test, Object label) {
+    public CodeBuilder if_testz(Test test, int reg_to_test, Object label) {
         check_reg_or_pair(reg_to_test, false);
         add(new BuilderNode() {
             int position;
@@ -2191,23 +2152,11 @@ public final class CodeBuilder {
 
     /**
      * @param reg_to_test u8
-     * @param label       s32 label
-     */
-    public CodeBuilder if_testz(Test test, int reg_to_test, String label) {
-        return if_testz_internal(test, reg_to_test, label);
-    }
-
-    private CodeBuilder raw_if_testz_internal(Test test, int reg_to_test, Object label) {
-        return f21t(test.testz(), reg_to_test, false,
-                self -> branchOffset(self, label));
-    }
-
-    /**
-     * @param reg_to_test u8
      * @param label       s16 label
      */
-    public CodeBuilder raw_if_testz(Test test, int reg_to_test, String label) {
-        return raw_if_testz_internal(test, reg_to_test, label);
+    public CodeBuilder raw_if_testz(Test test, int reg_to_test, Object label) {
+        return f21t(test.testz(), reg_to_test, false,
+                self -> branchOffset(self, label));
     }
 
     public enum Op {
