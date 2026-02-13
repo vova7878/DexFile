@@ -326,11 +326,11 @@ public sealed abstract class Register {
             this.type_info = Objects.requireNonNull(type_info);
         }
 
-        public TypeInfo typeInfo() {
+        /* package */ TypeInfo typeInfo() {
             return type_info;
         }
 
-        public char getShorty() {
+        /* package */ char getShorty() {
             return type_info.getShorty();
         }
 
@@ -368,7 +368,7 @@ public sealed abstract class Register {
             return of(source, lo ? WIDE_LO : WIDE_HI);
         }
 
-        public ConstantKind classify() {
+        /* package */ ConstantKind classify() {
             return kind;
         }
 
@@ -442,11 +442,11 @@ public sealed abstract class Register {
             return new WidePrimitive(source, type, lo);
         }
 
-        public boolean isLo() {
+        /* package */ boolean isLo() {
             return lo;
         }
 
-        public boolean isHi() {
+        /* package */ boolean isHi() {
             return !isLo();
         }
 
@@ -519,7 +519,7 @@ public sealed abstract class Register {
             return new UninitializedRef(source, type, thiz);
         }
 
-        public boolean isThis() {
+        /* package */ boolean isThis() {
             return thiz;
         }
 
@@ -654,8 +654,19 @@ public sealed abstract class Register {
         return this instanceof WidePiece;
     }
 
+    public final boolean hasContent() {
+        return !isUndefined() && !isConflict() && !isWidePiece();
+    }
+
     public final boolean isConstant() {
         return this instanceof Constant;
+    }
+
+    public final ConstantKind getConstantKind() {
+        if (!(this instanceof Constant c)) {
+            return null;
+        }
+        return c.classify();
     }
 
     public final boolean isZero() {

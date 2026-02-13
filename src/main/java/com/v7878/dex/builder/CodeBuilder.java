@@ -2672,61 +2672,63 @@ public final class CodeBuilder {
     }
 
     public enum BinOp {
-        ADD_INT(Opcode.ADD_INT, ADD_INT_2ADDR, ADD_INT_LIT16, ADD_INT_LIT8, TypeId.I, TypeId.I),
-        RSUB_INT(null, null, Opcode.RSUB_INT, RSUB_INT_LIT8, TypeId.I, TypeId.I),
-        SUB_INT(Opcode.SUB_INT, SUB_INT_2ADDR, null, null, TypeId.I, TypeId.I),
-        MUL_INT(Opcode.MUL_INT, MUL_INT_2ADDR, MUL_INT_LIT16, MUL_INT_LIT8, TypeId.I, TypeId.I),
-        DIV_INT(Opcode.DIV_INT, DIV_INT_2ADDR, DIV_INT_LIT16, DIV_INT_LIT8, TypeId.I, TypeId.I),
-        REM_INT(Opcode.REM_INT, REM_INT_2ADDR, REM_INT_LIT16, REM_INT_LIT8, TypeId.I, TypeId.I),
-        AND_INT(Opcode.AND_INT, AND_INT_2ADDR, AND_INT_LIT16, AND_INT_LIT8, TypeId.I, TypeId.I),
-        OR_INT(Opcode.OR_INT, OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8, TypeId.I, TypeId.I),
-        XOR_INT(Opcode.XOR_INT, XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8, TypeId.I, TypeId.I),
-        SHL_INT(Opcode.SHL_INT, SHL_INT_2ADDR, null, SHL_INT_LIT8, TypeId.I, TypeId.I),
-        SHR_INT(Opcode.SHR_INT, SHR_INT_2ADDR, null, SHR_INT_LIT8, TypeId.I, TypeId.I),
-        USHR_INT(Opcode.USHR_INT, USHR_INT_2ADDR, null, USHR_INT_LIT8, TypeId.I, TypeId.I),
+        ADD_INT(Opcode.ADD_INT, ADD_INT_2ADDR, ADD_INT_LIT16, ADD_INT_LIT8, TypeId.I, TypeId.I, false),
+        RSUB_INT(null, null, Opcode.RSUB_INT, RSUB_INT_LIT8, TypeId.I, TypeId.I, false),
+        SUB_INT(Opcode.SUB_INT, SUB_INT_2ADDR, null, null, TypeId.I, TypeId.I, false),
+        MUL_INT(Opcode.MUL_INT, MUL_INT_2ADDR, MUL_INT_LIT16, MUL_INT_LIT8, TypeId.I, TypeId.I, false),
+        DIV_INT(Opcode.DIV_INT, DIV_INT_2ADDR, DIV_INT_LIT16, DIV_INT_LIT8, TypeId.I, TypeId.I, true),
+        REM_INT(Opcode.REM_INT, REM_INT_2ADDR, REM_INT_LIT16, REM_INT_LIT8, TypeId.I, TypeId.I, true),
+        AND_INT(Opcode.AND_INT, AND_INT_2ADDR, AND_INT_LIT16, AND_INT_LIT8, TypeId.I, TypeId.I, false),
+        OR_INT(Opcode.OR_INT, OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8, TypeId.I, TypeId.I, false),
+        XOR_INT(Opcode.XOR_INT, XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8, TypeId.I, TypeId.I, false),
+        SHL_INT(Opcode.SHL_INT, SHL_INT_2ADDR, null, SHL_INT_LIT8, TypeId.I, TypeId.I, false),
+        SHR_INT(Opcode.SHR_INT, SHR_INT_2ADDR, null, SHR_INT_LIT8, TypeId.I, TypeId.I, false),
+        USHR_INT(Opcode.USHR_INT, USHR_INT_2ADDR, null, USHR_INT_LIT8, TypeId.I, TypeId.I, false),
 
-        ADD_LONG(Opcode.ADD_LONG, ADD_LONG_2ADDR, TypeId.J, TypeId.J),
-        RSUB_LONG(null, null, TypeId.J, TypeId.J),
-        SUB_LONG(Opcode.SUB_LONG, SUB_LONG_2ADDR, TypeId.J, TypeId.J),
-        MUL_LONG(Opcode.MUL_LONG, MUL_LONG_2ADDR, TypeId.J, TypeId.J),
-        DIV_LONG(Opcode.DIV_LONG, DIV_LONG_2ADDR, TypeId.J, TypeId.J),
-        REM_LONG(Opcode.REM_LONG, REM_LONG_2ADDR, TypeId.J, TypeId.J),
-        AND_LONG(Opcode.AND_LONG, AND_LONG_2ADDR, TypeId.J, TypeId.J),
-        OR_LONG(Opcode.OR_LONG, OR_LONG_2ADDR, TypeId.J, TypeId.J),
-        XOR_LONG(Opcode.XOR_LONG, XOR_LONG_2ADDR, TypeId.J, TypeId.J),
-        SHL_LONG(Opcode.SHL_LONG, SHL_LONG_2ADDR, TypeId.J, TypeId.I),
-        SHR_LONG(Opcode.SHR_LONG, SHR_LONG_2ADDR, TypeId.J, TypeId.I),
-        USHR_LONG(Opcode.USHR_LONG, USHR_LONG_2ADDR, TypeId.J, TypeId.I),
+        ADD_LONG(Opcode.ADD_LONG, ADD_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        RSUB_LONG(null, null, TypeId.J, TypeId.J, false),
+        SUB_LONG(Opcode.SUB_LONG, SUB_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        MUL_LONG(Opcode.MUL_LONG, MUL_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        DIV_LONG(Opcode.DIV_LONG, DIV_LONG_2ADDR, TypeId.J, TypeId.J, true),
+        REM_LONG(Opcode.REM_LONG, REM_LONG_2ADDR, TypeId.J, TypeId.J, true),
+        AND_LONG(Opcode.AND_LONG, AND_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        OR_LONG(Opcode.OR_LONG, OR_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        XOR_LONG(Opcode.XOR_LONG, XOR_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        SHL_LONG(Opcode.SHL_LONG, SHL_LONG_2ADDR, TypeId.J, TypeId.I, false),
+        SHR_LONG(Opcode.SHR_LONG, SHR_LONG_2ADDR, TypeId.J, TypeId.I, false),
+        USHR_LONG(Opcode.USHR_LONG, USHR_LONG_2ADDR, TypeId.J, TypeId.I, false),
 
-        ADD_FLOAT(Opcode.ADD_FLOAT, ADD_FLOAT_2ADDR, TypeId.F, TypeId.F),
-        RSUB_FLOAT(null, null, TypeId.F, TypeId.F),
-        SUB_FLOAT(Opcode.SUB_FLOAT, SUB_FLOAT_2ADDR, TypeId.F, TypeId.F),
-        MUL_FLOAT(Opcode.MUL_FLOAT, MUL_FLOAT_2ADDR, TypeId.F, TypeId.F),
-        DIV_FLOAT(Opcode.DIV_FLOAT, DIV_FLOAT_2ADDR, TypeId.F, TypeId.F),
-        REM_FLOAT(Opcode.REM_FLOAT, REM_FLOAT_2ADDR, TypeId.F, TypeId.F),
+        ADD_FLOAT(Opcode.ADD_FLOAT, ADD_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
+        RSUB_FLOAT(null, null, TypeId.F, TypeId.F, false),
+        SUB_FLOAT(Opcode.SUB_FLOAT, SUB_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
+        MUL_FLOAT(Opcode.MUL_FLOAT, MUL_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
+        DIV_FLOAT(Opcode.DIV_FLOAT, DIV_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
+        REM_FLOAT(Opcode.REM_FLOAT, REM_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
 
-        ADD_DOUBLE(Opcode.ADD_DOUBLE, ADD_DOUBLE_2ADDR, TypeId.D, TypeId.D),
-        RSUB_DOUBLE(null, null, TypeId.D, TypeId.D),
-        SUB_DOUBLE(Opcode.SUB_DOUBLE, SUB_DOUBLE_2ADDR, TypeId.D, TypeId.D),
-        MUL_DOUBLE(Opcode.MUL_DOUBLE, MUL_DOUBLE_2ADDR, TypeId.D, TypeId.D),
-        DIV_DOUBLE(Opcode.DIV_DOUBLE, DIV_DOUBLE_2ADDR, TypeId.D, TypeId.D),
-        REM_DOUBLE(Opcode.REM_DOUBLE, REM_DOUBLE_2ADDR, TypeId.D, TypeId.D);
+        ADD_DOUBLE(Opcode.ADD_DOUBLE, ADD_DOUBLE_2ADDR, TypeId.D, TypeId.D, false),
+        RSUB_DOUBLE(null, null, TypeId.D, TypeId.D, false),
+        SUB_DOUBLE(Opcode.SUB_DOUBLE, SUB_DOUBLE_2ADDR, TypeId.D, TypeId.D, false),
+        MUL_DOUBLE(Opcode.MUL_DOUBLE, MUL_DOUBLE_2ADDR, TypeId.D, TypeId.D, false),
+        DIV_DOUBLE(Opcode.DIV_DOUBLE, DIV_DOUBLE_2ADDR, TypeId.D, TypeId.D, false),
+        REM_DOUBLE(Opcode.REM_DOUBLE, REM_DOUBLE_2ADDR, TypeId.D, TypeId.D, false);
 
         private final Opcode regular, _2addr, lit16, lit8;
         private final TypeId dst_src1, src2;
+        private final boolean can_throw;
 
         BinOp(Opcode regular, Opcode _2addr, Opcode lit16, Opcode lit8,
-              TypeId dst_src1, TypeId src2) {
+              TypeId dst_src1, TypeId src2, boolean can_throw) {
             this.regular = regular;
             this._2addr = _2addr;
             this.lit16 = lit16;
             this.lit8 = lit8;
             this.dst_src1 = dst_src1;
             this.src2 = src2;
+            this.can_throw = can_throw;
         }
 
-        BinOp(Opcode regular, Opcode _2addr, TypeId dst_src1, TypeId src2) {
-            this(regular, _2addr, null, null, dst_src1, src2);
+        BinOp(Opcode regular, Opcode _2addr, TypeId dst_src1, TypeId src2, boolean can_throw) {
+            this(regular, _2addr, null, null, dst_src1, src2, can_throw);
         }
 
         public static BinOp of(Opcode op) {
@@ -2801,6 +2803,10 @@ public final class CodeBuilder {
 
         public boolean isSrc2Wide() {
             return src2.isWidePrimitive();
+        }
+
+        public boolean canThrow() {
+            return can_throw;
         }
     }
 
