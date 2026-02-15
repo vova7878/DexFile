@@ -199,6 +199,14 @@ public final class CodeBuilder {
         public BuilderPosition(int position) {
             this.position = position;
         }
+
+        public BuilderPosition(BuilderPosition other) {
+            this.position = other.position;
+            this.units = other.units;
+            this.label_offset = other.label_offset;
+            this.next = other.next;
+            this.node = other.node;
+        }
     }
 
     private static int checkRange(int value, int start, int length) {
@@ -217,10 +225,11 @@ public final class CodeBuilder {
     private final List<BuilderTryItem> try_items;
     private final List<BuilderDebugItem> debug_items;
     private final Map<Object, BuilderPosition> labels;
-    private final BuilderPosition first;
-    private BuilderPosition last;
+    private final BuilderPosition head;
+    private BuilderPosition current;
 
     private boolean generate_lines;
+    private int synthetic_line;
 
     private CodeBuilder(int regs_size, int ins_size, boolean add_hidden_this) {
         this.has_this = add_hidden_this;
@@ -231,8 +240,9 @@ public final class CodeBuilder {
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
-        this.first = this.last = new BuilderPosition(0);
+        this.head = this.current = new BuilderPosition(0);
         this.generate_lines = false;
+        this.synthetic_line = 0;
     }
 
     // <------------------>
@@ -351,14 +361,13 @@ public final class CodeBuilder {
     }
 
     private List<Instruction> mergeInstructions() {
-        var begin = first;
-        var end = last;
+        var begin = head;
 
         boolean changed;
         do {
             changed = false;
-            for (var current = begin; current != end; current = current.next) {
-                assert current != null;
+            //noinspection DataFlowIssue
+            for (var current = begin; current.node != null; current = current.next) {
                 var node = current.node;
                 node.update(current.position);
                 var units = node.units();
@@ -381,7 +390,7 @@ public final class CodeBuilder {
         } while (changed);
 
         var out = new ArrayList<Instruction>();
-        for (var current = begin; current != end; current = current.next) {
+        for (var current = begin; current.node != null; current = current.next) {
             out.addAll(current.node.generate());
         }
         return out;
@@ -495,16 +504,19 @@ public final class CodeBuilder {
     private void add(BuilderNode node, int initial_units) {
         if (generate_lines) {
             // Note: Numbering starts from one
-            line(currentUnit() + 1);
+            line(++synthetic_line);
         }
 
-        var current = last;
-        current.units = initial_units;
-        current.node = node;
+        var c = current;
+        var n = new BuilderPosition(c);
 
-        var next = new BuilderPosition(current.position + current.units);
-        current.next = next;
-        last = next;
+        c.units = initial_units;
+        c.node = node;
+        c.next = current = n;
+
+        for (var tmp = n; tmp != null; tmp = tmp.next) {
+            tmp.position += initial_units;
+        }
     }
 
     private void add(Instruction instruction) {
@@ -585,15 +597,16 @@ public final class CodeBuilder {
         delayed_actions.add(action);
     }
 
-    private int currentUnit() {
-        return last.position;
-    }
-
-    private int findUnit(Object label) {
-        var pos = labels.get(label);
+    private BuilderPosition findPosition(Object label) {
+        var pos = label instanceof BuilderPosition bp ? bp : labels.get(label);
         if (pos == null) {
             throw new IllegalStateException("Can`t find label: " + label);
         }
+        return pos;
+    }
+
+    private int findUnit(Object label) {
+        var pos = findPosition(label);
         return pos.position + pos.label_offset;
     }
 
@@ -614,14 +627,27 @@ public final class CodeBuilder {
         return branchOffset(findUnit(from), to, allow_zero);
     }
 
-    public static Object newLabel() {
+    public static Object new_label() {
         return new Label();
     }
 
+    /**
+     * Returns a label attached to the end of current instruction
+     */
+    public Object current_label() {
+        return current;
+    }
+
     public CodeBuilder label(Object label) {
-        if (labels.putIfAbsent(Objects.requireNonNull(label), last) != null) {
+        Objects.requireNonNull(label);
+        if (label instanceof BuilderPosition || labels.putIfAbsent(label, current) != null) {
             throw new IllegalArgumentException("Label " + label + " already exists");
         }
+        return this;
+    }
+
+    public CodeBuilder append_position(Object label) {
+        current = findPosition(label);
         return this;
     }
 
@@ -639,10 +665,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder try_catch(Object label1, Object label2, TypeId exceptionType) {
-        var handler = newLabel();
-        try_catch(label1, label2, exceptionType, handler);
-        label(handler);
-        return this;
+        return try_catch(label1, label2, exceptionType, current_label());
     }
 
     public CodeBuilder try_catch_all(Object label1, Object label2, Object handler) {
@@ -651,10 +674,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder try_catch_all(Object label1, Object label2) {
-        var handler = newLabel();
-        try_catch_all(label1, label2, handler);
-        label(handler);
-        return this;
+        return try_catch_all(label1, label2, current_label());
     }
 
     public CodeBuilder try_catch(Object label1, Object label2, Map<TypeId, ?> table) {
@@ -678,9 +698,13 @@ public final class CodeBuilder {
         return this;
     }
 
-    public CodeBuilder generate_lines() {
-        generate_lines = true;
+    public CodeBuilder generate_lines(boolean value) {
+        generate_lines = value;
         return this;
+    }
+
+    public CodeBuilder generate_lines() {
+        return generate_lines(true);
     }
 
     public CodeBuilder line(Object label, int line) {
@@ -716,38 +740,23 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder line(int line) {
-        var label = newLabel();
-        line(label, line);
-        label(label);
-        return this;
+        return line(current_label(), line);
     }
 
     public CodeBuilder prologue() {
-        var label = newLabel();
-        prologue(label);
-        label(label);
-        return this;
+        return prologue(current_label());
     }
 
     public CodeBuilder epilogue() {
-        var label = newLabel();
-        epilogue(label);
-        label(label);
-        return this;
+        return epilogue(current_label());
     }
 
     public CodeBuilder source(String name) {
-        var label = newLabel();
-        source(label, name);
-        label(label);
-        return this;
+        return source(current_label(), name);
     }
 
     public CodeBuilder local(int register, String name, TypeId type, String signature) {
-        var label = newLabel();
-        local(label, register, name, type, signature);
-        label(label);
-        return this;
+        return local(current_label(), register, name, type, signature);
     }
 
     public CodeBuilder local(int register, String name, TypeId type) {
@@ -755,17 +764,11 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder end_local(int register) {
-        var label = newLabel();
-        end_local(label, register);
-        label(label);
-        return this;
+        return end_local(current_label(), register);
     }
 
     public CodeBuilder restart_local(int register) {
-        var label = newLabel();
-        restart_local(label, register);
-        label(label);
-        return this;
+        return restart_local(current_label(), register);
     }
 
     private void format_35c_checks(int arg_count, int arg_reg1, int arg_reg2,
@@ -1619,7 +1622,7 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder fill_array_data_internal(int arr_ref_reg, int element_width, List<? extends Number> data) {
-        var payload = newLabel();
+        var payload = new_label();
 
         f31t(FILL_ARRAY_DATA, arr_ref_reg, false,
                 self -> branchOffset(self, payload));
@@ -1809,10 +1812,9 @@ public final class CodeBuilder {
 
     private CodeBuilder packed_switch_internal(int reg_to_test, int first_key, Object... labels) {
         assert first_key + labels.length >= first_key;
-        var current = newLabel();
-        var payload = newLabel();
+        var current = current_label();
+        var payload = new_label();
 
-        label(current);
         f31t(PACKED_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
 
@@ -1826,10 +1828,9 @@ public final class CodeBuilder {
 
     private CodeBuilder sparse_switch_internal(int reg_to_test, int[] keys, Object... labels) {
         assert keys.length == labels.length;
-        var current = newLabel();
-        var payload = newLabel();
+        var current = current_label();
+        var payload = new_label();
 
-        label(current);
         f31t(SPARSE_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
 
@@ -1975,8 +1976,8 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test,
                                Consumer<CodeBuilder> true_branch, Consumer<CodeBuilder> false_branch) {
-        var true_label = newLabel();
-        var end_label = newLabel();
+        var true_label = new_label();
+        var end_label = new_label();
         if_test(test, first_reg_to_test, second_reg_to_test, true_label);
         false_branch.accept(this);
         goto_(end_label);
@@ -1992,7 +1993,7 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test,
                                Consumer<CodeBuilder> true_branch) {
-        var end_label = newLabel();
+        var end_label = new_label();
         if_test(test.inverse(), first_reg_to_test, second_reg_to_test, end_label);
         true_branch.accept(this);
         label(end_label);
@@ -2074,8 +2075,8 @@ public final class CodeBuilder {
     public CodeBuilder if_testz(Test test, int reg_to_test,
                                 Consumer<CodeBuilder> true_branch,
                                 Consumer<CodeBuilder> false_branch) {
-        var true_label = newLabel();
-        var end_label = newLabel();
+        var true_label = new_label();
+        var end_label = new_label();
         if_testz(test, reg_to_test, true_label);
         false_branch.accept(this);
         goto_(end_label);
@@ -2090,7 +2091,7 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_testz(Test test, int reg_to_test,
                                 Consumer<CodeBuilder> true_branch) {
-        var end_label = newLabel();
+        var end_label = new_label();
         if_testz(test.inverse(), reg_to_test, end_label);
         true_branch.accept(this);
         label(end_label);
