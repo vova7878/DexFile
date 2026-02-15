@@ -69,17 +69,19 @@ public final class AnalyzedMethod {
     private final MethodDef method;
     private final MethodImplementation implementation;
     private final IntMap<Position> positions;
+    private final int last_offset;
     private final ProtoId call_proto;
     private final int register_count;
 
     private AnalyzedMethod(TypeId declaring_class, MethodDef method,
                            MethodImplementation implementation,
-                           IntMap<Position> positions, ProtoId call_proto,
-                           int register_count) {
+                           IntMap<Position> positions, int last_offset,
+                           ProtoId call_proto, int register_count) {
         this.declaring_class = declaring_class;
         this.method = method;
         this.implementation = implementation;
         this.positions = positions;
+        this.last_offset = last_offset;
         this.call_proto = call_proto;
         this.register_count = register_count;
     }
@@ -94,6 +96,10 @@ public final class AnalyzedMethod {
 
     public IntMap<Position> getPositions() {
         return positions;
+    }
+
+    public int getLastOffset() {
+        return last_offset;
     }
 
     public ProtoId getCallProto() {
@@ -157,7 +163,7 @@ public final class AnalyzedMethod {
             offset += value.getUnitCount();
         }
         var method = new AnalyzedMethod(declaring_class,
-                def, implementation, code_map,
+                def, implementation, code_map, offset,
                 def.callProto(declaring_class), regs);
         method.init();
         method.analyze(resolver);
@@ -1463,6 +1469,8 @@ public final class AnalyzedMethod {
                         is_nnop = false;
                         is_nop = true;
                     } else if (!TypeResolver._instanceOf(resolver, type, ref, true)) {
+                        is_nnop = false;
+                        is_nop = false;
                         next_reachable = false;
                     } else if (TypeResolver._instanceOf(resolver, type, ref, false)) {
                         is_nnop = true;

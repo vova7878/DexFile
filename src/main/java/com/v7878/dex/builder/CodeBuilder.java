@@ -90,7 +90,7 @@ import java.util.function.IntUnaryOperator;
 import java.util.function.Supplier;
 
 public final class CodeBuilder {
-    private static class InternalLabel {
+    private static class Label {
     }
 
     private class BuilderTryItem {
@@ -199,6 +199,14 @@ public final class CodeBuilder {
         public BuilderPosition(int position) {
             this.position = position;
         }
+
+        public BuilderPosition(BuilderPosition other) {
+            this.position = other.position;
+            this.units = other.units;
+            this.label_offset = other.label_offset;
+            this.next = other.next;
+            this.node = other.node;
+        }
     }
 
     private static int checkRange(int value, int start, int length) {
@@ -217,10 +225,11 @@ public final class CodeBuilder {
     private final List<BuilderTryItem> try_items;
     private final List<BuilderDebugItem> debug_items;
     private final Map<Object, BuilderPosition> labels;
-    private final BuilderPosition first;
-    private BuilderPosition last;
+    private final BuilderPosition head;
+    private BuilderPosition current;
 
     private boolean generate_lines;
+    private int synthetic_line;
 
     private CodeBuilder(int regs_size, int ins_size, boolean add_hidden_this) {
         this.has_this = add_hidden_this;
@@ -231,8 +240,9 @@ public final class CodeBuilder {
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
-        this.first = this.last = new BuilderPosition(0);
+        this.head = this.current = new BuilderPosition(0);
         this.generate_lines = false;
+        this.synthetic_line = 0;
     }
 
     // <------------------>
@@ -351,14 +361,13 @@ public final class CodeBuilder {
     }
 
     private List<Instruction> mergeInstructions() {
-        var begin = first;
-        var end = last;
+        var begin = head;
 
         boolean changed;
         do {
             changed = false;
-            for (var current = begin; current != end; current = current.next) {
-                assert current != null;
+            //noinspection DataFlowIssue
+            for (var current = begin; current.node != null; current = current.next) {
                 var node = current.node;
                 node.update(current.position);
                 var units = node.units();
@@ -381,7 +390,7 @@ public final class CodeBuilder {
         } while (changed);
 
         var out = new ArrayList<Instruction>();
-        for (var current = begin; current != end; current = current.next) {
+        for (var current = begin; current.node != null; current = current.next) {
             out.addAll(current.node.generate());
         }
         return out;
@@ -495,16 +504,19 @@ public final class CodeBuilder {
     private void add(BuilderNode node, int initial_units) {
         if (generate_lines) {
             // Note: Numbering starts from one
-            line(currentUnit() + 1);
+            line(++synthetic_line);
         }
 
-        var current = last;
-        current.units = initial_units;
-        current.node = node;
+        var c = current;
+        var n = new BuilderPosition(c);
 
-        var next = new BuilderPosition(current.position + current.units);
-        current.next = next;
-        last = next;
+        c.units = initial_units;
+        c.node = node;
+        c.next = current = n;
+
+        for (var tmp = n; tmp != null; tmp = tmp.next) {
+            tmp.position += initial_units;
+        }
     }
 
     private void add(Instruction instruction) {
@@ -585,21 +597,16 @@ public final class CodeBuilder {
         delayed_actions.add(action);
     }
 
-    private void putLabel(Object label) {
-        if (labels.putIfAbsent(Objects.requireNonNull(label), last) != null) {
-            throw new IllegalArgumentException("Label " + label + " already exists");
-        }
-    }
-
-    private int currentUnit() {
-        return last.position;
-    }
-
-    private int findUnit(Object label) {
-        var pos = labels.get(label);
+    private BuilderPosition findPosition(Object label) {
+        var pos = label instanceof BuilderPosition bp ? bp : labels.get(label);
         if (pos == null) {
             throw new IllegalStateException("Can`t find label: " + label);
         }
+        return pos;
+    }
+
+    private int findUnit(Object label) {
+        var pos = findPosition(label);
         return pos.position + pos.label_offset;
     }
 
@@ -620,8 +627,27 @@ public final class CodeBuilder {
         return branchOffset(findUnit(from), to, allow_zero);
     }
 
-    public CodeBuilder label(String label) {
-        putLabel(label);
+    public static Object new_label() {
+        return new Label();
+    }
+
+    /**
+     * Returns a label attached to the end of current instruction
+     */
+    public Object current_label() {
+        return current;
+    }
+
+    public CodeBuilder label(Object label) {
+        Objects.requireNonNull(label);
+        if (label instanceof BuilderPosition || labels.putIfAbsent(label, current) != null) {
+            throw new IllegalArgumentException("Label " + label + " already exists");
+        }
+        return this;
+    }
+
+    public CodeBuilder append_position(Object label) {
+        current = findPosition(label);
         return this;
     }
 
@@ -632,49 +658,35 @@ public final class CodeBuilder {
         try_items.add(new BuilderTryItem(label1, label2, exceptionType, handler));
     }
 
-    private void try_catch_internal(Object label1, Object label2, TypeId exceptionType, Object handler) {
+    public CodeBuilder try_catch(Object label1, Object label2, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(exceptionType);
         addTryBlock(label1, label2, exceptionType, handler);
-    }
-
-    public CodeBuilder try_catch(String label1, String label2, TypeId exceptionType, String handler) {
-        try_catch_internal(label1, label2, exceptionType, handler);
         return this;
     }
 
-    public CodeBuilder try_catch(String label1, String label2, TypeId exceptionType) {
-        InternalLabel handler = new InternalLabel();
-        try_catch_internal(label1, label2, exceptionType, handler);
-        putLabel(handler);
-        return this;
+    public CodeBuilder try_catch(Object label1, Object label2, TypeId exceptionType) {
+        return try_catch(label1, label2, exceptionType, current_label());
     }
 
-    private void try_catch_all_internal(Object label1, Object label2, Object handler) {
+    public CodeBuilder try_catch_all(Object label1, Object label2, Object handler) {
         addTryBlock(label1, label2, null, handler);
-    }
-
-    public CodeBuilder try_catch_all(String label1, String label2, String handler) {
-        try_catch_all_internal(label1, label2, handler);
         return this;
     }
 
-    public CodeBuilder try_catch_all(String label1, String label2) {
-        InternalLabel handler = new InternalLabel();
-        try_catch_all_internal(label1, label2, handler);
-        putLabel(handler);
-        return this;
+    public CodeBuilder try_catch_all(Object label1, Object label2) {
+        return try_catch_all(label1, label2, current_label());
     }
 
-    public CodeBuilder try_catch(String label1, String label2, Map<TypeId, String> table) {
+    public CodeBuilder try_catch(Object label1, Object label2, Map<TypeId, ?> table) {
         for (var entry : table.entrySet()) {
             try_catch(label1, label2, entry.getKey(), entry.getValue());
         }
         return this;
     }
 
-    public CodeBuilder try_catch(String label1, String label2,
-                                 String catch_all_handler,
-                                 Map<TypeId, String> table) {
+    public CodeBuilder try_catch(Object label1, Object label2,
+                                 Object catch_all_handler,
+                                 Map<TypeId, ?> table) {
         return try_catch_all(label1, label2, catch_all_handler)
                 .try_catch(label1, label2, table);
     }
@@ -686,104 +698,65 @@ public final class CodeBuilder {
         return this;
     }
 
-    public CodeBuilder generate_lines() {
-        generate_lines = true;
+    public CodeBuilder generate_lines(boolean value) {
+        generate_lines = value;
         return this;
     }
 
-    private CodeBuilder line_internal(Object label, int line) {
+    public CodeBuilder generate_lines() {
+        return generate_lines(true);
+    }
+
+    public CodeBuilder line(Object label, int line) {
         return addDebugItem(label, LineNumber.of(line));
     }
 
-    private CodeBuilder prologue_internal(Object label) {
+    public CodeBuilder prologue(Object label) {
         return addDebugItem(label, SetPrologueEnd.INSTANCE);
     }
 
-    private CodeBuilder epilogue_internal(Object label) {
+    public CodeBuilder epilogue(Object label) {
         return addDebugItem(label, SetEpilogueBegin.INSTANCE);
     }
 
-    private CodeBuilder source_internal(Object label, String name) {
+    public CodeBuilder source(Object label, String name) {
         return addDebugItem(label, SetFile.of(name));
     }
 
-    private CodeBuilder local_internal(Object label, int register, String name, TypeId type, String signature) {
+    public CodeBuilder local(Object label, int register, String name, TypeId type, String signature) {
         return addDebugItem(label, StartLocal.of(register, name, type, signature));
     }
 
-    private CodeBuilder end_local_internal(Object label, int register) {
-        return addDebugItem(label, EndLocal.of(register));
-    }
-
-    private CodeBuilder restart_local_internal(Object label, int register) {
-        return addDebugItem(label, RestartLocal.of(register));
-    }
-
-    public CodeBuilder line(String label, int line) {
-        return line_internal(label, line);
-    }
-
-    public CodeBuilder prologue(String label) {
-        return prologue_internal(label);
-    }
-
-    public CodeBuilder epilogue(String label) {
-        return epilogue_internal(label);
-    }
-
-    public CodeBuilder source(String label, String name) {
-        return source_internal(label, name);
-    }
-
-    public CodeBuilder local(String label, int register, String name, TypeId type, String signature) {
-        return local_internal(label, register, name, type, signature);
-    }
-
-    public CodeBuilder local(String label, int register, String name, TypeId type) {
+    public CodeBuilder local(Object label, int register, String name, TypeId type) {
         return local(label, register, name, type, null);
     }
 
-    public CodeBuilder end_local(String label, int register) {
-        return end_local_internal(label, register);
+    public CodeBuilder end_local(Object label, int register) {
+        return addDebugItem(label, EndLocal.of(register));
     }
 
-    public CodeBuilder restart_local(String label, int register) {
-        return restart_local_internal(label, register);
+    public CodeBuilder restart_local(Object label, int register) {
+        return addDebugItem(label, RestartLocal.of(register));
     }
 
     public CodeBuilder line(int line) {
-        InternalLabel label = new InternalLabel();
-        line_internal(label, line);
-        putLabel(label);
-        return this;
+        return line(current_label(), line);
     }
 
     public CodeBuilder prologue() {
-        InternalLabel label = new InternalLabel();
-        prologue_internal(label);
-        putLabel(label);
-        return this;
+        return prologue(current_label());
     }
 
     public CodeBuilder epilogue() {
-        InternalLabel label = new InternalLabel();
-        epilogue_internal(label);
-        putLabel(label);
-        return this;
+        return epilogue(current_label());
     }
 
     public CodeBuilder source(String name) {
-        InternalLabel label = new InternalLabel();
-        source_internal(label, name);
-        putLabel(label);
-        return this;
+        return source(current_label(), name);
     }
 
     public CodeBuilder local(int register, String name, TypeId type, String signature) {
-        InternalLabel label = new InternalLabel();
-        local_internal(label, register, name, type, signature);
-        putLabel(label);
-        return this;
+        return local(current_label(), register, name, type, signature);
     }
 
     public CodeBuilder local(int register, String name, TypeId type) {
@@ -791,17 +764,11 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder end_local(int register) {
-        InternalLabel label = new InternalLabel();
-        end_local_internal(label, register);
-        putLabel(label);
-        return this;
+        return end_local(current_label(), register);
     }
 
     public CodeBuilder restart_local(int register) {
-        InternalLabel label = new InternalLabel();
-        restart_local_internal(label, register);
-        putLabel(label);
-        return this;
+        return restart_local(current_label(), register);
     }
 
     private void format_35c_checks(int arg_count, int arg_reg1, int arg_reg2,
@@ -1655,13 +1622,13 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder fill_array_data_internal(int arr_ref_reg, int element_width, List<? extends Number> data) {
-        InternalLabel payload = new InternalLabel();
+        var payload = new_label();
 
         f31t(FILL_ARRAY_DATA, arr_ref_reg, false,
                 self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
-            putLabel(payload);
+            label(payload);
             fill_array_data_payload(element_width, data);
         });
 
@@ -1780,8 +1747,11 @@ public final class CodeBuilder {
         return f11x(THROW, ex_reg, false);
     }
 
+    /**
+     * @param label s32 label
+     */
     // TODO: what if target is next instruction? Can we generate nothing?
-    private CodeBuilder goto_internal(Object label) {
+    public CodeBuilder goto_(Object label) {
         add(new BuilderNode() {
             int position;
             int target;
@@ -1820,56 +1790,36 @@ public final class CodeBuilder {
     }
 
     /**
-     * @param label s32 label
-     */
-    public CodeBuilder goto_(String label) {
-        return goto_internal(label);
-    }
-
-    private CodeBuilder raw_goto_internal(Object label) {
-        return f10t(GOTO, self -> branchOffset(self, label));
-    }
-
-    /**
      * @param label s8 label
      */
-    public CodeBuilder raw_goto(String label) {
-        return raw_goto_internal(label);
-    }
-
-    private CodeBuilder raw_goto_16_internal(Object label) {
-        return f20t(GOTO_16, self -> branchOffset(self, label));
+    public CodeBuilder raw_goto(Object label) {
+        return f10t(GOTO, self -> branchOffset(self, label));
     }
 
     /**
      * @param label s16 label
      */
-    public CodeBuilder raw_goto_16(String label) {
-        return raw_goto_16_internal(label);
-    }
-
-    private CodeBuilder raw_goto_32_internal(Object label) {
-        return f30t(GOTO_32, self -> branchOffset(self, label, true));
+    public CodeBuilder raw_goto_16(Object label) {
+        return f20t(GOTO_16, self -> branchOffset(self, label));
     }
 
     /**
      * @param label s32 label
      */
-    public CodeBuilder raw_goto_32(String label) {
-        return raw_goto_32_internal(label);
+    public CodeBuilder raw_goto_32(Object label) {
+        return f30t(GOTO_32, self -> branchOffset(self, label, true));
     }
 
     private CodeBuilder packed_switch_internal(int reg_to_test, int first_key, Object... labels) {
         assert first_key + labels.length >= first_key;
-        InternalLabel current = new InternalLabel();
-        InternalLabel payload = new InternalLabel();
+        var current = current_label();
+        var payload = new_label();
 
-        putLabel(current);
         f31t(PACKED_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
-            putLabel(payload);
+            label(payload);
             packed_switch_payload(first_key, current, labels);
         });
 
@@ -1878,39 +1828,57 @@ public final class CodeBuilder {
 
     private CodeBuilder sparse_switch_internal(int reg_to_test, int[] keys, Object... labels) {
         assert keys.length == labels.length;
-        InternalLabel current = new InternalLabel();
-        InternalLabel payload = new InternalLabel();
+        var current = current_label();
+        var payload = new_label();
 
-        putLabel(current);
         f31t(SPARSE_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
 
         addDelayedAction(() -> {
-            putLabel(payload);
+            label(payload);
             sparse_switch_payload(keys, current, labels);
         });
 
         return this;
     }
 
-    /**
-     * @param reg_to_test u8
-     */
-    // TODO: what if all targets is next instruction? Can we generate nothing?
-    public CodeBuilder switch_(int reg_to_test, Map<Integer, String> table) {
-        check_reg(reg_to_test);
+    private CodeBuilder switch_internal(int reg_to_test, IntMap<?> table) {
         if (table.isEmpty()) {
             return this;
         }
-        var map = new IntMap<String>(table.size());
+        if (table.size() == 1 && table.firstKey() == 0) {
+            return if_testz(Test.EQ, reg_to_test, table.valueAt(0));
+        }
+        // TODO: what if all targets is next instruction? Can we generate nothing?
+        if (table.size() <= 1 || (table.lastKey() - table.firstKey()) == (table.size() - 1)) {
+            return packed_switch_internal(reg_to_test, table.firstKey(), table.valuesArray());
+        }
+        return sparse_switch_internal(reg_to_test, table.keysArray(), table.valuesArray());
+    }
+
+    /**
+     * @param reg_to_test u8
+     */
+    public CodeBuilder switch_(int reg_to_test, IntMap<?> table) {
+        check_reg(reg_to_test);
+        if (table.isEmpty()) return this;
+        table = table.duplicate();
+        int size = table.size();
+        for (int i = 0; i < size; i++) {
+            Objects.requireNonNull(table.valueAt(i));
+        }
+        return switch_internal(reg_to_test, table);
+    }
+
+    /**
+     * @param reg_to_test u8
+     */
+    public CodeBuilder switch_(int reg_to_test, Map<Integer, ?> table) {
+        check_reg(reg_to_test);
+        if (table.isEmpty()) return this;
+        var map = new IntMap<>(table.size());
         table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
-        if (map.size() == 1 && map.keyAt(0) == 0) {
-            return if_testz(Test.EQ, reg_to_test, map.valueAt(0));
-        }
-        if (map.size() <= 1 || (map.lastKey() - map.firstKey()) == (map.size() - 1)) {
-            return packed_switch_internal(reg_to_test, map.firstKey(), map.valuesArray());
-        }
-        return sparse_switch_internal(reg_to_test, map.keysArray(), map.valuesArray());
+        return switch_internal(reg_to_test, map);
     }
 
     public enum Cmp {
@@ -2008,14 +1976,14 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test,
                                Consumer<CodeBuilder> true_branch, Consumer<CodeBuilder> false_branch) {
-        var true_label = new InternalLabel();
-        var end_label = new InternalLabel();
-        if_test_internal(test, first_reg_to_test, second_reg_to_test, true_label);
+        var true_label = new_label();
+        var end_label = new_label();
+        if_test(test, first_reg_to_test, second_reg_to_test, true_label);
         false_branch.accept(this);
-        goto_internal(end_label);
-        putLabel(true_label);
+        goto_(end_label);
+        label(true_label);
         true_branch.accept(this);
-        putLabel(end_label);
+        label(end_label);
         return this;
     }
 
@@ -2025,16 +1993,21 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_test(Test test, int first_reg_to_test, int second_reg_to_test,
                                Consumer<CodeBuilder> true_branch) {
-        var end_label = new InternalLabel();
-        if_test_internal(test.inverse(), first_reg_to_test, second_reg_to_test, end_label);
+        var end_label = new_label();
+        if_test(test.inverse(), first_reg_to_test, second_reg_to_test, end_label);
         true_branch.accept(this);
-        putLabel(end_label);
+        label(end_label);
         return this;
     }
 
+    /**
+     * @param first_reg_to_test  u4
+     * @param second_reg_to_test u4
+     * @param label              s32 label
+     */
     // TODO: what if target is next instruction? Can we generate nothing?
-    private CodeBuilder if_test_internal(Test test, int first_reg_to_test,
-                                         int second_reg_to_test, Object label) {
+    public CodeBuilder if_test(Test test, int first_reg_to_test,
+                               int second_reg_to_test, Object label) {
         check_reg_or_pair(first_reg_to_test, false);
         check_reg_or_pair(second_reg_to_test, false);
         add(new BuilderNode() {
@@ -2087,28 +2060,13 @@ public final class CodeBuilder {
     /**
      * @param first_reg_to_test  u4
      * @param second_reg_to_test u4
-     * @param label              s32 label
-     */
-    public CodeBuilder if_test(Test test, int first_reg_to_test,
-                               int second_reg_to_test, String label) {
-        return if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
-    }
-
-    private CodeBuilder raw_if_test_internal(Test test, int first_reg_to_test,
-                                             int second_reg_to_test, Object label) {
-        return f22t(test.test(), first_reg_to_test, false,
-                second_reg_to_test, false,
-                self -> branchOffset(self, label));
-    }
-
-    /**
-     * @param first_reg_to_test  u4
-     * @param second_reg_to_test u4
      * @param label              s16 label
      */
     public CodeBuilder raw_if_test(Test test, int first_reg_to_test,
-                                   int second_reg_to_test, String label) {
-        return raw_if_test_internal(test, first_reg_to_test, second_reg_to_test, label);
+                                   int second_reg_to_test, Object label) {
+        return f22t(test.test(), first_reg_to_test, false,
+                second_reg_to_test, false,
+                self -> branchOffset(self, label));
     }
 
     /**
@@ -2117,14 +2075,14 @@ public final class CodeBuilder {
     public CodeBuilder if_testz(Test test, int reg_to_test,
                                 Consumer<CodeBuilder> true_branch,
                                 Consumer<CodeBuilder> false_branch) {
-        var true_label = new InternalLabel();
-        var end_label = new InternalLabel();
-        if_testz_internal(test, reg_to_test, true_label);
+        var true_label = new_label();
+        var end_label = new_label();
+        if_testz(test, reg_to_test, true_label);
         false_branch.accept(this);
-        goto_internal(end_label);
-        putLabel(true_label);
+        goto_(end_label);
+        label(true_label);
         true_branch.accept(this);
-        putLabel(end_label);
+        label(end_label);
         return this;
     }
 
@@ -2133,15 +2091,19 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_testz(Test test, int reg_to_test,
                                 Consumer<CodeBuilder> true_branch) {
-        var end_label = new InternalLabel();
-        if_testz_internal(test.inverse(), reg_to_test, end_label);
+        var end_label = new_label();
+        if_testz(test.inverse(), reg_to_test, end_label);
         true_branch.accept(this);
-        putLabel(end_label);
+        label(end_label);
         return this;
     }
 
+    /**
+     * @param reg_to_test u8
+     * @param label       s32 label
+     */
     // TODO: what if target is next instruction? Can we generate nothing?
-    private CodeBuilder if_testz_internal(Test test, int reg_to_test, Object label) {
+    public CodeBuilder if_testz(Test test, int reg_to_test, Object label) {
         check_reg_or_pair(reg_to_test, false);
         add(new BuilderNode() {
             int position;
@@ -2191,23 +2153,11 @@ public final class CodeBuilder {
 
     /**
      * @param reg_to_test u8
-     * @param label       s32 label
-     */
-    public CodeBuilder if_testz(Test test, int reg_to_test, String label) {
-        return if_testz_internal(test, reg_to_test, label);
-    }
-
-    private CodeBuilder raw_if_testz_internal(Test test, int reg_to_test, Object label) {
-        return f21t(test.testz(), reg_to_test, false,
-                self -> branchOffset(self, label));
-    }
-
-    /**
-     * @param reg_to_test u8
      * @param label       s16 label
      */
-    public CodeBuilder raw_if_testz(Test test, int reg_to_test, String label) {
-        return raw_if_testz_internal(test, reg_to_test, label);
+    public CodeBuilder raw_if_testz(Test test, int reg_to_test, Object label) {
+        return f21t(test.testz(), reg_to_test, false,
+                self -> branchOffset(self, label));
     }
 
     public enum Op {
@@ -2723,61 +2673,63 @@ public final class CodeBuilder {
     }
 
     public enum BinOp {
-        ADD_INT(Opcode.ADD_INT, ADD_INT_2ADDR, ADD_INT_LIT16, ADD_INT_LIT8, TypeId.I, TypeId.I),
-        RSUB_INT(null, null, Opcode.RSUB_INT, RSUB_INT_LIT8, TypeId.I, TypeId.I),
-        SUB_INT(Opcode.SUB_INT, SUB_INT_2ADDR, null, null, TypeId.I, TypeId.I),
-        MUL_INT(Opcode.MUL_INT, MUL_INT_2ADDR, MUL_INT_LIT16, MUL_INT_LIT8, TypeId.I, TypeId.I),
-        DIV_INT(Opcode.DIV_INT, DIV_INT_2ADDR, DIV_INT_LIT16, DIV_INT_LIT8, TypeId.I, TypeId.I),
-        REM_INT(Opcode.REM_INT, REM_INT_2ADDR, REM_INT_LIT16, REM_INT_LIT8, TypeId.I, TypeId.I),
-        AND_INT(Opcode.AND_INT, AND_INT_2ADDR, AND_INT_LIT16, AND_INT_LIT8, TypeId.I, TypeId.I),
-        OR_INT(Opcode.OR_INT, OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8, TypeId.I, TypeId.I),
-        XOR_INT(Opcode.XOR_INT, XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8, TypeId.I, TypeId.I),
-        SHL_INT(Opcode.SHL_INT, SHL_INT_2ADDR, null, SHL_INT_LIT8, TypeId.I, TypeId.I),
-        SHR_INT(Opcode.SHR_INT, SHR_INT_2ADDR, null, SHR_INT_LIT8, TypeId.I, TypeId.I),
-        USHR_INT(Opcode.USHR_INT, USHR_INT_2ADDR, null, USHR_INT_LIT8, TypeId.I, TypeId.I),
+        ADD_INT(Opcode.ADD_INT, ADD_INT_2ADDR, ADD_INT_LIT16, ADD_INT_LIT8, TypeId.I, TypeId.I, false),
+        RSUB_INT(null, null, Opcode.RSUB_INT, RSUB_INT_LIT8, TypeId.I, TypeId.I, false),
+        SUB_INT(Opcode.SUB_INT, SUB_INT_2ADDR, null, null, TypeId.I, TypeId.I, false),
+        MUL_INT(Opcode.MUL_INT, MUL_INT_2ADDR, MUL_INT_LIT16, MUL_INT_LIT8, TypeId.I, TypeId.I, false),
+        DIV_INT(Opcode.DIV_INT, DIV_INT_2ADDR, DIV_INT_LIT16, DIV_INT_LIT8, TypeId.I, TypeId.I, true),
+        REM_INT(Opcode.REM_INT, REM_INT_2ADDR, REM_INT_LIT16, REM_INT_LIT8, TypeId.I, TypeId.I, true),
+        AND_INT(Opcode.AND_INT, AND_INT_2ADDR, AND_INT_LIT16, AND_INT_LIT8, TypeId.I, TypeId.I, false),
+        OR_INT(Opcode.OR_INT, OR_INT_2ADDR, OR_INT_LIT16, OR_INT_LIT8, TypeId.I, TypeId.I, false),
+        XOR_INT(Opcode.XOR_INT, XOR_INT_2ADDR, XOR_INT_LIT16, XOR_INT_LIT8, TypeId.I, TypeId.I, false),
+        SHL_INT(Opcode.SHL_INT, SHL_INT_2ADDR, null, SHL_INT_LIT8, TypeId.I, TypeId.I, false),
+        SHR_INT(Opcode.SHR_INT, SHR_INT_2ADDR, null, SHR_INT_LIT8, TypeId.I, TypeId.I, false),
+        USHR_INT(Opcode.USHR_INT, USHR_INT_2ADDR, null, USHR_INT_LIT8, TypeId.I, TypeId.I, false),
 
-        ADD_LONG(Opcode.ADD_LONG, ADD_LONG_2ADDR, TypeId.J, TypeId.J),
-        RSUB_LONG(null, null, TypeId.J, TypeId.J),
-        SUB_LONG(Opcode.SUB_LONG, SUB_LONG_2ADDR, TypeId.J, TypeId.J),
-        MUL_LONG(Opcode.MUL_LONG, MUL_LONG_2ADDR, TypeId.J, TypeId.J),
-        DIV_LONG(Opcode.DIV_LONG, DIV_LONG_2ADDR, TypeId.J, TypeId.J),
-        REM_LONG(Opcode.REM_LONG, REM_LONG_2ADDR, TypeId.J, TypeId.J),
-        AND_LONG(Opcode.AND_LONG, AND_LONG_2ADDR, TypeId.J, TypeId.J),
-        OR_LONG(Opcode.OR_LONG, OR_LONG_2ADDR, TypeId.J, TypeId.J),
-        XOR_LONG(Opcode.XOR_LONG, XOR_LONG_2ADDR, TypeId.J, TypeId.J),
-        SHL_LONG(Opcode.SHL_LONG, SHL_LONG_2ADDR, TypeId.J, TypeId.I),
-        SHR_LONG(Opcode.SHR_LONG, SHR_LONG_2ADDR, TypeId.J, TypeId.I),
-        USHR_LONG(Opcode.USHR_LONG, USHR_LONG_2ADDR, TypeId.J, TypeId.I),
+        ADD_LONG(Opcode.ADD_LONG, ADD_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        RSUB_LONG(null, null, TypeId.J, TypeId.J, false),
+        SUB_LONG(Opcode.SUB_LONG, SUB_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        MUL_LONG(Opcode.MUL_LONG, MUL_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        DIV_LONG(Opcode.DIV_LONG, DIV_LONG_2ADDR, TypeId.J, TypeId.J, true),
+        REM_LONG(Opcode.REM_LONG, REM_LONG_2ADDR, TypeId.J, TypeId.J, true),
+        AND_LONG(Opcode.AND_LONG, AND_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        OR_LONG(Opcode.OR_LONG, OR_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        XOR_LONG(Opcode.XOR_LONG, XOR_LONG_2ADDR, TypeId.J, TypeId.J, false),
+        SHL_LONG(Opcode.SHL_LONG, SHL_LONG_2ADDR, TypeId.J, TypeId.I, false),
+        SHR_LONG(Opcode.SHR_LONG, SHR_LONG_2ADDR, TypeId.J, TypeId.I, false),
+        USHR_LONG(Opcode.USHR_LONG, USHR_LONG_2ADDR, TypeId.J, TypeId.I, false),
 
-        ADD_FLOAT(Opcode.ADD_FLOAT, ADD_FLOAT_2ADDR, TypeId.F, TypeId.F),
-        RSUB_FLOAT(null, null, TypeId.F, TypeId.F),
-        SUB_FLOAT(Opcode.SUB_FLOAT, SUB_FLOAT_2ADDR, TypeId.F, TypeId.F),
-        MUL_FLOAT(Opcode.MUL_FLOAT, MUL_FLOAT_2ADDR, TypeId.F, TypeId.F),
-        DIV_FLOAT(Opcode.DIV_FLOAT, DIV_FLOAT_2ADDR, TypeId.F, TypeId.F),
-        REM_FLOAT(Opcode.REM_FLOAT, REM_FLOAT_2ADDR, TypeId.F, TypeId.F),
+        ADD_FLOAT(Opcode.ADD_FLOAT, ADD_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
+        RSUB_FLOAT(null, null, TypeId.F, TypeId.F, false),
+        SUB_FLOAT(Opcode.SUB_FLOAT, SUB_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
+        MUL_FLOAT(Opcode.MUL_FLOAT, MUL_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
+        DIV_FLOAT(Opcode.DIV_FLOAT, DIV_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
+        REM_FLOAT(Opcode.REM_FLOAT, REM_FLOAT_2ADDR, TypeId.F, TypeId.F, false),
 
-        ADD_DOUBLE(Opcode.ADD_DOUBLE, ADD_DOUBLE_2ADDR, TypeId.D, TypeId.D),
-        RSUB_DOUBLE(null, null, TypeId.D, TypeId.D),
-        SUB_DOUBLE(Opcode.SUB_DOUBLE, SUB_DOUBLE_2ADDR, TypeId.D, TypeId.D),
-        MUL_DOUBLE(Opcode.MUL_DOUBLE, MUL_DOUBLE_2ADDR, TypeId.D, TypeId.D),
-        DIV_DOUBLE(Opcode.DIV_DOUBLE, DIV_DOUBLE_2ADDR, TypeId.D, TypeId.D),
-        REM_DOUBLE(Opcode.REM_DOUBLE, REM_DOUBLE_2ADDR, TypeId.D, TypeId.D);
+        ADD_DOUBLE(Opcode.ADD_DOUBLE, ADD_DOUBLE_2ADDR, TypeId.D, TypeId.D, false),
+        RSUB_DOUBLE(null, null, TypeId.D, TypeId.D, false),
+        SUB_DOUBLE(Opcode.SUB_DOUBLE, SUB_DOUBLE_2ADDR, TypeId.D, TypeId.D, false),
+        MUL_DOUBLE(Opcode.MUL_DOUBLE, MUL_DOUBLE_2ADDR, TypeId.D, TypeId.D, false),
+        DIV_DOUBLE(Opcode.DIV_DOUBLE, DIV_DOUBLE_2ADDR, TypeId.D, TypeId.D, false),
+        REM_DOUBLE(Opcode.REM_DOUBLE, REM_DOUBLE_2ADDR, TypeId.D, TypeId.D, false);
 
         private final Opcode regular, _2addr, lit16, lit8;
         private final TypeId dst_src1, src2;
+        private final boolean can_throw;
 
         BinOp(Opcode regular, Opcode _2addr, Opcode lit16, Opcode lit8,
-              TypeId dst_src1, TypeId src2) {
+              TypeId dst_src1, TypeId src2, boolean can_throw) {
             this.regular = regular;
             this._2addr = _2addr;
             this.lit16 = lit16;
             this.lit8 = lit8;
             this.dst_src1 = dst_src1;
             this.src2 = src2;
+            this.can_throw = can_throw;
         }
 
-        BinOp(Opcode regular, Opcode _2addr, TypeId dst_src1, TypeId src2) {
-            this(regular, _2addr, null, null, dst_src1, src2);
+        BinOp(Opcode regular, Opcode _2addr, TypeId dst_src1, TypeId src2, boolean can_throw) {
+            this(regular, _2addr, null, null, dst_src1, src2, can_throw);
         }
 
         public static BinOp of(Opcode op) {
@@ -2852,6 +2804,10 @@ public final class CodeBuilder {
 
         public boolean isSrc2Wide() {
             return src2.isWidePrimitive();
+        }
+
+        public boolean canThrow() {
+            return can_throw;
         }
     }
 
