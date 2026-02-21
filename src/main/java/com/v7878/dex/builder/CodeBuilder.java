@@ -397,6 +397,7 @@ public final class CodeBuilder {
     }
 
     private MethodImplementation finish() {
+        append_to_end();
         delayed_actions.forEach(Runnable::run);
 
         List<Instruction> insns = mergeInstructions();
@@ -648,6 +649,20 @@ public final class CodeBuilder {
 
     public CodeBuilder append_position(Object label) {
         current = findPosition(label);
+        return this;
+    }
+
+    public CodeBuilder append_to_start() {
+        current = head;
+        return this;
+    }
+
+    public CodeBuilder append_to_end() {
+        var end = current;
+        while (end.next != null) {
+            end = end.next;
+        }
+        current = end;
         return this;
     }
 
