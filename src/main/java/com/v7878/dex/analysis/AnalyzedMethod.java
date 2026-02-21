@@ -165,8 +165,8 @@ public final class AnalyzedMethod {
         var method = new AnalyzedMethod(declaring_class,
                 def, implementation, code_map, offset,
                 def.callProto(declaring_class), regs);
-        method.init();
-        method.analyze(resolver);
+        method.init(verify);
+        method.analyze(resolver, verify);
         method.freeze();
         return method;
     }
@@ -204,7 +204,7 @@ public final class AnalyzedMethod {
         return line;
     }
 
-    private void init() {
+    private void init(boolean verify) {
         position(0).before().copy(firstLine());
         int count = positions.size();
         BitSet done = new BitSet(count);
@@ -215,7 +215,7 @@ public final class AnalyzedMethod {
                 continue;
             }
             done.set(i);
-            initPosition(todo, i);
+            initPosition(todo, i, verify);
         }
     }
 
@@ -243,11 +243,11 @@ public final class AnalyzedMethod {
     }
 
     private static void init_35c_45cc_args(
-            Position current, VariableFiveRegisterInstruction tmp, ProtoId proto) {
+            Position current, VariableFiveRegisterInstruction tmp, ProtoId proto, boolean verify) {
         var reg_count = tmp.getRegisterCount();
         var sig_count = proto.countInputRegisters();
 
-        if (reg_count != sig_count) {
+        if (verify) if (reg_count != sig_count) {
             throw unexpectedRegisterCount(current, reg_count, sig_count, proto);
         }
 
@@ -277,11 +277,11 @@ public final class AnalyzedMethod {
     }
 
     private static void init_3rc_4rcc_args(
-            Position current, RegisterRangeInstruction tmp, ProtoId proto) {
+            Position current, RegisterRangeInstruction tmp, ProtoId proto, boolean verify) {
         var reg_count = tmp.getRegisterCount();
         var sig_count = proto.countInputRegisters();
 
-        if (reg_count != sig_count) {
+        if (verify) if (reg_count != sig_count) {
             throw unexpectedRegisterCount(
                     current, reg_count, sig_count, proto);
         }
@@ -297,7 +297,7 @@ public final class AnalyzedMethod {
         }
     }
 
-    private void initPosition(BitSet todo, int index) {
+    private void initPosition(BitSet todo, int index, boolean verify) {
         var current = positionAt(index);
         if (index == 0) {
             // The first instruction is always reachable
@@ -348,7 +348,7 @@ public final class AnalyzedMethod {
             }
             case RETURN_VOID -> {
                 var rtype = method.getReturnType();
-                if (!rtype.isVoid()) {
+                if (verify) if (!rtype.isVoid()) {
                     throw unexpectedReturnType(current, rtype);
                 }
             }
@@ -357,7 +357,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister1();
 
                 var rtype = method.getReturnType();
-                if (!rtype.isThinPrimitive()) {
+                if (verify) if (!rtype.isThinPrimitive()) {
                     throw unexpectedReturnType(current, rtype);
                 }
 
@@ -368,7 +368,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister1();
 
                 var rtype = method.getReturnType();
-                if (!rtype.isWidePrimitive()) {
+                if (verify) if (!rtype.isWidePrimitive()) {
                     throw unexpectedReturnType(current, rtype);
                 }
 
@@ -379,7 +379,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister1();
 
                 var rtype = method.getReturnType();
-                if (!rtype.isReference()) {
+                if (verify) if (!rtype.isReference()) {
                     throw unexpectedReturnType(current, rtype);
                 }
 
@@ -410,7 +410,7 @@ public final class AnalyzedMethod {
                 var ireg = tmp.getRegister1();
                 var ref = (TypeId) tmp.getReference1();
 
-                if (ref.isPrimitive()) {
+                if (verify) if (ref.isPrimitive()) {
                     throw unexpectedType(current, ref);
                 }
 
@@ -423,7 +423,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var ref = (TypeId) tmp.getReference1();
 
-                if (ref.isPrimitive()) {
+                if (verify) if (ref.isPrimitive()) {
                     throw unexpectedType(current, ref);
                 }
 
@@ -445,7 +445,7 @@ public final class AnalyzedMethod {
                 var ireg = tmp.getRegister1();
                 var ref = (TypeId) tmp.getReference1();
 
-                if (ref.isPrimitive() || ref.isArray()) {
+                if (verify) if (ref.isPrimitive() || ref.isArray()) {
                     throw unexpectedType(current, ref);
                 }
 
@@ -457,7 +457,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var ref = (TypeId) tmp.getReference1();
 
-                if (ref.isPrimitive() || !ref.isArray()) {
+                if (verify) if (ref.isPrimitive() || !ref.isArray()) {
                     throw unexpectedType(current, ref);
                 }
 
@@ -470,14 +470,14 @@ public final class AnalyzedMethod {
                 var reg_count = tmp.getRegisterCount();
 
                 var component = ref.componentType();
-                if (component == null || component.isWidePrimitive()) {
+                if (verify) if (component == null || component.isWidePrimitive()) {
                     throw unexpectedType(current, ref);
                 }
 
                 var proto = ProtoId.raw(ref, Converter.listOf(reg_count, component));
                 current.accessProto(proto);
 
-                init_35c_45cc_args(current, tmp, proto);
+                init_35c_45cc_args(current, tmp, proto, verify);
             }
             case FILLED_NEW_ARRAY_RANGE -> {
                 var tmp = (Instruction3rc3rmi3rms) insn;
@@ -485,14 +485,14 @@ public final class AnalyzedMethod {
                 var reg_count = tmp.getRegisterCount();
 
                 var component = ref.componentType();
-                if (component == null || component.isWidePrimitive()) {
+                if (verify) if (component == null || component.isWidePrimitive()) {
                     throw unexpectedType(current, ref);
                 }
 
                 var proto = ProtoId.raw(ref, Converter.listOf(reg_count, component));
                 current.accessProto(proto);
 
-                init_3rc_4rcc_args(current, tmp, proto);
+                init_3rc_4rcc_args(current, tmp, proto, verify);
             }
             case FILL_ARRAY_DATA -> {
                 var tmp = (Instruction31t) insn;
@@ -631,7 +631,7 @@ public final class AnalyzedMethod {
                 var ftype = ref.getType();
                 var shorty = ftype.getShorty();
 
-                if (!switch (opcode) {
+                if (verify) if (!switch (opcode) {
                     case IGET_BOOLEAN -> shorty == 'Z';
                     case IGET_BYTE -> shorty == 'B';
                     case IGET_SHORT -> shorty == 'S';
@@ -657,7 +657,7 @@ public final class AnalyzedMethod {
                 var ftype = ref.getType();
                 var shorty = ftype.getShorty();
 
-                if (!switch (opcode) {
+                if (verify) if (!switch (opcode) {
                     case IPUT_BOOLEAN -> shorty == 'Z';
                     case IPUT_BYTE -> shorty == 'B';
                     case IPUT_SHORT -> shorty == 'S';
@@ -682,7 +682,7 @@ public final class AnalyzedMethod {
                 var ftype = ref.getType();
                 var shorty = ftype.getShorty();
 
-                if (!switch (opcode) {
+                if (verify) if (!switch (opcode) {
                     case SGET_BOOLEAN -> shorty == 'Z';
                     case SGET_BYTE -> shorty == 'B';
                     case SGET_SHORT -> shorty == 'S';
@@ -706,7 +706,7 @@ public final class AnalyzedMethod {
                 var ftype = ref.getType();
                 var shorty = ftype.getShorty();
 
-                if (!switch (opcode) {
+                if (verify) if (!switch (opcode) {
                     case SPUT_BOOLEAN -> shorty == 'Z';
                     case SPUT_BYTE -> shorty == 'B';
                     case SPUT_SHORT -> shorty == 'S';
@@ -730,7 +730,7 @@ public final class AnalyzedMethod {
                         ref.getProto() : ref.instanceProto();
                 current.accessProto(proto);
 
-                init_35c_45cc_args(current, tmp, proto);
+                init_35c_45cc_args(current, tmp, proto, verify);
             }
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
                  INVOKE_DIRECT_RANGE, INVOKE_STATIC_RANGE,
@@ -742,7 +742,7 @@ public final class AnalyzedMethod {
                         ref.getProto() : ref.instanceProto();
                 current.accessProto(proto);
 
-                init_3rc_4rcc_args(current, tmp, proto);
+                init_3rc_4rcc_args(current, tmp, proto, verify);
             }
             case INVOKE_POLYMORPHIC -> {
                 var tmp = (Instruction45cc) insn;
@@ -751,7 +751,7 @@ public final class AnalyzedMethod {
                 var proto = ref.insertThis(METHOD_HANDLE);
                 current.accessProto(proto);
 
-                init_35c_45cc_args(current, tmp, proto);
+                init_35c_45cc_args(current, tmp, proto, verify);
             }
             case INVOKE_POLYMORPHIC_RANGE -> {
                 var tmp = (Instruction4rcc) insn;
@@ -760,7 +760,7 @@ public final class AnalyzedMethod {
                 var proto = ref.insertThis(METHOD_HANDLE);
                 current.accessProto(proto);
 
-                init_3rc_4rcc_args(current, tmp, proto);
+                init_3rc_4rcc_args(current, tmp, proto, verify);
             }
             case INVOKE_CUSTOM -> {
                 var tmp = (Instruction35c35mi35ms) insn;
@@ -770,7 +770,7 @@ public final class AnalyzedMethod {
                 var proto = ref.getMethodProto();
                 current.accessProto(proto);
 
-                init_35c_45cc_args(current, tmp, proto);
+                init_35c_45cc_args(current, tmp, proto, verify);
             }
             case INVOKE_CUSTOM_RANGE -> {
                 var tmp = (Instruction3rc3rmi3rms) insn;
@@ -780,7 +780,7 @@ public final class AnalyzedMethod {
                 var proto = ref.getMethodProto();
                 current.accessProto(proto);
 
-                init_3rc_4rcc_args(current, tmp, proto);
+                init_3rc_4rcc_args(current, tmp, proto, verify);
             }
             case NEG_INT, NOT_INT, NEG_FLOAT, INT_TO_FLOAT, FLOAT_TO_INT,
                  INT_TO_BYTE, INT_TO_CHAR, INT_TO_SHORT -> {
@@ -939,14 +939,14 @@ public final class AnalyzedMethod {
         }
     }
 
-    private void analyze(TypeResolver resolver) {
+    private void analyze(TypeResolver resolver, boolean verify) {
         int count = positions.size();
         BitSet touched = new BitSet(count);
         touched.set(0);
         BitSet todo = new BitSet(count);
         for (int i = 0; i >= 0; i = todo.nextSetBit(0)) {
             todo.clear(i);
-            analyzePosition(resolver, touched, todo, i);
+            analyzePosition(resolver, touched, todo, i, verify);
         }
     }
 
@@ -1171,24 +1171,24 @@ public final class AnalyzedMethod {
         }
     }
 
-    private static void unop(Position current, TypeId tdst, TypeId tsrc) {
+    private static void unop(Position current, TypeId tdst, TypeId tsrc, boolean verify) {
         assert tdst.isPrimitive() && tsrc.isPrimitive();
         TwoRegisterInstruction insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc = insn.getRegister2();
-        verifyReg(null, current, isrc, tsrc);
+        if (verify) verifyReg(null, current, isrc, tsrc);
         output(current, idst, tdst);
     }
 
     private static void binop(Position current, TypeId tdst, TypeId tsrc1,
-                              TypeId tsrc2, boolean check_bool_op) {
+                              TypeId tsrc2, boolean check_bool_op, boolean verify) {
         assert tdst.isPrimitive() && tsrc1.isPrimitive() && tsrc2.isPrimitive();
         ThreeRegisterInstruction insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc1 = insn.getRegister2();
-        verifyReg(null, current, isrc1, tsrc1);
+        if (verify) verifyReg(null, current, isrc1, tsrc1);
         var isrc2 = insn.getRegister3();
-        verifyReg(null, current, isrc2, tsrc2);
+        if (verify) verifyReg(null, current, isrc2, tsrc2);
         if (check_bool_op
                 && current.before().at(isrc1).isBool()
                 && current.before().at(isrc2).isBool()) {
@@ -1198,13 +1198,13 @@ public final class AnalyzedMethod {
     }
 
     private static void binop_2addr(Position current, TypeId tdst_src1,
-                                    TypeId tsrc2, boolean check_bool_op) {
+                                    TypeId tsrc2, boolean check_bool_op, boolean verify) {
         assert tdst_src1.isPrimitive() && tsrc2.isPrimitive();
         TwoRegisterInstruction insn = current.instruction();
         var idst_src1 = insn.getRegister1();
-        verifyReg(null, current, idst_src1, tdst_src1);
+        if (verify) verifyReg(null, current, idst_src1, tdst_src1);
         var isrc2 = insn.getRegister2();
-        verifyReg(null, current, isrc2, tsrc2);
+        if (verify) verifyReg(null, current, isrc2, tsrc2);
         if (check_bool_op
                 && current.before().at(idst_src1).isBool()
                 && current.before().at(isrc2).isBool()) {
@@ -1213,11 +1213,11 @@ public final class AnalyzedMethod {
         output(current, idst_src1, tdst_src1);
     }
 
-    private static void binop_lit_int(Position current, boolean check_bool_op) {
+    private static void binop_lit_int(Position current, boolean check_bool_op, boolean verify) {
         TwoRegisterInstruction insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc = insn.getRegister2();
-        verifyReg(null, current, isrc, TypeId.I);
+        if (verify) verifyReg(null, current, isrc, TypeId.I);
         var type = TypeId.I;
         if (check_bool_op && current.before().at(isrc).isBool()) {
             LiteralInstruction lit = current.instruction();
@@ -1298,7 +1298,7 @@ public final class AnalyzedMethod {
 
     // At this stage, there is no need to check the boundaries of
     // register indices, as they have already been checked earlier
-    private void analyzePosition(TypeResolver resolver, BitSet touched, BitSet todo, int index) {
+    private void analyzePosition(TypeResolver resolver, BitSet touched, BitSet todo, int index, boolean verify) {
         var current = positionAt(index);
         int address = current.address();
         var insn = current.instruction();
@@ -1323,7 +1323,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);
 
-                if (!src.isIntOrFloat() && !src.isConflict()) {
+                if (verify) if (!src.isIntOrFloat() && !src.isConflict()) {
                     throw unexpectedReg(current, isrc, src);
                 }
                 is_nop = (isrc == idst) || Objects.equals(src, dst);
@@ -1337,7 +1337,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().pairAt(isrc);
 
-                if (!src.isWidePair()) {
+                if (verify) if (!src.isWidePair()) {
                     throw unexpectedRegPair(current, isrc, src);
                 }
                 is_nop = (isrc == idst) || Objects.equals(src, dst);
@@ -1351,7 +1351,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);
 
-                if (!src.isRef() && !src.isConflict()) {
+                if (verify) if (!src.isRef() && !src.isConflict()) {
                     throw unexpectedReg(current, isrc, src);
                 }
                 is_nop = (isrc == idst) || Objects.equals(src, dst);
@@ -1364,7 +1364,7 @@ public final class AnalyzedMethod {
                 var idst = tmp.getRegister1();
 
                 var type = getResultType(current);
-                if (!type.isThinPrimitive()) {
+                if (verify) if (!type.isThinPrimitive()) {
                     throw unexpectedType(current, type);
                 }
 
@@ -1375,7 +1375,7 @@ public final class AnalyzedMethod {
                 var idst = tmp.getRegister1();
 
                 var type = getResultType(current);
-                if (!type.isWidePrimitive()) {
+                if (verify) if (!type.isWidePrimitive()) {
                     throw unexpectedType(current, type);
                 }
 
@@ -1386,7 +1386,7 @@ public final class AnalyzedMethod {
                 var idst = tmp.getRegister1();
 
                 var type = getResultType(current);
-                if (!type.isReference()) {
+                if (verify) if (!type.isReference()) {
                     throw unexpectedType(current, type);
                 }
 
@@ -1409,7 +1409,7 @@ public final class AnalyzedMethod {
             }
             case RETURN, RETURN_WIDE, RETURN_OBJECT -> {
                 var ireg = ((OneRegisterInstruction) insn).getRegister1();
-                verifyReg(resolver, current, ireg, method.getReturnType());
+                if (verify) verifyReg(resolver, current, ireg, method.getReturnType());
             }
             // Could be boolean, int, float, or a null reference
             case CONST_4, CONST_16, CONST, CONST_HIGH16 -> {
@@ -1445,7 +1445,7 @@ public final class AnalyzedMethod {
 
                 var ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
-                if (!reg.isRef()) {
+                if (verify) if (!reg.isRef()) {
                     throw unexpectedReg(current, ireg, reg);
                 }
             }
@@ -1455,7 +1455,7 @@ public final class AnalyzedMethod {
                 var reg = current.before().at(ireg);
                 var ref = (TypeId) tmp.getReference1();
 
-                if (!reg.isInitializedRef()) {
+                if (verify) if (!reg.isInitializedRef()) {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
@@ -1489,7 +1489,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);
 
-                if (!src.isInitializedRef()) {
+                if (verify) if (!src.isInitializedRef()) {
                     throw unexpectedReg(current, isrc, src);
                 }
 
@@ -1501,7 +1501,7 @@ public final class AnalyzedMethod {
                 var iarr = tmp.getRegister2();
                 var arr = current.before().at(iarr);
 
-                if (!arr.isArray() && !arr.isZeroOrNull()) {
+                if (verify) if (!arr.isArray() && !arr.isZeroOrNull()) {
                     throw unexpectedReg(current, iarr, arr);
                 }
 
@@ -1523,14 +1523,18 @@ public final class AnalyzedMethod {
                 var sz = current.before().at(isz);
                 var ref = (TypeId) tmp.getReference1();
 
-                if (!sz.isInt()) {
+                if (verify) if (!sz.isInt()) {
                     throw unexpectedReg(current, isz, sz);
                 }
 
                 output(current, idst, ref);
             }
-            case FILLED_NEW_ARRAY -> verify_35c_45cc_args(resolver, current, false, false);
-            case FILLED_NEW_ARRAY_RANGE -> verify_3rc_4rcc_args(resolver, current, false, false);
+            case FILLED_NEW_ARRAY -> {
+                if (verify) verify_35c_45cc_args(resolver, current, false, false);
+            }
+            case FILLED_NEW_ARRAY_RANGE -> {
+                if (verify) verify_3rc_4rcc_args(resolver, current, false, false);
+            }
             case FILL_ARRAY_DATA -> {
                 var tmp = (Instruction31t) insn;
 
@@ -1564,14 +1568,14 @@ public final class AnalyzedMethod {
                 var tmp = (OneRegisterInstruction) insn;
                 var ireg = tmp.getRegister1();
 
-                verifyReg(resolver, current, ireg, THROWABLE);
+                if (verify) verifyReg(resolver, current, ireg, THROWABLE);
             }
             case PACKED_SWITCH, SPARSE_SWITCH -> {
                 var tmp = (Instruction31t) insn;
                 int ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
 
-                if (!reg.isInt()) {
+                if (verify) if (!reg.isInt()) {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
@@ -1587,15 +1591,17 @@ public final class AnalyzedMethod {
                 var target = positionAt(index + 1);
                 merge(resolver, touched, todo, current, target, work_line, true);
             }
-            case CMPL_FLOAT, CMPG_FLOAT -> binop(current, TypeId.I, TypeId.F, TypeId.F, false);
-            case CMPL_DOUBLE, CMPG_DOUBLE -> binop(current, TypeId.I, TypeId.D, TypeId.D, false);
-            case CMP_LONG -> binop(current, TypeId.I, TypeId.J, TypeId.J, false);
+            case CMPL_FLOAT, CMPG_FLOAT ->
+                    binop(current, TypeId.I, TypeId.F, TypeId.F, false, verify);
+            case CMPL_DOUBLE, CMPG_DOUBLE ->
+                    binop(current, TypeId.I, TypeId.D, TypeId.D, false, verify);
+            case CMP_LONG -> binop(current, TypeId.I, TypeId.J, TypeId.J, false, verify);
             case IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> {
                 var tmp = (Instruction21t) insn;
                 int ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
 
-                if (!reg.isInt()) {
+                if (verify) if (!reg.isInt()) {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
@@ -1614,7 +1620,7 @@ public final class AnalyzedMethod {
                 int ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
 
-                if (!reg.isInt() && !reg.isRef()) {
+                if (verify) if (!reg.isInt() && !reg.isRef()) {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
@@ -1643,10 +1649,10 @@ public final class AnalyzedMethod {
                 int ireg2 = tmp.getRegister2();
                 var reg2 = current.before().at(ireg2);
 
-                if (!reg1.isInt()) {
+                if (verify) if (!reg1.isInt()) {
                     throw unexpectedReg(current, ireg1, reg1);
                 }
-                if (!reg2.isInt()) {
+                if (verify) if (!reg2.isInt()) {
                     throw unexpectedReg(current, ireg2, reg2);
                 }
 
@@ -1682,7 +1688,7 @@ public final class AnalyzedMethod {
                 int reg2t = classifier.applyAsInt(reg2);
                 int argt = reg1t | reg2t;
 
-                if (argt == 0b11) {
+                if (verify) if (argt == 0b11) {
                     throw new AnalysisException(
                             "Register v" + ireg1 + " of type " + reg1 + " and register v" +
                                     ireg2 + " of type " + reg2 + " can`t be args to " + describe(current)
@@ -1716,7 +1722,7 @@ public final class AnalyzedMethod {
                 var iidx = tmp.getRegister3();
                 var idx = current.before().at(iidx);
 
-                if (!idx.isInt()) {
+                if (verify) if (!idx.isInt()) {
                     throw unexpectedReg(current, iidx, idx);
                 }
 
@@ -1737,7 +1743,7 @@ public final class AnalyzedMethod {
                     }
                     var component = info.getComponentType();
                     var shorty = component.getShorty();
-                    if (!switch (opcode) {
+                    if (verify) if (!switch (opcode) {
                         case AGET_BOOLEAN -> shorty == 'Z';
                         case AGET_BYTE -> shorty == 'B';
                         case AGET_SHORT -> shorty == 'S';
@@ -1761,26 +1767,28 @@ public final class AnalyzedMethod {
                 var iidx = tmp.getRegister3();
                 var idx = current.before().at(iidx);
 
-                if (!idx.isInt()) {
+                if (verify) if (!idx.isInt()) {
                     throw unexpectedReg(current, iidx, idx);
                 }
 
                 if (arr.isZeroOrNull()) {
-                    if (opcode == APUT_WIDE) {
-                        var val = current.before().pairAt(ival);
-                        if (!val.isWidePair()) {
-                            throw unexpectedRegPair(current, ival, val);
-                        }
-                    } else {
-                        var val = current.before().at(ival);
-                        if (!switch (opcode) {
-                            case APUT_BOOLEAN, APUT_BYTE, APUT_CHAR,
-                                 APUT_SHORT -> val.isInt();
-                            case APUT -> val.isIntOrFloat();
-                            case APUT_OBJECT -> val.isInitializedRef();
-                            default -> throw shouldNotReachHere();
-                        }) {
-                            throw unexpectedReg(current, ival, val);
+                    if (verify) {
+                        if (opcode == APUT_WIDE) {
+                            var val = current.before().pairAt(ival);
+                            if (!val.isWidePair()) {
+                                throw unexpectedRegPair(current, ival, val);
+                            }
+                        } else {
+                            var val = current.before().at(ival);
+                            if (!switch (opcode) {
+                                case APUT_BOOLEAN, APUT_BYTE, APUT_CHAR,
+                                     APUT_SHORT -> val.isInt();
+                                case APUT -> val.isIntOrFloat();
+                                case APUT_OBJECT -> val.isInitializedRef();
+                                default -> throw shouldNotReachHere();
+                            }) {
+                                throw unexpectedReg(current, ival, val);
+                            }
                         }
                     }
                     next_reachable = false;
@@ -1790,7 +1798,7 @@ public final class AnalyzedMethod {
                         throw unexpectedReg(current, iarr, arr);
                     }
                     var shorty = info.getComponentShorty();
-                    if (!switch (opcode) {
+                    if (verify) if (!switch (opcode) {
                         case APUT_BOOLEAN -> shorty == 'Z';
                         case APUT_BYTE -> shorty == 'B';
                         case APUT_SHORT -> shorty == 'S';
@@ -1804,7 +1812,7 @@ public final class AnalyzedMethod {
                     }
                     // Note: The instanceof check for iput-object occurs at runtime
                     var type = shorty == 'L' ? OBJECT : info.base();
-                    verifyReg(resolver, current, ival, type);
+                    if (verify) verifyReg(resolver, current, ival, type);
                 }
             }
             case IGET, IGET_BOOLEAN, IGET_BYTE, IGET_CHAR,
@@ -1815,16 +1823,19 @@ public final class AnalyzedMethod {
                 var obj = current.before().at(iobj);
                 var ref = (FieldId) tmp.getReference1();
 
-                if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true)) {
-                    throw unexpectedReg(current, iobj, obj);
-                }
-                if (obj.isUninitializedRef()) {
-                    // Access to fields of an uninitialized object can only
-                    // be done in the constructor and only relative to 'this'
-                    if (!obj.isUninitializedThis()) {
+                if (verify) {
+                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
-                } else if (obj.isZeroOrNull()) {
+                    if (obj.isUninitializedRef()) {
+                        // Access to fields of an uninitialized object can only
+                        // be done in the constructor and only relative to 'this'
+                        if (!obj.isUninitializedThis()) {
+                            throw unexpectedReg(current, iobj, obj);
+                        }
+                    }
+                }
+                if (obj.isZeroOrNull()) {
                     next_reachable = false;
                 }
 
@@ -1838,21 +1849,24 @@ public final class AnalyzedMethod {
                 var obj = current.before().at(iobj);
                 var ref = (FieldId) tmp.getReference1();
 
-                if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true)) {
-                    throw unexpectedReg(current, iobj, obj);
-                }
-
-                if (obj.isUninitializedRef()) {
-                    // Access to fields of an uninitialized object can only
-                    // be done in the constructor and only relative to 'this'
-                    if (!obj.isUninitializedThis()) {
+                if (verify) {
+                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
-                } else if (obj.isZeroOrNull()) {
+
+                    if (obj.isUninitializedRef()) {
+                        // Access to fields of an uninitialized object can only
+                        // be done in the constructor and only relative to 'this'
+                        if (!obj.isUninitializedThis()) {
+                            throw unexpectedReg(current, iobj, obj);
+                        }
+                    }
+                }
+                if (obj.isZeroOrNull()) {
                     next_reachable = false;
                 }
 
-                verifyReg(resolver, current, ival, ref.getType());
+                if (verify) verifyReg(resolver, current, ival, ref.getType());
             }
             case SGET, SGET_BOOLEAN, SGET_BYTE, SGET_CHAR,
                  SGET_SHORT, SGET_OBJECT, SGET_WIDE -> {
@@ -1868,7 +1882,7 @@ public final class AnalyzedMethod {
                 var ireg = tmp.getRegister1();
                 var ref = (FieldId) tmp.getReference1();
 
-                verifyReg(resolver, current, ireg, ref.getType());
+                if (verify) verifyReg(resolver, current, ireg, ref.getType());
             }
             case INVOKE_DIRECT -> {
                 var tmp = (Instruction35c35mi35ms) insn;
@@ -1879,14 +1893,14 @@ public final class AnalyzedMethod {
                     assert tmp.getRegisterCount() > 0;
                     int ithis_reg = tmp.getRegister1();
                     var this_reg = current.before().at(ithis_reg);
-                    if (!this_reg.isUninitializedRef()) {
+                    if (verify) if (!this_reg.isUninitializedRef()) {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
                     markInitialized(current, ithis_reg, this_reg);
                     check_this = false;
                 }
 
-                verify_35c_45cc_args(resolver, current, true, check_this);
+                if (verify) verify_35c_45cc_args(resolver, current, true, check_this);
             }
             case INVOKE_DIRECT_RANGE -> {
                 var tmp = (Instruction3rc3rmi3rms) insn;
@@ -1897,80 +1911,88 @@ public final class AnalyzedMethod {
                     assert tmp.getRegisterCount() > 0;
                     int ithis_reg = tmp.getStartRegister();
                     var this_reg = current.before().at(ithis_reg);
-                    if (!this_reg.isUninitializedRef()) {
+                    if (verify) if (!this_reg.isUninitializedRef()) {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
                     markInitialized(current, ithis_reg, this_reg);
                     check_this = false;
                 }
 
-                verify_3rc_4rcc_args(resolver, current, true, check_this);
+                if (verify) verify_3rc_4rcc_args(resolver, current, true, check_this);
             }
-            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_INTERFACE, INVOKE_POLYMORPHIC ->
-                    verify_35c_45cc_args(resolver, current, true, true);
-            case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE, INVOKE_INTERFACE_RANGE,
-                 INVOKE_POLYMORPHIC_RANGE -> verify_3rc_4rcc_args(resolver, current, true, true);
+            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_INTERFACE, INVOKE_POLYMORPHIC -> {
+                if (verify) verify_35c_45cc_args(resolver, current, true, true);
+            }
+            case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
+                 INVOKE_INTERFACE_RANGE, INVOKE_POLYMORPHIC_RANGE -> {
+                if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
+            }
             case INVOKE_STATIC, INVOKE_CUSTOM ->
-                //noinspection DuplicateBranchesInSwitch
-                    verify_35c_45cc_args(resolver, current, false, false);
+            //noinspection DuplicateBranchesInSwitch
+            {
+                if (verify) verify_35c_45cc_args(resolver, current, false, false);
+            }
             case INVOKE_STATIC_RANGE, INVOKE_CUSTOM_RANGE ->
-                //noinspection DuplicateBranchesInSwitch
-                    verify_3rc_4rcc_args(resolver, current, false, false);
-            case NEG_INT, NOT_INT -> unop(current, TypeId.I, TypeId.I);
-            case NEG_LONG, NOT_LONG -> unop(current, TypeId.J, TypeId.J);
-            case NEG_FLOAT -> unop(current, TypeId.F, TypeId.F);
-            case NEG_DOUBLE -> unop(current, TypeId.D, TypeId.D);
-            case INT_TO_LONG -> unop(current, TypeId.J, TypeId.I);
-            case INT_TO_FLOAT -> unop(current, TypeId.F, TypeId.I);
-            case INT_TO_DOUBLE -> unop(current, TypeId.D, TypeId.I);
-            case LONG_TO_INT -> unop(current, TypeId.I, TypeId.J);
-            case LONG_TO_FLOAT -> unop(current, TypeId.F, TypeId.J);
-            case LONG_TO_DOUBLE -> unop(current, TypeId.D, TypeId.J);
-            case FLOAT_TO_INT -> unop(current, TypeId.I, TypeId.F);
-            case FLOAT_TO_LONG -> unop(current, TypeId.J, TypeId.F);
-            case FLOAT_TO_DOUBLE -> unop(current, TypeId.D, TypeId.F);
-            case DOUBLE_TO_INT -> unop(current, TypeId.I, TypeId.D);
-            case DOUBLE_TO_LONG -> unop(current, TypeId.J, TypeId.D);
-            case DOUBLE_TO_FLOAT -> unop(current, TypeId.F, TypeId.D);
+            //noinspection DuplicateBranchesInSwitch
+            {
+                if (verify) verify_3rc_4rcc_args(resolver, current, false, false);
+            }
+            case NEG_INT, NOT_INT -> unop(current, TypeId.I, TypeId.I, verify);
+            case NEG_LONG, NOT_LONG -> unop(current, TypeId.J, TypeId.J, verify);
+            case NEG_FLOAT -> unop(current, TypeId.F, TypeId.F, verify);
+            case NEG_DOUBLE -> unop(current, TypeId.D, TypeId.D, verify);
+            case INT_TO_LONG -> unop(current, TypeId.J, TypeId.I, verify);
+            case INT_TO_FLOAT -> unop(current, TypeId.F, TypeId.I, verify);
+            case INT_TO_DOUBLE -> unop(current, TypeId.D, TypeId.I, verify);
+            case LONG_TO_INT -> unop(current, TypeId.I, TypeId.J, verify);
+            case LONG_TO_FLOAT -> unop(current, TypeId.F, TypeId.J, verify);
+            case LONG_TO_DOUBLE -> unop(current, TypeId.D, TypeId.J, verify);
+            case FLOAT_TO_INT -> unop(current, TypeId.I, TypeId.F, verify);
+            case FLOAT_TO_LONG -> unop(current, TypeId.J, TypeId.F, verify);
+            case FLOAT_TO_DOUBLE -> unop(current, TypeId.D, TypeId.F, verify);
+            case DOUBLE_TO_INT -> unop(current, TypeId.I, TypeId.D, verify);
+            case DOUBLE_TO_LONG -> unop(current, TypeId.J, TypeId.D, verify);
+            case DOUBLE_TO_FLOAT -> unop(current, TypeId.F, TypeId.D, verify);
             // TODO: Mark as nop if the required type is already in the register
-            case INT_TO_BYTE -> unop(current, TypeId.B, TypeId.I);
-            case INT_TO_CHAR -> unop(current, TypeId.C, TypeId.I);
-            case INT_TO_SHORT -> unop(current, TypeId.S, TypeId.I);
+            case INT_TO_BYTE -> unop(current, TypeId.B, TypeId.I, verify);
+            case INT_TO_CHAR -> unop(current, TypeId.C, TypeId.I, verify);
+            case INT_TO_SHORT -> unop(current, TypeId.S, TypeId.I, verify);
             // TODO: Mark division by zero as unreachable
             case ADD_INT, SUB_INT, MUL_INT, DIV_INT,
                  REM_INT, SHL_INT, SHR_INT, USHR_INT ->
-                    binop(current, TypeId.I, TypeId.I, TypeId.I, false);
-            case AND_INT, OR_INT, XOR_INT -> binop(current, TypeId.I, TypeId.I, TypeId.I, true);
+                    binop(current, TypeId.I, TypeId.I, TypeId.I, false, verify);
+            case AND_INT, OR_INT, XOR_INT ->
+                    binop(current, TypeId.I, TypeId.I, TypeId.I, true, verify);
             case ADD_LONG, SUB_LONG, MUL_LONG, DIV_LONG,
                  REM_LONG, AND_LONG, OR_LONG, XOR_LONG ->
-                    binop(current, TypeId.J, TypeId.J, TypeId.J, false);
+                    binop(current, TypeId.J, TypeId.J, TypeId.J, false, verify);
             case SHL_LONG, SHR_LONG, USHR_LONG ->
-                    binop(current, TypeId.J, TypeId.J, TypeId.I, false);
+                    binop(current, TypeId.J, TypeId.J, TypeId.I, false, verify);
             case ADD_FLOAT, SUB_FLOAT, MUL_FLOAT, DIV_FLOAT, REM_FLOAT ->
-                    binop(current, TypeId.F, TypeId.F, TypeId.F, false);
+                    binop(current, TypeId.F, TypeId.F, TypeId.F, false, verify);
             case ADD_DOUBLE, SUB_DOUBLE, MUL_DOUBLE, DIV_DOUBLE, REM_DOUBLE ->
-                    binop(current, TypeId.D, TypeId.D, TypeId.D, false);
+                    binop(current, TypeId.D, TypeId.D, TypeId.D, false, verify);
             case ADD_INT_2ADDR, SUB_INT_2ADDR, MUL_INT_2ADDR, DIV_INT_2ADDR,
                  REM_INT_2ADDR, SHL_INT_2ADDR, SHR_INT_2ADDR, USHR_INT_2ADDR ->
-                    binop_2addr(current, TypeId.I, TypeId.I, false);
+                    binop_2addr(current, TypeId.I, TypeId.I, false, verify);
             case AND_INT_2ADDR, OR_INT_2ADDR, XOR_INT_2ADDR ->
-                    binop_2addr(current, TypeId.I, TypeId.I, true);
+                    binop_2addr(current, TypeId.I, TypeId.I, true, verify);
             case ADD_LONG_2ADDR, SUB_LONG_2ADDR, MUL_LONG_2ADDR, DIV_LONG_2ADDR,
                  REM_LONG_2ADDR, AND_LONG_2ADDR, OR_LONG_2ADDR, XOR_LONG_2ADDR ->
-                    binop_2addr(current, TypeId.J, TypeId.J, false);
+                    binop_2addr(current, TypeId.J, TypeId.J, false, verify);
             case SHL_LONG_2ADDR, SHR_LONG_2ADDR, USHR_LONG_2ADDR ->
-                    binop_2addr(current, TypeId.J, TypeId.I, false);
+                    binop_2addr(current, TypeId.J, TypeId.I, false, verify);
             case ADD_FLOAT_2ADDR, SUB_FLOAT_2ADDR, MUL_FLOAT_2ADDR,
                  DIV_FLOAT_2ADDR, REM_FLOAT_2ADDR ->
-                    binop_2addr(current, TypeId.F, TypeId.F, false);
+                    binop_2addr(current, TypeId.F, TypeId.F, false, verify);
             case ADD_DOUBLE_2ADDR, SUB_DOUBLE_2ADDR, MUL_DOUBLE_2ADDR,
                  DIV_DOUBLE_2ADDR, REM_DOUBLE_2ADDR ->
-                    binop_2addr(current, TypeId.D, TypeId.D, false);
+                    binop_2addr(current, TypeId.D, TypeId.D, false, verify);
             case ADD_INT_LIT16, RSUB_INT, MUL_INT_LIT16, DIV_INT_LIT16, REM_INT_LIT16,
                  ADD_INT_LIT8, RSUB_INT_LIT8, MUL_INT_LIT8, DIV_INT_LIT8, REM_INT_LIT8,
-                 SHL_INT_LIT8, SHR_INT_LIT8, USHR_INT_LIT8 -> binop_lit_int(current, false);
+                 SHL_INT_LIT8, SHR_INT_LIT8, USHR_INT_LIT8 -> binop_lit_int(current, false, verify);
             case AND_INT_LIT16, OR_INT_LIT16, XOR_INT_LIT16,
-                 AND_INT_LIT8, OR_INT_LIT8, XOR_INT_LIT8 -> binop_lit_int(current, true);
+                 AND_INT_LIT8, OR_INT_LIT8, XOR_INT_LIT8 -> binop_lit_int(current, true, verify);
             default -> throw shouldNotReachHere();
         }
         current.setNopExact(is_nop);
