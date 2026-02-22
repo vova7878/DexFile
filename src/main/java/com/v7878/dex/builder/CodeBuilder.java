@@ -192,18 +192,15 @@ public final class CodeBuilder {
     }
 
     private static class BuilderPosition {
-        public int position, units, label_offset;
+        public int units, position, label_offset;
         public BuilderPosition next;
         public BuilderNode node;
 
-        public BuilderPosition(int position) {
-            this.position = position;
+        public BuilderPosition() {
         }
 
         public BuilderPosition(BuilderPosition other) {
-            this.position = other.position;
             this.units = other.units;
-            this.label_offset = other.label_offset;
             this.next = other.next;
             this.node = other.node;
         }
@@ -240,7 +237,7 @@ public final class CodeBuilder {
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
-        this.head = this.current = new BuilderPosition(0);
+        this.head = this.current = new BuilderPosition();
         this.generate_lines = false;
         this.synthetic_line = 0;
     }
@@ -362,6 +359,13 @@ public final class CodeBuilder {
 
     private List<Instruction> mergeInstructions() {
         var begin = head;
+        {
+            int offset = 0;
+            for (var tmp = begin; tmp != null; tmp = tmp.next) {
+                tmp.position = offset;
+                offset += tmp.units;
+            }
+        }
 
         boolean changed;
         do {
@@ -514,10 +518,6 @@ public final class CodeBuilder {
         c.units = initial_units;
         c.node = node;
         c.next = current = n;
-
-        for (var tmp = n; tmp != null; tmp = tmp.next) {
-            tmp.position += initial_units;
-        }
     }
 
     private void add(Instruction instruction) {
@@ -648,22 +648,17 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder append_position(Object label) {
+        // TODO: Add ability to write code to labels that haven't been attached yet
         current = findPosition(label);
         return this;
     }
 
-    public CodeBuilder append_to_start() {
-        current = head;
-        return this;
-    }
-
-    public CodeBuilder append_to_end() {
+    private void append_to_end() {
         var end = current;
         while (end.next != null) {
             end = end.next;
         }
         current = end;
-        return this;
     }
 
     private void addTryBlock(Object label1, Object label2, TypeId exceptionType, Object handler) {
