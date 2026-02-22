@@ -63,6 +63,8 @@ import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_LIST_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.getHeaderSize;
+import static com.v7878.dex.DexVersion.DEX009;
+import static com.v7878.dex.DexVersion.DEX013;
 import static com.v7878.dex.raw.CompactDexConstants.kDebugElementsPerIndex;
 import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsSize;
 import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsnsSize;
@@ -78,6 +80,7 @@ import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
 import static com.v7878.dex.raw.DexCollector.ClassDefContainer;
 import static com.v7878.dex.util.AlignmentUtils.roundUp;
 
+import com.v7878.dex.DexIO;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.Opcodes;
 import com.v7878.dex.WriteOptions;
@@ -308,6 +311,13 @@ public class DexWriter {
         options.validate();
         this.options = options;
         this.shared_data = shared_data;
+
+        var version = version();
+        if (version == DEX013 || version == DEX009) {
+            // TODO
+            throw new DexIO.InvalidDexFile("Unsupported dex version: " + version);
+        }
+
         main_buffer = io.duplicate();
         data_buffer = io.duplicate();
 

@@ -56,6 +56,8 @@ import static com.v7878.dex.DexOffsets.TYPE_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_START_OFFSET;
 import static com.v7878.dex.DexOffsets.getHeaderSize;
+import static com.v7878.dex.DexVersion.DEX009;
+import static com.v7878.dex.DexVersion.DEX013;
 import static com.v7878.dex.raw.CompactDexConstants.kDebugElementsPerIndex;
 import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsSize;
 import static com.v7878.dex.raw.CompactDexConstants.kFlagPreHeaderInsnsSize;
@@ -200,6 +202,10 @@ public class DexReader implements DexIO.DexReaderCache {
             throw new NotADexFile("File is too short");
         }
         version = DexVersion.forMagic(mainAt(header_offset + MAGIC_OFFSET).readLong());
+        if (version == DEX013 || version == DEX009) {
+            // TODO
+            throw new InvalidDexFile("Unsupported dex version: " + version);
+        }
         version.checkApi(options.getTargetApi());
         if (main_buffer.size() < Math.addExact(header_offset, getHeaderSize(version))) {
             throw new NotADexFile("File is too short");

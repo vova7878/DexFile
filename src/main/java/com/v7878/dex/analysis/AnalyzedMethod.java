@@ -1893,7 +1893,7 @@ public final class AnalyzedMethod {
                     assert tmp.getRegisterCount() > 0;
                     int ithis_reg = tmp.getRegister1();
                     var this_reg = current.before().at(ithis_reg);
-                    if (verify) if (!this_reg.isUninitializedRef()) {
+                    if (!this_reg.isUninitializedRef()) {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
                     markInitialized(current, ithis_reg, this_reg);
@@ -1911,7 +1911,7 @@ public final class AnalyzedMethod {
                     assert tmp.getRegisterCount() > 0;
                     int ithis_reg = tmp.getStartRegister();
                     var this_reg = current.before().at(ithis_reg);
-                    if (verify) if (!this_reg.isUninitializedRef()) {
+                    if (!this_reg.isUninitializedRef()) {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
                     markInitialized(current, ithis_reg, this_reg);
