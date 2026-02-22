@@ -78,6 +78,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -179,6 +180,18 @@ public final class CodeBuilder {
     }
 
     private interface BuilderNode {
+        BuilderNode EMPTY = new BuilderNode() {
+            @Override
+            public int units() {
+                return 0;
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                return List.of();
+            }
+        };
+
         default void update(int position) {
         }
 
@@ -204,6 +217,10 @@ public final class CodeBuilder {
             this.next = other.next;
             this.node = other.node;
         }
+
+        public int label_position() {
+            return position + label_offset;
+        }
     }
 
     private static int checkRange(int value, int start, int length) {
@@ -217,12 +234,11 @@ public final class CodeBuilder {
 
     private final int regs_size, ins_size;
     private final boolean has_this;
-
-    private final List<Runnable> delayed_actions;
     private final List<BuilderTryItem> try_items;
     private final List<BuilderDebugItem> debug_items;
     private final Map<Object, BuilderPosition> labels;
-    private final BuilderPosition head;
+    private final Set<BuilderPosition> detached;
+    private final BuilderPosition head, payloads;
     private BuilderPosition current;
 
     private boolean generate_lines;
@@ -233,11 +249,12 @@ public final class CodeBuilder {
         int this_reg = add_hidden_this ? 1 : 0;
         this.regs_size = checkRange(regs_size, 0, (1 << 16) - this_reg) + this_reg;
         this.ins_size = checkRange(ins_size, 0, regs_size + 1) + this_reg;
-        this.delayed_actions = new ArrayList<>();
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
+        this.detached = new LinkedHashSet<>();
         this.head = this.current = new BuilderPosition();
+        this.payloads = new BuilderPosition();
         this.generate_lines = false;
         this.synthetic_line = 0;
     }
@@ -400,9 +417,24 @@ public final class CodeBuilder {
         return out;
     }
 
+    private static BuilderPosition tail(BuilderPosition head) {
+        while (head.next != null) {
+            head = head.next;
+        }
+        return head;
+    }
+
     private MethodImplementation finish() {
-        append_to_end();
-        delayed_actions.forEach(Runnable::run);
+        {
+            var end = tail(head);
+            for (var iter = detached.iterator(); iter.hasNext(); ) {
+                var pos = iter.next();
+                iter.remove();
+                attach(end, pos);
+                end = tail(end);
+            }
+            attach(end, payloads);
+        }
 
         List<Instruction> insns = mergeInstructions();
         List<TryBlock> try_blocks = mergeTryItems(try_items);
@@ -506,6 +538,20 @@ public final class CodeBuilder {
         return check_reg(first_reg);
     }
 
+    private void attach(BuilderPosition a, BuilderPosition b) {
+        if (a.node != null) {
+            var end = tail(b);
+            var n = new BuilderPosition(end);
+
+            end.units = a.units;
+            end.node = a.node;
+            end.next = n;
+        }
+        a.units = 0;
+        a.node = BuilderNode.EMPTY;
+        a.next = b;
+    }
+
     private void add(BuilderNode node, int initial_units) {
         if (generate_lines) {
             // Note: Numbering starts from one
@@ -594,12 +640,20 @@ public final class CodeBuilder {
         }, unit_count);
     }
 
-    private void addDelayedAction(Runnable action) {
-        delayed_actions.add(action);
+    private BuilderPosition findPositionOrNull(Object label) {
+        var pos = label instanceof BuilderPosition bp ? bp : labels.get(label);
+        if (pos == null) {
+            return null;
+        }
+        while (pos.node == BuilderNode.EMPTY) {
+            // Not a real position, points to the next one
+            pos = pos.next;
+        }
+        return pos;
     }
 
     private BuilderPosition findPosition(Object label) {
-        var pos = label instanceof BuilderPosition bp ? bp : labels.get(label);
+        var pos = findPositionOrNull(label);
         if (pos == null) {
             throw new IllegalStateException("Can`t find label: " + label);
         }
@@ -607,8 +661,7 @@ public final class CodeBuilder {
     }
 
     private int findUnit(Object label) {
-        var pos = findPosition(label);
-        return pos.position + pos.label_offset;
+        return findPosition(label).label_position();
     }
 
     private int branchOffset(int from, Object to, boolean allow_zero) {
@@ -639,26 +692,44 @@ public final class CodeBuilder {
         return current;
     }
 
+    private static IllegalArgumentException dup(Object label) {
+        throw new IllegalArgumentException("Label " + label + " already exists");
+    }
+
     public CodeBuilder label(Object label) {
         Objects.requireNonNull(label);
-        if (label instanceof BuilderPosition || labels.putIfAbsent(label, current) != null) {
-            throw new IllegalArgumentException("Label " + label + " already exists");
+
+        var cur = current;
+        BuilderPosition pos;
+        if (label instanceof BuilderPosition bp) {
+            pos = bp;
+        } else {
+            pos = labels.putIfAbsent(label, cur);
+            if (pos == null) {
+                // Just added new label
+                return this;
+            }
         }
+        if (!detached.remove(pos)) {
+            throw dup(label);
+        }
+        attach(cur, pos);
+
         return this;
     }
 
     public CodeBuilder append_position(Object label) {
-        // TODO: Add ability to write code to labels that haven't been attached yet
-        current = findPosition(label);
-        return this;
-    }
+        Objects.requireNonNull(label);
 
-    private void append_to_end() {
-        var end = current;
-        while (end.next != null) {
-            end = end.next;
+        var pos = findPositionOrNull(label);
+        if (pos == null) {
+            pos = new BuilderPosition();
+            detached.add(pos);
+            labels.put(label, pos);
         }
-        current = end;
+
+        current = pos;
+        return this;
     }
 
     private void addTryBlock(Object label1, Object label2, TypeId exceptionType, Object handler) {
@@ -1632,15 +1703,18 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder fill_array_data_internal(int arr_ref_reg, int element_width, List<? extends Number> data) {
+        var current = current_label();
         var payload = new_label();
+
+        append_position(payloads);
+
+        label(payload);
+        fill_array_data_payload(element_width, data);
+
+        append_position(current);
 
         f31t(FILL_ARRAY_DATA, arr_ref_reg, false,
                 self -> branchOffset(self, payload));
-
-        addDelayedAction(() -> {
-            label(payload);
-            fill_array_data_payload(element_width, data);
-        });
 
         return this;
     }
@@ -1825,13 +1899,15 @@ public final class CodeBuilder {
         var current = current_label();
         var payload = new_label();
 
+        append_position(payloads);
+
+        label(payload);
+        packed_switch_payload(first_key, current, labels);
+
+        append_position(current);
+
         f31t(PACKED_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
-
-        addDelayedAction(() -> {
-            label(payload);
-            packed_switch_payload(first_key, current, labels);
-        });
 
         return this;
     }
@@ -1841,13 +1917,15 @@ public final class CodeBuilder {
         var current = current_label();
         var payload = new_label();
 
+        append_position(payloads);
+
+        label(payload);
+        sparse_switch_payload(keys, current, labels);
+
+        append_position(current);
+
         f31t(SPARSE_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
-
-        addDelayedAction(() -> {
-            label(payload);
-            sparse_switch_payload(keys, current, labels);
-        });
 
         return this;
     }
