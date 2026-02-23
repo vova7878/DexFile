@@ -209,13 +209,15 @@ public final class CodeBuilder {
 
     private static class BuilderPosition {
         public int units, position, label_offset;
-        public BuilderPosition next;
+        public BuilderPosition head, next;
         public BuilderNode node;
 
         public BuilderPosition() {
+            this.head = this;
         }
 
-        public BuilderPosition(BuilderPosition other) {
+        public BuilderPosition(BuilderPosition head, BuilderPosition other) {
+            this.head = head;
             this.units = other.units;
             this.next = other.next;
             this.node = other.node;
@@ -567,6 +569,13 @@ public final class CodeBuilder {
     }
 
     private void attach(BuilderPosition a, BuilderPosition b) {
+        assert a != null && b != null && a.head != b.head;
+
+        var head = a.head;
+        for (var tmp = b; tmp != null; tmp = tmp.next) {
+            tmp.head = head;
+        }
+
         if (a.node != null) {
             var end = tail(b);
 
@@ -586,7 +595,7 @@ public final class CodeBuilder {
         }
 
         var c = current;
-        var n = new BuilderPosition(c);
+        var n = new BuilderPosition(c.head, c);
 
         c.units = initial_units;
         c.node = node;
@@ -730,6 +739,9 @@ public final class CodeBuilder {
                 // Just added new label
                 return this;
             }
+        }
+        if (cur.head == pos.head) {
+            throw dup(label);
         }
         if (!detached.remove(pos)) {
             throw dup(label);
@@ -3097,6 +3109,9 @@ public final class CodeBuilder {
         if (op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT) {
             value &= 0x1f;
         }
+        if (op == BinOp.SHL_LONG || op == BinOp.SHR_LONG || op == BinOp.USHR_LONG) {
+            value &= 0x3f;
+        }
         if (op.lit8() != null && check_width_int(value, 8)) {
             return raw_binop_lit8(op, dst_reg_or_pair, src_reg_or_pair, value);
         }
@@ -3127,10 +3142,14 @@ public final class CodeBuilder {
         if (!op.isDstAndSrc1Wide()) {
             throw new IllegalArgumentException(op + " is not wide operation");
         }
-        return if_(op.isSrc2Wide(), ib ->
-                const_wide(dst_reg_pair, value), ib ->
-                // only shift operations
-                const_(dst_reg_pair, (int) value))
+        if (!op.isSrc2Wide()) {
+            // only shift operations
+            return binop_lit(op, dst_reg_pair, src_reg_pair, (int) value);
+        }
+        if (src_reg_pair == dst_reg_pair) {
+            throw new IllegalArgumentException("src and dst regs must be different");
+        }
+        return const_wide(dst_reg_pair, value)
                 .binop(op, dst_reg_pair, src_reg_pair, dst_reg_pair);
     }
 
