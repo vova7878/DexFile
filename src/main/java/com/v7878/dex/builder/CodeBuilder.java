@@ -195,7 +195,7 @@ public final class CodeBuilder {
         BuilderNode PLACEHOLDER = new Empty();
         BuilderNode EMPTY = new Empty();
 
-        default void update(int position) {
+        default void attach(BuilderPosition position) {
         }
 
         default int label_offset() {
@@ -382,6 +382,9 @@ public final class CodeBuilder {
         {
             int offset = 0;
             for (var tmp = begin; tmp != null; tmp = tmp.next) {
+                if (tmp.node != null) {
+                    tmp.node.attach(tmp);
+                }
                 tmp.position = offset;
                 offset += tmp.units;
             }
@@ -393,29 +396,43 @@ public final class CodeBuilder {
             //noinspection DataFlowIssue
             for (var current = begin; current.node != null; current = current.next) {
                 var node = current.node;
-                node.update(current.position);
                 var units = node.units();
-                if (current.units != units) {
+                var lo = node.label_offset();
+                if (current.units != units || current.label_offset != lo) {
                     changed = true;
+
+                    // The difference can be negative only for two types of corrections:
+                    //
+                    // 1) If the payload position becomes even
+                    // 2) If a zero-size instruction 'expands' and this turns the nearest
+                    // branch 0 into a non-zero branch (branch 0 is usually large)
+                    //
+                    // Both situations should not lead to an infinite correction loop
+                    //
+                    // In the first case, the finiteness of iterations is ensured
+                    // by the fact that the payloads are located separately and
+                    // are pointed to only by fixed-size instructions
+                    //
+                    // In the second case, the acquisition of a non-zero
+                    // size by the instruction is irreversible
                     int diff = units - current.units;
-                    // The node size may decrease if it is a payload whose position has become even.
-                    // Since all payloads are located after the main instructions,
-                    // such change cannot lead to an infinite loop of corrections
-                    assert diff > 0 || diff == -1;
+
                     current.units = units;
-                    current.label_offset = node.label_offset();
-                    // We correct positions for all nodes, including the last one
-                    // (despite the fact that it does not contain any instructions)
-                    for (var tmp = current.next; tmp != null; tmp = tmp.next) {
-                        tmp.position += diff;
+                    current.label_offset = lo;
+                    if (diff != 0) {
+                        // We correct positions for all nodes, including the last one
+                        // (despite the fact that it does not contain any instructions)
+                        for (var tmp = current.next; tmp != null; tmp = tmp.next) {
+                            tmp.position += diff;
+                        }
                     }
                 }
             }
         } while (changed);
 
         var out = new ArrayList<Instruction>();
-        for (var current = begin; current.node != null; current = current.next) {
-            out.addAll(current.node.generate());
+        for (var tmp = begin; tmp.node != null; tmp = tmp.next) {
+            out.addAll(tmp.node.generate());
         }
         return out;
     }
@@ -552,11 +569,10 @@ public final class CodeBuilder {
     private void attach(BuilderPosition a, BuilderPosition b) {
         if (a.node != null) {
             var end = tail(b);
-            var n = new BuilderPosition(end);
 
             end.units = a.units;
             end.node = a.node;
-            end.next = n;
+            end.next = a.next;
         }
         a.units = 0;
         a.node = BuilderNode.PLACEHOLDER;
@@ -599,11 +615,10 @@ public final class CodeBuilder {
 
         int units = format.getUnitCount();
         add(new BuilderNode() {
-            int position;
+            BuilderPosition current;
 
-            @Override
-            public void update(int position) {
-                this.position = position;
+            public void attach(BuilderPosition current) {
+                this.current = current;
             }
 
             @Override
@@ -613,7 +628,7 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                var instruction = factory.apply(position);
+                var instruction = factory.apply(current.label_position());
                 assert instruction.getOpcode().format() == format;
                 return List.of(instruction);
             }
@@ -622,16 +637,15 @@ public final class CodeBuilder {
 
     private void addPayload(int unit_count, Supplier<Instruction> factory) {
         add(new BuilderNode() {
-            boolean odd_position;
+            BuilderPosition current;
 
-            @Override
-            public void update(int position) {
-                odd_position = (position & 0x1) == 1;
+            public void attach(BuilderPosition current) {
+                this.current = current;
             }
 
             @Override
             public int label_offset() {
-                return odd_position ? 1 : 0;
+                return current.position & 0x1;
             }
 
             @Override
@@ -643,7 +657,7 @@ public final class CodeBuilder {
             public List<Instruction> generate() {
                 var value = factory.get();
                 assert value.getOpcode().isPayload();
-                if (odd_position) {
+                if (label_offset() != 0) {
                     return List.of(Instruction10x.of(NOP), value);
                 }
                 return List.of(value);
@@ -1844,24 +1858,40 @@ public final class CodeBuilder {
         return f11x(THROW, ex_reg, false);
     }
 
+    private static boolean isNext(BuilderPosition from,
+                                  BuilderPosition to) {
+        while (from.next != null && from.units == 0) {
+            from = from.next;
+            if (from == to) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * @param label s32 label
      */
-    // TODO: what if target is next instruction? Can we generate nothing?
     public CodeBuilder goto_(Object label) {
         add(new BuilderNode() {
-            int position;
-            int target;
+            BuilderPosition current;
+            BuilderPosition target;
 
-            @Override
-            public void update(int position) {
-                this.position = position;
-                this.target = unit(label);
+            public void attach(BuilderPosition current) {
+                this.current = current;
+                this.target = position(label);
+            }
+
+            private int diff() {
+                return target.label_position() - current.label_position();
             }
 
             @Override
             public int units() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return 0;
+                }
                 if (diff == 0 || !check_width_int(diff, 16)) {
                     return GOTO_32.getUnitCount();
                 }
@@ -1873,7 +1903,10 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return List.of();
+                }
                 if (diff == 0 || !check_width_int(diff, 16)) {
                     return List.of(Instruction30t.of(GOTO_32, diff));
                 }
@@ -1882,7 +1915,7 @@ public final class CodeBuilder {
                 }
                 return List.of(Instruction10t.of(GOTO, diff));
             }
-        }, GOTO.getUnitCount());
+        }, 0);
         return this;
     }
 
@@ -2108,24 +2141,29 @@ public final class CodeBuilder {
      * @param second_reg_to_test u4
      * @param label              s32 label
      */
-    // TODO: what if target is next instruction? Can we generate nothing?
     public CodeBuilder if_test(Test test, int first_reg_to_test,
                                int second_reg_to_test, Object label) {
         check_reg_or_pair(first_reg_to_test, false);
         check_reg_or_pair(second_reg_to_test, false);
         add(new BuilderNode() {
-            int position;
-            int target;
+            BuilderPosition current;
+            BuilderPosition target;
 
-            @Override
-            public void update(int position) {
-                this.position = position;
-                this.target = unit(label);
+            public void attach(BuilderPosition current) {
+                this.current = current;
+                this.target = position(label);
+            }
+
+            private int diff() {
+                return target.label_position() - current.label_position();
             }
 
             @Override
             public int units() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return 0;
+                }
                 int units = Format22t.getUnitCount();
                 if (diff == 0) {
                     return units + GOTO.getUnitCount();
@@ -2138,7 +2176,10 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return List.of();
+                }
                 if (diff == 0) {
                     return List.of(
                             Instruction22t.of(test.inverse().test(), first_reg_to_test,
@@ -2156,7 +2197,7 @@ public final class CodeBuilder {
                 return List.of(Instruction22t.of(test.test(),
                         first_reg_to_test, second_reg_to_test, diff));
             }
-        }, Format22t.getUnitCount());
+        }, 0);
         return this;
     }
 
@@ -2205,22 +2246,27 @@ public final class CodeBuilder {
      * @param reg_to_test u8
      * @param label       s32 label
      */
-    // TODO: what if target is next instruction? Can we generate nothing?
     public CodeBuilder if_testz(Test test, int reg_to_test, Object label) {
         check_reg_or_pair(reg_to_test, false);
         add(new BuilderNode() {
-            int position;
-            int target;
+            BuilderPosition current;
+            BuilderPosition target;
 
-            @Override
-            public void update(int position) {
-                this.position = position;
-                this.target = unit(label);
+            public void attach(BuilderPosition current) {
+                this.current = current;
+                this.target = position(label);
+            }
+
+            private int diff() {
+                return target.label_position() - current.label_position();
             }
 
             @Override
             public int units() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return 0;
+                }
                 int units = Format21t.getUnitCount();
                 if (diff == 0) {
                     return units + GOTO.getUnitCount();
@@ -2233,7 +2279,10 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return List.of();
+                }
                 if (diff == 0) {
                     return List.of(
                             Instruction21t.of(test.inverse().testz(),
@@ -2250,7 +2299,7 @@ public final class CodeBuilder {
                 }
                 return List.of(Instruction21t.of(test.testz(), reg_to_test, diff));
             }
-        }, Format21t.getUnitCount());
+        }, 0);
         return this;
     }
 
