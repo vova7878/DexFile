@@ -1200,6 +1200,10 @@ public final class CodeBuilder {
      * @param src_reg u16
      */
     public CodeBuilder move(int dst_reg, int src_reg) {
+        if (dst_reg == src_reg) {
+            check_reg(dst_reg);
+            nop();
+        }
         if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
             return raw_move(dst_reg, src_reg);
         }
@@ -1238,6 +1242,10 @@ public final class CodeBuilder {
      * @param src_reg_pair u16
      */
     public CodeBuilder move_wide(int dst_reg_pair, int src_reg_pair) {
+        if (dst_reg_pair == src_reg_pair) {
+            check_reg_pair(dst_reg_pair);
+            nop();
+        }
         if (src_reg_pair < 1 << 4 && dst_reg_pair < 1 << 4) {
             return raw_move_wide(dst_reg_pair, src_reg_pair);
         }
@@ -1276,6 +1284,10 @@ public final class CodeBuilder {
      * @param src_reg u16
      */
     public CodeBuilder move_object(int dst_reg, int src_reg) {
+        if (dst_reg == src_reg) {
+            check_reg(dst_reg);
+            nop();
+        }
         if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
             return raw_move_object(dst_reg, src_reg);
         }
@@ -1295,6 +1307,7 @@ public final class CodeBuilder {
             case 'V' -> {
                 check_reg_empty_range(dst_reg_or_pair);
                 check_reg_empty_range(src_reg_or_pair);
+                nop();
                 yield this;
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> move(dst_reg_or_pair, src_reg_or_pair);
@@ -1318,7 +1331,7 @@ public final class CodeBuilder {
         check_reg_range(first_dst_reg, size);
         check_reg_range(first_src_reg, size);
         if (size <= 0 || (first_dst_reg == first_src_reg)) {
-            // nop
+            nop();
             return this;
         }
         if (first_src_reg < first_dst_reg) {
@@ -1370,6 +1383,7 @@ public final class CodeBuilder {
         return switch (shorty) {
             case 'V' -> {
                 check_reg_empty_range(dst_reg_or_pair);
+                nop();
                 yield this;
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> move_result(dst_reg_or_pair);
@@ -1419,6 +1433,7 @@ public final class CodeBuilder {
         return switch (shorty) {
             case 'V' -> {
                 check_reg_empty_range(return_value_reg_or_pair);
+                nop();
                 yield return_void();
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> return_(return_value_reg_or_pair);
@@ -1980,6 +1995,7 @@ public final class CodeBuilder {
 
     private CodeBuilder switch_internal(int reg_to_test, IntMap<?> table) {
         if (table.isEmpty()) {
+            nop();
             return this;
         }
         if (table.size() == 1 && table.firstKey() == 0) {
@@ -1997,7 +2013,10 @@ public final class CodeBuilder {
      */
     public CodeBuilder switch_(int reg_to_test, IntMap<?> table) {
         check_reg(reg_to_test);
-        if (table.isEmpty()) return this;
+        if (table.isEmpty()) {
+            nop();
+            return this;
+        }
         table = table.duplicate();
         int size = table.size();
         for (int i = 0; i < size; i++) {
@@ -2011,7 +2030,10 @@ public final class CodeBuilder {
      */
     public CodeBuilder switch_(int reg_to_test, Map<Integer, ?> table) {
         check_reg(reg_to_test);
-        if (table.isEmpty()) return this;
+        if (table.isEmpty()) {
+            nop();
+            return this;
+        }
         var map = new IntMap<>(table.size());
         table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
         return switch_internal(reg_to_test, map);
@@ -2143,8 +2165,15 @@ public final class CodeBuilder {
      */
     public CodeBuilder if_test(Test test, int first_reg_to_test,
                                int second_reg_to_test, Object label) {
+        Objects.requireNonNull(test);
         check_reg_or_pair(first_reg_to_test, false);
         check_reg_or_pair(second_reg_to_test, false);
+        if (first_reg_to_test == second_reg_to_test) {
+            return switch (test) {
+                case EQ, LE, GE -> goto_(label);
+                case NE, LT, GT -> nop();
+            };
+        }
         add(new BuilderNode() {
             BuilderPosition current;
             BuilderPosition target;
@@ -2247,6 +2276,7 @@ public final class CodeBuilder {
      * @param label       s32 label
      */
     public CodeBuilder if_testz(Test test, int reg_to_test, Object label) {
+        Objects.requireNonNull(test);
         check_reg_or_pair(reg_to_test, false);
         add(new BuilderNode() {
             BuilderPosition current;
@@ -2750,14 +2780,14 @@ public final class CodeBuilder {
                                     char src_shorty, int src_reg_or_pair) {
         return switch (dst_shorty) {
             case 'Z' -> switch (src_shorty) {
-                case 'Z' -> this;
+                case 'Z' -> nop();
                 case 'B', 'S', 'C', 'I', 'F', 'J', 'D' ->
                         cast_numeric('I', dst_reg_or_pair, src_shorty, src_reg_or_pair)
                                 .binop_lit(BinOp.AND_INT, dst_reg_or_pair, dst_reg_or_pair, 0x1);
                 default -> throw invalidShorty(dst_shorty);
             };
             case 'B' -> switch (src_shorty) {
-                case 'Z', 'B' -> this;
+                case 'Z', 'B' -> nop();
                 case 'S', 'C', 'I' -> unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair)
                         .unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, dst_reg_or_pair);
@@ -2768,7 +2798,7 @@ public final class CodeBuilder {
                 default -> throw invalidShorty(dst_shorty);
             };
             case 'S' -> switch (src_shorty) {
-                case 'Z', 'B', 'S' -> this;
+                case 'Z', 'B', 'S' -> nop();
                 case 'C', 'I' -> unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair)
                         .unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, dst_reg_or_pair);
@@ -2779,7 +2809,7 @@ public final class CodeBuilder {
                 default -> throw invalidShorty(dst_shorty);
             };
             case 'C' -> switch (src_shorty) {
-                case 'Z', 'C' -> this;
+                case 'Z', 'C' -> nop();
                 case 'B', 'S', 'I' -> unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair)
                         .unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, dst_reg_or_pair);
@@ -2790,7 +2820,7 @@ public final class CodeBuilder {
                 default -> throw invalidShorty(dst_shorty);
             };
             case 'I' -> switch (src_shorty) {
-                case 'Z', 'B', 'S', 'C', 'I' -> this;
+                case 'Z', 'B', 'S', 'C', 'I' -> nop();
                 case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair);
                 case 'J' -> unop(UnOp.LONG_TO_INT, dst_reg_or_pair, src_reg_or_pair);
                 case 'D' -> unop(UnOp.DOUBLE_TO_INT, dst_reg_or_pair, src_reg_or_pair);
@@ -2799,7 +2829,7 @@ public final class CodeBuilder {
             case 'F' -> switch (src_shorty) {
                 case 'Z', 'B', 'S', 'C', 'I' ->
                         unop(UnOp.INT_TO_FLOAT, dst_reg_or_pair, src_reg_or_pair);
-                case 'F' -> this;
+                case 'F' -> nop();
                 case 'J' -> unop(UnOp.LONG_TO_FLOAT, dst_reg_or_pair, src_reg_or_pair);
                 case 'D' -> unop(UnOp.DOUBLE_TO_FLOAT, dst_reg_or_pair, src_reg_or_pair);
                 default -> throw invalidShorty(dst_shorty);
@@ -2808,7 +2838,7 @@ public final class CodeBuilder {
                 case 'Z', 'B', 'S', 'C', 'I' ->
                         unop(UnOp.INT_TO_LONG, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_LONG, dst_reg_or_pair, src_reg_or_pair);
-                case 'J' -> this;
+                case 'J' -> nop();
                 case 'D' -> unop(UnOp.DOUBLE_TO_LONG, dst_reg_or_pair, src_reg_or_pair);
                 default -> throw invalidShorty(dst_shorty);
             };
@@ -2817,7 +2847,7 @@ public final class CodeBuilder {
                         unop(UnOp.INT_TO_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
                 case 'J' -> unop(UnOp.LONG_TO_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
-                case 'D' -> this;
+                case 'D' -> nop();
                 default -> throw invalidShorty(dst_shorty);
             };
             default -> throw invalidShorty(dst_shorty);
@@ -3059,6 +3089,7 @@ public final class CodeBuilder {
      * @param value           s32
      */
     public CodeBuilder binop_lit(BinOp op, int dst_reg_or_pair, int src_reg_or_pair, int value) {
+        // TODO: check for nop operation
         if (op == BinOp.SUB_INT) {
             op = BinOp.ADD_INT;
             value = -value;
@@ -3092,6 +3123,7 @@ public final class CodeBuilder {
      * @param value        s64
      */
     public CodeBuilder binop_lit_wide(BinOp op, int dst_reg_pair, int src_reg_pair, long value) {
+        // TODO: check for nop operation
         if (!op.isDstAndSrc1Wide()) {
             throw new IllegalArgumentException(op + " is not wide operation");
         }
