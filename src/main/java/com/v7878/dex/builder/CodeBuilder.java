@@ -109,9 +109,9 @@ public final class CodeBuilder {
 
         private void initLabels() {
             if (start < 0 || end < 0 || handler < 0) {
-                int l1 = findUnit(label1);
-                int l2 = findUnit(label2);
-                int hl = findUnit(handlerLabel);
+                int l1 = unit(label1);
+                int l2 = unit(label2);
+                int hl = unit(handlerLabel);
                 if (l1 < l2) {
                     start = l1;
                     end = l2;
@@ -157,7 +157,7 @@ public final class CodeBuilder {
 
         private void initLabel() {
             if (position < 0) {
-                position = findUnit(label);
+                position = unit(label);
             }
         }
 
@@ -180,7 +180,7 @@ public final class CodeBuilder {
     }
 
     private interface BuilderNode {
-        BuilderNode EMPTY = new BuilderNode() {
+        class Empty implements BuilderNode {
             @Override
             public int units() {
                 return 0;
@@ -190,7 +190,10 @@ public final class CodeBuilder {
             public List<Instruction> generate() {
                 return List.of();
             }
-        };
+        }
+
+        BuilderNode PLACEHOLDER = new Empty();
+        BuilderNode EMPTY = new Empty();
 
         default void update(int position) {
         }
@@ -417,6 +420,14 @@ public final class CodeBuilder {
         return out;
     }
 
+    private BuilderPosition exact(BuilderPosition pos) {
+        while (pos.node == BuilderNode.PLACEHOLDER) {
+            // Not a real position, points to the next one
+            pos = pos.next;
+        }
+        return pos;
+    }
+
     private static BuilderPosition tail(BuilderPosition head) {
         while (head.next != null) {
             head = head.next;
@@ -548,7 +559,7 @@ public final class CodeBuilder {
             end.next = n;
         }
         a.units = 0;
-        a.node = BuilderNode.EMPTY;
+        a.node = BuilderNode.PLACEHOLDER;
         a.next = b;
     }
 
@@ -640,32 +651,28 @@ public final class CodeBuilder {
         }, unit_count);
     }
 
-    private BuilderPosition findPositionOrNull(Object label) {
+    private BuilderPosition positionOrNull(Object label) {
         var pos = label instanceof BuilderPosition bp ? bp : labels.get(label);
         if (pos == null) {
             return null;
         }
-        while (pos.node == BuilderNode.EMPTY) {
-            // Not a real position, points to the next one
-            pos = pos.next;
-        }
-        return pos;
+        return exact(pos);
     }
 
-    private BuilderPosition findPosition(Object label) {
-        var pos = findPositionOrNull(label);
+    private BuilderPosition position(Object label) {
+        var pos = positionOrNull(label);
         if (pos == null) {
             throw new IllegalStateException("Can`t find label: " + label);
         }
         return pos;
     }
 
-    private int findUnit(Object label) {
-        return findPosition(label).label_position();
+    private int unit(Object label) {
+        return position(label).label_position();
     }
 
     private int branchOffset(int from, Object to, boolean allow_zero) {
-        int offset = findUnit(to) - from;
+        int offset = unit(to) - from;
         if (!allow_zero && offset == 0) {
             throw new IllegalStateException("Zero branch offset is not allowed");
         }
@@ -678,7 +685,7 @@ public final class CodeBuilder {
 
     @SuppressWarnings("SameParameterValue")
     private int branchOffset(Object from, Object to, boolean allow_zero) {
-        return branchOffset(findUnit(from), to, allow_zero);
+        return branchOffset(unit(from), to, allow_zero);
     }
 
     public static Object new_label() {
@@ -714,6 +721,7 @@ public final class CodeBuilder {
             throw dup(label);
         }
         attach(cur, pos);
+        current = exact(cur);
 
         return this;
     }
@@ -721,7 +729,7 @@ public final class CodeBuilder {
     public CodeBuilder append_position(Object label) {
         Objects.requireNonNull(label);
 
-        var pos = findPositionOrNull(label);
+        var pos = positionOrNull(label);
         if (pos == null) {
             pos = new BuilderPosition();
             detached.add(pos);
@@ -1140,9 +1148,13 @@ public final class CodeBuilder {
         return raw(InstructionRaw.of(instruction));
     }
 
-    @SuppressWarnings("UnusedReturnValue")
-    public CodeBuilder nop() {
+    public CodeBuilder raw_nop() {
         return f10x(NOP);
+    }
+
+    public CodeBuilder nop() {
+        add(BuilderNode.EMPTY, 0);
+        return this;
     }
 
     /**
@@ -1708,6 +1720,7 @@ public final class CodeBuilder {
 
         append_position(payloads);
 
+        nop();
         label(payload);
         fill_array_data_payload(element_width, data);
 
@@ -1843,7 +1856,7 @@ public final class CodeBuilder {
             @Override
             public void update(int position) {
                 this.position = position;
-                this.target = findUnit(label);
+                this.target = unit(label);
             }
 
             @Override
@@ -1901,6 +1914,7 @@ public final class CodeBuilder {
 
         append_position(payloads);
 
+        nop();
         label(payload);
         packed_switch_payload(first_key, current, labels);
 
@@ -1919,6 +1933,7 @@ public final class CodeBuilder {
 
         append_position(payloads);
 
+        nop();
         label(payload);
         sparse_switch_payload(keys, current, labels);
 
@@ -2105,7 +2120,7 @@ public final class CodeBuilder {
             @Override
             public void update(int position) {
                 this.position = position;
-                this.target = findUnit(label);
+                this.target = unit(label);
             }
 
             @Override
@@ -2200,7 +2215,7 @@ public final class CodeBuilder {
             @Override
             public void update(int position) {
                 this.position = position;
-                this.target = findUnit(label);
+                this.target = unit(label);
             }
 
             @Override
