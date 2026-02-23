@@ -4,6 +4,9 @@ public final class DexConstants {
     private DexConstants() {
     }
 
+    public static final int API_M5 = 0;
+    public static final int API_M3 = -1;
+
     public static final int ENDIAN_CONSTANT = 0x12345678;
     public static final int REVERSE_ENDIAN_CONSTANT = 0x78563412;
     public static final int NO_INDEX = -1;

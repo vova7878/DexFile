@@ -37,6 +37,6 @@ public final class InstructionRaw extends Instruction {
 
     @Override
     public String toString() {
-        return "raw " + Formatter.unsignedHex(value);
+        return "raw " + Formatter.unsignedHex(value & 0xffff);
     }
 }

@@ -78,6 +78,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
@@ -108,9 +109,9 @@ public final class CodeBuilder {
 
         private void initLabels() {
             if (start < 0 || end < 0 || handler < 0) {
-                int l1 = findUnit(label1);
-                int l2 = findUnit(label2);
-                int hl = findUnit(handlerLabel);
+                int l1 = unit(label1);
+                int l2 = unit(label2);
+                int hl = unit(handlerLabel);
                 if (l1 < l2) {
                     start = l1;
                     end = l2;
@@ -156,7 +157,7 @@ public final class CodeBuilder {
 
         private void initLabel() {
             if (position < 0) {
-                position = findUnit(label);
+                position = unit(label);
             }
         }
 
@@ -179,7 +180,22 @@ public final class CodeBuilder {
     }
 
     private interface BuilderNode {
-        default void update(int position) {
+        class Empty implements BuilderNode {
+            @Override
+            public int units() {
+                return 0;
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                return List.of();
+            }
+        }
+
+        BuilderNode PLACEHOLDER = new Empty();
+        BuilderNode EMPTY = new Empty();
+
+        default void attach(BuilderPosition position) {
         }
 
         default int label_offset() {
@@ -192,20 +208,23 @@ public final class CodeBuilder {
     }
 
     private static class BuilderPosition {
-        public int position, units, label_offset;
-        public BuilderPosition next;
+        public int units, position, label_offset;
+        public BuilderPosition head, next;
         public BuilderNode node;
 
-        public BuilderPosition(int position) {
-            this.position = position;
+        public BuilderPosition() {
+            this.head = this;
         }
 
-        public BuilderPosition(BuilderPosition other) {
-            this.position = other.position;
+        public BuilderPosition(BuilderPosition head, BuilderPosition other) {
+            this.head = head;
             this.units = other.units;
-            this.label_offset = other.label_offset;
             this.next = other.next;
             this.node = other.node;
+        }
+
+        public int label_position() {
+            return position + label_offset;
         }
     }
 
@@ -220,12 +239,11 @@ public final class CodeBuilder {
 
     private final int regs_size, ins_size;
     private final boolean has_this;
-
-    private final List<Runnable> delayed_actions;
     private final List<BuilderTryItem> try_items;
     private final List<BuilderDebugItem> debug_items;
     private final Map<Object, BuilderPosition> labels;
-    private final BuilderPosition head;
+    private final Set<BuilderPosition> detached;
+    private final BuilderPosition head, payloads;
     private BuilderPosition current;
 
     private boolean generate_lines;
@@ -236,11 +254,12 @@ public final class CodeBuilder {
         int this_reg = add_hidden_this ? 1 : 0;
         this.regs_size = checkRange(regs_size, 0, (1 << 16) - this_reg) + this_reg;
         this.ins_size = checkRange(ins_size, 0, regs_size + 1) + this_reg;
-        this.delayed_actions = new ArrayList<>();
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
-        this.head = this.current = new BuilderPosition(0);
+        this.detached = new LinkedHashSet<>();
+        this.head = this.current = new BuilderPosition();
+        this.payloads = new BuilderPosition();
         this.generate_lines = false;
         this.synthetic_line = 0;
     }
@@ -362,6 +381,16 @@ public final class CodeBuilder {
 
     private List<Instruction> mergeInstructions() {
         var begin = head;
+        {
+            int offset = 0;
+            for (var tmp = begin; tmp != null; tmp = tmp.next) {
+                if (tmp.node != null) {
+                    tmp.node.attach(tmp);
+                }
+                tmp.position = offset;
+                offset += tmp.units;
+            }
+        }
 
         boolean changed;
         do {
@@ -369,35 +398,73 @@ public final class CodeBuilder {
             //noinspection DataFlowIssue
             for (var current = begin; current.node != null; current = current.next) {
                 var node = current.node;
-                node.update(current.position);
                 var units = node.units();
-                if (current.units != units) {
+                var lo = node.label_offset();
+                if (current.units != units || current.label_offset != lo) {
                     changed = true;
+
+                    // The difference can be negative only for two types of corrections:
+                    //
+                    // 1) If the payload position becomes even
+                    // 2) If a zero-size instruction 'expands' and this turns the nearest
+                    // branch 0 into a non-zero branch (branch 0 is usually large)
+                    //
+                    // Both situations should not lead to an infinite correction loop
+                    //
+                    // In the first case, the finiteness of iterations is ensured
+                    // by the fact that the payloads are located separately and
+                    // are pointed to only by fixed-size instructions
+                    //
+                    // In the second case, the acquisition of a non-zero
+                    // size by the instruction is irreversible
                     int diff = units - current.units;
-                    // The node size may decrease if it is a payload whose position has become even.
-                    // Since all payloads are located after the main instructions,
-                    // such change cannot lead to an infinite loop of corrections
-                    assert diff > 0 || diff == -1;
+
                     current.units = units;
-                    current.label_offset = node.label_offset();
-                    // We correct positions for all nodes, including the last one
-                    // (despite the fact that it does not contain any instructions)
-                    for (var tmp = current.next; tmp != null; tmp = tmp.next) {
-                        tmp.position += diff;
+                    current.label_offset = lo;
+                    if (diff != 0) {
+                        // We correct positions for all nodes, including the last one
+                        // (despite the fact that it does not contain any instructions)
+                        for (var tmp = current.next; tmp != null; tmp = tmp.next) {
+                            tmp.position += diff;
+                        }
                     }
                 }
             }
         } while (changed);
 
         var out = new ArrayList<Instruction>();
-        for (var current = begin; current.node != null; current = current.next) {
-            out.addAll(current.node.generate());
+        for (var tmp = begin; tmp.node != null; tmp = tmp.next) {
+            out.addAll(tmp.node.generate());
         }
         return out;
     }
 
+    private BuilderPosition exact(BuilderPosition pos) {
+        while (pos.node == BuilderNode.PLACEHOLDER) {
+            // Not a real position, points to the next one
+            pos = pos.next;
+        }
+        return pos;
+    }
+
+    private static BuilderPosition tail(BuilderPosition head) {
+        while (head.next != null) {
+            head = head.next;
+        }
+        return head;
+    }
+
     private MethodImplementation finish() {
-        delayed_actions.forEach(Runnable::run);
+        {
+            var end = tail(head);
+            for (var iter = detached.iterator(); iter.hasNext(); ) {
+                var pos = iter.next();
+                iter.remove();
+                attach(end, pos);
+                end = tail(end);
+            }
+            attach(end, payloads);
+        }
 
         List<Instruction> insns = mergeInstructions();
         List<TryBlock> try_blocks = mergeTryItems(try_items);
@@ -501,6 +568,26 @@ public final class CodeBuilder {
         return check_reg(first_reg);
     }
 
+    private void attach(BuilderPosition a, BuilderPosition b) {
+        assert a != null && b != null && a.head != b.head;
+
+        var head = a.head;
+        for (var tmp = b; tmp != null; tmp = tmp.next) {
+            tmp.head = head;
+        }
+
+        if (a.node != null) {
+            var end = tail(b);
+
+            end.units = a.units;
+            end.node = a.node;
+            end.next = a.next;
+        }
+        a.units = 0;
+        a.node = BuilderNode.PLACEHOLDER;
+        a.next = b;
+    }
+
     private void add(BuilderNode node, int initial_units) {
         if (generate_lines) {
             // Note: Numbering starts from one
@@ -508,15 +595,11 @@ public final class CodeBuilder {
         }
 
         var c = current;
-        var n = new BuilderPosition(c);
+        var n = new BuilderPosition(c.head, c);
 
         c.units = initial_units;
         c.node = node;
         c.next = current = n;
-
-        for (var tmp = n; tmp != null; tmp = tmp.next) {
-            tmp.position += initial_units;
-        }
     }
 
     private void add(Instruction instruction) {
@@ -541,11 +624,10 @@ public final class CodeBuilder {
 
         int units = format.getUnitCount();
         add(new BuilderNode() {
-            int position;
+            BuilderPosition current;
 
-            @Override
-            public void update(int position) {
-                this.position = position;
+            public void attach(BuilderPosition current) {
+                this.current = current;
             }
 
             @Override
@@ -555,7 +637,7 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                var instruction = factory.apply(position);
+                var instruction = factory.apply(current.label_position());
                 assert instruction.getOpcode().format() == format;
                 return List.of(instruction);
             }
@@ -564,16 +646,15 @@ public final class CodeBuilder {
 
     private void addPayload(int unit_count, Supplier<Instruction> factory) {
         add(new BuilderNode() {
-            boolean odd_position;
+            BuilderPosition current;
 
-            @Override
-            public void update(int position) {
-                odd_position = (position & 0x1) == 1;
+            public void attach(BuilderPosition current) {
+                this.current = current;
             }
 
             @Override
             public int label_offset() {
-                return odd_position ? 1 : 0;
+                return current.position & 0x1;
             }
 
             @Override
@@ -585,7 +666,7 @@ public final class CodeBuilder {
             public List<Instruction> generate() {
                 var value = factory.get();
                 assert value.getOpcode().isPayload();
-                if (odd_position) {
+                if (label_offset() != 0) {
                     return List.of(Instruction10x.of(NOP), value);
                 }
                 return List.of(value);
@@ -593,25 +674,28 @@ public final class CodeBuilder {
         }, unit_count);
     }
 
-    private void addDelayedAction(Runnable action) {
-        delayed_actions.add(action);
+    private BuilderPosition positionOrNull(Object label) {
+        var pos = label instanceof BuilderPosition bp ? bp : labels.get(label);
+        if (pos == null) {
+            return null;
+        }
+        return exact(pos);
     }
 
-    private BuilderPosition findPosition(Object label) {
-        var pos = label instanceof BuilderPosition bp ? bp : labels.get(label);
+    private BuilderPosition position(Object label) {
+        var pos = positionOrNull(label);
         if (pos == null) {
             throw new IllegalStateException("Can`t find label: " + label);
         }
         return pos;
     }
 
-    private int findUnit(Object label) {
-        var pos = findPosition(label);
-        return pos.position + pos.label_offset;
+    private int unit(Object label) {
+        return position(label).label_position();
     }
 
     private int branchOffset(int from, Object to, boolean allow_zero) {
-        int offset = findUnit(to) - from;
+        int offset = unit(to) - from;
         if (!allow_zero && offset == 0) {
             throw new IllegalStateException("Zero branch offset is not allowed");
         }
@@ -624,7 +708,7 @@ public final class CodeBuilder {
 
     @SuppressWarnings("SameParameterValue")
     private int branchOffset(Object from, Object to, boolean allow_zero) {
-        return branchOffset(findUnit(from), to, allow_zero);
+        return branchOffset(unit(from), to, allow_zero);
     }
 
     public static Object new_label() {
@@ -638,16 +722,47 @@ public final class CodeBuilder {
         return current;
     }
 
+    private static IllegalArgumentException dup(Object label) {
+        throw new IllegalArgumentException("Label " + label + " already exists");
+    }
+
     public CodeBuilder label(Object label) {
         Objects.requireNonNull(label);
-        if (label instanceof BuilderPosition || labels.putIfAbsent(label, current) != null) {
-            throw new IllegalArgumentException("Label " + label + " already exists");
+
+        var cur = current;
+        BuilderPosition pos;
+        if (label instanceof BuilderPosition bp) {
+            pos = bp;
+        } else {
+            pos = labels.putIfAbsent(label, cur);
+            if (pos == null) {
+                // Just added new label
+                return this;
+            }
         }
+        if (cur.head == pos.head) {
+            throw dup(label);
+        }
+        if (!detached.remove(pos)) {
+            throw dup(label);
+        }
+        attach(cur, pos);
+        current = exact(cur);
+
         return this;
     }
 
     public CodeBuilder append_position(Object label) {
-        current = findPosition(label);
+        Objects.requireNonNull(label);
+
+        var pos = positionOrNull(label);
+        if (pos == null) {
+            pos = new BuilderPosition();
+            detached.add(pos);
+            labels.put(label, pos);
+        }
+
+        current = pos;
         return this;
     }
 
@@ -1059,9 +1174,13 @@ public final class CodeBuilder {
         return raw(InstructionRaw.of(instruction));
     }
 
-    @SuppressWarnings("UnusedReturnValue")
-    public CodeBuilder nop() {
+    public CodeBuilder raw_nop() {
         return f10x(NOP);
+    }
+
+    public CodeBuilder nop() {
+        add(BuilderNode.EMPTY, 0);
+        return this;
     }
 
     /**
@@ -1093,6 +1212,10 @@ public final class CodeBuilder {
      * @param src_reg u16
      */
     public CodeBuilder move(int dst_reg, int src_reg) {
+        if (dst_reg == src_reg) {
+            check_reg(dst_reg);
+            nop();
+        }
         if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
             return raw_move(dst_reg, src_reg);
         }
@@ -1131,6 +1254,10 @@ public final class CodeBuilder {
      * @param src_reg_pair u16
      */
     public CodeBuilder move_wide(int dst_reg_pair, int src_reg_pair) {
+        if (dst_reg_pair == src_reg_pair) {
+            check_reg_pair(dst_reg_pair);
+            nop();
+        }
         if (src_reg_pair < 1 << 4 && dst_reg_pair < 1 << 4) {
             return raw_move_wide(dst_reg_pair, src_reg_pair);
         }
@@ -1169,6 +1296,10 @@ public final class CodeBuilder {
      * @param src_reg u16
      */
     public CodeBuilder move_object(int dst_reg, int src_reg) {
+        if (dst_reg == src_reg) {
+            check_reg(dst_reg);
+            nop();
+        }
         if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
             return raw_move_object(dst_reg, src_reg);
         }
@@ -1188,6 +1319,7 @@ public final class CodeBuilder {
             case 'V' -> {
                 check_reg_empty_range(dst_reg_or_pair);
                 check_reg_empty_range(src_reg_or_pair);
+                nop();
                 yield this;
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> move(dst_reg_or_pair, src_reg_or_pair);
@@ -1211,7 +1343,7 @@ public final class CodeBuilder {
         check_reg_range(first_dst_reg, size);
         check_reg_range(first_src_reg, size);
         if (size <= 0 || (first_dst_reg == first_src_reg)) {
-            // nop
+            nop();
             return this;
         }
         if (first_src_reg < first_dst_reg) {
@@ -1263,6 +1395,7 @@ public final class CodeBuilder {
         return switch (shorty) {
             case 'V' -> {
                 check_reg_empty_range(dst_reg_or_pair);
+                nop();
                 yield this;
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> move_result(dst_reg_or_pair);
@@ -1312,6 +1445,7 @@ public final class CodeBuilder {
         return switch (shorty) {
             case 'V' -> {
                 check_reg_empty_range(return_value_reg_or_pair);
+                nop();
                 yield return_void();
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> return_(return_value_reg_or_pair);
@@ -1622,15 +1756,19 @@ public final class CodeBuilder {
     }
 
     private CodeBuilder fill_array_data_internal(int arr_ref_reg, int element_width, List<? extends Number> data) {
+        var current = current_label();
         var payload = new_label();
+
+        append_position(payloads);
+
+        nop();
+        label(payload);
+        fill_array_data_payload(element_width, data);
+
+        append_position(current);
 
         f31t(FILL_ARRAY_DATA, arr_ref_reg, false,
                 self -> branchOffset(self, payload));
-
-        addDelayedAction(() -> {
-            label(payload);
-            fill_array_data_payload(element_width, data);
-        });
 
         return this;
     }
@@ -1747,24 +1885,40 @@ public final class CodeBuilder {
         return f11x(THROW, ex_reg, false);
     }
 
+    private static boolean isNext(BuilderPosition from,
+                                  BuilderPosition to) {
+        while (from.next != null && from.units == 0) {
+            from = from.next;
+            if (from == to) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * @param label s32 label
      */
-    // TODO: what if target is next instruction? Can we generate nothing?
     public CodeBuilder goto_(Object label) {
         add(new BuilderNode() {
-            int position;
-            int target;
+            BuilderPosition current;
+            BuilderPosition target;
 
-            @Override
-            public void update(int position) {
-                this.position = position;
-                this.target = findUnit(label);
+            public void attach(BuilderPosition current) {
+                this.current = current;
+                this.target = position(label);
+            }
+
+            private int diff() {
+                return target.label_position() - current.label_position();
             }
 
             @Override
             public int units() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return 0;
+                }
                 if (diff == 0 || !check_width_int(diff, 16)) {
                     return GOTO_32.getUnitCount();
                 }
@@ -1776,7 +1930,10 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return List.of();
+                }
                 if (diff == 0 || !check_width_int(diff, 16)) {
                     return List.of(Instruction30t.of(GOTO_32, diff));
                 }
@@ -1785,7 +1942,7 @@ public final class CodeBuilder {
                 }
                 return List.of(Instruction10t.of(GOTO, diff));
             }
-        }, GOTO.getUnitCount());
+        }, 0);
         return this;
     }
 
@@ -1815,13 +1972,16 @@ public final class CodeBuilder {
         var current = current_label();
         var payload = new_label();
 
+        append_position(payloads);
+
+        nop();
+        label(payload);
+        packed_switch_payload(first_key, current, labels);
+
+        append_position(current);
+
         f31t(PACKED_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
-
-        addDelayedAction(() -> {
-            label(payload);
-            packed_switch_payload(first_key, current, labels);
-        });
 
         return this;
     }
@@ -1831,19 +1991,23 @@ public final class CodeBuilder {
         var current = current_label();
         var payload = new_label();
 
+        append_position(payloads);
+
+        nop();
+        label(payload);
+        sparse_switch_payload(keys, current, labels);
+
+        append_position(current);
+
         f31t(SPARSE_SWITCH, reg_to_test, false,
                 self -> branchOffset(self, payload));
-
-        addDelayedAction(() -> {
-            label(payload);
-            sparse_switch_payload(keys, current, labels);
-        });
 
         return this;
     }
 
     private CodeBuilder switch_internal(int reg_to_test, IntMap<?> table) {
         if (table.isEmpty()) {
+            nop();
             return this;
         }
         if (table.size() == 1 && table.firstKey() == 0) {
@@ -1861,7 +2025,10 @@ public final class CodeBuilder {
      */
     public CodeBuilder switch_(int reg_to_test, IntMap<?> table) {
         check_reg(reg_to_test);
-        if (table.isEmpty()) return this;
+        if (table.isEmpty()) {
+            nop();
+            return this;
+        }
         table = table.duplicate();
         int size = table.size();
         for (int i = 0; i < size; i++) {
@@ -1875,7 +2042,10 @@ public final class CodeBuilder {
      */
     public CodeBuilder switch_(int reg_to_test, Map<Integer, ?> table) {
         check_reg(reg_to_test);
-        if (table.isEmpty()) return this;
+        if (table.isEmpty()) {
+            nop();
+            return this;
+        }
         var map = new IntMap<>(table.size());
         table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
         return switch_internal(reg_to_test, map);
@@ -2005,24 +2175,36 @@ public final class CodeBuilder {
      * @param second_reg_to_test u4
      * @param label              s32 label
      */
-    // TODO: what if target is next instruction? Can we generate nothing?
     public CodeBuilder if_test(Test test, int first_reg_to_test,
                                int second_reg_to_test, Object label) {
+        Objects.requireNonNull(test);
         check_reg_or_pair(first_reg_to_test, false);
         check_reg_or_pair(second_reg_to_test, false);
+        if (first_reg_to_test == second_reg_to_test) {
+            return switch (test) {
+                case EQ, LE, GE -> goto_(label);
+                case NE, LT, GT -> nop();
+            };
+        }
         add(new BuilderNode() {
-            int position;
-            int target;
+            BuilderPosition current;
+            BuilderPosition target;
 
-            @Override
-            public void update(int position) {
-                this.position = position;
-                this.target = findUnit(label);
+            public void attach(BuilderPosition current) {
+                this.current = current;
+                this.target = position(label);
+            }
+
+            private int diff() {
+                return target.label_position() - current.label_position();
             }
 
             @Override
             public int units() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return 0;
+                }
                 int units = Format22t.getUnitCount();
                 if (diff == 0) {
                     return units + GOTO.getUnitCount();
@@ -2035,7 +2217,10 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return List.of();
+                }
                 if (diff == 0) {
                     return List.of(
                             Instruction22t.of(test.inverse().test(), first_reg_to_test,
@@ -2053,7 +2238,7 @@ public final class CodeBuilder {
                 return List.of(Instruction22t.of(test.test(),
                         first_reg_to_test, second_reg_to_test, diff));
             }
-        }, Format22t.getUnitCount());
+        }, 0);
         return this;
     }
 
@@ -2102,22 +2287,28 @@ public final class CodeBuilder {
      * @param reg_to_test u8
      * @param label       s32 label
      */
-    // TODO: what if target is next instruction? Can we generate nothing?
     public CodeBuilder if_testz(Test test, int reg_to_test, Object label) {
+        Objects.requireNonNull(test);
         check_reg_or_pair(reg_to_test, false);
         add(new BuilderNode() {
-            int position;
-            int target;
+            BuilderPosition current;
+            BuilderPosition target;
 
-            @Override
-            public void update(int position) {
-                this.position = position;
-                this.target = findUnit(label);
+            public void attach(BuilderPosition current) {
+                this.current = current;
+                this.target = position(label);
+            }
+
+            private int diff() {
+                return target.label_position() - current.label_position();
             }
 
             @Override
             public int units() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return 0;
+                }
                 int units = Format21t.getUnitCount();
                 if (diff == 0) {
                     return units + GOTO.getUnitCount();
@@ -2130,7 +2321,10 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                int diff = target - position;
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return List.of();
+                }
                 if (diff == 0) {
                     return List.of(
                             Instruction21t.of(test.inverse().testz(),
@@ -2147,7 +2341,7 @@ public final class CodeBuilder {
                 }
                 return List.of(Instruction21t.of(test.testz(), reg_to_test, diff));
             }
-        }, Format21t.getUnitCount());
+        }, 0);
         return this;
     }
 
@@ -2598,14 +2792,14 @@ public final class CodeBuilder {
                                     char src_shorty, int src_reg_or_pair) {
         return switch (dst_shorty) {
             case 'Z' -> switch (src_shorty) {
-                case 'Z' -> this;
+                case 'Z' -> nop();
                 case 'B', 'S', 'C', 'I', 'F', 'J', 'D' ->
                         cast_numeric('I', dst_reg_or_pair, src_shorty, src_reg_or_pair)
                                 .binop_lit(BinOp.AND_INT, dst_reg_or_pair, dst_reg_or_pair, 0x1);
                 default -> throw invalidShorty(dst_shorty);
             };
             case 'B' -> switch (src_shorty) {
-                case 'Z', 'B' -> this;
+                case 'Z', 'B' -> nop();
                 case 'S', 'C', 'I' -> unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair)
                         .unop(UnOp.INT_TO_BYTE, dst_reg_or_pair, dst_reg_or_pair);
@@ -2616,7 +2810,7 @@ public final class CodeBuilder {
                 default -> throw invalidShorty(dst_shorty);
             };
             case 'S' -> switch (src_shorty) {
-                case 'Z', 'B', 'S' -> this;
+                case 'Z', 'B', 'S' -> nop();
                 case 'C', 'I' -> unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair)
                         .unop(UnOp.INT_TO_SHORT, dst_reg_or_pair, dst_reg_or_pair);
@@ -2627,7 +2821,7 @@ public final class CodeBuilder {
                 default -> throw invalidShorty(dst_shorty);
             };
             case 'C' -> switch (src_shorty) {
-                case 'Z', 'C' -> this;
+                case 'Z', 'C' -> nop();
                 case 'B', 'S', 'I' -> unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair)
                         .unop(UnOp.INT_TO_CHAR, dst_reg_or_pair, dst_reg_or_pair);
@@ -2638,7 +2832,7 @@ public final class CodeBuilder {
                 default -> throw invalidShorty(dst_shorty);
             };
             case 'I' -> switch (src_shorty) {
-                case 'Z', 'B', 'S', 'C', 'I' -> this;
+                case 'Z', 'B', 'S', 'C', 'I' -> nop();
                 case 'F' -> unop(UnOp.FLOAT_TO_INT, dst_reg_or_pair, src_reg_or_pair);
                 case 'J' -> unop(UnOp.LONG_TO_INT, dst_reg_or_pair, src_reg_or_pair);
                 case 'D' -> unop(UnOp.DOUBLE_TO_INT, dst_reg_or_pair, src_reg_or_pair);
@@ -2647,7 +2841,7 @@ public final class CodeBuilder {
             case 'F' -> switch (src_shorty) {
                 case 'Z', 'B', 'S', 'C', 'I' ->
                         unop(UnOp.INT_TO_FLOAT, dst_reg_or_pair, src_reg_or_pair);
-                case 'F' -> this;
+                case 'F' -> nop();
                 case 'J' -> unop(UnOp.LONG_TO_FLOAT, dst_reg_or_pair, src_reg_or_pair);
                 case 'D' -> unop(UnOp.DOUBLE_TO_FLOAT, dst_reg_or_pair, src_reg_or_pair);
                 default -> throw invalidShorty(dst_shorty);
@@ -2656,7 +2850,7 @@ public final class CodeBuilder {
                 case 'Z', 'B', 'S', 'C', 'I' ->
                         unop(UnOp.INT_TO_LONG, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_LONG, dst_reg_or_pair, src_reg_or_pair);
-                case 'J' -> this;
+                case 'J' -> nop();
                 case 'D' -> unop(UnOp.DOUBLE_TO_LONG, dst_reg_or_pair, src_reg_or_pair);
                 default -> throw invalidShorty(dst_shorty);
             };
@@ -2665,7 +2859,7 @@ public final class CodeBuilder {
                         unop(UnOp.INT_TO_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
                 case 'F' -> unop(UnOp.FLOAT_TO_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
                 case 'J' -> unop(UnOp.LONG_TO_DOUBLE, dst_reg_or_pair, src_reg_or_pair);
-                case 'D' -> this;
+                case 'D' -> nop();
                 default -> throw invalidShorty(dst_shorty);
             };
             default -> throw invalidShorty(dst_shorty);
@@ -2907,12 +3101,16 @@ public final class CodeBuilder {
      * @param value           s32
      */
     public CodeBuilder binop_lit(BinOp op, int dst_reg_or_pair, int src_reg_or_pair, int value) {
+        // TODO: check for nop operation
         if (op == BinOp.SUB_INT) {
             op = BinOp.ADD_INT;
             value = -value;
         }
         if (op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT) {
             value &= 0x1f;
+        }
+        if (op == BinOp.SHL_LONG || op == BinOp.SHR_LONG || op == BinOp.USHR_LONG) {
+            value &= 0x3f;
         }
         if (op.lit8() != null && check_width_int(value, 8)) {
             return raw_binop_lit8(op, dst_reg_or_pair, src_reg_or_pair, value);
@@ -2940,13 +3138,18 @@ public final class CodeBuilder {
      * @param value        s64
      */
     public CodeBuilder binop_lit_wide(BinOp op, int dst_reg_pair, int src_reg_pair, long value) {
+        // TODO: check for nop operation
         if (!op.isDstAndSrc1Wide()) {
             throw new IllegalArgumentException(op + " is not wide operation");
         }
-        return if_(op.isSrc2Wide(), ib ->
-                const_wide(dst_reg_pair, value), ib ->
-                // only shift operations
-                const_(dst_reg_pair, (int) value))
+        if (!op.isSrc2Wide()) {
+            // only shift operations
+            return binop_lit(op, dst_reg_pair, src_reg_pair, (int) value);
+        }
+        if (src_reg_pair == dst_reg_pair) {
+            throw new IllegalArgumentException("src and dst regs must be different");
+        }
+        return const_wide(dst_reg_pair, value)
                 .binop(op, dst_reg_pair, src_reg_pair, dst_reg_pair);
     }
 

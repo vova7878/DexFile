@@ -110,7 +110,7 @@ public class InstructionWriter {
 
     public static int check_unsigned(int value, int width) {
         if ((value >>> width) != 0) {
-            throw new IllegalStateException("Illegal instruction unsigned value "
+            throw new IllegalStateException("Illegal instruction unsigned value 0x"
                     + Integer.toHexString(value) + " for width " + width);
         }
         return value & (~0 >>> (32 - width));
@@ -119,7 +119,7 @@ public class InstructionWriter {
     public static int check_signed(int value, int width) {
         int empty_width = 32 - width;
         if (value << empty_width >> empty_width != value) {
-            throw new IllegalStateException("Illegal instruction signed value "
+            throw new IllegalStateException("Illegal instruction signed value 0x"
                     + Integer.toHexString(value) + " for width " + width);
         }
         return value & (~0 >>> empty_width);
@@ -127,7 +127,7 @@ public class InstructionWriter {
 
     public static int check_hat32(int value, int width) {
         if ((value & -1 >>> width) != 0) {
-            throw new IllegalStateException("Illegal instruction hat value "
+            throw new IllegalStateException("Illegal instruction hat value 0x"
                     + Integer.toHexString(value) + " for width " + width);
         }
         return value >>> (32 - width);
@@ -135,7 +135,7 @@ public class InstructionWriter {
 
     public static long check_hat64(long value, int width) {
         if ((value & -1L >>> width) != 0) {
-            throw new IllegalStateException("Illegal instruction hat value "
+            throw new IllegalStateException("Illegal instruction hat value 0x"
                     + Long.toHexString(value) + " for width " + width);
         }
         return value >>> (64 - width);
