@@ -184,8 +184,7 @@ public class DexCollector {
         // equals and hashCode are not used
 
         private static List<String> toNamesList(List<Parameter> parameters) {
-            return Converter.minimize(parameters, Parameter::getName,
-                    value -> value, Objects::isNull);
+            return Converter.transformList(parameters, Parameter::getName);
         }
 
         private static DebugInfo toDebugInfo(List<String> names, List<DebugItem> items) {
