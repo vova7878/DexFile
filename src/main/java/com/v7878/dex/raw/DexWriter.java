@@ -78,7 +78,7 @@ import static com.v7878.dex.raw.CompactDexConstants.kOutsSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
 import static com.v7878.dex.raw.DexCollector.ClassDefContainer;
-import static com.v7878.dex.util.AlignmentUtils.roundUp;
+import static com.v7878.dex.util.MathUtils.roundUp;
 
 import com.v7878.dex.DexIO;
 import com.v7878.dex.DexVersion;

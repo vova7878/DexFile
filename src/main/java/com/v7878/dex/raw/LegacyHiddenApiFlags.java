@@ -6,8 +6,8 @@ import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_BLOCKED;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_MAX_TARGET_O;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_SDK;
 import static com.v7878.dex.DexConstants.HIDDENAPI_FLAG_UNSUPPORTED;
-import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
+import static com.v7878.dex.util.MathUtils.isPowerOfTwo;
 
 /*
  * First bit is encoded as inversion of visibility flags (public/private/protected).
