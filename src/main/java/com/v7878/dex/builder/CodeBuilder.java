@@ -12,6 +12,8 @@ import static com.v7878.dex.util.Ids.INT_TYPE;
 import static com.v7878.dex.util.Ids.LONG_TYPE;
 import static com.v7878.dex.util.Ids.SHORT_TYPE;
 import static com.v7878.dex.util.Ids.VOID_TYPE;
+import static com.v7878.dex.util.MathUtils.swidth;
+import static com.v7878.dex.util.MathUtils.uwidth;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
 import com.v7878.collections.IntMap;
@@ -70,7 +72,6 @@ import com.v7878.dex.immutable.debug.SetFile;
 import com.v7878.dex.immutable.debug.SetPrologueEnd;
 import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.util.Converter;
-import com.v7878.dex.util.MathUtils;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
 
@@ -1286,10 +1287,10 @@ public final class CodeBuilder {
             check_reg(dst_reg);
             nop();
         }
-        if (MathUtils.uwidth(src_reg, 4) && MathUtils.uwidth(dst_reg, 4)) {
+        if (uwidth(src_reg, 4) && uwidth(dst_reg, 4)) {
             return raw_move(dst_reg, src_reg);
         }
-        if (MathUtils.uwidth(src_reg, 8)) {
+        if (uwidth(src_reg, 8)) {
             return raw_move_from16(dst_reg, src_reg);
         }
         return raw_move_16(dst_reg, src_reg);
@@ -1328,10 +1329,10 @@ public final class CodeBuilder {
             check_reg_pair(dst_reg_pair);
             nop();
         }
-        if (MathUtils.uwidth(src_reg_pair, 4) && MathUtils.uwidth(dst_reg_pair, 4)) {
+        if (uwidth(src_reg_pair, 4) && uwidth(dst_reg_pair, 4)) {
             return raw_move_wide(dst_reg_pair, src_reg_pair);
         }
-        if (MathUtils.uwidth(src_reg_pair, 8)) {
+        if (uwidth(src_reg_pair, 8)) {
             return raw_move_wide_from16(dst_reg_pair, src_reg_pair);
         }
         return raw_move_wide_16(dst_reg_pair, src_reg_pair);
@@ -1370,10 +1371,10 @@ public final class CodeBuilder {
             check_reg(dst_reg);
             nop();
         }
-        if (MathUtils.uwidth(src_reg, 4) && MathUtils.uwidth(dst_reg, 4)) {
+        if (uwidth(src_reg, 4) && uwidth(dst_reg, 4)) {
             return raw_move_object(dst_reg, src_reg);
         }
-        if (MathUtils.uwidth(src_reg, 8)) {
+        if (uwidth(src_reg, 8)) {
             return raw_move_object_from16(dst_reg, src_reg);
         }
         return raw_move_object_16(dst_reg, src_reg);
@@ -1562,10 +1563,10 @@ public final class CodeBuilder {
      * @param value   s32
      */
     public CodeBuilder const_(int dst_reg, int value) {
-        if (MathUtils.uwidth(dst_reg, 4) && MathUtils.swidth(value, 4)) {
+        if (uwidth(dst_reg, 4) && swidth(value, 4)) {
             return raw_const_4(dst_reg, value);
         }
-        if (MathUtils.swidth(value, 16)) {
+        if (swidth(value, 16)) {
             return raw_const_16(dst_reg, value);
         }
         if ((value & 0xffff) == 0) {
@@ -1611,10 +1612,10 @@ public final class CodeBuilder {
      * @param value        s64
      */
     public CodeBuilder const_wide(int dst_reg_pair, long value) {
-        if (MathUtils.swidth(value, 16)) {
+        if (swidth(value, 16)) {
             return raw_const_wide_16(dst_reg_pair, (int) value);
         }
-        if (MathUtils.swidth(value, 32)) {
+        if (swidth(value, 32)) {
             return raw_const_wide_32(dst_reg_pair, (int) value);
         }
         if ((value & 0xffff_ffff_ffffL) == 0) {
@@ -1979,10 +1980,10 @@ public final class CodeBuilder {
                 if (diff == 0 && isNext(current, target)) {
                     return 0;
                 }
-                if (diff == 0 || !MathUtils.swidth(diff, 16)) {
+                if (diff == 0 || !swidth(diff, 16)) {
                     return GOTO_32.getUnitCount();
                 }
-                if (!MathUtils.swidth(diff, 8)) {
+                if (!swidth(diff, 8)) {
                     return GOTO_16.getUnitCount();
                 }
                 return GOTO.getUnitCount();
@@ -1994,10 +1995,10 @@ public final class CodeBuilder {
                 if (diff == 0 && isNext(current, target)) {
                     return List.of();
                 }
-                if (diff == 0 || !MathUtils.swidth(diff, 16)) {
+                if (diff == 0 || !swidth(diff, 16)) {
                     return List.of(Instruction30t.of(GOTO_32, diff));
                 }
-                if (!MathUtils.swidth(diff, 8)) {
+                if (!swidth(diff, 8)) {
                     return List.of(Instruction20t.of(GOTO_16, diff));
                 }
                 return List.of(Instruction10t.of(GOTO, diff));
@@ -2269,7 +2270,7 @@ public final class CodeBuilder {
                 if (diff == 0) {
                     return units + GOTO.getUnitCount();
                 }
-                if (!MathUtils.swidth(diff, 16)) {
+                if (!swidth(diff, 16)) {
                     return units + GOTO_32.getUnitCount();
                 }
                 return units;
@@ -2288,7 +2289,7 @@ public final class CodeBuilder {
                             Instruction10t.of(GOTO, -Format22t.getUnitCount())
                     );
                 }
-                if (!MathUtils.swidth(diff, 16)) {
+                if (!swidth(diff, 16)) {
                     return List.of(
                             Instruction22t.of(test.inverse().test(), first_reg_to_test,
                                     second_reg_to_test, Format22t.getUnitCount() + GOTO_32.getUnitCount()),
@@ -2373,7 +2374,7 @@ public final class CodeBuilder {
                 if (diff == 0) {
                     return units + GOTO.getUnitCount();
                 }
-                if (!MathUtils.swidth(diff, 16)) {
+                if (!swidth(diff, 16)) {
                     return units + GOTO_32.getUnitCount();
                 }
                 return units;
@@ -2392,7 +2393,7 @@ public final class CodeBuilder {
                             Instruction10t.of(GOTO, -Format21t.getUnitCount())
                     );
                 }
-                if (!MathUtils.swidth(diff, 16)) {
+                if (!swidth(diff, 16)) {
                     return List.of(
                             Instruction21t.of(test.inverse().testz(),
                                     reg_to_test, Format21t.getUnitCount() + GOTO_32.getUnitCount()),
@@ -3129,8 +3130,8 @@ public final class CodeBuilder {
         }
 
         if (dst_reg_or_pair == first_src_reg_or_pair
-                && MathUtils.uwidth(first_src_reg_or_pair, 4)
-                && MathUtils.uwidth(second_src_reg_or_pair, 4)) {
+                && uwidth(first_src_reg_or_pair, 4)
+                && uwidth(second_src_reg_or_pair, 4)) {
             return raw_binop_2addr(op, first_src_reg_or_pair, second_src_reg_or_pair);
         }
         return raw_binop(op, dst_reg_or_pair, first_src_reg_or_pair, second_src_reg_or_pair);
@@ -3201,7 +3202,7 @@ public final class CodeBuilder {
                         return const_(dst_reg_or_pair, 0);
                     }
                     case RSUB_INT -> {
-                        if (MathUtils.uwidth(dst_reg_or_pair, 4) && MathUtils.uwidth(src_reg_or_pair, 4)) {
+                        if (uwidth(dst_reg_or_pair, 4) && uwidth(src_reg_or_pair, 4)) {
                             return unop(UnOp.NEG_INT, dst_reg_or_pair, src_reg_or_pair);
                         }
                     }
@@ -3216,22 +3217,22 @@ public final class CodeBuilder {
                         return const_(dst_reg_or_pair, -1);
                     }
                     case XOR_INT -> {
-                        if (MathUtils.uwidth(dst_reg_or_pair, 4) && MathUtils.uwidth(src_reg_or_pair, 4)) {
+                        if (uwidth(dst_reg_or_pair, 4) && uwidth(src_reg_or_pair, 4)) {
                             return unop(UnOp.NOT_INT, dst_reg_or_pair, src_reg_or_pair);
                         }
                     }
                 }
             }
         }
-        if (op.lit8() != null && MathUtils.swidth(value, 8)) {
+        if (op.lit8() != null && swidth(value, 8)) {
             return raw_binop_lit8(op, dst_reg_or_pair, src_reg_or_pair, value);
         }
         // These operations should always be placed as binop_lit8
         assert !(op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT);
         if (op.lit16() != null
-                && MathUtils.uwidth(dst_reg_or_pair, 4)
-                && MathUtils.uwidth(src_reg_or_pair, 4)
-                && MathUtils.swidth(value, 16)) {
+                && uwidth(dst_reg_or_pair, 4)
+                && uwidth(src_reg_or_pair, 4)
+                && swidth(value, 16)) {
             return raw_binop_lit16(op, dst_reg_or_pair, src_reg_or_pair, value);
         }
         if (src_reg_or_pair == dst_reg_or_pair) {
@@ -3264,7 +3265,7 @@ public final class CodeBuilder {
                     return const_wide(dst_reg_pair, 0);
                 }
                 case RSUB_LONG -> {
-                    if (MathUtils.uwidth(dst_reg_pair, 4) && MathUtils.uwidth(src_reg_pair, 4)) {
+                    if (uwidth(dst_reg_pair, 4) && uwidth(src_reg_pair, 4)) {
                         return unop(UnOp.NEG_LONG, dst_reg_pair, src_reg_pair);
                     }
                 }
@@ -3278,7 +3279,7 @@ public final class CodeBuilder {
                     return const_wide(dst_reg_pair, -1L);
                 }
                 case XOR_LONG -> {
-                    if (MathUtils.uwidth(dst_reg_pair, 4) && MathUtils.uwidth(src_reg_pair, 4)) {
+                    if (uwidth(dst_reg_pair, 4) && uwidth(src_reg_pair, 4)) {
                         return unop(UnOp.NOT_LONG, dst_reg_pair, src_reg_pair);
                     }
                 }
