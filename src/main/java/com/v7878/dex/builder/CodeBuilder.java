@@ -3117,13 +3117,22 @@ public final class CodeBuilder {
 
         if (first_src_reg_or_pair == second_src_reg_or_pair) {
             switch (op) {
-                case AND_INT, OR_INT, AND_LONG, OR_LONG -> {
+                case AND_INT, OR_INT -> {
+                    check_reg(first_src_reg_or_pair);
+                    check_reg(dst_reg_or_pair);
+                    return nop();
+                }
+                case AND_LONG, OR_LONG -> {
+                    check_reg_pair(first_src_reg_or_pair);
+                    check_reg_pair(dst_reg_or_pair);
                     return nop();
                 }
                 case XOR_INT -> {
+                    check_reg(first_src_reg_or_pair);
                     return const_(dst_reg_or_pair, 0);
                 }
                 case XOR_LONG -> {
+                    check_reg_pair(first_src_reg_or_pair);
                     return const_wide(dst_reg_or_pair, 0L);
                 }
             }
@@ -3194,11 +3203,18 @@ public final class CodeBuilder {
             case 0 -> {
                 switch (op) {
                     case ADD_INT, /*SUB_INT,*/ OR_INT, XOR_INT,
-                         SHL_INT, SHR_INT, USHR_INT,
-                         SHL_LONG, SHR_LONG, USHR_LONG -> {
+                         SHL_INT, SHR_INT, USHR_INT -> {
+                        check_reg(src_reg_or_pair);
+                        check_reg(dst_reg_or_pair);
+                        return nop();
+                    }
+                    case SHL_LONG, SHR_LONG, USHR_LONG -> {
+                        check_reg_pair(src_reg_or_pair);
+                        check_reg_pair(dst_reg_or_pair);
                         return nop();
                     }
                     case MUL_INT, AND_INT -> {
+                        check_reg(src_reg_or_pair);
                         return const_(dst_reg_or_pair, 0);
                     }
                     case RSUB_INT -> {
@@ -3211,9 +3227,12 @@ public final class CodeBuilder {
             case -1 -> {
                 switch (op) {
                     case AND_INT -> {
+                        check_reg(src_reg_or_pair);
+                        check_reg(dst_reg_or_pair);
                         return nop();
                     }
                     case OR_INT -> {
+                        check_reg(src_reg_or_pair);
                         return const_(dst_reg_or_pair, -1);
                     }
                     case XOR_INT -> {
@@ -3259,9 +3278,12 @@ public final class CodeBuilder {
         if (value == 0L) {
             switch (op) {
                 case ADD_LONG, SUB_LONG, OR_LONG, XOR_LONG -> {
+                    check_reg_pair(src_reg_pair);
+                    check_reg_pair(dst_reg_pair);
                     return nop();
                 }
                 case MUL_LONG, AND_LONG -> {
+                    check_reg_pair(src_reg_pair);
                     return const_wide(dst_reg_pair, 0);
                 }
                 case RSUB_LONG -> {
@@ -3273,9 +3295,12 @@ public final class CodeBuilder {
         } else if (value == -1L) {
             switch (op) {
                 case AND_LONG -> {
+                    check_reg_pair(src_reg_pair);
+                    check_reg_pair(dst_reg_pair);
                     return nop();
                 }
                 case OR_LONG -> {
+                    check_reg_pair(src_reg_pair);
                     return const_wide(dst_reg_pair, -1L);
                 }
                 case XOR_LONG -> {
