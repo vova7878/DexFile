@@ -12,6 +12,8 @@ import static com.v7878.dex.util.Ids.INT_TYPE;
 import static com.v7878.dex.util.Ids.LONG_TYPE;
 import static com.v7878.dex.util.Ids.SHORT_TYPE;
 import static com.v7878.dex.util.Ids.VOID_TYPE;
+import static com.v7878.dex.util.MathUtils.hwidth32;
+import static com.v7878.dex.util.MathUtils.hwidth64;
 import static com.v7878.dex.util.MathUtils.swidth;
 import static com.v7878.dex.util.MathUtils.uwidth;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
@@ -1569,7 +1571,7 @@ public final class CodeBuilder {
         if (swidth(value, 16)) {
             return raw_const_16(dst_reg, value);
         }
-        if ((value & 0xffff) == 0) {
+        if (hwidth32(value, 16)) {
             return raw_const_high16(dst_reg, value);
         }
         return raw_const(dst_reg, value);
@@ -1618,7 +1620,7 @@ public final class CodeBuilder {
         if (swidth(value, 32)) {
             return raw_const_wide_32(dst_reg_pair, (int) value);
         }
-        if ((value & 0xffff_ffff_ffffL) == 0) {
+        if (hwidth64(value, 16)) {
             return raw_const_wide_high16(dst_reg_pair, value);
         }
         return raw_const_wide(dst_reg_pair, value);
