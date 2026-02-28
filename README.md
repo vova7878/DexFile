@@ -45,7 +45,7 @@ public static byte[] compile(int tape_length, String bf) {
                         ib.generate_lines();
 
                         int field_reg = ib.l(0);
-                        ib.sop(GET_OBJECT, field_reg, system_out_id);
+                        ib.sget(field_reg, system_out_id);
                         ib.invoke(VIRTUAL, system_write_id, field_reg, ib.p(0));
 
                         ib.return_void();
@@ -58,7 +58,7 @@ public static byte[] compile(int tape_length, String bf) {
                         ib.generate_lines();
 
                         int field_reg = ib.l(0);
-                        ib.sop(GET_OBJECT, field_reg, system_in_id);
+                        ib.sget(field_reg, system_in_id);
                         ib.invoke(VIRTUAL, system_read_id, field_reg);
 
                         int data_reg = ib.l(1);
@@ -97,29 +97,29 @@ public static byte[] compile(int tape_length, String bf) {
                                 case '>' -> ib.binop_lit(ADD_INT, index_reg, index_reg, 1);
                                 case '<' -> ib.binop_lit(ADD_INT, index_reg, index_reg, -1);
                                 case '+' -> {
-                                    ib.aop(GET_BYTE, tmp_reg, tape_reg, index_reg);
+                                    ib.aget('B', tmp_reg, tape_reg, index_reg);
                                     ib.binop_lit(ADD_INT, tmp_reg, tmp_reg, 1);
-                                    ib.aop(PUT_BYTE, tmp_reg, tape_reg, index_reg);
+                                    ib.aput('B', tmp_reg, tape_reg, index_reg);
                                 }
                                 case '-' -> {
-                                    ib.aop(GET_BYTE, tmp_reg, tape_reg, index_reg);
+                                    ib.aget('B', tmp_reg, tape_reg, index_reg);
                                     ib.binop_lit(ADD_INT, tmp_reg, tmp_reg, -1);
-                                    ib.aop(PUT_BYTE, tmp_reg, tape_reg, index_reg);
+                                    ib.aput('B', tmp_reg, tape_reg, index_reg);
                                 }
                                 case '.' -> {
-                                    ib.aop(GET_BYTE, tmp_reg, tape_reg, index_reg);
+                                    ib.aget('B', tmp_reg, tape_reg, index_reg);
                                     ib.invoke(STATIC, write_byte_id, tmp_reg);
                                 }
                                 case ',' -> {
                                     ib.invoke(STATIC, read_byte_id);
                                     ib.move_result(tmp_reg);
-                                    ib.aop(PUT_BYTE, tmp_reg, tape_reg, index_reg);
+                                    ib.aput('B', tmp_reg, tape_reg, index_reg);
                                 }
                                 case '[' -> {
                                     labels.add(depth);
                                     int open_depth = depth++;
                                     ib.label("label_open_" + open_depth);
-                                    ib.aop(GET_BYTE, tmp_reg, tape_reg, index_reg);
+                                    ib.aget('B', tmp_reg, tape_reg, index_reg);
                                     ib.if_testz(EQ, tmp_reg, "label_close_" + open_depth);
                                 }
                                 case ']' -> {
