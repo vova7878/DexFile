@@ -1,7 +1,7 @@
 package com.v7878.dex.io;
 
-import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
-import static com.v7878.dex.util.AlignmentUtils.roundUp;
+import static com.v7878.dex.util.MathUtils.isPowerOfTwo;
+import static com.v7878.dex.util.MathUtils.roundUp;
 
 import java.util.Objects;
 

@@ -12,6 +12,10 @@ import static com.v7878.dex.util.Ids.INT_TYPE;
 import static com.v7878.dex.util.Ids.LONG_TYPE;
 import static com.v7878.dex.util.Ids.SHORT_TYPE;
 import static com.v7878.dex.util.Ids.VOID_TYPE;
+import static com.v7878.dex.util.MathUtils.hwidth32;
+import static com.v7878.dex.util.MathUtils.hwidth64;
+import static com.v7878.dex.util.MathUtils.swidth;
+import static com.v7878.dex.util.MathUtils.uwidth;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
 import com.v7878.collections.IntMap;
@@ -216,8 +220,8 @@ public final class CodeBuilder {
             this.head = this;
         }
 
-        public BuilderPosition(BuilderPosition head, BuilderPosition other) {
-            this.head = head;
+        public BuilderPosition(BuilderPosition other) {
+            this.head = other.head;
             this.units = other.units;
             this.next = other.next;
             this.node = other.node;
@@ -439,7 +443,7 @@ public final class CodeBuilder {
         return out;
     }
 
-    private BuilderPosition exact(BuilderPosition pos) {
+    private static BuilderPosition exact(BuilderPosition pos) {
         while (pos.node == BuilderNode.PLACEHOLDER) {
             // Not a real position, points to the next one
             pos = pos.next;
@@ -568,24 +572,29 @@ public final class CodeBuilder {
         return check_reg(first_reg);
     }
 
-    private void attach(BuilderPosition a, BuilderPosition b) {
+    private static BuilderPosition attach(BuilderPosition a, BuilderPosition b) {
         assert a != null && b != null && a.head != b.head;
 
-        var head = a.head;
-        for (var tmp = b; tmp != null; tmp = tmp.next) {
-            tmp.head = head;
+        var a_head = a.head;
+        var b_tail = b;
+
+        while (true) {
+            b_tail.head = a_head;
+            var next = b_tail.next;
+            if (next == null) break;
+            b_tail = next;
         }
 
         if (a.node != null) {
-            var end = tail(b);
-
-            end.units = a.units;
-            end.node = a.node;
-            end.next = a.next;
+            b_tail.units = a.units;
+            b_tail.node = a.node;
+            b_tail.next = a.next;
         }
         a.units = 0;
         a.node = BuilderNode.PLACEHOLDER;
         a.next = b;
+
+        return b_tail;
     }
 
     private void add(BuilderNode node, int initial_units) {
@@ -595,7 +604,7 @@ public final class CodeBuilder {
         }
 
         var c = current;
-        var n = new BuilderPosition(c.head, c);
+        var n = new BuilderPosition(c);
 
         c.units = initial_units;
         c.node = node;
@@ -722,35 +731,75 @@ public final class CodeBuilder {
         return current;
     }
 
-    private static IllegalArgumentException dup(Object label) {
-        throw new IllegalArgumentException("Label " + label + " already exists");
-    }
-
-    public CodeBuilder label(Object label) {
-        Objects.requireNonNull(label);
-
+    private void insert_block(Object label, boolean move_to_head) {
+        BuilderPosition pos = position(label);
         var cur = current;
-        BuilderPosition pos;
-        if (label instanceof BuilderPosition bp) {
-            pos = bp;
-        } else {
-            pos = labels.putIfAbsent(label, cur);
-            if (pos == null) {
-                // Just added new label
-                return this;
-            }
-        }
         if (cur.head == pos.head) {
-            throw dup(label);
+            throw new IllegalArgumentException(
+                    "Attempt to attach '" + label + "' code block to itself");
         }
         if (!detached.remove(pos)) {
-            throw dup(label);
+            throw new IllegalArgumentException(
+                    "Attempt to attach non-head block of code '" + label + "'");
         }
-        attach(cur, pos);
-        current = exact(cur);
+        var target = attach(cur, pos);
+        if (move_to_head) {
+            target = exact(pos);
+        }
+        current = target;
+    }
 
+    ///      ↓----------↑
+    /// A->B->*C->D->X  E->F->G->X
+    ///
+    /// A->B->\->E->F->G->*C->D->X
+    public CodeBuilder insert_block(Object label) {
+        insert_block(label, false);
         return this;
     }
+
+    ///      ↓----------↑
+    /// A->B->*C->D->X  E->F->G->X
+    ///
+    /// A->B->\->*E->F->G->C->D->X
+    public CodeBuilder attach_block(Object label) {
+        insert_block(label, true);
+        return this;
+    }
+
+    public CodeBuilder remove_next_node() {
+        var cur = current;
+        if (cur.node == null) {
+            throw new IllegalArgumentException(
+                    "The next node doesn`t exist");
+        }
+        cur.units = 0;
+        cur.node = BuilderNode.PLACEHOLDER;
+        current = exact(cur);
+        return this;
+    }
+
+    // TODO: public CodeBuilder remove_prev_node()
+
+    public Object head_of_block(Object label) {
+        return exact(position(label).head);
+    }
+
+    public Object tail_of_block(Object label) {
+        return tail(position(label));
+    }
+
+    public Object next_position(Object label) {
+        var pos = position(label).next;
+        if (pos == null) {
+            throw new IllegalArgumentException(
+                    "The next position doesn`t exist");
+        }
+        return exact(pos);
+    }
+
+    // TODO: public Object prev_position(Object label)
+    // TODO: public ??? position_info(Object label)
 
     public CodeBuilder append_position(Object label) {
         Objects.requireNonNull(label);
@@ -763,6 +812,30 @@ public final class CodeBuilder {
         }
 
         current = pos;
+        return this;
+    }
+
+    public CodeBuilder label(Object label) {
+        Objects.requireNonNull(label);
+
+        if (label instanceof BuilderPosition ||
+                labels.putIfAbsent(label, current) != null) {
+            throw new IllegalArgumentException(
+                    "Label " + label + " already exists");
+        }
+
+        return this;
+    }
+
+    public CodeBuilder remove_label(Object label) {
+        Objects.requireNonNull(label);
+
+        if (label instanceof BuilderPosition) {
+            throw new IllegalArgumentException(
+                    "Label " + label + " can`t be removed");
+        }
+        labels.remove(label);
+
         return this;
     }
 
@@ -1216,10 +1289,10 @@ public final class CodeBuilder {
             check_reg(dst_reg);
             nop();
         }
-        if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
+        if (uwidth(src_reg, 4) && uwidth(dst_reg, 4)) {
             return raw_move(dst_reg, src_reg);
         }
-        if (src_reg < 1 << 8) {
+        if (uwidth(src_reg, 8)) {
             return raw_move_from16(dst_reg, src_reg);
         }
         return raw_move_16(dst_reg, src_reg);
@@ -1258,10 +1331,10 @@ public final class CodeBuilder {
             check_reg_pair(dst_reg_pair);
             nop();
         }
-        if (src_reg_pair < 1 << 4 && dst_reg_pair < 1 << 4) {
+        if (uwidth(src_reg_pair, 4) && uwidth(dst_reg_pair, 4)) {
             return raw_move_wide(dst_reg_pair, src_reg_pair);
         }
-        if (src_reg_pair < 1 << 8) {
+        if (uwidth(src_reg_pair, 8)) {
             return raw_move_wide_from16(dst_reg_pair, src_reg_pair);
         }
         return raw_move_wide_16(dst_reg_pair, src_reg_pair);
@@ -1300,10 +1373,10 @@ public final class CodeBuilder {
             check_reg(dst_reg);
             nop();
         }
-        if (src_reg < 1 << 4 && dst_reg < 1 << 4) {
+        if (uwidth(src_reg, 4) && uwidth(dst_reg, 4)) {
             return raw_move_object(dst_reg, src_reg);
         }
-        if (src_reg < 1 << 8) {
+        if (uwidth(src_reg, 8)) {
             return raw_move_object_from16(dst_reg, src_reg);
         }
         return raw_move_object_16(dst_reg, src_reg);
@@ -1487,23 +1560,18 @@ public final class CodeBuilder {
         return f21ih(CONST_HIGH16, dst_reg, value);
     }
 
-    private static boolean check_width_int(int value, int width) {
-        int empty_width = 32 - width;
-        return value << empty_width >> empty_width == value;
-    }
-
     /**
      * @param dst_reg u8
      * @param value   s32
      */
     public CodeBuilder const_(int dst_reg, int value) {
-        if (dst_reg < 1 << 4 && check_width_int(value, 4)) {
+        if (uwidth(dst_reg, 4) && swidth(value, 4)) {
             return raw_const_4(dst_reg, value);
         }
-        if (check_width_int(value, 16)) {
+        if (swidth(value, 16)) {
             return raw_const_16(dst_reg, value);
         }
-        if ((value & 0xffff) == 0) {
+        if (hwidth32(value, 16)) {
             return raw_const_high16(dst_reg, value);
         }
         return raw_const(dst_reg, value);
@@ -1541,23 +1609,18 @@ public final class CodeBuilder {
         return f21lh(CONST_WIDE_HIGH16, dst_reg_pair, value);
     }
 
-    private static boolean check_width_long(long value, int width) {
-        int empty_width = 64 - width;
-        return value << empty_width >> empty_width == value;
-    }
-
     /**
      * @param dst_reg_pair u8
      * @param value        s64
      */
     public CodeBuilder const_wide(int dst_reg_pair, long value) {
-        if (check_width_long(value, 16)) {
+        if (swidth(value, 16)) {
             return raw_const_wide_16(dst_reg_pair, (int) value);
         }
-        if (check_width_long(value, 32)) {
+        if (swidth(value, 32)) {
             return raw_const_wide_32(dst_reg_pair, (int) value);
         }
-        if ((value & 0xffff_ffff_ffffL) == 0) {
+        if (hwidth64(value, 16)) {
             return raw_const_wide_high16(dst_reg_pair, value);
         }
         return raw_const_wide(dst_reg_pair, value);
@@ -1919,10 +1982,10 @@ public final class CodeBuilder {
                 if (diff == 0 && isNext(current, target)) {
                     return 0;
                 }
-                if (diff == 0 || !check_width_int(diff, 16)) {
+                if (diff == 0 || !swidth(diff, 16)) {
                     return GOTO_32.getUnitCount();
                 }
-                if (!check_width_int(diff, 8)) {
+                if (!swidth(diff, 8)) {
                     return GOTO_16.getUnitCount();
                 }
                 return GOTO.getUnitCount();
@@ -1934,10 +1997,10 @@ public final class CodeBuilder {
                 if (diff == 0 && isNext(current, target)) {
                     return List.of();
                 }
-                if (diff == 0 || !check_width_int(diff, 16)) {
+                if (diff == 0 || !swidth(diff, 16)) {
                     return List.of(Instruction30t.of(GOTO_32, diff));
                 }
-                if (!check_width_int(diff, 8)) {
+                if (!swidth(diff, 8)) {
                     return List.of(Instruction20t.of(GOTO_16, diff));
                 }
                 return List.of(Instruction10t.of(GOTO, diff));
@@ -2209,7 +2272,7 @@ public final class CodeBuilder {
                 if (diff == 0) {
                     return units + GOTO.getUnitCount();
                 }
-                if (!check_width_int(diff, 16)) {
+                if (!swidth(diff, 16)) {
                     return units + GOTO_32.getUnitCount();
                 }
                 return units;
@@ -2228,7 +2291,7 @@ public final class CodeBuilder {
                             Instruction10t.of(GOTO, -Format22t.getUnitCount())
                     );
                 }
-                if (!check_width_int(diff, 16)) {
+                if (!swidth(diff, 16)) {
                     return List.of(
                             Instruction22t.of(test.inverse().test(), first_reg_to_test,
                                     second_reg_to_test, Format22t.getUnitCount() + GOTO_32.getUnitCount()),
@@ -2313,7 +2376,7 @@ public final class CodeBuilder {
                 if (diff == 0) {
                     return units + GOTO.getUnitCount();
                 }
-                if (!check_width_int(diff, 16)) {
+                if (!swidth(diff, 16)) {
                     return units + GOTO_32.getUnitCount();
                 }
                 return units;
@@ -2332,7 +2395,7 @@ public final class CodeBuilder {
                             Instruction10t.of(GOTO, -Format21t.getUnitCount())
                     );
                 }
-                if (!check_width_int(diff, 16)) {
+                if (!swidth(diff, 16)) {
                     return List.of(
                             Instruction21t.of(test.inverse().testz(),
                                     reg_to_test, Format21t.getUnitCount() + GOTO_32.getUnitCount()),
@@ -3053,9 +3116,33 @@ public final class CodeBuilder {
             first_src_reg_or_pair = second_src_reg_or_pair;
             second_src_reg_or_pair = tmp;
         }
+
+        if (first_src_reg_or_pair == second_src_reg_or_pair) {
+            switch (op) {
+                case AND_INT, OR_INT -> {
+                    check_reg(first_src_reg_or_pair);
+                    check_reg(dst_reg_or_pair);
+                    return nop();
+                }
+                case AND_LONG, OR_LONG -> {
+                    check_reg_pair(first_src_reg_or_pair);
+                    check_reg_pair(dst_reg_or_pair);
+                    return nop();
+                }
+                case XOR_INT -> {
+                    check_reg(first_src_reg_or_pair);
+                    return const_(dst_reg_or_pair, 0);
+                }
+                case XOR_LONG -> {
+                    check_reg_pair(first_src_reg_or_pair);
+                    return const_wide(dst_reg_or_pair, 0L);
+                }
+            }
+        }
+
         if (dst_reg_or_pair == first_src_reg_or_pair
-                && check_width_int(first_src_reg_or_pair, 4)
-                && check_width_int(second_src_reg_or_pair, 4)) {
+                && uwidth(first_src_reg_or_pair, 4)
+                && uwidth(second_src_reg_or_pair, 4)) {
             return raw_binop_2addr(op, first_src_reg_or_pair, second_src_reg_or_pair);
         }
         return raw_binop(op, dst_reg_or_pair, first_src_reg_or_pair, second_src_reg_or_pair);
@@ -3101,7 +3188,9 @@ public final class CodeBuilder {
      * @param value           s32
      */
     public CodeBuilder binop_lit(BinOp op, int dst_reg_or_pair, int src_reg_or_pair, int value) {
-        // TODO: check for nop operation
+        if (op.isSrc2Wide()) {
+            return binop_lit_wide(op, dst_reg_or_pair, src_reg_or_pair, value);
+        }
         if (op == BinOp.SUB_INT) {
             op = BinOp.ADD_INT;
             value = -value;
@@ -3112,23 +3201,66 @@ public final class CodeBuilder {
         if (op == BinOp.SHL_LONG || op == BinOp.SHR_LONG || op == BinOp.USHR_LONG) {
             value &= 0x3f;
         }
-        if (op.lit8() != null && check_width_int(value, 8)) {
+        switch (value) {
+            case 0 -> {
+                switch (op) {
+                    case ADD_INT, /*SUB_INT,*/ OR_INT, XOR_INT,
+                         SHL_INT, SHR_INT, USHR_INT -> {
+                        check_reg(src_reg_or_pair);
+                        check_reg(dst_reg_or_pair);
+                        return nop();
+                    }
+                    case SHL_LONG, SHR_LONG, USHR_LONG -> {
+                        check_reg_pair(src_reg_or_pair);
+                        check_reg_pair(dst_reg_or_pair);
+                        return nop();
+                    }
+                    case MUL_INT, AND_INT -> {
+                        check_reg(src_reg_or_pair);
+                        return const_(dst_reg_or_pair, 0);
+                    }
+                    case RSUB_INT -> {
+                        if (uwidth(dst_reg_or_pair, 4) && uwidth(src_reg_or_pair, 4)) {
+                            return unop(UnOp.NEG_INT, dst_reg_or_pair, src_reg_or_pair);
+                        }
+                    }
+                }
+            }
+            case -1 -> {
+                switch (op) {
+                    case AND_INT -> {
+                        check_reg(src_reg_or_pair);
+                        check_reg(dst_reg_or_pair);
+                        return nop();
+                    }
+                    case OR_INT -> {
+                        check_reg(src_reg_or_pair);
+                        return const_(dst_reg_or_pair, -1);
+                    }
+                    case XOR_INT -> {
+                        if (uwidth(dst_reg_or_pair, 4) && uwidth(src_reg_or_pair, 4)) {
+                            return unop(UnOp.NOT_INT, dst_reg_or_pair, src_reg_or_pair);
+                        }
+                    }
+                }
+            }
+        }
+        if (op.lit8() != null && swidth(value, 8)) {
             return raw_binop_lit8(op, dst_reg_or_pair, src_reg_or_pair, value);
         }
         // These operations should always be placed as binop_lit8
         assert !(op == BinOp.SHL_INT || op == BinOp.SHR_INT || op == BinOp.USHR_INT);
-        if (op.lit16() != null && (dst_reg_or_pair < 1 << 4)
-                && (src_reg_or_pair < 1 << 4)
-                && check_width_int(value, 16)) {
+        if (op.lit16() != null
+                && uwidth(dst_reg_or_pair, 4)
+                && uwidth(src_reg_or_pair, 4)
+                && swidth(value, 16)) {
             return raw_binop_lit16(op, dst_reg_or_pair, src_reg_or_pair, value);
         }
         if (src_reg_or_pair == dst_reg_or_pair) {
             throw new IllegalArgumentException("src and dst regs must be different");
         }
         int final_value = value;
-        return if_(op.isSrc2Wide(), ib ->
-                const_wide(dst_reg_or_pair, final_value), ib ->
-                const_(dst_reg_or_pair, final_value))
+        return const_(dst_reg_or_pair, final_value)
                 .binop(op, dst_reg_or_pair, src_reg_or_pair, dst_reg_or_pair);
     }
 
@@ -3138,13 +3270,47 @@ public final class CodeBuilder {
      * @param value        s64
      */
     public CodeBuilder binop_lit_wide(BinOp op, int dst_reg_pair, int src_reg_pair, long value) {
-        // TODO: check for nop operation
         if (!op.isDstAndSrc1Wide()) {
             throw new IllegalArgumentException(op + " is not wide operation");
         }
         if (!op.isSrc2Wide()) {
             // only shift operations
             return binop_lit(op, dst_reg_pair, src_reg_pair, (int) value);
+        }
+        if (value == 0L) {
+            switch (op) {
+                case ADD_LONG, SUB_LONG, OR_LONG, XOR_LONG -> {
+                    check_reg_pair(src_reg_pair);
+                    check_reg_pair(dst_reg_pair);
+                    return nop();
+                }
+                case MUL_LONG, AND_LONG -> {
+                    check_reg_pair(src_reg_pair);
+                    return const_wide(dst_reg_pair, 0);
+                }
+                case RSUB_LONG -> {
+                    if (uwidth(dst_reg_pair, 4) && uwidth(src_reg_pair, 4)) {
+                        return unop(UnOp.NEG_LONG, dst_reg_pair, src_reg_pair);
+                    }
+                }
+            }
+        } else if (value == -1L) {
+            switch (op) {
+                case AND_LONG -> {
+                    check_reg_pair(src_reg_pair);
+                    check_reg_pair(dst_reg_pair);
+                    return nop();
+                }
+                case OR_LONG -> {
+                    check_reg_pair(src_reg_pair);
+                    return const_wide(dst_reg_pair, -1L);
+                }
+                case XOR_LONG -> {
+                    if (uwidth(dst_reg_pair, 4) && uwidth(src_reg_pair, 4)) {
+                        return unop(UnOp.NOT_LONG, dst_reg_pair, src_reg_pair);
+                    }
+                }
+            }
         }
         if (src_reg_pair == dst_reg_pair) {
             throw new IllegalArgumentException("src and dst regs must be different");

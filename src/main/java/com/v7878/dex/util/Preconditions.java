@@ -1,7 +1,7 @@
 package com.v7878.dex.util;
 
 import static com.v7878.dex.DexConstants.ACC_VISIBILITY_MASK;
-import static com.v7878.dex.util.AlignmentUtils.isPowerOfTwo;
+import static com.v7878.dex.util.MathUtils.isPowerOfTwo;
 
 import com.v7878.dex.AccessFlag;
 import com.v7878.dex.Format;

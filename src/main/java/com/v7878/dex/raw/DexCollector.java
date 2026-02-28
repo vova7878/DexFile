@@ -184,8 +184,7 @@ public class DexCollector {
         // equals and hashCode are not used
 
         private static List<String> toNamesList(List<Parameter> parameters) {
-            return Converter.minimize(parameters, Parameter::getName,
-                    value -> value, Objects::isNull);
+            return Converter.transformList(parameters, Parameter::getName);
         }
 
         private static DebugInfo toDebugInfo(List<String> names, List<DebugItem> items) {
@@ -326,9 +325,18 @@ public class DexCollector {
         }
 
         private static List<NavigableSet<Annotation>> toAnnotationsList(List<Parameter> parameters) {
-            return Converter.minimize(parameters, Parameter::getAnnotations,
-                    annos -> annos.isEmpty() ? null : annos,
-                    NavigableSet<Annotation>::isEmpty);
+            var list = Converter.transformList(parameters, param -> {
+                var anno = param.getAnnotations();
+                return anno.isEmpty() ? null : anno;
+            });
+            boolean empty = true;
+            for (var tmp : list) {
+                if (tmp != null) {
+                    empty = false;
+                    break;
+                }
+            }
+            return empty ? null : list;
         }
 
         private static void fill(
@@ -354,7 +362,7 @@ public class DexCollector {
                     method_annotations.put(method.id(), m_annotations);
                 }
                 var p_annotations = toAnnotationsList(method.value().getParameters());
-                if (!p_annotations.isEmpty()) {
+                if (p_annotations != null) {
                     parameter_annotations.put(method.id(), p_annotations);
                 }
             }
