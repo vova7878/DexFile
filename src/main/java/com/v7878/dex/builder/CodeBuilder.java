@@ -212,24 +212,100 @@ public final class CodeBuilder {
     }
 
     private static class BuilderPosition {
-        public int units, position, label_offset;
-        public BuilderPosition head, next;
-        public BuilderNode node;
+        private int units, position, label_offset;
+        private BuilderPosition head, prev, next;
+        private BuilderNode node;
 
-        public BuilderPosition() {
-            this.head = this;
+        public BuilderPosition(BuilderPosition head) {
+            this.head = head == null ? this : head;
         }
 
-        public BuilderPosition(BuilderPosition other) {
-            this.head = other.head;
-            this.units = other.units;
-            this.next = other.next;
-            this.node = other.node;
+        public BuilderNode node() {
+            return node;
+        }
+
+        public void node(BuilderNode node, int units) {
+            this.node = node;
+            this.units = units;
+        }
+
+        public void erase() {
+            node(BuilderNode.PLACEHOLDER, 0);
+        }
+
+        public void copy_node(BuilderPosition pos) {
+            node(pos.node(), pos.units());
+        }
+
+        public BuilderPosition head() {
+            return head;
+        }
+
+        public void head(BuilderPosition head) {
+            this.head = head;
+        }
+
+        public BuilderPosition prev() {
+            return prev;
+        }
+
+        public BuilderPosition next() {
+            return next;
+        }
+
+        public void next(BuilderPosition pos) {
+            next = pos;
+            if (pos != null) pos.prev = this;
+        }
+
+        public int units() {
+            return units;
+        }
+
+        public void update(int units, int label_offset) {
+            this.units = units;
+            this.label_offset = label_offset;
         }
 
         public int label_position() {
             return position + label_offset;
         }
+
+        public int position() {
+            return position;
+        }
+
+        public void position(int position) {
+            this.position = position;
+        }
+
+        public void add_position(int diff) {
+            this.position += diff;
+        }
+    }
+
+    private static BuilderPosition tail(BuilderPosition pos) {
+        BuilderPosition next;
+        while ((next = pos.next()) != null) {
+            pos = next;
+        }
+        return pos;
+    }
+
+    private static BuilderPosition exact(BuilderPosition pos) {
+        while (pos != null && pos.node() == BuilderNode.PLACEHOLDER) {
+            // Not a real position
+            pos = pos.next();
+        }
+        return pos;
+    }
+
+    private static BuilderPosition exact_backwards(BuilderPosition pos) {
+        while (pos != null && pos.node() == BuilderNode.PLACEHOLDER) {
+            // Not a real position
+            pos = pos.prev();
+        }
+        return pos;
     }
 
     private static int checkRange(int value, int start, int length) {
@@ -262,8 +338,8 @@ public final class CodeBuilder {
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
         this.detached = new LinkedHashSet<>();
-        this.head = this.current = new BuilderPosition();
-        this.payloads = new BuilderPosition();
+        this.head = this.current = new BuilderPosition(null);
+        this.payloads = new BuilderPosition(null);
         this.generate_lines = false;
         this.synthetic_line = 0;
     }
@@ -385,26 +461,15 @@ public final class CodeBuilder {
 
     private List<Instruction> mergeInstructions() {
         var begin = head;
-        {
-            int offset = 0;
-            for (var tmp = begin; tmp != null; tmp = tmp.next) {
-                if (tmp.node != null) {
-                    tmp.node.attach(tmp);
-                }
-                tmp.position = offset;
-                offset += tmp.units;
-            }
-        }
 
         boolean changed;
         do {
             changed = false;
-            //noinspection DataFlowIssue
-            for (var current = begin; current.node != null; current = current.next) {
-                var node = current.node;
-                var units = node.units();
-                var lo = node.label_offset();
-                if (current.units != units || current.label_offset != lo) {
+            BuilderNode node;
+            for (var tmp = begin; (node = tmp.node()) != null; tmp = tmp.next()) {
+                var node_units = node.units();
+                var pos_units = tmp.units();
+                if (pos_units != node_units) {
                     changed = true;
 
                     // The difference can be negative only for two types of corrections:
@@ -421,41 +486,23 @@ public final class CodeBuilder {
                     //
                     // In the second case, the acquisition of a non-zero
                     // size by the instruction is irreversible
-                    int diff = units - current.units;
+                    int diff = node_units - pos_units;
+                    tmp.update(node_units, node.label_offset());
 
-                    current.units = units;
-                    current.label_offset = lo;
-                    if (diff != 0) {
-                        // We correct positions for all nodes, including the last one
-                        // (despite the fact that it does not contain any instructions)
-                        for (var tmp = current.next; tmp != null; tmp = tmp.next) {
-                            tmp.position += diff;
-                        }
+                    // We correct positions for all nodes, including the last one
+                    // (despite the fact that it does not contain any instructions)
+                    for (var tmp2 = tmp.next(); tmp2 != null; tmp2 = tmp2.next()) {
+                        tmp2.add_position(diff);
                     }
                 }
             }
         } while (changed);
 
         var out = new ArrayList<Instruction>();
-        for (var tmp = begin; tmp.node != null; tmp = tmp.next) {
-            out.addAll(tmp.node.generate());
+        for (var tmp = begin; tmp.node() != null; tmp = tmp.next()) {
+            out.addAll(tmp.node().generate());
         }
         return out;
-    }
-
-    private static BuilderPosition exact(BuilderPosition pos) {
-        while (pos.node == BuilderNode.PLACEHOLDER) {
-            // Not a real position, points to the next one
-            pos = pos.next;
-        }
-        return pos;
-    }
-
-    private static BuilderPosition tail(BuilderPosition head) {
-        while (head.next != null) {
-            head = head.next;
-        }
-        return head;
     }
 
     private MethodImplementation finish() {
@@ -464,10 +511,19 @@ public final class CodeBuilder {
             for (var iter = detached.iterator(); iter.hasNext(); ) {
                 var pos = iter.next();
                 iter.remove();
-                attach(end, pos);
-                end = tail(end);
+                end = attach(end, pos);
             }
             attach(end, payloads);
+
+            int offset = 0;
+            for (var tmp = head; tmp != null; tmp = tmp.next()) {
+                var node = tmp.node();
+                if (node != null) {
+                    node.attach(tmp);
+                }
+                tmp.position(offset);
+                offset += tmp.units();
+            }
         }
 
         List<Instruction> insns = mergeInstructions();
@@ -573,42 +629,46 @@ public final class CodeBuilder {
     }
 
     private static BuilderPosition attach(BuilderPosition a, BuilderPosition b) {
-        assert a != null && b != null && a.head != b.head;
+        assert a != null && b != null && a.head() != b.head();
 
-        var a_head = a.head;
+        var a_head = a.head();
         var b_tail = b;
 
         while (true) {
-            b_tail.head = a_head;
-            var next = b_tail.next;
+            b_tail.head(a_head);
+            var next = b_tail.next();
             if (next == null) break;
             b_tail = next;
         }
 
-        if (a.node != null) {
-            b_tail.units = a.units;
-            b_tail.node = a.node;
-            b_tail.next = a.next;
+        if (a.node() != null) {
+            b_tail.copy_node(a);
+            b_tail.next(a.next());
         }
-        a.units = 0;
-        a.node = BuilderNode.PLACEHOLDER;
-        a.next = b;
+        a.erase();
+        a.next(b);
 
         return b_tail;
     }
 
     private void add(BuilderNode node, int initial_units) {
+        assert node != null && node != BuilderNode.PLACEHOLDER;
+
         if (generate_lines) {
             // Note: Numbering starts from one
             line(++synthetic_line);
         }
 
         var c = current;
-        var n = new BuilderPosition(c);
+        var n = new BuilderPosition(c.head());
 
-        c.units = initial_units;
-        c.node = node;
-        c.next = current = n;
+        n.copy_node(c);
+        n.next(c.next());
+
+        c.node(node, initial_units);
+        c.next(n);
+
+        current = n;
     }
 
     private void add(Instruction instruction) {
@@ -663,7 +723,7 @@ public final class CodeBuilder {
 
             @Override
             public int label_offset() {
-                return current.position & 0x1;
+                return current.position() & 0x1;
             }
 
             @Override
@@ -734,7 +794,7 @@ public final class CodeBuilder {
     private void insert_block(Object label, boolean move_to_head) {
         BuilderPosition pos = position(label);
         var cur = current;
-        if (cur.head == pos.head) {
+        if (cur.head() == pos.head()) {
             throw new IllegalArgumentException(
                     "Attempt to attach '" + label + "' code block to itself");
         }
@@ -743,10 +803,8 @@ public final class CodeBuilder {
                     "Attempt to attach non-head block of code '" + label + "'");
         }
         var target = attach(cur, pos);
-        if (move_to_head) {
-            target = exact(pos);
-        }
-        current = target;
+        if (move_to_head) target = pos;
+        current = exact(target);
     }
 
     ///      ↓----------↑
@@ -769,20 +827,27 @@ public final class CodeBuilder {
 
     public CodeBuilder remove_next_node() {
         var cur = current;
-        if (cur.node == null) {
+        if (cur.node() == null) {
             throw new IllegalArgumentException(
                     "The next node doesn`t exist");
         }
-        cur.units = 0;
-        cur.node = BuilderNode.PLACEHOLDER;
+        cur.erase();
         current = exact(cur);
         return this;
     }
 
-    // TODO: public CodeBuilder remove_prev_node()
+    public CodeBuilder remove_prev_node() {
+        var prev = exact_backwards(current.prev());
+        if (prev == null) {
+            throw new IllegalArgumentException(
+                    "The previous node doesn`t exist");
+        }
+        prev.erase();
+        return this;
+    }
 
     public Object head_of_block(Object label) {
-        return exact(position(label).head);
+        return exact(position(label).head());
     }
 
     public Object tail_of_block(Object label) {
@@ -790,15 +855,23 @@ public final class CodeBuilder {
     }
 
     public Object next_position(Object label) {
-        var pos = position(label).next;
+        var pos = exact(position(label).next());
         if (pos == null) {
             throw new IllegalArgumentException(
                     "The next position doesn`t exist");
         }
-        return exact(pos);
+        return pos;
     }
 
-    // TODO: public Object prev_position(Object label)
+    public Object prev_position(Object label) {
+        var pos = exact_backwards(position(label).prev());
+        if (pos == null) {
+            throw new IllegalArgumentException(
+                    "The previous position doesn`t exist");
+        }
+        return pos;
+    }
+
     // TODO: public ??? position_info(Object label)
 
     public CodeBuilder append_position(Object label) {
@@ -806,7 +879,7 @@ public final class CodeBuilder {
 
         var pos = positionOrNull(label);
         if (pos == null) {
-            pos = new BuilderPosition();
+            pos = new BuilderPosition(null);
             detached.add(pos);
             labels.put(label, pos);
         }
@@ -1950,11 +2023,12 @@ public final class CodeBuilder {
 
     private static boolean isNext(BuilderPosition from,
                                   BuilderPosition to) {
-        while (from.next != null && from.units == 0) {
-            from = from.next;
-            if (from == to) {
+        BuilderPosition next;
+        while (from.units() == 0 && (next = from.next()) != null) {
+            if (next == to) {
                 return true;
             }
+            from = next;
         }
         return false;
     }
