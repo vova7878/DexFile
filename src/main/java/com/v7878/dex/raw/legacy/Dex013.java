@@ -1,8 +1,5 @@
 package com.v7878.dex.raw.legacy;
 
-import static com.v7878.dex.DexConstants.ACC_ABSTRACT;
-import static com.v7878.dex.DexConstants.ACC_NATIVE;
-import static com.v7878.dex.DexConstants.ACC_SYNTHETIC;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.util.Ids.CLASS;
@@ -17,6 +14,7 @@ import com.v7878.dex.immutable.MethodId;
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.value.EncodedBoolean;
 import com.v7878.dex.immutable.value.EncodedByte;
 import com.v7878.dex.immutable.value.EncodedChar;
@@ -30,6 +28,8 @@ import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.raw.DexReader;
+import com.v7878.dex.raw.DexReader.CodeItem;
+import com.v7878.dex.raw.InstructionReader;
 import com.v7878.dex.util.MemberUtils;
 
 import java.util.ArrayList;
@@ -105,6 +105,58 @@ public class Dex013 {
         return list;
     }
 
+    //private List<TryBlock> readTryList(DexReader reader, int offset) {
+    //    var in = reader.dataAt(offset);
+    //
+    //    record Entry(int end, List<ExceptionHandler> handlers) {
+    //    }
+    //    var blocks = new IntMap<Entry>();
+    //    var size = in.readSmallUInt();
+    //    for (int i = 0; i < size; i++) {
+    //        int start = in.readSmallUInt();
+    //        int end = in.readSmallUInt();
+    //        int handler = in.readSmallUInt();
+    //        int exception = in.readSmallUInt();
+    //    }
+    //}
+
+    private static List<Instruction> readInstructions(DexReader reader, int offset) {
+        var in = reader.dataAt(offset);
+        int insns_count = in.readSmallUInt();
+        return InstructionReader.readArray(reader, in, insns_count);
+    }
+
+    public static CodeItem readCodeItem(DexReader reader, int offset) {
+        var in = reader.dataAt(offset);
+
+        var registers_size = in.readUShort();
+        var ins_size = in.readUShort();
+        var outs_size = in.readUShort();
+        in.readUShort(); // unused
+
+        // TODO
+        var source_file_idx = in.readSmallUInt();
+        var insns_off = in.readSmallUInt();
+        var exceptions_off = in.readSmallUInt();
+        var debug_info_off = in.readSmallUInt();
+
+        var instructions = readInstructions(reader, insns_off);
+
+        //DebugInfo debug_info;
+        //if (reader.options().hasDebugInfo() && debug_info_off != NO_OFFSET) {
+        //    debug_info = reader.getDebugInfo(debug_info_off);
+        //} else {
+        //    debug_info = null;
+        //}
+
+        return new CodeItem(registers_size, ins_size,
+                outs_size, null,
+                // TODO
+                instructions,
+                // TODO
+                Collections.emptyNavigableSet());
+    }
+
     private static List<MethodDef> readMethodDefList(DexReader reader, int offset, boolean direct) {
         var in = reader.dataAt(offset);
         int count = in.readSmallUInt();
@@ -112,15 +164,15 @@ public class Dex013 {
         for (int i = 0; i < count; i++) {
             var id = reader.getMethod(in.readSmallUInt());
             int access_flags = in.readInt();
+            // TODO
             int throws_list_off = in.readInt();
             int code_off = in.readInt();
-            // TODO: read code
+            var code = code_off == NO_OFFSET ?
+                    null : reader.getCodeItem(code_off);
+            var debug_info = code != null ? code.debug_info() : null;
             list.add(MethodDef.of(id.getName(), id.getReturnType(),
-                    Parameter.listOf(id.getParameterTypes()),
-                    (access_flags & ACC_ABSTRACT) != 0 ? access_flags :
-                            ((access_flags & ACC_NATIVE) != 0 ? access_flags :
-                                    (access_flags | ACC_NATIVE | ACC_SYNTHETIC)),
-                    0, null, null));
+                    Parameter.listOf(id.getParameterTypes()), access_flags, 0,
+                    DexReader.toImplementation(code, debug_info), null));
         }
         return list;
     }

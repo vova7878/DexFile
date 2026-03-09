@@ -1,9 +1,8 @@
 package com.v7878.dex.immutable.bytecode;
 
-import static com.v7878.dex.Opcode.PACKED_SWITCH_PAYLOAD;
-
 import com.v7878.dex.Format;
 import com.v7878.dex.Internal;
+import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
@@ -15,19 +14,20 @@ import java.util.stream.Collectors;
 public final class PackedSwitchPayload extends Instruction implements SwitchPayloadInstruction {
     private final NavigableSet<SwitchElement> elements;
 
-    private PackedSwitchPayload(NavigableSet<SwitchElement> elements) {
-        super(Preconditions.checkFormat(PACKED_SWITCH_PAYLOAD, Format.PackedSwitchPayload));
+    private PackedSwitchPayload(Opcode opcode, NavigableSet<SwitchElement> elements) {
+        super(Preconditions.checkFormat(opcode,
+                Format.PackedSwitchPayload, Format.LegacyPackedSwitchPayload));
         this.elements = Objects.requireNonNull(elements);
     }
 
     @Internal
-    public static PackedSwitchPayload raw(NavigableSet<SwitchElement> elements) {
-        return new PackedSwitchPayload(elements);
+    public static PackedSwitchPayload raw(Opcode opcode, NavigableSet<SwitchElement> elements) {
+        return new PackedSwitchPayload(opcode, elements);
     }
 
-    public static PackedSwitchPayload of(Iterable<SwitchElement> elements) {
+    public static PackedSwitchPayload of(Opcode opcode, Iterable<SwitchElement> elements) {
         var set = Converter.toNavigableSet(elements);
-        return new PackedSwitchPayload(Preconditions.checkSequentialOrderedKeys(set));
+        return new PackedSwitchPayload(opcode, Preconditions.checkSequentialOrderedKeys(set));
     }
 
     @Override
@@ -37,6 +37,9 @@ public final class PackedSwitchPayload extends Instruction implements SwitchPayl
 
     @Override
     public int getUnitCount() {
+        if (getOpcode().format() == Format.LegacyPackedSwitchPayload) {
+            return Preconditions.getLegacyPackedSwitchPayloadUnitCount(getSwitchElements().size());
+        }
         return Preconditions.getPackedSwitchPayloadUnitCount(getSwitchElements().size());
     }
 

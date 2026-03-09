@@ -161,8 +161,8 @@ public class DexReader implements DexIO.DexReaderCache {
                 Collections.emptyNavigableSet(), IntMap.empty(), IntMap.empty(), IntMap.empty());
     }
 
-    private record CodeItem(int registers, int ins, int outs, DebugInfo debug_info,
-                            List<Instruction> instructions, NavigableSet<TryBlock> tries) {
+    public record CodeItem(int registers, int ins, int outs, DebugInfo debug_info,
+                           List<Instruction> instructions, NavigableSet<TryBlock> tries) {
     }
 
     private record CompactData(int offsets_pos,
@@ -226,7 +226,7 @@ public class DexReader implements DexIO.DexReaderCache {
             throw new NotADexFile("File is too short");
         }
 
-        if (version() != DEX013) {
+        if (version != DEX013) {
             int endian_tag = mainAt(header_offset + ENDIAN_TAG_OFFSET).readInt();
             switch (endian_tag) {
                 case ENDIAN_CONSTANT -> { /* ok */ }
@@ -279,7 +279,7 @@ public class DexReader implements DexIO.DexReaderCache {
         annotation_directory_cache = makeOffsetCache(this::readAnnotationDirectory);
         code_cache = makeOffsetCache(this::readCodeItem);
 
-        if (version() == DEX013) {
+        if (version == DEX013) {
             string_section = makeSection(
                     mainAt(header_offset + M5_STRING_COUNT_OFFSET).readSmallUInt(),
                     mainAt(header_offset + M5_STRING_START_OFFSET).readSmallUInt(),
@@ -339,7 +339,7 @@ public class DexReader implements DexIO.DexReaderCache {
             );
         }
 
-        if (version() == DEX013) {
+        if (version == DEX013) {
             map_items = null;
             method_handle_section = null;
             callsite_section = null;
@@ -406,7 +406,7 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     public boolean isCompact() {
-        return version().isCompact();
+        return version.isCompact();
     }
 
     private MapItem readMapItem(RandomInput in) {
@@ -637,7 +637,7 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private String readString(int index, int offset) {
-        if (version() == DEX013) {
+        if (version == DEX013) {
             return Dex013.readString(this, index, offset);
         }
         var in = mainAt(offset);
@@ -661,7 +661,7 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private FieldId readFieldId(int index, int offset) {
-        if (version() == DEX013) {
+        if (version == DEX013) {
             return Dex013.readFieldId(this, index, offset);
         }
         var in = mainAt(offset);
@@ -692,7 +692,7 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private MethodId readMethodId(int index, int offset) {
-        if (version() == DEX013) {
+        if (version == DEX013) {
             return Dex013.readMethodId(this, index, offset);
         }
         var in = mainAt(offset);
@@ -952,6 +952,9 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private CodeItem readCodeItem(int offset) {
+        if (version == DEX013) {
+            return Dex013.readCodeItem(this, offset);
+        }
         var in = dataAt(offset);
 
         DebugInfo debug_info;
@@ -1043,7 +1046,7 @@ public class DexReader implements DexIO.DexReaderCache {
         return code_cache.apply(offset);
     }
 
-    private MethodImplementation toImplementation(CodeItem code, DebugInfo debug_info) {
+    public static MethodImplementation toImplementation(CodeItem code, DebugInfo debug_info) {
         if (code == null) return null;
         return MethodImplementation.raw(code.registers(), code.instructions(),
                 code.tries(), debug_info == null ? List.of() : debug_info.items());
@@ -1139,7 +1142,7 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private ClassDef readClassDef(int index, int offset) {
-        if (version() == DEX013) {
+        if (version == DEX013) {
             return Dex013.readClassDef(this, index, offset);
         }
         var in = mainAt(offset);

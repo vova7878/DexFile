@@ -1099,9 +1099,6 @@ public final class CodeBuilder {
         return this;
     }
 
-    // <AA|op BBBB> op AA, @BBBB
-    // TODO: 20bc
-
     // <AA|op BBBB> op vAA, vBBBB
     private CodeBuilder f22x(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
                              int reg_or_pair2, boolean is_reg2_wide) {
@@ -1289,7 +1286,7 @@ public final class CodeBuilder {
                         branchOffset(target, labels[i], true)));
             }
             elements = Collections.unmodifiableNavigableSet(elements);
-            return PackedSwitchPayload.raw(elements);
+            return PackedSwitchPayload.raw(PACKED_SWITCH_PAYLOAD, elements);
         });
     }
 
@@ -1302,7 +1299,7 @@ public final class CodeBuilder {
                         branchOffset(target, labels[i], true)));
             }
             elements = Collections.unmodifiableNavigableSet(elements);
-            return SparseSwitchPayload.raw(elements);
+            return SparseSwitchPayload.raw(SPARSE_SWITCH_PAYLOAD, elements);
         });
     }
 
