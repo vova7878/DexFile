@@ -6,12 +6,9 @@ import static com.v7878.dex.DexOffsets.M5_INSTANCE_FIELD_DEF_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.M5_STATIC_FIELD_DEF_ALIGNMENT;
 import static com.v7878.dex.util.Ids.CLASS;
 import static com.v7878.dex.util.Ids.STRING;
-import static com.v7878.dex.util.Ids.THROWABLE;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
-import com.v7878.collections.IntMap;
 import com.v7878.dex.immutable.ClassDef;
-import com.v7878.dex.immutable.ExceptionHandler;
 import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MethodDef;
@@ -37,12 +34,12 @@ import com.v7878.dex.raw.DexReader;
 import com.v7878.dex.raw.DexReader.CodeItem;
 import com.v7878.dex.raw.InstructionReader;
 import com.v7878.dex.util.MemberUtils;
+import com.v7878.dex.util.TryBlocksMerger;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
-import java.util.TreeSet;
 
 public class Dex013 {
     public static String readString(DexReader reader, int index, int offset) {
@@ -114,43 +111,27 @@ public class Dex013 {
         return list;
     }
 
-    private static NavigableSet<TryBlock> readTries(DexReader reader, int offset) {
-        record Entry(int end, List<ExceptionHandler> handlers) {
-        }
+    private record TryItem(int start, int end, int handler, TypeId exception)
+            implements TryBlocksMerger.TryItem {
+    }
 
+    private static NavigableSet<TryBlock> readTries(DexReader reader, int offset) {
         var in = reader.dataAt(offset);
 
-        var blocks = new IntMap<Entry>();
         var size = in.readSmallUInt();
+        var items = new ArrayList<TryItem>(size);
         for (int i = 0; i < size; i++) {
             int start = in.readSmallUInt();
             int end = in.readSmallUInt();
             int handler = in.readSmallUInt();
             int exception_idx = in.readSmallUIntWithM1();
 
-            var entry = blocks.get(start);
-            if (entry == null) {
-                entry = new Entry(end, new ArrayList<>());
-                blocks.append(start, entry);
-            }
-            if (end != entry.end()) {
-                throw new IllegalStateException(String.format(
-                        "Out of order try block (%s, %s)", start, end));
-            }
             var exception = exception_idx == NO_INDEX ?
-                    THROWABLE : reader.getType(exception_idx);
-            entry.handlers().add(ExceptionHandler.of(exception, handler));
+                    null : reader.getType(exception_idx);
+            items.add(i, new TryItem(start, end, handler, exception));
         }
-        int count = blocks.size();
-        var tries = new TreeSet<TryBlock>();
-        for (int i = 0; i < count; i++) {
-            var start = blocks.keyAt(i);
-            var entry = blocks.valueAt(i);
-            var units = entry.end() - start;
-            var handlers = Collections.unmodifiableList(entry.handlers());
-            tries.add(TryBlock.raw(start, units, null, handlers));
-        }
-        return Collections.unmodifiableNavigableSet(tries);
+
+        return TryBlocksMerger.mergeTryItems(items);
     }
 
     private static List<Instruction> readInstructions(DexReader reader, int offset) {
