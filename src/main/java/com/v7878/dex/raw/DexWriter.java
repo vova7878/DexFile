@@ -7,7 +7,6 @@ import static com.v7878.dex.DexConstants.DBG_END_SEQUENCE;
 import static com.v7878.dex.DexConstants.DBG_FIRST_SPECIAL;
 import static com.v7878.dex.DexConstants.DBG_LAST_SPECIAL;
 import static com.v7878.dex.DexConstants.DBG_LINE_BASE;
-import static com.v7878.dex.DexConstants.DBG_LINE_CEIL;
 import static com.v7878.dex.DexConstants.DBG_LINE_RANGE;
 import static com.v7878.dex.DexConstants.DBG_RESTART_LOCAL;
 import static com.v7878.dex.DexConstants.DBG_SET_EPILOGUE_BEGIN;
@@ -1185,7 +1184,7 @@ public class DexWriter {
                 int line_diff = line[0] - line[1];
 
                 int adjusted_opcode = Math.max(Math.min(
-                        line_diff, DBG_LINE_CEIL), DBG_LINE_BASE);
+                        line_diff, DBG_FIRST_SPECIAL), DBG_LINE_BASE);
                 line_diff -= adjusted_opcode;
                 adjusted_opcode -= DBG_LINE_BASE;
 

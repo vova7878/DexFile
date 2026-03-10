@@ -1,5 +1,19 @@
 package com.v7878.dex.raw.legacy;
 
+import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
+import static com.v7878.dex.DexConstants.M5_DBG_ADVANCE_LINE;
+import static com.v7878.dex.DexConstants.M5_DBG_ADVANCE_PC;
+import static com.v7878.dex.DexConstants.M5_DBG_END_LOCAL;
+import static com.v7878.dex.DexConstants.M5_DBG_END_SEQUENCE;
+import static com.v7878.dex.DexConstants.M5_DBG_FIRST_SPECIAL;
+import static com.v7878.dex.DexConstants.M5_DBG_LINE_BASE;
+import static com.v7878.dex.DexConstants.M5_DBG_LINE_RANGE;
+import static com.v7878.dex.DexConstants.M5_DBG_RESTART_LOCAL;
+import static com.v7878.dex.DexConstants.M5_DBG_SET_EPILOGUE_BEGIN;
+import static com.v7878.dex.DexConstants.M5_DBG_SET_FILE;
+import static com.v7878.dex.DexConstants.M5_DBG_SET_PROLOGUE_END;
+import static com.v7878.dex.DexConstants.M5_DBG_START_LOCAL;
+import static com.v7878.dex.DexConstants.M5_DBG_START_LOCAL_EXTENDED;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.DexOffsets.M5_INSTANCE_FIELD_DEF_ALIGNMENT;
@@ -18,6 +32,15 @@ import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
+import com.v7878.dex.immutable.debug.AdvancePC;
+import com.v7878.dex.immutable.debug.DebugItem;
+import com.v7878.dex.immutable.debug.EndLocal;
+import com.v7878.dex.immutable.debug.LineNumber;
+import com.v7878.dex.immutable.debug.RestartLocal;
+import com.v7878.dex.immutable.debug.SetEpilogueBegin;
+import com.v7878.dex.immutable.debug.SetFile;
+import com.v7878.dex.immutable.debug.SetPrologueEnd;
+import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.immutable.value.EncodedBoolean;
 import com.v7878.dex.immutable.value.EncodedByte;
 import com.v7878.dex.immutable.value.EncodedChar;
@@ -30,6 +53,8 @@ import com.v7878.dex.immutable.value.EncodedShort;
 import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
+import com.v7878.dex.io.RandomInput;
+import com.v7878.dex.raw.DebugInfo;
 import com.v7878.dex.raw.DexReader;
 import com.v7878.dex.raw.DexReader.CodeItem;
 import com.v7878.dex.raw.InstructionReader;
@@ -140,7 +165,116 @@ public class Dex013 {
         return InstructionReader.readArray(reader, in, insns_count);
     }
 
-    public static CodeItem readCodeItem(DexReader reader, int offset) {
+    public static List<DebugItem> readDebugItemArray(
+            DexReader reader, RandomInput in, int line_start) {
+        var out = new ArrayList<DebugItem>();
+        int[] address = {0, 0};
+        Runnable emit_address = () -> {
+            if (address[0] != address[1]) {
+                out.add(AdvancePC.of(address[0] - address[1]));
+                address[1] = address[0];
+            }
+        };
+        int[] line = {line_start, -1};
+        Runnable emit_line = () -> {
+            if (line[0] != line[1]) {
+                out.add(LineNumber.of(line[0]));
+                line[1] = line[0];
+            }
+        };
+
+        int opcode;
+        do {
+            opcode = in.readUByte();
+        } while (switch (opcode) {
+            case M5_DBG_END_SEQUENCE -> false;
+            case M5_DBG_ADVANCE_PC -> {
+                address[0] += in.readULeb128();
+                yield true;
+            }
+            case M5_DBG_ADVANCE_LINE -> {
+                line[0] += in.readSLeb128();
+                yield true;
+            }
+            case M5_DBG_START_LOCAL, M5_DBG_START_LOCAL_EXTENDED -> {
+                int reg = in.readULeb128();
+                int name_idx = in.readULeb128() - 1;
+                String name = name_idx == NO_INDEX ?
+                        null : reader.getString(name_idx);
+                int descriptor_idx = in.readULeb128() - 1;
+                String descriptor = descriptor_idx == NO_INDEX ?
+                        null : reader.getString(descriptor_idx);
+                //TODO?
+                var type = "<null>".equals(descriptor) ? TypeId.V : TypeId.of(descriptor);
+                int signature_idx = opcode == DBG_START_LOCAL ?
+                        NO_INDEX : in.readULeb128() - 1;
+                String signature = signature_idx == NO_INDEX ?
+                        null : reader.getString(signature_idx);
+                emit_address.run();
+                out.add(StartLocal.of(reg, name, type, signature));
+                yield true;
+            }
+            case M5_DBG_END_LOCAL -> {
+                int reg = in.readULeb128();
+                emit_address.run();
+                out.add(EndLocal.of(reg));
+                yield true;
+            }
+            case M5_DBG_RESTART_LOCAL -> {
+                int reg = in.readULeb128();
+                emit_address.run();
+                out.add(RestartLocal.of(reg));
+                yield true;
+            }
+            case M5_DBG_SET_PROLOGUE_END -> {
+                emit_address.run();
+                out.add(SetPrologueEnd.INSTANCE);
+                yield true;
+            }
+            case M5_DBG_SET_EPILOGUE_BEGIN -> {
+                emit_address.run();
+                out.add(SetEpilogueBegin.INSTANCE);
+                yield true;
+            }
+            case M5_DBG_SET_FILE -> {
+                int name_idx = in.readULeb128() - 1;
+                String name = name_idx == NO_INDEX ?
+                        null : reader.getString(name_idx);
+                emit_address.run();
+                out.add(SetFile.of(name));
+                yield true;
+            }
+            default -> {
+                int adjopcode = opcode - M5_DBG_FIRST_SPECIAL;
+                address[0] += adjopcode / M5_DBG_LINE_RANGE;
+                line[0] += M5_DBG_LINE_BASE + (adjopcode % M5_DBG_LINE_RANGE);
+                emit_address.run();
+                emit_line.run();
+                yield true;
+            }
+        });
+        return Collections.unmodifiableList(out);
+    }
+
+    public static DebugInfo readDebugInfo(DexReader reader, MethodId mid, int offset) {
+        var in = reader.dataAt(offset);
+        int line_start = in.readULeb128();
+        List<String> parameter_names;
+        {
+            int parameters_size = mid.getParameterTypes().size();
+            parameter_names = new ArrayList<>(parameters_size);
+            for (int i = 0; i < parameters_size; i++) {
+                int name_idx = in.readULeb128() - 1;
+                parameter_names.add(name_idx == NO_INDEX ?
+                        null : reader.getString(name_idx));
+            }
+            parameter_names = Collections.unmodifiableList(parameter_names);
+        }
+        var items = readDebugItemArray(reader, in, line_start);
+        return new DebugInfo(parameter_names, items);
+    }
+
+    public static CodeItem readCodeItem(DexReader reader, MethodId mid, int offset) {
         var in = reader.dataAt(offset);
 
         var registers_size = in.readUShort();
@@ -152,23 +286,21 @@ public class Dex013 {
         in.readSmallUInt();
         var insns_off = in.readSmallUInt();
         var exceptions_off = in.readSmallUInt();
-        /* TODO var debug_info_off = */
-        in.readSmallUInt();
+        var debug_info_off = in.readSmallUInt();
 
         var instructions = readInstructions(reader, insns_off);
         NavigableSet<TryBlock> tries = exceptions_off == NO_OFFSET ?
                 Collections.emptyNavigableSet() : readTries(reader, exceptions_off);
 
-        // TODO
-        // DebugInfo debug_info;
-        // if (reader.options().hasDebugInfo() && debug_info_off != NO_OFFSET) {
-        //     debug_info = reader.getDebugInfo(debug_info_off);
-        // } else {
-        //     debug_info = null;
-        // }
+        DebugInfo debug_info;
+        if (reader.options().hasDebugInfo() && debug_info_off != NO_OFFSET) {
+            debug_info = readDebugInfo(reader, mid, debug_info_off);
+        } else {
+            debug_info = null;
+        }
 
         return new CodeItem(registers_size, ins_size,
-                outs_size, null, instructions, tries);
+                outs_size, debug_info, instructions, tries);
     }
 
     private static List<MethodDef> readMethodDefList(
@@ -183,7 +315,7 @@ public class Dex013 {
             in.readInt();
             int code_off = in.readInt();
 
-            var code = code_off == NO_OFFSET ? null : readCodeItem(reader, code_off);
+            var code = code_off == NO_OFFSET ? null : readCodeItem(reader, mid, code_off);
             var debug_info = code == null ? null : code.debug_info();
             list.add(MethodDef.of(mid.getName(), mid.getReturnType(),
                     Parameter.listOf(mid.getParameterTypes()), access_flags, 0,
