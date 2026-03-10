@@ -4,32 +4,12 @@ public final class DexOffsets {
     private DexOffsets() {
     }
 
-    // m5 constants
-    public static final int M5_HEADER_SIZE = 0x7c;
-    public static final int M5_STRING_COUNT_OFFSET = 0x30;
-    public static final int M5_STRING_START_OFFSET = 0x34;
-    // TODO ??? string_objects_size offset = 0x38
-    public static final int M5_TYPE_COUNT_OFFSET = 0x3c;
-    public static final int M5_TYPE_START_OFFSET = 0x40;
-    public static final int M5_FIELD_COUNT_OFFSET = 0x44;
-    public static final int M5_FIELD_START_OFFSET = 0x48;
-    public static final int M5_METHOD_COUNT_OFFSET = 0x4c;
-    public static final int M5_METHOD_START_OFFSET = 0x50;
-    public static final int M5_CLASS_COUNT_OFFSET = 0x54;
-    public static final int M5_CLASS_START_OFFSET = 0x58;
-
-    // m5 dex element sizes
-    public static final int M5_STRING_ID_SIZE = 8;
-    public static final int M5_FIELD_ID_SIZE = 12;
-    public static final int M5_METHOD_ID_SIZE = 12;
-    public static final int M5_CLASS_DEF_SIZE = 36;
-
     // header sizes
     public static final int BASE_HEADER_SIZE = 0x70;
     public static final int DEXCONTAINER_HEADER_SIZE = BASE_HEADER_SIZE + 4 * 2;
     public static final int COMPACT_HEADER_SIZE = BASE_HEADER_SIZE + 4 * 6;
 
-    public static int getHeaderSize(DexVersion version) {
+    public static int headerSize(DexVersion version) {
         return switch (version) {
             case DEX013 -> M5_HEADER_SIZE;
             case CDEX001 -> COMPACT_HEADER_SIZE;
@@ -96,4 +76,28 @@ public final class DexOffsets {
     public static final int DEBUG_INFO_OFFSETS_POS_OFFSET = 116;
     public static final int DEBUG_INFO_OFFSETS_TABLE_OFFSET = 120;
     public static final int DEBUG_INFO_BASE_OFFSET = 124;
+
+    // m5 constants
+    public static final int M5_HEADER_SIZE = 0x7c;
+    public static final int M5_STRING_COUNT_OFFSET = 0x30;
+    public static final int M5_STRING_START_OFFSET = 0x34;
+    // TODO ??? string_objects_size offset = 0x38
+    public static final int M5_TYPE_COUNT_OFFSET = 0x3c;
+    public static final int M5_TYPE_START_OFFSET = 0x40;
+    public static final int M5_FIELD_COUNT_OFFSET = 0x44;
+    public static final int M5_FIELD_START_OFFSET = 0x48;
+    public static final int M5_METHOD_COUNT_OFFSET = 0x4c;
+    public static final int M5_METHOD_START_OFFSET = 0x50;
+    public static final int M5_CLASS_COUNT_OFFSET = 0x54;
+    public static final int M5_CLASS_START_OFFSET = 0x58;
+
+    // m5 dex element sizes
+    public static final int M5_STRING_ID_SIZE = 8;
+    public static final int M5_FIELD_ID_SIZE = 12;
+    public static final int M5_METHOD_ID_SIZE = 12;
+    public static final int M5_CLASS_DEF_SIZE = 36;
+
+    // m5 dex element alignments
+    public static final int M5_STATIC_FIELD_DEF_ALIGNMENT = 8;
+    public static final int M5_INSTANCE_FIELD_DEF_ALIGNMENT = 4;
 }

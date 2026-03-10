@@ -62,7 +62,7 @@ import static com.v7878.dex.DexOffsets.TRY_ITEM_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_LIST_ALIGNMENT;
-import static com.v7878.dex.DexOffsets.getHeaderSize;
+import static com.v7878.dex.DexOffsets.headerSize;
 import static com.v7878.dex.DexVersion.DEX009;
 import static com.v7878.dex.DexVersion.DEX013;
 import static com.v7878.dex.raw.CompactDexConstants.kDebugElementsPerIndex;
@@ -499,7 +499,7 @@ public class DexWriter {
     private void initMap() {
         int offset = map.header_off;
 
-        map.header_size = getHeaderSize(version());
+        map.header_size = headerSize(version());
         offset += map.header_size;
 
         map.string_ids_off = offset;

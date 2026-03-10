@@ -2,17 +2,23 @@ package com.v7878.dex.raw.legacy;
 
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
+import static com.v7878.dex.DexOffsets.M5_INSTANCE_FIELD_DEF_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.M5_STATIC_FIELD_DEF_ALIGNMENT;
 import static com.v7878.dex.util.Ids.CLASS;
 import static com.v7878.dex.util.Ids.STRING;
+import static com.v7878.dex.util.Ids.THROWABLE;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
+import com.v7878.collections.IntMap;
 import com.v7878.dex.immutable.ClassDef;
+import com.v7878.dex.immutable.ExceptionHandler;
 import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.MethodId;
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
+import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.value.EncodedBoolean;
@@ -35,6 +41,8 @@ import com.v7878.dex.util.MemberUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 
 public class Dex013 {
     public static String readString(DexReader reader, int index, int offset) {
@@ -64,15 +72,15 @@ public class Dex013 {
         var in = reader.dataAt(offset);
         int count = in.readSmallUInt();
         var list = new ArrayList<FieldDef>(count);
-        // TODO
-        in.alignPosition(_static ? 8 : 4);
+        in.alignPosition(_static ? M5_STATIC_FIELD_DEF_ALIGNMENT : M5_INSTANCE_FIELD_DEF_ALIGNMENT);
         for (int i = 0; i < count; i++) {
-            var id = reader.getField(in.readSmallUInt());
+            var fid = reader.getField(in.readSmallUInt());
             int access_flags = in.readInt();
+
             EncodedValue value = null;
             if (_static) {
                 var lvalue = in.readLong();
-                var type = id.getType();
+                var type = fid.getType();
                 var shorty = type.getShorty();
                 value = switch (shorty) {
                     case 'Z' -> EncodedBoolean.of(lvalue != 0);
@@ -93,32 +101,57 @@ public class Dex013 {
                         if (CLASS.equals(type)) {
                             yield EncodedType.of(reader.getType((int) lvalue));
                         }
-                        // TODO: msg
-                        throw new IllegalArgumentException();
+                        throw new IllegalStateException(String.format(
+                                "Unsupported field type %s with non-null value 0x%016X", type, lvalue));
                     }
                     default -> throw invalidShorty(shorty);
                 };
             }
-            list.add(FieldDef.of(id.getName(), id.getType(), access_flags,
+
+            list.add(FieldDef.of(fid.getName(), fid.getType(), access_flags,
                     0, value, null));
         }
         return list;
     }
 
-    //private List<TryBlock> readTryList(DexReader reader, int offset) {
-    //    var in = reader.dataAt(offset);
-    //
-    //    record Entry(int end, List<ExceptionHandler> handlers) {
-    //    }
-    //    var blocks = new IntMap<Entry>();
-    //    var size = in.readSmallUInt();
-    //    for (int i = 0; i < size; i++) {
-    //        int start = in.readSmallUInt();
-    //        int end = in.readSmallUInt();
-    //        int handler = in.readSmallUInt();
-    //        int exception = in.readSmallUInt();
-    //    }
-    //}
+    private static NavigableSet<TryBlock> readTries(DexReader reader, int offset) {
+        record Entry(int end, List<ExceptionHandler> handlers) {
+        }
+
+        var in = reader.dataAt(offset);
+
+        var blocks = new IntMap<Entry>();
+        var size = in.readSmallUInt();
+        for (int i = 0; i < size; i++) {
+            int start = in.readSmallUInt();
+            int end = in.readSmallUInt();
+            int handler = in.readSmallUInt();
+            int exception_idx = in.readSmallUIntWithM1();
+
+            var entry = blocks.get(start);
+            if (entry == null) {
+                entry = new Entry(end, new ArrayList<>());
+                blocks.append(start, entry);
+            }
+            if (end != entry.end()) {
+                throw new IllegalStateException(String.format(
+                        "Out of order try block (%s, %s)", start, end));
+            }
+            var exception = exception_idx == NO_INDEX ?
+                    THROWABLE : reader.getType(exception_idx);
+            entry.handlers().add(ExceptionHandler.of(exception, handler));
+        }
+        int count = blocks.size();
+        var tries = new TreeSet<TryBlock>();
+        for (int i = 0; i < count; i++) {
+            var start = blocks.keyAt(i);
+            var entry = blocks.valueAt(i);
+            var units = entry.end() - start;
+            var handlers = Collections.unmodifiableList(entry.handlers());
+            tries.add(TryBlock.raw(start, units, null, handlers));
+        }
+        return Collections.unmodifiableNavigableSet(tries);
+    }
 
     private static List<Instruction> readInstructions(DexReader reader, int offset) {
         var in = reader.dataAt(offset);
@@ -134,44 +167,45 @@ public class Dex013 {
         var outs_size = in.readUShort();
         in.readUShort(); // unused
 
-        // TODO
-        var source_file_idx = in.readSmallUInt();
+        /* TODO var source_file_idx = */
+        in.readSmallUInt();
         var insns_off = in.readSmallUInt();
         var exceptions_off = in.readSmallUInt();
-        var debug_info_off = in.readSmallUInt();
+        /* TODO var debug_info_off = */
+        in.readSmallUInt();
 
         var instructions = readInstructions(reader, insns_off);
+        NavigableSet<TryBlock> tries = exceptions_off == NO_OFFSET ?
+                Collections.emptyNavigableSet() : readTries(reader, exceptions_off);
 
-        //DebugInfo debug_info;
-        //if (reader.options().hasDebugInfo() && debug_info_off != NO_OFFSET) {
-        //    debug_info = reader.getDebugInfo(debug_info_off);
-        //} else {
-        //    debug_info = null;
-        //}
+        // TODO
+        // DebugInfo debug_info;
+        // if (reader.options().hasDebugInfo() && debug_info_off != NO_OFFSET) {
+        //     debug_info = reader.getDebugInfo(debug_info_off);
+        // } else {
+        //     debug_info = null;
+        // }
 
         return new CodeItem(registers_size, ins_size,
-                outs_size, null,
-                // TODO
-                instructions,
-                // TODO
-                Collections.emptyNavigableSet());
+                outs_size, null, instructions, tries);
     }
 
-    private static List<MethodDef> readMethodDefList(DexReader reader, int offset, boolean direct) {
+    private static List<MethodDef> readMethodDefList(
+            DexReader reader, int offset, @SuppressWarnings("unused") boolean direct) {
         var in = reader.dataAt(offset);
         int count = in.readSmallUInt();
         var list = new ArrayList<MethodDef>(count);
         for (int i = 0; i < count; i++) {
-            var id = reader.getMethod(in.readSmallUInt());
+            var mid = reader.getMethod(in.readSmallUInt());
             int access_flags = in.readInt();
-            // TODO
-            int throws_list_off = in.readInt();
+            /* TODO int throws_list_off = */
+            in.readInt();
             int code_off = in.readInt();
-            var code = code_off == NO_OFFSET ?
-                    null : reader.getCodeItem(code_off);
-            var debug_info = code != null ? code.debug_info() : null;
-            list.add(MethodDef.of(id.getName(), id.getReturnType(),
-                    Parameter.listOf(id.getParameterTypes()), access_flags, 0,
+
+            var code = code_off == NO_OFFSET ? null : readCodeItem(reader, code_off);
+            var debug_info = code == null ? null : code.debug_info();
+            list.add(MethodDef.of(mid.getName(), mid.getReturnType(),
+                    Parameter.listOf(mid.getParameterTypes()), access_flags, 0,
                     DexReader.toImplementation(code, debug_info), null));
         }
         return list;
@@ -195,7 +229,8 @@ public class Dex013 {
         //  are actually written to the dex file, they're simply not linked to their class.
         //  We can fix the dx utility from the SDK and try to restore the structure,
         //  but it's never been correct. Is this necessary?
-        int annotations_off = in.readSmallUInt();
+        /*  int annotations_off = */
+        in.readSmallUInt();
 
         TypeId clazz = reader.getType(class_idx);
         TypeId superclass = superclass_idx == NO_INDEX ?

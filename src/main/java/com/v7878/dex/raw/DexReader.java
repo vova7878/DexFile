@@ -69,7 +69,7 @@ import static com.v7878.dex.DexOffsets.TRY_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.TYPE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.TYPE_START_OFFSET;
-import static com.v7878.dex.DexOffsets.getHeaderSize;
+import static com.v7878.dex.DexOffsets.headerSize;
 import static com.v7878.dex.DexVersion.DEX009;
 import static com.v7878.dex.DexVersion.DEX013;
 import static com.v7878.dex.raw.CompactDexConstants.kDebugElementsPerIndex;
@@ -222,7 +222,7 @@ public class DexReader implements DexIO.DexReaderCache {
             throw new InvalidDexFile("Unsupported dex version: " + version);
         }
         version.checkApi(options.getTargetApi());
-        if (main_buffer.size() < Math.addExact(header_offset, getHeaderSize(version))) {
+        if (main_buffer.size() < Math.addExact(header_offset, headerSize(version))) {
             throw new NotADexFile("File is too short");
         }
 
@@ -277,9 +277,9 @@ public class DexReader implements DexIO.DexReaderCache {
         annotation_set_cache = makeOffsetCache(this::readAnnotationSet);
         annotation_set_list_cache = makeOffsetCache(this::readAnnotationSetList);
         annotation_directory_cache = makeOffsetCache(this::readAnnotationDirectory);
-        code_cache = makeOffsetCache(this::readCodeItem);
 
         if (version == DEX013) {
+            code_cache = null;
             string_section = makeSection(
                     mainAt(header_offset + M5_STRING_COUNT_OFFSET).readSmallUInt(),
                     mainAt(header_offset + M5_STRING_START_OFFSET).readSmallUInt(),
@@ -307,6 +307,7 @@ public class DexReader implements DexIO.DexReaderCache {
                     M5_CLASS_DEF_SIZE, this::readClassDef
             );
         } else {
+            code_cache = makeOffsetCache(this::readCodeItem);
             string_section = makeSection(
                     mainAt(header_offset + STRING_COUNT_OFFSET).readSmallUInt(),
                     mainAt(header_offset + STRING_START_OFFSET).readSmallUInt(),
@@ -952,9 +953,6 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private CodeItem readCodeItem(int offset) {
-        if (version == DEX013) {
-            return Dex013.readCodeItem(this, offset);
-        }
         var in = dataAt(offset);
 
         DebugInfo debug_info;
