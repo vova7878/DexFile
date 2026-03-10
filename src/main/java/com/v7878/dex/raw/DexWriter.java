@@ -1414,7 +1414,7 @@ public class DexWriter {
                 value.debug_info_offset = NO_OFFSET;
                 data_buffer.writeInt(NO_OFFSET);
             } else {
-                // The correct offset will be writed later
+                // The correct offset will be written later
                 value.debug_info_offset = data_buffer.position();
                 data_buffer.addPosition(4);
             }
