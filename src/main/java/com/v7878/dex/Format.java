@@ -4,6 +4,7 @@ public enum Format {
     Format10t(1),
     Format10x(1),
     Format11n(1),
+    Format11p(1),
     Format11x(1),
     Format12x(1),
     Format20bc(2, true, false),

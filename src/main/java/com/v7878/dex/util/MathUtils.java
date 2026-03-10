@@ -45,4 +45,14 @@ public class MathUtils {
     public static boolean hwidth64(long value, int width) {
         return (value & (-1L >>> width)) == 0;
     }
+
+    public static int extend_sign32(int value, int width) {
+        int shift = 32 - width;
+        return (value << shift) >> shift;
+    }
+
+    public static long extend_sign64(long value, int width) {
+        int shift = 64 - width;
+        return (value << shift) >> shift;
+    }
 }

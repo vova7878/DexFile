@@ -61,13 +61,17 @@ public class InstructionWriter {
             case Format10t -> write_10t(((Instruction10t) instruction), out, op);
             case Format10x -> write_10x(((Instruction10x) instruction), out, op);
             case Format11n -> write_11n(((Instruction11n) instruction), out, op);
+            // TODO?
+            case Format11p -> throw new UnsupportedOperationException("Unimplemented yet!");
             case Format11x -> write_11x(((Instruction11x) instruction), out, op);
             case Format12x -> write_12x(((Instruction12x) instruction), out, op);
             // TODO
-            case Format20bc -> throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format20bc -> //noinspection DuplicateBranchesInSwitch
+                    throw new UnsupportedOperationException("Unimplemented yet!");
             case Format20t -> write_20t_16(((Instruction20t) instruction), out, op);
             // TODO?
-            case Format20t_24 -> throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format20t_24 -> //noinspection DuplicateBranchesInSwitch
+                    throw new UnsupportedOperationException("Unimplemented yet!");
             case Format21c -> write_21c(((Instruction21c) instruction), writer, out, op);
             case Format21ih -> write_21ih(((Instruction21ih) instruction), out, op);
             case Format21lh -> write_21lh(((Instruction21lh) instruction), out, op);
@@ -98,9 +102,9 @@ public class InstructionWriter {
             case SparseSwitchPayload ->
                     write_sparse_switch_payload(((SparseSwitchPayload) instruction), out, op);
             // TODO?
-            case LegacyPackedSwitchPayload ->
+            case LegacyPackedSwitchPayload -> //noinspection DuplicateBranchesInSwitch
                     throw new UnsupportedOperationException("Unimplemented yet!");
-            case LegacySparseSwitchPayload ->
+            case LegacySparseSwitchPayload -> //noinspection DuplicateBranchesInSwitch
                     throw new UnsupportedOperationException("Unimplemented yet!");
             case FormatRaw -> write_raw(((InstructionRaw) instruction), out);
             default -> throw shouldNotReachHere();

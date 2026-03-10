@@ -1,6 +1,7 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
+import static com.v7878.dex.util.MathUtils.extend_sign32;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
@@ -9,6 +10,7 @@ import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.Instruction10t;
 import com.v7878.dex.immutable.bytecode.Instruction10x;
 import com.v7878.dex.immutable.bytecode.Instruction11n;
+import com.v7878.dex.immutable.bytecode.Instruction11p;
 import com.v7878.dex.immutable.bytecode.Instruction11x;
 import com.v7878.dex.immutable.bytecode.Instruction12x;
 import com.v7878.dex.immutable.bytecode.Instruction20t;
@@ -61,6 +63,7 @@ public class InstructionReader {
             case Format10t -> read_10t(opcode, arg);
             case Format10x -> read_10x(opcode, arg);
             case Format11n -> read_11n(opcode, arg);
+            case Format11p -> read_11p(opcode, arg);
             case Format11x -> read_11x(opcode, arg);
             case Format12x -> read_12x(opcode, arg);
             // TODO
@@ -141,11 +144,6 @@ public class InstructionReader {
         }
     }
 
-    private static int extend_sign32(int value, int width) {
-        int shift = 32 - width;
-        return (value << shift) >> shift;
-    }
-
     public static Instruction10x read_10x(Opcode opcode, int _00) {
         check_zero_arg(_00);
         return Instruction10x.of(opcode);
@@ -158,6 +156,10 @@ public class InstructionReader {
     public static Instruction11n read_11n(Opcode opcode, int BA) {
         return Instruction11n.of(opcode, BA & 0xf,
                 extend_sign32(BA >> 4, 4));
+    }
+
+    public static Instruction11p read_11p(Opcode opcode, int BA) {
+        return Instruction11p.of(opcode, BA & 0xf, BA >> 4);
     }
 
     public static Instruction11x read_11x(Opcode opcode, int AA) {

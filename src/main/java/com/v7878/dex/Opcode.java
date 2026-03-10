@@ -9,6 +9,7 @@ import static com.v7878.dex.Format.ArrayPayload;
 import static com.v7878.dex.Format.Format10t;
 import static com.v7878.dex.Format.Format10x;
 import static com.v7878.dex.Format.Format11n;
+import static com.v7878.dex.Format.Format11p;
 import static com.v7878.dex.Format.Format11x;
 import static com.v7878.dex.Format.Format12x;
 import static com.v7878.dex.Format.Format20t;
@@ -88,8 +89,6 @@ public enum Opcode {
     CONST_STRING(common(0x18, 0x18, 0x1a), "const-string", Format21c, STRING, CAN_THROW),
     CONST_STRING_JUMBO(modern(0x1b), "const-string/jumbo", Format31c, STRING, CAN_THROW),
     CONST_CLASS(common(0x19, 0x19, 0x1c), "const-class", Format21c, TYPE, CAN_THROW),
-    CONST_SPECIAL(legacy(0x1a, 0x1a), "const/special", Format11n /* TODO: Format11p */, 0),
-    CONST_WIDE_SPECIAL(legacy(0x1b, 0x1b), "const-wide/special", Format11n /* TODO: Format11p */, 0),
     MONITOR_ENTER(common(0x1c, 0x1c, 0x1d), "monitor-enter", Format11x, CAN_THROW),
     MONITOR_EXIT(common(0x1d, 0x1d, 0x1e), "monitor-exit", Format11x, CAN_THROW),
     CHECK_CAST(common(0x1e, 0x1e, 0x1f), "check-cast", Format21c, TYPE, CAN_THROW),
@@ -97,14 +96,6 @@ public enum Opcode {
     ARRAY_LENGTH(common(0x20, 0x20, 0x21), "array-length", Format12x, CAN_THROW),
     NEW_INSTANCE(common(0x21, 0x21, 0x22), "new-instance", Format21c, TYPE, CAN_THROW),
     NEW_ARRAY(common(0x22, 0x22, 0x23), "new-array", Format22c22cs, TYPE, CAN_THROW),
-    NEW_ARRAY_BOOLEAN(legacy(0x23, 0x23), "new-array-", Format12x, CAN_THROW),
-    NEW_ARRAY_BYTE(legacy(0x24, 0x24), "new-array-", Format12x, CAN_THROW),
-    NEW_ARRAY_CHAR(legacy(0x25, 0x25), "new-array-", Format12x, CAN_THROW),
-    NEW_ARRAY_SHORT(legacy(0x26, 0x26), "new-array-", Format12x, CAN_THROW),
-    NEW_ARRAY_INT(legacy(0x27, 0x27), "new-array-", Format12x, CAN_THROW),
-    NEW_ARRAY_LONG(legacy(0x28, 0x28), "new-array-", Format12x, CAN_THROW),
-    NEW_ARRAY_FLOAT(legacy(0x29, 0x29), "new-array-", Format12x, CAN_THROW),
-    NEW_ARRAY_DOUBLE(legacy(0x2a, 0x2a), "new-array-", Format12x, CAN_THROW),
     // TODO: format 34c for dex009/013
     FILLED_NEW_ARRAY(common(0x2b, 0x2b, 0x24), "filled-new-array", Format35c35mi35ms, TYPE, CAN_THROW),
     FILLED_NEW_ARRAY_RANGE(common(0x2c, 0x2c, 0x25), "filled-new-array/range", Format3rc3rmi3rms, TYPE, CAN_THROW),
@@ -112,12 +103,9 @@ public enum Opcode {
     THROW(common(0x32, 0x33, 0x27), "throw", Format11x, CAN_THROW | ENDS_FLOW),
     GOTO(common(0x33, 0x34, 0x28), "goto", Format10t, TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
     GOTO_16(modern(0x29), "goto/16", Format20t, TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
-    GOTO_24(legacy(52, 53), "goto/24", Format20t_24, TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
     GOTO_32(modern(0x2a), "goto/32", Format30t, TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
     PACKED_SWITCH(modern(0x2b), "packed-switch", Format31t, HAS_PAYLOAD | TYPE_SWITCH),
     SPARSE_SWITCH(modern(0x2c), "sparse-switch", Format31t, HAS_PAYLOAD | TYPE_SWITCH),
-    LEGACY_PACKED_SWITCH(legacy(0x35, 0x36), "packed-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
-    LEGACY_SPARSE_SWITCH(legacy(0x36, 0x37), "sparse-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
 
     CMPL_FLOAT(common(0x2d, 0x2e, 0x2d), "cmpl-float", Format23x, 0),
     CMPG_FLOAT(common(0x2e, 0x2f, 0x2e), "cmpg-float", Format23x, 0),
@@ -322,10 +310,26 @@ public enum Opcode {
     CONST_METHOD_TYPE(firstDex(DEX039, firstApi(0xff, 28)), "const-method-type", Format21c, PROTO, CAN_THROW),
 
     PACKED_SWITCH_PAYLOAD(modern(0x100), "packed-switch-payload", PackedSwitchPayload, 0),
-    LEGACY_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "packed-switch-payload", LegacyPackedSwitchPayload, 0),
     SPARSE_SWITCH_PAYLOAD(modern(0x200), "sparse-switch-payload", SparseSwitchPayload, 0),
-    LEGACY_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "sparse-switch-payload", LegacySparseSwitchPayload, 0),
     ARRAY_PAYLOAD(common(0x300), "array-payload", ArrayPayload, 0),
+
+    // legacy dex009 / dex013 opcodes
+
+    CONST_SPECIAL(legacy(0x1a, 0x1a), "const/special", Format11p, 0),
+    CONST_WIDE_SPECIAL(legacy(0x1b, 0x1b), "const-wide/special", Format11p, 0),
+    NEW_ARRAY_BOOLEAN(legacy(0x23, 0x23), "new-array-boolean", Format12x, CAN_THROW),
+    NEW_ARRAY_BYTE(legacy(0x24, 0x24), "new-array-byte", Format12x, CAN_THROW),
+    NEW_ARRAY_CHAR(legacy(0x25, 0x25), "new-array-char", Format12x, CAN_THROW),
+    NEW_ARRAY_SHORT(legacy(0x26, 0x26), "new-array-short", Format12x, CAN_THROW),
+    NEW_ARRAY_INT(legacy(0x27, 0x27), "new-array-int", Format12x, CAN_THROW),
+    NEW_ARRAY_LONG(legacy(0x28, 0x28), "new-array-long", Format12x, CAN_THROW),
+    NEW_ARRAY_FLOAT(legacy(0x29, 0x29), "new-array-float", Format12x, CAN_THROW),
+    NEW_ARRAY_DOUBLE(legacy(0x2a, 0x2a), "new-array-double", Format12x, CAN_THROW),
+    GOTO_24(legacy(52, 53), "goto/24", Format20t_24, TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
+    LEGACY_PACKED_SWITCH(legacy(0x35, 0x36), "packed-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
+    LEGACY_SPARSE_SWITCH(legacy(0x36, 0x37), "sparse-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
+    LEGACY_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "packed-switch-payload", LegacyPackedSwitchPayload, 0),
+    LEGACY_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "sparse-switch-payload", LegacySparseSwitchPayload, 0),
 
     // odex opcodes
 
@@ -379,7 +383,7 @@ public enum Opcode {
     IGET_CHAR_QUICK(betweenApi(0xf1, 23, 30), "iget-char-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IGET_SHORT_QUICK(betweenApi(0xf2, 23, 30), "iget-short-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
 
-    // experimental lambda opcodes
+    // legacy android 7.x lambda opcodes
 
     //TODO INVOKE_LAMBDA(onlyArt(betweenApi(0xf3, 24, 25)), "invoke-lambda", Format25x, EXPERIMENTAL_LAMBDA),
     //TODO CAPTURE_VARIABLE(onlyArt(betweenApi(0xf5, 24, 25)), "capture-variable", Format21c(string), EXPERIMENTAL_LAMBDA),
@@ -806,7 +810,7 @@ public enum Opcode {
 
             @Override
             public String toString() {
-                return "<" + first + " | " + second + ">";
+                return first + " | " + second;
             }
         };
     }

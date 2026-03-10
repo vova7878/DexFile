@@ -192,6 +192,14 @@ public class Preconditions {
         return register;
     }
 
+    public static int checkNibbleIndex(int index) {
+        if ((index & 0xFFFFFFF0) != 0) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid index value: %d. Must be between 0 and 15, inclusive", index));
+        }
+        return index;
+    }
+
     public static int checkNibbleLiteral(int literal) {
         if (literal < -8 || literal > 7) {
             throw new IllegalArgumentException(
