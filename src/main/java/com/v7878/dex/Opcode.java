@@ -175,19 +175,19 @@ public enum Opcode {
     SPUT_SHORT(common(0x6c, 0x6d, 0x6d), "sput-short", Format21c, FIELD, CAN_THROW),
 
     // TODO: format 34c for dex009/013
-    INVOKE_VIRTUAL(common(0x6d, 0x6e), "invoke-virtual", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE),
-    INVOKE_SUPER(common(0x6e, 0x6f), "invoke-super", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE),
-    INVOKE_DIRECT(common(0x6f, 0x70), "invoke-direct", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
-    INVOKE_STATIC(common(0x70, 0x71), "invoke-static", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE),
-    INVOKE_INTERFACE(common(0x71, 0x72), "invoke-interface", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_VIRTUAL(common(0x6d, 0x6e, 0x6e), "invoke-virtual", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_SUPER(common(0x6e, 0x6f, 0x6f), "invoke-super", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_DIRECT(common(0x6f, 0x70, 0x70), "invoke-direct", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    INVOKE_STATIC(common(0x70, 0x71, 0x71), "invoke-static", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_INTERFACE(common(0x71, 0x72, 0x72), "invoke-interface", Format35c35mi35ms, METHOD, CAN_THROW | TYPE_INVOKE),
 
     // 73 unused
 
-    INVOKE_VIRTUAL_RANGE(common(0x72, 0x74), "invoke-virtual/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE),
-    INVOKE_SUPER_RANGE(common(0x73, 0x75), "invoke-super/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE),
-    INVOKE_DIRECT_RANGE(common(0x74, 0x76), "invoke-direct/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
-    INVOKE_STATIC_RANGE(common(0x75, 0x77), "invoke-static/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE),
-    INVOKE_INTERFACE_RANGE(common(0x76, 0x78), "invoke-interface/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_VIRTUAL_RANGE(common(0x72, 0x74, 0x74), "invoke-virtual/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_SUPER_RANGE(common(0x73, 0x75, 0x75), "invoke-super/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_DIRECT_RANGE(common(0x74, 0x76, 0x76), "invoke-direct/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    INVOKE_STATIC_RANGE(common(0x75, 0x77, 0x77), "invoke-static/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_INTERFACE_RANGE(common(0x76, 0x78, 0x78), "invoke-interface/range", Format3rc3rmi3rms, METHOD, CAN_THROW | TYPE_INVOKE),
 
     // 79 - 7a unused
 
@@ -333,23 +333,23 @@ public enum Opcode {
 
     // odex opcodes
 
-    EXECUTE_INLINE(dalvikOnly(0xee), "execute-inline", Format35c35mi35ms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    EXECUTE_INLINE(dalvikOnly(common(0xee)), "execute-inline", Format35c35mi35ms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
     EXECUTE_INLINE_RANGE(dalvikOnly(firstApi(0xef, 8)), "execute-inline/range", Format3rc3rmi3rms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
-    INVOKE_DIRECT_EMPTY(dalvikOnly(lastApi(0xf0, 13)), "invoke-direct-empty", Format35c35mi35ms, METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    INVOKE_DIRECT_EMPTY(dalvikOnly(lastApi(common(0xf0), 13)), "invoke-direct-empty", Format35c35mi35ms, METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
     INVOKE_OBJECT_INIT_RANGE(dalvikOnly(firstApi(0xf0, 14)), "invoke-object-init/range", Format3rc3rmi3rms, METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
 
-    IGET_QUICK(dalvikOrArt(value(0xf2), lastApi(0xe3, 30)), "iget-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
-    IGET_WIDE_QUICK(dalvikOrArt(value(0xf3), lastApi(0xe4, 30)), "iget-wide-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
-    IGET_OBJECT_QUICK(dalvikOrArt(value(0xf4), lastApi(0xe5, 30)), "iget-object-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
-    IPUT_QUICK(dalvikOrArt(value(0xf5), lastApi(0xe6, 30)), "iput-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
-    IPUT_WIDE_QUICK(dalvikOrArt(value(0xf6), lastApi(0xe7, 30)), "iput-wide-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
-    IPUT_OBJECT_QUICK(dalvikOrArt(value(0xf7), lastApi(0xe8, 30)), "iput-object-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
+    IGET_QUICK(dalvikOrArt(common(0xf2), lastApi(0xe3, 30)), "iget-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
+    IGET_WIDE_QUICK(dalvikOrArt(common(0xf3), lastApi(0xe4, 30)), "iget-wide-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
+    IGET_OBJECT_QUICK(dalvikOrArt(common(0xf4), lastApi(0xe5, 30)), "iget-object-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
+    IPUT_QUICK(dalvikOrArt(common(0xf5), lastApi(0xe6, 30)), "iput-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
+    IPUT_WIDE_QUICK(dalvikOrArt(common(0xf6), lastApi(0xe7, 30)), "iput-wide-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
+    IPUT_OBJECT_QUICK(dalvikOrArt(common(0xf7), lastApi(0xe8, 30)), "iput-object-quick", Format22c22cs, RAW_INDEX, ODEX_ONLY | CAN_THROW),
 
-    INVOKE_VIRTUAL_QUICK(dalvikOrArt(value(0xf8), lastApi(0xe9, 30)), "invoke-virtual-quick", Format35c35mi35ms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
-    INVOKE_VIRTUAL_QUICK_RANGE(dalvikOrArt(value(0xf9), lastApi(0xea, 30)), "invoke-virtual-quick/range", Format3rc3rmi3rms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
-    INVOKE_SUPER_QUICK(dalvikOnly(0xfa), "invoke-super-quick", Format35c35mi35ms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
-    INVOKE_SUPER_QUICK_RANGE(dalvikOnly(0xfb), "invoke-super-quick/range", Format3rc3rmi3rms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    INVOKE_VIRTUAL_QUICK(dalvikOrArt(common(0xf8), lastApi(0xe9, 30)), "invoke-virtual-quick", Format35c35mi35ms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    INVOKE_VIRTUAL_QUICK_RANGE(dalvikOrArt(common(0xf9), lastApi(0xea, 30)), "invoke-virtual-quick/range", Format3rc3rmi3rms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    INVOKE_SUPER_QUICK(dalvikOnly(common(0xfa)), "invoke-super-quick", Format35c35mi35ms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    INVOKE_SUPER_QUICK_RANGE(dalvikOnly(common(0xfb)), "invoke-super-quick/range", Format3rc3rmi3rms, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
     //TODO THROW_VERIFICATION_ERROR(onlyDalvik(firstApi(0xed, 5)), "throw-verification-error", Format20bc, ODEX_ONLY | CAN_THROW | END_FLOW),
 
@@ -448,8 +448,7 @@ public enum Opcode {
 
     Opcode(Constraint constraint, String name, Format format, ReferenceType reference1, ReferenceType reference2, int flags) {
         this.flags = flags;
-        // TODO: Find odex instructions for dex013 and dex009
-        this.constraint = odexOnly() ? firstApi(onlyOdex(constraint), 1) : constraint;
+        this.constraint = odexOnly() ? onlyOdex(constraint) : constraint;
         this.name = name;
         this.format = format;
         this.reference1 = reference1;
@@ -566,10 +565,6 @@ public enum Opcode {
 
     private static Constraint common(int common) {
         return value(common);
-    }
-
-    private static Constraint common(int dex009, int common) {
-        return common(dex009, common, common);
     }
 
     private static Constraint common(int dex009, int dex013, int dex035) {
@@ -785,10 +780,6 @@ public enum Opcode {
                 return "dalvik -> {" + constraint + "}";
             }
         };
-    }
-
-    private static Constraint dalvikOnly(int opcodeValue) {
-        return dalvikOnly(value(opcodeValue));
     }
 
     private static Constraint dalvikOrArt(Constraint dalvik, Constraint art) {

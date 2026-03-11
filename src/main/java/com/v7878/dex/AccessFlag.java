@@ -10,6 +10,7 @@ import static com.v7878.dex.DexConstants.ACC_FINAL;
 import static com.v7878.dex.DexConstants.ACC_INTERFACE;
 import static com.v7878.dex.DexConstants.ACC_MANDATED;
 import static com.v7878.dex.DexConstants.ACC_NATIVE;
+import static com.v7878.dex.DexConstants.ACC_OPTIMIZED;
 import static com.v7878.dex.DexConstants.ACC_PRIVATE;
 import static com.v7878.dex.DexConstants.ACC_PROTECTED;
 import static com.v7878.dex.DexConstants.ACC_PUBLIC;
@@ -20,6 +21,7 @@ import static com.v7878.dex.DexConstants.ACC_SYNCHRONIZED;
 import static com.v7878.dex.DexConstants.ACC_SYNTHETIC;
 import static com.v7878.dex.DexConstants.ACC_TRANSIENT;
 import static com.v7878.dex.DexConstants.ACC_VARARGS;
+import static com.v7878.dex.DexConstants.ACC_VERIFIED;
 import static com.v7878.dex.DexConstants.ACC_VOLATILE;
 
 import java.util.Arrays;
@@ -49,7 +51,9 @@ public enum AccessFlag {
     // Used only in the dalvik.annotation.MethodParameters annotation
     MANDATED(ACC_MANDATED, "mandated", false, false, false, true, false),
     CONSTRUCTOR(ACC_CONSTRUCTOR, "constructor", false, false, true, false, false),
-    DECLARED_SYNCHRONIZED(ACC_DECLARED_SYNCHRONIZED, "declared-synchronized", false, false, true, false, false);
+    DECLARED_SYNCHRONIZED(ACC_DECLARED_SYNCHRONIZED, "declared-synchronized", false, false, true, false, false),
+    VERIFIED(ACC_VERIFIED, "verified", true, false, false, false, false),
+    OPTIMIZED(ACC_OPTIMIZED, "optimized", true, false, false, false, false);
 
     private final int value;
     private final boolean validForClass;
