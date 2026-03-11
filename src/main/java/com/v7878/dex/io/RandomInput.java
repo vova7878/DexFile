@@ -130,6 +130,10 @@ public interface RandomInput extends RandomAccess {
         return MUTF8.readMUTF8(this);
     }
 
+    default String readMUTF8(int expected_length) {
+        return MUTF8.readMUTF8(this, expected_length);
+    }
+
     default void writeTo(RandomOutput out, long length) {
         for (int i = 0; i < length; i++) {
             out.writeByte(readByte());

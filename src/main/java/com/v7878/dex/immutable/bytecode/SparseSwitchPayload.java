@@ -1,9 +1,8 @@
 package com.v7878.dex.immutable.bytecode;
 
-import static com.v7878.dex.Opcode.SPARSE_SWITCH_PAYLOAD;
-
 import com.v7878.dex.Format;
 import com.v7878.dex.Internal;
+import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
@@ -15,18 +14,19 @@ import java.util.stream.Collectors;
 public final class SparseSwitchPayload extends Instruction implements SwitchPayloadInstruction {
     private final NavigableSet<SwitchElement> elements;
 
-    private SparseSwitchPayload(NavigableSet<SwitchElement> elements) {
-        super(Preconditions.checkFormat(SPARSE_SWITCH_PAYLOAD, Format.SparseSwitchPayload));
+    private SparseSwitchPayload(Opcode opcode, NavigableSet<SwitchElement> elements) {
+        super(Preconditions.checkFormat(opcode,
+                Format.SparseSwitchPayload, Format.LegacySparseSwitchPayload));
         this.elements = Objects.requireNonNull(elements);
     }
 
     @Internal
-    public static SparseSwitchPayload raw(NavigableSet<SwitchElement> elements) {
-        return new SparseSwitchPayload(elements);
+    public static SparseSwitchPayload raw(Opcode opcode, NavigableSet<SwitchElement> elements) {
+        return new SparseSwitchPayload(opcode, elements);
     }
 
-    public static SparseSwitchPayload of(Iterable<SwitchElement> elements) {
-        return new SparseSwitchPayload(Converter.toNavigableSet(elements));
+    public static SparseSwitchPayload of(Opcode opcode, Iterable<SwitchElement> elements) {
+        return new SparseSwitchPayload(opcode, Converter.toNavigableSet(elements));
     }
 
     @Override
@@ -36,6 +36,9 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
 
     @Override
     public int getUnitCount() {
+        if (getOpcode().format() == Format.LegacySparseSwitchPayload) {
+            return Preconditions.getLegacySparseSwitchPayloadUnitCount(getSwitchElements().size());
+        }
         return Preconditions.getSparseSwitchPayloadUnitCount(getSwitchElements().size());
     }
 

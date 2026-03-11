@@ -13,7 +13,7 @@ class Leb128 {
             count++;
         } while (((cur & 0x80) == 0x80) && count < 5);
         if ((cur & 0x80) == 0x80) {
-            throw new IllegalStateException("invalid LEB128 sequence");
+            throw new IllegalStateException("Invalid LEB128 sequence");
         }
         // Sign extend if appropriate
         if (((signBits >> 1) & result) != 0) {
@@ -32,7 +32,7 @@ class Leb128 {
             count++;
         } while (((cur & 0x80) == 0x80) && count < 5);
         if ((cur & 0x80) == 0x80) {
-            throw new IllegalStateException("invalid LEB128 sequence");
+            throw new IllegalStateException("Invalid LEB128 sequence");
         }
         return result;
     }

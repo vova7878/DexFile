@@ -20,6 +20,14 @@ public class Preconditions {
         return element_count * 4 + 2;
     }
 
+    public static int getLegacyPackedSwitchPayloadUnitCount(int element_count) {
+        return element_count + 4;
+    }
+
+    public static int getLegacySparseSwitchPayloadUnitCount(int element_count) {
+        return element_count * 3 + 2;
+    }
+
     public static int getArrayPayloadUnitCount(int element_width, int element_count) {
         return (element_count * element_width + 1) / 2 + 4;
     }
@@ -109,10 +117,18 @@ public class Preconditions {
         return registerCount;
     }
 
-    public static Opcode checkFormat(Opcode opcode, Format expectedFormat) {
-        if (opcode.format() != expectedFormat) {
+    public static Opcode checkFormat(Opcode opcode, Format expected) {
+        if (opcode.format() != expected) {
             throw new IllegalArgumentException(
-                    String.format("Invalid opcode %s for %s", opcode, expectedFormat));
+                    String.format("Invalid opcode %s for %s", opcode, expected));
+        }
+        return opcode;
+    }
+
+    public static Opcode checkFormat(Opcode opcode, Format expected, Format expected2) {
+        if (opcode.format() != expected && opcode.format() != expected2) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid opcode %s for %s", opcode, expected));
         }
         return opcode;
     }
@@ -176,6 +192,14 @@ public class Preconditions {
         return register;
     }
 
+    public static int checkNibbleIndex(int index) {
+        if ((index & 0xFFFFFFF0) != 0) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid index value: %d. Must be between 0 and 15, inclusive", index));
+        }
+        return index;
+    }
+
     public static int checkNibbleLiteral(int literal) {
         if (literal < -8 || literal > 7) {
             throw new IllegalArgumentException(
@@ -228,6 +252,14 @@ public class Preconditions {
         if (offset < -32768 || offset > 32767) {
             throw new IllegalArgumentException(
                     String.format("Invalid code offset: %d. Must be between -32768 and 32767, inclusive", offset));
+        }
+        return offset;
+    }
+
+    public static int checkCodeOffset24(int offset) {
+        if (offset < -8388608 || offset > 8388607) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid code offset: %d. Must be between -8388608 and 8388607, inclusive", offset));
         }
         return offset;
     }

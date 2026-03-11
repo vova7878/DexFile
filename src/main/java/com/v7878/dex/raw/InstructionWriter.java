@@ -2,6 +2,7 @@ package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexOffsets.PAYLOAD_INSTRUCTION_ALIGNMENT;
 import static com.v7878.dex.Opcode.RAW;
+import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.MathUtils.hwidth32;
 import static com.v7878.dex.util.MathUtils.hwidth64;
 import static com.v7878.dex.util.MathUtils.swidth;
@@ -60,11 +61,17 @@ public class InstructionWriter {
             case Format10t -> write_10t(((Instruction10t) instruction), out, op);
             case Format10x -> write_10x(((Instruction10x) instruction), out, op);
             case Format11n -> write_11n(((Instruction11n) instruction), out, op);
+            // TODO?
+            case Format11p -> throw new UnsupportedOperationException("Unimplemented yet!");
             case Format11x -> write_11x(((Instruction11x) instruction), out, op);
             case Format12x -> write_12x(((Instruction12x) instruction), out, op);
             // TODO
-            case Format20bc -> throw new UnsupportedOperationException("Unimplemented yet!");
-            case Format20t -> write_20t(((Instruction20t) instruction), out, op);
+            case Format20bc -> //noinspection DuplicateBranchesInSwitch
+                    throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format20t -> write_20t_16(((Instruction20t) instruction), out, op);
+            // TODO?
+            case Format20t_24 -> //noinspection DuplicateBranchesInSwitch
+                    throw new UnsupportedOperationException("Unimplemented yet!");
             case Format21c -> write_21c(((Instruction21c) instruction), writer, out, op);
             case Format21ih -> write_21ih(((Instruction21ih) instruction), out, op);
             case Format21lh -> write_21lh(((Instruction21lh) instruction), out, op);
@@ -94,7 +101,13 @@ public class InstructionWriter {
                     write_packed_switch_payload(((PackedSwitchPayload) instruction), out, op);
             case SparseSwitchPayload ->
                     write_sparse_switch_payload(((SparseSwitchPayload) instruction), out, op);
+            // TODO?
+            case LegacyPackedSwitchPayload -> //noinspection DuplicateBranchesInSwitch
+                    throw new UnsupportedOperationException("Unimplemented yet!");
+            case LegacySparseSwitchPayload -> //noinspection DuplicateBranchesInSwitch
+                    throw new UnsupportedOperationException("Unimplemented yet!");
             case FormatRaw -> write_raw(((InstructionRaw) instruction), out);
+            default -> throw shouldNotReachHere();
         }
     }
 
@@ -210,14 +223,14 @@ public class InstructionWriter {
         write_10t(out, opcode, value.getBranchOffset());
     }
 
-    public static void write_20t(RandomOutput out, int opcode, int sAAAA) {
+    public static void write_20t_16(RandomOutput out, int opcode, int sAAAA) {
         sAAAA = signed(sAAAA, 16);
         write_base(out, opcode, 0);
         out.writeShort(sAAAA);
     }
 
-    public static void write_20t(Instruction20t value, RandomOutput out, int opcode) {
-        write_20t(out, opcode, value.getBranchOffset());
+    public static void write_20t_16(Instruction20t value, RandomOutput out, int opcode) {
+        write_20t_16(out, opcode, value.getBranchOffset());
     }
 
     public static void write_22x_21c(RandomOutput out, int opcode, int AA, int BBBB) {

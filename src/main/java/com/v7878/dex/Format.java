@@ -4,10 +4,12 @@ public enum Format {
     Format10t(1),
     Format10x(1),
     Format11n(1),
+    Format11p(1),
     Format11x(1),
     Format12x(1),
     Format20bc(2, true, false),
     Format20t(2),
+    Format20t_24(2),
     Format21c(2, true, false),
     Format21ih(2),
     Format21lh(2),
@@ -32,6 +34,8 @@ public enum Format {
     ArrayPayload(),
     PackedSwitchPayload(),
     SparseSwitchPayload(),
+    LegacyPackedSwitchPayload(),
+    LegacySparseSwitchPayload(),
     // special format
     FormatRaw(1);
 

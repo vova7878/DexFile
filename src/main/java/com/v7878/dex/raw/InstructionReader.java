@@ -1,6 +1,7 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
+import static com.v7878.dex.util.MathUtils.extend_sign32;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
@@ -9,9 +10,11 @@ import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.Instruction10t;
 import com.v7878.dex.immutable.bytecode.Instruction10x;
 import com.v7878.dex.immutable.bytecode.Instruction11n;
+import com.v7878.dex.immutable.bytecode.Instruction11p;
 import com.v7878.dex.immutable.bytecode.Instruction11x;
 import com.v7878.dex.immutable.bytecode.Instruction12x;
 import com.v7878.dex.immutable.bytecode.Instruction20t;
+import com.v7878.dex.immutable.bytecode.Instruction20t_24;
 import com.v7878.dex.immutable.bytecode.Instruction21c;
 import com.v7878.dex.immutable.bytecode.Instruction21ih;
 import com.v7878.dex.immutable.bytecode.Instruction21lh;
@@ -60,11 +63,13 @@ public class InstructionReader {
             case Format10t -> read_10t(opcode, arg);
             case Format10x -> read_10x(opcode, arg);
             case Format11n -> read_11n(opcode, arg);
+            case Format11p -> read_11p(opcode, arg);
             case Format11x -> read_11x(opcode, arg);
             case Format12x -> read_12x(opcode, arg);
             // TODO
             case Format20bc -> throw new UnsupportedOperationException("Unimplemented yet!");
-            case Format20t -> read_20t(opcode, in, arg);
+            case Format20t -> read_20t_16(opcode, in, arg);
+            case Format20t_24 -> read_20t_24(opcode, in, arg);
             case Format21c -> read_21c(opcode, in, reader, arg);
             case Format21ih -> read_21ih(opcode, in, arg);
             case Format21lh -> read_21lh(opcode, in, arg);
@@ -89,6 +94,8 @@ public class InstructionReader {
             case ArrayPayload -> read_array_payload(opcode, in, arg);
             case PackedSwitchPayload -> read_packed_switch_payload(opcode, in, arg);
             case SparseSwitchPayload -> read_sparse_switch_payload(opcode, in, arg);
+            case LegacyPackedSwitchPayload -> read_legacy_packed_switch_payload(opcode, in, arg);
+            case LegacySparseSwitchPayload -> read_legacy_sparse_switch_payload(opcode, in, arg);
             case FormatRaw -> throw shouldNotReachHere();
         };
     }
@@ -109,7 +116,9 @@ public class InstructionReader {
         }
 
         if (readed != insns_bytes) {
-            throw new IllegalStateException("Read more code units than expected");
+            throw new IllegalStateException(
+                    String.format("Read more code units (%s) than expected (%s)", readed, insns_bytes)
+            );
         }
 
         insns.trimToSize();
@@ -135,11 +144,6 @@ public class InstructionReader {
         }
     }
 
-    private static int extend_sign32(int value, int width) {
-        int shift = 32 - width;
-        return (value << shift) >> shift;
-    }
-
     public static Instruction10x read_10x(Opcode opcode, int _00) {
         check_zero_arg(_00);
         return Instruction10x.of(opcode);
@@ -154,6 +158,10 @@ public class InstructionReader {
                 extend_sign32(BA >> 4, 4));
     }
 
+    public static Instruction11p read_11p(Opcode opcode, int BA) {
+        return Instruction11p.of(opcode, BA & 0xf, BA >> 4);
+    }
+
     public static Instruction11x read_11x(Opcode opcode, int AA) {
         return Instruction11x.of(opcode, AA);
     }
@@ -162,10 +170,16 @@ public class InstructionReader {
         return Instruction10t.of(opcode, extend_sign32(AA, 8));
     }
 
-    public static Instruction20t read_20t(Opcode opcode, RandomInput in, int _00) {
+    public static Instruction20t read_20t_16(Opcode opcode, RandomInput in, int _00) {
         check_zero_arg(_00);
         int AAAA = in.readUShort();
         return Instruction20t.of(opcode, extend_sign32(AAAA, 16));
+    }
+
+    public static Instruction20t_24 read_20t_24(Opcode opcode, RandomInput in, int AAh) {
+        int AAAAl = in.readUShort();
+        int AAAAAA = AAAAl | (AAh << 16);
+        return Instruction20t_24.of(opcode, extend_sign32(AAAAAA, 24));
     }
 
     public static Instruction22x read_22x(Opcode opcode, RandomInput in, int AA) {
@@ -330,7 +344,7 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(first_key + i, targets[i]));
         }
-        return PackedSwitchPayload.of(elements);
+        return PackedSwitchPayload.of(opcode, elements);
     }
 
     public static SparseSwitchPayload read_sparse_switch_payload(
@@ -343,7 +357,7 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(keys[i], targets[i]));
         }
-        return SparseSwitchPayload.of(elements);
+        return SparseSwitchPayload.of(opcode, elements);
     }
 
     public static ArrayPayload read_array_payload(
@@ -378,5 +392,31 @@ public class InstructionReader {
         }
         in.alignPosition(2); // code unit
         return ArrayPayload.of(element_width, data);
+    }
+
+    public static PackedSwitchPayload read_legacy_packed_switch_payload(
+            Opcode opcode, RandomInput in, int _00) {
+        check_zero_arg(_00);
+        int size = in.readUShort();
+        int first_key = in.readInt();
+        short[] targets = in.readShortArray(size);
+        var elements = new ArrayList<SwitchElement>(targets.length);
+        for (int i = 0; i < targets.length; i++) {
+            elements.add(i, SwitchElement.of(first_key + i, targets[i]));
+        }
+        return PackedSwitchPayload.of(opcode, elements);
+    }
+
+    public static SparseSwitchPayload read_legacy_sparse_switch_payload(
+            Opcode opcode, RandomInput in, int _00) {
+        check_zero_arg(_00);
+        int size = in.readUShort();
+        int[] keys = in.readIntArray(size);
+        short[] targets = in.readShortArray(size);
+        var elements = new ArrayList<SwitchElement>(size);
+        for (int i = 0; i < targets.length; i++) {
+            elements.add(i, SwitchElement.of(keys[i], targets[i]));
+        }
+        return SparseSwitchPayload.of(opcode, elements);
     }
 }

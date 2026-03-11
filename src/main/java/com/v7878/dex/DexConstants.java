@@ -38,7 +38,7 @@ public final class DexConstants {
     public static final int ACC_VISIBILITY_MASK = ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED;
     public static final int ACC_DIRECT_MASK = ACC_PRIVATE | ACC_STATIC | ACC_CONSTRUCTOR;
 
-    // Type Codes
+    // type codes
     public static final int TYPE_HEADER_ITEM = 0x0000;
     public static final int TYPE_STRING_ID_ITEM = 0x0001;
     public static final int TYPE_TYPE_ID_ITEM = 0x0002;
@@ -61,7 +61,7 @@ public final class DexConstants {
     public static final int TYPE_ANNOTATIONS_DIRECTORY_ITEM = 0x2006;
     public static final int TYPE_HIDDENAPI_CLASS_DATA_ITEM = 0xF000;
 
-    // Value formats
+    // value formats
     public static final int VALUE_BYTE = 0x00;
     public static final int VALUE_SHORT = 0x02;
     public static final int VALUE_CHAR = 0x03;
@@ -81,7 +81,7 @@ public final class DexConstants {
     public static final int VALUE_NULL = 0x1e;
     public static final int VALUE_BOOLEAN = 0x1f;
 
-    // Method Handle Type Codes
+    // method handle type codes
     public static final int METHOD_HANDLE_TYPE_STATIC_PUT = 0x00;
     public static final int METHOD_HANDLE_TYPE_STATIC_GET = 0x01;
     public static final int METHOD_HANDLE_TYPE_INSTANCE_PUT = 0x02;
@@ -92,12 +92,12 @@ public final class DexConstants {
     public static final int METHOD_HANDLE_TYPE_INVOKE_DIRECT = 0x07;
     public static final int METHOD_HANDLE_TYPE_INVOKE_INTERFACE = 0x08;
 
-    // Visibility values
+    // visibility values
     public static final int VISIBILITY_BUILD = 0x00;
     public static final int VISIBILITY_RUNTIME = 0x01;
     public static final int VISIBILITY_SYSTEM = 0x02;
 
-    // Restriction flags
+    // restriction flags
     public static final int HIDDENAPI_FLAG_SDK = 0;
     public static final int HIDDENAPI_FLAG_UNSUPPORTED = 1;
     public static final int HIDDENAPI_FLAG_BLOCKED = 2;
@@ -107,7 +107,7 @@ public final class DexConstants {
     public static final int HIDDENAPI_FLAG_MAX_TARGET_R = 6;
     public static final int HIDDENAPI_FLAG_MAX_TARGET_S = 7;
 
-    // Debug byte code values
+    // debug byte code values
     public static final int DBG_END_SEQUENCE = 0x00;
     public static final int DBG_ADVANCE_PC = 0x01;
     public static final int DBG_ADVANCE_LINE = 0x02;
@@ -122,5 +122,21 @@ public final class DexConstants {
     public static final int DBG_LAST_SPECIAL = 0xff;
     public static final int DBG_LINE_BASE = -4;
     public static final int DBG_LINE_RANGE = 15;
-    public static final int DBG_LINE_CEIL = DBG_LINE_BASE + DBG_LINE_RANGE - 1;
+
+    // m5 debug byte code values
+
+    public static final int M5_DBG_END_SEQUENCE = 0x00;
+    public static final int M5_DBG_ADVANCE_PC = 0x01;
+    public static final int M5_DBG_ADVANCE_LINE = 0x02;
+    public static final int M5_DBG_START_LOCAL = 0x03;
+    public static final int M5_DBG_END_LOCAL = 0x04;
+    public static final int M5_DBG_RESTART_LOCAL = 0x05;
+    public static final int M5_DBG_SET_PROLOGUE_END = 0x06;
+    public static final int M5_DBG_SET_EPILOGUE_BEGIN = 0x07;
+    public static final int M5_DBG_START_LOCAL_EXTENDED = 0x08;
+    public static final int M5_DBG_SET_FILE = 0x09;
+    public static final int M5_DBG_FIRST_SPECIAL = 0x0a;
+    public static final int M5_DBG_LAST_SPECIAL = 0xff;
+    public static final int M5_DBG_LINE_BASE = -4;
+    public static final int M5_DBG_LINE_RANGE = 15;
 }
