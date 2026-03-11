@@ -22,6 +22,7 @@ import static com.v7878.dex.util.Ids.CLASS;
 import static com.v7878.dex.util.Ids.STRING;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
+import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.ClassDef;
 import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.FieldId;
@@ -166,8 +167,11 @@ public class Dex013 {
     }
 
     public static List<DebugItem> readDebugItemArray(
-            DexReader reader, RandomInput in, int line_start) {
+            DexReader reader, RandomInput in, String source_file, int line_start) {
         var out = new ArrayList<DebugItem>();
+        if (source_file != null) {
+            out.add(SetFile.of(source_file));
+        }
         int[] address = {0, 0};
         Runnable emit_address = () -> {
             if (address[0] != address[1]) {
@@ -204,8 +208,9 @@ public class Dex013 {
                 int descriptor_idx = in.readULeb128() - 1;
                 String descriptor = descriptor_idx == NO_INDEX ?
                         null : reader.getString(descriptor_idx);
-                //TODO?
-                var type = "<null>".equals(descriptor) ? TypeId.V : TypeId.of(descriptor);
+                // Note: This version had an additional value
+                // for the register type that meant untyped null
+                var type = "<null>".equals(descriptor) ? null : TypeId.of(descriptor);
                 int signature_idx = opcode == DBG_START_LOCAL ?
                         NO_INDEX : in.readULeb128() - 1;
                 String signature = signature_idx == NO_INDEX ?
@@ -256,7 +261,8 @@ public class Dex013 {
         return Collections.unmodifiableList(out);
     }
 
-    public static DebugInfo readDebugInfo(DexReader reader, MethodId mid, int offset) {
+    public static DebugInfo readDebugInfo(DexReader reader, MethodId mid,
+                                          String source_file, int offset) {
         var in = reader.dataAt(offset);
         int line_start = in.readULeb128();
         List<String> parameter_names;
@@ -270,7 +276,7 @@ public class Dex013 {
             }
             parameter_names = Collections.unmodifiableList(parameter_names);
         }
-        var items = readDebugItemArray(reader, in, line_start);
+        var items = readDebugItemArray(reader, in, source_file, line_start);
         return new DebugInfo(parameter_names, items);
     }
 
@@ -282,8 +288,7 @@ public class Dex013 {
         var outs_size = in.readUShort();
         in.readUShort(); // unused
 
-        /* TODO var source_file_idx = */
-        in.readSmallUInt();
+        var source_file_idx = in.readSmallUIntWithM1();
         var insns_off = in.readSmallUInt();
         var exceptions_off = in.readSmallUInt();
         var debug_info_off = in.readSmallUInt();
@@ -294,7 +299,9 @@ public class Dex013 {
 
         DebugInfo debug_info;
         if (reader.options().hasDebugInfo() && debug_info_off != NO_OFFSET) {
-            debug_info = readDebugInfo(reader, mid, debug_info_off);
+            var source_file = source_file_idx == NO_INDEX ?
+                    null : reader.getString(source_file_idx);
+            debug_info = readDebugInfo(reader, mid, source_file, debug_info_off);
         } else {
             debug_info = null;
         }
@@ -311,15 +318,20 @@ public class Dex013 {
         for (int i = 0; i < count; i++) {
             var mid = reader.getMethod(in.readSmallUInt());
             int access_flags = in.readInt();
-            /* TODO int throws_list_off = */
-            in.readInt();
-            int code_off = in.readInt();
+            int throws_list_off = in.readSmallUInt();
+            int code_off = in.readSmallUInt();
+
+            List<Annotation> annotations = null;
+            if (throws_list_off != NO_OFFSET) {
+                var throws_list = reader.getTypeList(throws_list_off);
+                annotations = List.of(Annotation.Throws(throws_list));
+            }
 
             var code = code_off == NO_OFFSET ? null : readCodeItem(reader, mid, code_off);
             var debug_info = code == null ? null : code.debug_info();
             list.add(MethodDef.of(mid.getName(), mid.getReturnType(),
                     Parameter.listOf(mid.getParameterTypes()), access_flags, 0,
-                    DexReader.toImplementation(code, debug_info), null));
+                    DexReader.toImplementation(code, debug_info), annotations));
         }
         return list;
     }

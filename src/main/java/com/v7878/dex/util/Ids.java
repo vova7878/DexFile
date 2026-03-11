@@ -37,4 +37,25 @@ public class Ids {
     public static final FieldId FLOAT_TYPE = FieldId.of(FLOAT_WRAPPER, "TYPE", CLASS);
     public static final FieldId LONG_TYPE = FieldId.of(LONG_WRAPPER, "TYPE", CLASS);
     public static final FieldId DOUBLE_TYPE = FieldId.of(DOUBLE_WRAPPER, "TYPE", CLASS);
+
+    public static final TypeId FAST_NATIVE = TypeId.ofName(
+            "dalvik.annotation.optimization.FastNative");
+    public static final TypeId CRITICAL_NATIVE = TypeId.ofName(
+            "dalvik.annotation.optimization.CriticalNative");
+    public static final TypeId ANNOTATION_DEFAULT = TypeId.ofName(
+            "dalvik.annotation.AnnotationDefault");
+    public static final TypeId ENCLOSING_CLASS = TypeId.ofName(
+            "dalvik.annotation.EnclosingClass");
+    public static final TypeId ENCLOSING_METHOD = TypeId.ofName(
+            "dalvik.annotation.EnclosingMethod");
+    public static final TypeId INNER_CLASS = TypeId.ofName(
+            "dalvik.annotation.InnerClass");
+    public static final TypeId MEMBER_CLASSES = TypeId.ofName(
+            "dalvik.annotation.MemberClasses");
+    public static final TypeId METHOD_PARAMETERS = TypeId.ofName(
+            "dalvik.annotation.MethodParameters");
+    public static final TypeId SIGNATURE = TypeId.ofName(
+            "dalvik.annotation.Signature");
+    public static final TypeId THROWS = TypeId.ofName(
+            "dalvik.annotation.Throws");
 }
