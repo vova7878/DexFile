@@ -31,9 +31,11 @@ public final class DexConstants {
     public static final int ACC_SYNTHETIC = 0x1000;
     public static final int ACC_ANNOTATION = 0x2000;
     public static final int ACC_ENUM = 0x4000;
-    public static final int ACC_MANDATED = 0x8000;
+    public static final int ACC_MANDATED = 0x8000; // parameter
     public static final int ACC_CONSTRUCTOR = 0x10000;
+    public static final int ACC_VERIFIED = 0x10000; // class, odex
     public static final int ACC_DECLARED_SYNCHRONIZED = 0x20000;
+    public static final int ACC_OPTIMIZED = 0x20000; // class, odex
 
     public static final int ACC_VISIBILITY_MASK = ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED;
     public static final int ACC_DIRECT_MASK = ACC_PRIVATE | ACC_STATIC | ACC_CONSTRUCTOR;

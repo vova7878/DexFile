@@ -40,12 +40,12 @@ import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.Instruction12x;
 import com.v7878.dex.immutable.bytecode.Instruction21c;
 import com.v7878.dex.immutable.bytecode.Instruction21t;
-import com.v7878.dex.immutable.bytecode.Instruction22c22cs;
+import com.v7878.dex.immutable.bytecode.Instruction22c;
 import com.v7878.dex.immutable.bytecode.Instruction22t;
 import com.v7878.dex.immutable.bytecode.Instruction23x;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
-import com.v7878.dex.immutable.bytecode.Instruction35c35mi35ms;
-import com.v7878.dex.immutable.bytecode.Instruction3rc3rmi3rms;
+import com.v7878.dex.immutable.bytecode.Instruction35c;
+import com.v7878.dex.immutable.bytecode.Instruction3rc;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.iface.ArrayPayloadInstruction;
@@ -418,7 +418,7 @@ public final class AnalyzedMethod {
                 current.output(ireg);
             }
             case INSTANCE_OF -> {
-                var tmp = (Instruction22c22cs) insn;
+                var tmp = (Instruction22c) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
                 var ref = (TypeId) tmp.getReference1();
@@ -452,7 +452,7 @@ public final class AnalyzedMethod {
                 current.output(ireg);
             }
             case NEW_ARRAY -> {
-                var tmp = (Instruction22c22cs) insn;
+                var tmp = (Instruction22c) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
                 var ref = (TypeId) tmp.getReference1();
@@ -465,7 +465,7 @@ public final class AnalyzedMethod {
                 current.output(idst);
             }
             case FILLED_NEW_ARRAY -> {
-                var tmp = (Instruction35c35mi35ms) insn;
+                var tmp = (Instruction35c) insn;
                 var ref = (TypeId) tmp.getReference1();
                 var reg_count = tmp.getRegisterCount();
 
@@ -480,7 +480,7 @@ public final class AnalyzedMethod {
                 init_35c_45cc_args(current, tmp, proto, verify);
             }
             case FILLED_NEW_ARRAY_RANGE -> {
-                var tmp = (Instruction3rc3rmi3rms) insn;
+                var tmp = (Instruction3rc) insn;
                 var ref = (TypeId) tmp.getReference1();
                 var reg_count = tmp.getRegisterCount();
 
@@ -623,7 +623,7 @@ public final class AnalyzedMethod {
             }
             case IGET, IGET_OBJECT, IGET_WIDE, IGET_BOOLEAN,
                  IGET_BYTE, IGET_CHAR, IGET_SHORT -> {
-                var tmp = (Instruction22c22cs) insn;
+                var tmp = (Instruction22c) insn;
                 var ival = tmp.getRegister1();
                 var iobj = tmp.getRegister2();
 
@@ -649,7 +649,7 @@ public final class AnalyzedMethod {
             }
             case IPUT, IPUT_OBJECT, IPUT_WIDE, IPUT_BOOLEAN,
                  IPUT_BYTE, IPUT_CHAR, IPUT_SHORT -> {
-                var tmp = (Instruction22c22cs) insn;
+                var tmp = (Instruction22c) insn;
                 var ival = tmp.getRegister1();
                 var iobj = tmp.getRegister2();
 
@@ -723,7 +723,7 @@ public final class AnalyzedMethod {
             }
             case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_DIRECT,
                  INVOKE_STATIC, INVOKE_INTERFACE -> {
-                var tmp = (Instruction35c35mi35ms) insn;
+                var tmp = (Instruction35c) insn;
                 var ref = (MethodId) tmp.getReference1();
 
                 var proto = (opcode == INVOKE_STATIC) ?
@@ -735,7 +735,7 @@ public final class AnalyzedMethod {
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
                  INVOKE_DIRECT_RANGE, INVOKE_STATIC_RANGE,
                  INVOKE_INTERFACE_RANGE -> {
-                var tmp = (Instruction3rc3rmi3rms) insn;
+                var tmp = (Instruction3rc) insn;
                 var ref = (MethodId) tmp.getReference1();
 
                 var proto = (opcode == INVOKE_STATIC_RANGE) ?
@@ -763,7 +763,7 @@ public final class AnalyzedMethod {
                 init_3rc_4rcc_args(current, tmp, proto, verify);
             }
             case INVOKE_CUSTOM -> {
-                var tmp = (Instruction35c35mi35ms) insn;
+                var tmp = (Instruction35c) insn;
                 // TODO? verify callsite
                 var ref = (CallSiteId) tmp.getReference1();
 
@@ -773,7 +773,7 @@ public final class AnalyzedMethod {
                 init_35c_45cc_args(current, tmp, proto, verify);
             }
             case INVOKE_CUSTOM_RANGE -> {
-                var tmp = (Instruction3rc3rmi3rms) insn;
+                var tmp = (Instruction3rc) insn;
                 // TODO? verify callsite
                 var ref = (CallSiteId) tmp.getReference1();
 
@@ -1517,7 +1517,7 @@ public final class AnalyzedMethod {
                 current.after().copy(address, ireg, value);
             }
             case NEW_ARRAY -> {
-                var tmp = (Instruction22c22cs) insn;
+                var tmp = (Instruction22c) insn;
                 var idst = tmp.getRegister1();
                 var isz = tmp.getRegister2();
                 var sz = current.before().at(isz);
@@ -1817,7 +1817,7 @@ public final class AnalyzedMethod {
             }
             case IGET, IGET_BOOLEAN, IGET_BYTE, IGET_CHAR,
                  IGET_SHORT, IGET_OBJECT, IGET_WIDE -> {
-                var tmp = (Instruction22c22cs) insn;
+                var tmp = (Instruction22c) insn;
                 var ival = tmp.getRegister1();
                 var iobj = tmp.getRegister2();
                 var obj = current.before().at(iobj);
@@ -1843,7 +1843,7 @@ public final class AnalyzedMethod {
             }
             case IPUT, IPUT_BOOLEAN, IPUT_BYTE, IPUT_CHAR,
                  IPUT_SHORT, IPUT_OBJECT, IPUT_WIDE -> {
-                var tmp = (Instruction22c22cs) insn;
+                var tmp = (Instruction22c) insn;
                 var ival = tmp.getRegister1();
                 var iobj = tmp.getRegister2();
                 var obj = current.before().at(iobj);
@@ -1885,7 +1885,7 @@ public final class AnalyzedMethod {
                 if (verify) verifyReg(resolver, current, ireg, ref.getType());
             }
             case INVOKE_DIRECT -> {
-                var tmp = (Instruction35c35mi35ms) insn;
+                var tmp = (Instruction35c) insn;
                 var ref = (MethodId) tmp.getReference1();
 
                 var check_this = true;
@@ -1903,7 +1903,7 @@ public final class AnalyzedMethod {
                 if (verify) verify_35c_45cc_args(resolver, current, true, check_this);
             }
             case INVOKE_DIRECT_RANGE -> {
-                var tmp = (Instruction3rc3rmi3rms) insn;
+                var tmp = (Instruction3rc) insn;
                 var ref = (MethodId) tmp.getReference1();
 
                 var check_this = true;

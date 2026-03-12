@@ -188,8 +188,20 @@ public class DexCollector {
         }
 
         private static DebugInfo toDebugInfo(List<String> names, List<DebugItem> items) {
-            if (names.isEmpty() && items.isEmpty()) {
-                return null;
+            if (items.isEmpty()) {
+                if (names.isEmpty()) {
+                    return null;
+                }
+                boolean empty = true;
+                for (var name : names) {
+                    if (name != null) {
+                        empty = false;
+                        break;
+                    }
+                }
+                if (empty) {
+                    return null;
+                }
             }
             return new DebugInfo(names, items);
         }

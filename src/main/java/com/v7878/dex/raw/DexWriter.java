@@ -10,6 +10,7 @@ import static com.v7878.dex.DexConstants.DBG_LINE_BASE;
 import static com.v7878.dex.DexConstants.DBG_LINE_RANGE;
 import static com.v7878.dex.DexConstants.DBG_RESTART_LOCAL;
 import static com.v7878.dex.DexConstants.DBG_SET_EPILOGUE_BEGIN;
+import static com.v7878.dex.DexConstants.DBG_SET_FILE;
 import static com.v7878.dex.DexConstants.DBG_SET_PROLOGUE_END;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL_EXTENDED;
@@ -1243,6 +1244,7 @@ public class DexWriter {
             } else if (item instanceof SetFile op) {
                 var name = op.getName();
                 emit_address.run();
+                out.writeByte(DBG_SET_FILE);
                 out.writeULeb128((name == null ? NO_INDEX : getStringIndex(name)) + 1);
             } else if (item instanceof LineNumber op) {
                 line[0] = op.getLine();

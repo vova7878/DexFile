@@ -1,6 +1,5 @@
 package com.v7878.dex.raw.legacy;
 
-import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
 import static com.v7878.dex.DexConstants.M5_DBG_ADVANCE_LINE;
 import static com.v7878.dex.DexConstants.M5_DBG_ADVANCE_PC;
 import static com.v7878.dex.DexConstants.M5_DBG_END_LOCAL;
@@ -211,7 +210,7 @@ public class Dex013 {
                 // Note: This version had an additional value
                 // for the register type that meant untyped null
                 var type = "<null>".equals(descriptor) ? null : TypeId.of(descriptor);
-                int signature_idx = opcode == DBG_START_LOCAL ?
+                int signature_idx = opcode == M5_DBG_START_LOCAL ?
                         NO_INDEX : in.readULeb128() - 1;
                 String signature = signature_idx == NO_INDEX ?
                         null : reader.getString(signature_idx);

@@ -1,6 +1,6 @@
 package com.v7878.dex.immutable.bytecode;
 
-import static com.v7878.dex.Format.Format22c22cs;
+import static com.v7878.dex.Format.Format22c;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
@@ -11,23 +11,23 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction22c22cs extends Instruction
+public final class Instruction22c extends Instruction
         implements TwoRegisterInstruction, SingleReferenceInstruction {
     private final int register1;
     private final int register2;
     private final Object reference1;
 
-    private Instruction22c22cs(
+    private Instruction22c(
             Opcode opcode, int register1, int register2, Object reference1) {
-        super(Preconditions.checkFormat(opcode, Format22c22cs));
+        super(Preconditions.checkFormat(opcode, Format22c));
         this.register1 = Preconditions.checkNibbleRegister(register1);
         this.register2 = Preconditions.checkNibbleRegister(register2);
         this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
     }
 
-    public static Instruction22c22cs of(
+    public static Instruction22c of(
             Opcode opcode, int register1, int register2, Object reference1) {
-        return new Instruction22c22cs(opcode, register1, register2, reference1);
+        return new Instruction22c(opcode, register1, register2, reference1);
     }
 
     @Override
@@ -53,7 +53,7 @@ public final class Instruction22c22cs extends Instruction
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction22c22cs other
+        return obj instanceof Instruction22c other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
                 && getRegister2() == other.getRegister2()

@@ -19,10 +19,11 @@ import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.Instruction21c;
-import com.v7878.dex.immutable.bytecode.Instruction22c22cs;
+import com.v7878.dex.immutable.bytecode.Instruction22c;
 import com.v7878.dex.immutable.bytecode.Instruction31c;
-import com.v7878.dex.immutable.bytecode.Instruction35c35mi35ms;
-import com.v7878.dex.immutable.bytecode.Instruction3rc3rmi3rms;
+import com.v7878.dex.immutable.bytecode.Instruction34c;
+import com.v7878.dex.immutable.bytecode.Instruction35c;
+import com.v7878.dex.immutable.bytecode.Instruction3rc;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.debug.DebugItem;
@@ -214,8 +215,8 @@ public class DexRewriter {
                     rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
-        if (value instanceof Instruction22c22cs i) {
-            return Instruction22c22cs.of(
+        if (value instanceof Instruction22c i) {
+            return Instruction22c.of(
                     i.getOpcode(),
                     i.getRegister1(),
                     i.getRegister2(),
@@ -229,8 +230,19 @@ public class DexRewriter {
                     rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
-        if (value instanceof Instruction35c35mi35ms i) {
-            return Instruction35c35mi35ms.of(
+        if (value instanceof Instruction34c i) {
+            return Instruction34c.of(
+                    i.getOpcode(),
+                    i.getRegisterCount(),
+                    i.getRegister1(),
+                    i.getRegister2(),
+                    i.getRegister3(),
+                    i.getRegister4(),
+                    rewriteReference(i.getReferenceType1(), i.getReference1())
+            );
+        }
+        if (value instanceof Instruction35c i) {
+            return Instruction35c.of(
                     i.getOpcode(),
                     i.getRegisterCount(),
                     i.getRegister1(),
@@ -241,8 +253,8 @@ public class DexRewriter {
                     rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
-        if (value instanceof Instruction3rc3rmi3rms i) {
-            return Instruction3rc3rmi3rms.of(
+        if (value instanceof Instruction3rc i) {
+            return Instruction3rc.of(
                     i.getOpcode(),
                     i.getRegisterCount(),
                     i.getStartRegister(),
