@@ -96,7 +96,7 @@ public enum Opcode {
     INSTANCE_OF(common(0x1f, 0x1f, 0x20), "instance-of", Format22c, TYPE, CAN_THROW),
     ARRAY_LENGTH(common(0x20, 0x20, 0x21), "array-length", Format12x, CAN_THROW),
     NEW_INSTANCE(common(0x21, 0x21, 0x22), "new-instance", Format21c, TYPE, CAN_THROW),
-    NEW_ARRAY(common(0x22, 0x22, 0x23), "new-array", Format22c, TYPE, CAN_THROW),
+    NEW_ARRAY(modern(0x23), "new-array", Format22c, TYPE, CAN_THROW),
     FILLED_NEW_ARRAY(modern(0x24), "filled-new-array", Format35c, TYPE, CAN_THROW),
     FILLED_NEW_ARRAY_RANGE(common(0x2c, 0x2c, 0x25), "filled-new-array/range", Format3rc, TYPE, CAN_THROW),
     FILL_ARRAY_DATA(modern(0x26), "fill-array-data", Format31t, CAN_THROW | HAS_PAYLOAD),
@@ -316,6 +316,9 @@ public enum Opcode {
 
     M_CONST_SPECIAL(legacy(0x1a, 0x1a), "const/special", Format11p, 0),
     M_CONST_WIDE_SPECIAL(legacy(0x1b, 0x1b), "const-wide/special", Format11p, 0),
+    // The semantics of the new-array instruction differ from newer versions of dex.
+    // The instruction takes the type of array component, not the type of the array itself
+    M_NEW_ARRAY(legacy(0x22, 0x22), "new-array", Format22c, TYPE, CAN_THROW),
     M_NEW_ARRAY_BOOLEAN(legacy(0x23, 0x23), "new-array-boolean", Format12x, CAN_THROW),
     M_NEW_ARRAY_BYTE(legacy(0x24, 0x24), "new-array-byte", Format12x, CAN_THROW),
     M_NEW_ARRAY_CHAR(legacy(0x25, 0x25), "new-array-char", Format12x, CAN_THROW),
