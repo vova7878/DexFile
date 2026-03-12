@@ -43,7 +43,7 @@ import com.v7878.dex.immutable.bytecode.Instruction21lh;
 import com.v7878.dex.immutable.bytecode.Instruction21s;
 import com.v7878.dex.immutable.bytecode.Instruction21t;
 import com.v7878.dex.immutable.bytecode.Instruction22b;
-import com.v7878.dex.immutable.bytecode.Instruction22c22cs;
+import com.v7878.dex.immutable.bytecode.Instruction22c;
 import com.v7878.dex.immutable.bytecode.Instruction22s;
 import com.v7878.dex.immutable.bytecode.Instruction22t;
 import com.v7878.dex.immutable.bytecode.Instruction22x;
@@ -53,8 +53,8 @@ import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction31i;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
 import com.v7878.dex.immutable.bytecode.Instruction32x;
-import com.v7878.dex.immutable.bytecode.Instruction35c35mi35ms;
-import com.v7878.dex.immutable.bytecode.Instruction3rc3rmi3rms;
+import com.v7878.dex.immutable.bytecode.Instruction35c;
+import com.v7878.dex.immutable.bytecode.Instruction3rc;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
@@ -1088,7 +1088,7 @@ public final class CodeBuilder {
     @SuppressWarnings("SameParameterValue")
     private CodeBuilder f22c(Opcode op, int reg_or_pair1, boolean is_reg1_wide,
                              int reg_or_pair2, boolean is_reg2_wide, Object constant) {
-        add(Instruction22c22cs.of(op,
+        add(Instruction22c.of(op,
                 check_reg_or_pair(reg_or_pair1, is_reg1_wide),
                 check_reg_or_pair(reg_or_pair2, is_reg2_wide), constant));
         return this;
@@ -1138,7 +1138,7 @@ public final class CodeBuilder {
     private CodeBuilder f35c(Opcode op, Object constant, int arg_count, int arg_reg1,
                              int arg_reg2, int arg_reg3, int arg_reg4, int arg_reg5) {
         format_35c_checks(arg_count, arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5);
-        add(Instruction35c35mi35ms.of(op, arg_count,
+        add(Instruction35c.of(op, arg_count,
                 arg_reg1, arg_reg2, arg_reg3, arg_reg4, arg_reg5, constant));
         return this;
     }
@@ -1146,7 +1146,7 @@ public final class CodeBuilder {
     // <AA|op BBBB CCCC> op {vCCCC .. vNNNN}, @BBBB (where NNNN = CCCC+AA-1)
     private CodeBuilder f3rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, arg_count);
-        add(Instruction3rc3rmi3rms.of(op, arg_count, first_arg_reg, constant));
+        add(Instruction3rc.of(op, arg_count, first_arg_reg, constant));
         return this;
     }
 

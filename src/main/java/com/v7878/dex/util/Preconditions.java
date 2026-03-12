@@ -272,7 +272,7 @@ public class Preconditions {
         return registerCount;
     }
 
-    public static int checkExecuteInlineRegisterCount(int registerCount) {
+    public static int check34cOrExecuteInlineRegisterCount(int registerCount) {
         if (registerCount < 0 || registerCount > 4) {
             throw new IllegalArgumentException(
                     String.format("Invalid register count: %d. Must be between 0 and 4, inclusive", registerCount));

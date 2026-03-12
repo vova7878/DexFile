@@ -21,7 +21,7 @@ import com.v7878.dex.immutable.bytecode.Instruction21lh;
 import com.v7878.dex.immutable.bytecode.Instruction21s;
 import com.v7878.dex.immutable.bytecode.Instruction21t;
 import com.v7878.dex.immutable.bytecode.Instruction22b;
-import com.v7878.dex.immutable.bytecode.Instruction22c22cs;
+import com.v7878.dex.immutable.bytecode.Instruction22c;
 import com.v7878.dex.immutable.bytecode.Instruction22s;
 import com.v7878.dex.immutable.bytecode.Instruction22t;
 import com.v7878.dex.immutable.bytecode.Instruction22x;
@@ -31,8 +31,9 @@ import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction31i;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
 import com.v7878.dex.immutable.bytecode.Instruction32x;
-import com.v7878.dex.immutable.bytecode.Instruction35c35mi35ms;
-import com.v7878.dex.immutable.bytecode.Instruction3rc3rmi3rms;
+import com.v7878.dex.immutable.bytecode.Instruction34c;
+import com.v7878.dex.immutable.bytecode.Instruction35c;
+import com.v7878.dex.immutable.bytecode.Instruction3rc;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
@@ -76,7 +77,7 @@ public class InstructionReader {
             case Format21s -> read_21s(opcode, in, arg);
             case Format21t -> read_21t(opcode, in, arg);
             case Format22b -> read_22b(opcode, in, arg);
-            case Format22c22cs -> read_22c22cs(opcode, in, reader, arg);
+            case Format22c -> read_22c(opcode, in, reader, arg);
             case Format22s -> read_22s(opcode, in, arg);
             case Format22t -> read_22t(opcode, in, arg);
             case Format22x -> read_22x(opcode, in, arg);
@@ -86,16 +87,17 @@ public class InstructionReader {
             case Format31i -> read_31i(opcode, in, arg);
             case Format31t -> read_31t(opcode, in, arg);
             case Format32x -> read_32x(opcode, in, arg);
-            case Format35c35mi35ms -> read_35c_35ms_35mi(opcode, in, reader, arg);
-            case Format3rc3rmi3rms -> read_3rc_3rms_3rmi(opcode, in, reader, arg);
+            case Format34c -> read_34c(opcode, in, reader, arg);
+            case Format35c -> read_35c(opcode, in, reader, arg);
+            case Format3rc -> read_3rc(opcode, in, reader, arg);
             case Format45cc -> read_45cc(opcode, in, reader, arg);
             case Format4rcc -> read_4rcc(opcode, in, reader, arg);
             case Format51l -> read_51l(opcode, in, arg);
             case ArrayPayload -> read_array_payload(opcode, in, arg);
             case PackedSwitchPayload -> read_packed_switch_payload(opcode, in, arg);
             case SparseSwitchPayload -> read_sparse_switch_payload(opcode, in, arg);
-            case LegacyPackedSwitchPayload -> read_legacy_packed_switch_payload(opcode, in, arg);
-            case LegacySparseSwitchPayload -> read_legacy_sparse_switch_payload(opcode, in, arg);
+            case MPackedSwitchPayload -> read_m_packed_switch_payload(opcode, in, arg);
+            case MSparseSwitchPayload -> read_m_sparse_switch_payload(opcode, in, arg);
             case FormatRaw -> throw shouldNotReachHere();
         };
     }
@@ -213,10 +215,10 @@ public class InstructionReader {
         return Instruction21c.of(opcode, AA, indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
-    public static Instruction22c22cs read_22c22cs(
+    public static Instruction22c read_22c(
             Opcode opcode, RandomInput in, DexReader context, int BA) {
         int CCCC = in.readUShort();
-        return Instruction22c22cs.of(opcode, BA & 0xf, BA >> 4,
+        return Instruction22c.of(opcode, BA & 0xf, BA >> 4,
                 indexToRef(opcode.getReferenceType1(), context, CCCC));
     }
 
@@ -277,7 +279,19 @@ public class InstructionReader {
         return Instruction31c.of(opcode, AA, indexToRef(opcode.getReferenceType1(), context, BBBBBBBB));
     }
 
-    public static Instruction35c35mi35ms read_35c_35ms_35mi(
+    public static Instruction34c read_34c(
+            Opcode opcode, RandomInput in, DexReader context, int AA) {
+        int BBBB = in.readUShort();
+        int FEDC = in.readUShort();
+        int F = FEDC >> 12;
+        int E = (FEDC >> 8) & 0xf;
+        int D = (FEDC >> 4) & 0xf;
+        int C = FEDC & 0xf;
+        return Instruction34c.of(opcode, AA, C, D, E, F,
+                indexToRef(opcode.getReferenceType1(), context, BBBB));
+    }
+
+    public static Instruction35c read_35c(
             Opcode opcode, RandomInput in, DexReader context, int AG) {
         int A = AG >> 4;
         int G = AG & 0xf;
@@ -287,15 +301,15 @@ public class InstructionReader {
         int E = (FEDC >> 8) & 0xf;
         int D = (FEDC >> 4) & 0xf;
         int C = FEDC & 0xf;
-        return Instruction35c35mi35ms.of(opcode, A, C, D, E, F, G,
+        return Instruction35c.of(opcode, A, C, D, E, F, G,
                 indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
-    public static Instruction3rc3rmi3rms read_3rc_3rms_3rmi(
+    public static Instruction3rc read_3rc(
             Opcode opcode, RandomInput in, DexReader context, int AA) {
         int BBBB = in.readUShort();
         int CCCC = in.readUShort();
-        return Instruction3rc3rmi3rms.of(opcode, AA, CCCC,
+        return Instruction3rc.of(opcode, AA, CCCC,
                 indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
@@ -394,7 +408,7 @@ public class InstructionReader {
         return ArrayPayload.of(element_width, data);
     }
 
-    public static PackedSwitchPayload read_legacy_packed_switch_payload(
+    public static PackedSwitchPayload read_m_packed_switch_payload(
             Opcode opcode, RandomInput in, int _00) {
         check_zero_arg(_00);
         int size = in.readUShort();
@@ -407,7 +421,7 @@ public class InstructionReader {
         return PackedSwitchPayload.of(opcode, elements);
     }
 
-    public static SparseSwitchPayload read_legacy_sparse_switch_payload(
+    public static SparseSwitchPayload read_m_sparse_switch_payload(
             Opcode opcode, RandomInput in, int _00) {
         check_zero_arg(_00);
         int size = in.readUShort();

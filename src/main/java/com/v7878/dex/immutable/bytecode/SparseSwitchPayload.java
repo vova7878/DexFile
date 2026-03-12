@@ -16,7 +16,7 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
 
     private SparseSwitchPayload(Opcode opcode, NavigableSet<SwitchElement> elements) {
         super(Preconditions.checkFormat(opcode,
-                Format.SparseSwitchPayload, Format.LegacySparseSwitchPayload));
+                Format.SparseSwitchPayload, Format.MSparseSwitchPayload));
         this.elements = Objects.requireNonNull(elements);
     }
 
@@ -36,7 +36,7 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
 
     @Override
     public int getUnitCount() {
-        if (getOpcode().format() == Format.LegacySparseSwitchPayload) {
+        if (getOpcode().format() == Format.MSparseSwitchPayload) {
             return Preconditions.getLegacySparseSwitchPayloadUnitCount(getSwitchElements().size());
         }
         return Preconditions.getSparseSwitchPayloadUnitCount(getSwitchElements().size());

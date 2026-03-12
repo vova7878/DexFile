@@ -29,7 +29,7 @@ import com.v7878.dex.immutable.bytecode.Instruction21lh;
 import com.v7878.dex.immutable.bytecode.Instruction21s;
 import com.v7878.dex.immutable.bytecode.Instruction21t;
 import com.v7878.dex.immutable.bytecode.Instruction22b;
-import com.v7878.dex.immutable.bytecode.Instruction22c22cs;
+import com.v7878.dex.immutable.bytecode.Instruction22c;
 import com.v7878.dex.immutable.bytecode.Instruction22s;
 import com.v7878.dex.immutable.bytecode.Instruction22t;
 import com.v7878.dex.immutable.bytecode.Instruction22x;
@@ -39,8 +39,8 @@ import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction31i;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
 import com.v7878.dex.immutable.bytecode.Instruction32x;
-import com.v7878.dex.immutable.bytecode.Instruction35c35mi35ms;
-import com.v7878.dex.immutable.bytecode.Instruction3rc3rmi3rms;
+import com.v7878.dex.immutable.bytecode.Instruction35c;
+import com.v7878.dex.immutable.bytecode.Instruction3rc;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
@@ -78,8 +78,7 @@ public class InstructionWriter {
             case Format21s -> write_21s(((Instruction21s) instruction), out, op);
             case Format21t -> write_21t(((Instruction21t) instruction), out, op);
             case Format22b -> write_22b(((Instruction22b) instruction), out, op);
-            case Format22c22cs ->
-                    write_22c_22cs(((Instruction22c22cs) instruction), writer, out, op);
+            case Format22c -> write_22c(((Instruction22c) instruction), writer, out, op);
             case Format22s -> write_22s(((Instruction22s) instruction), out, op);
             case Format22t -> write_22t(((Instruction22t) instruction), out, op);
             case Format22x -> write_22x(((Instruction22x) instruction), out, op);
@@ -89,10 +88,10 @@ public class InstructionWriter {
             case Format31i -> write_31i(((Instruction31i) instruction), out, op);
             case Format31t -> write_31t(((Instruction31t) instruction), out, op);
             case Format32x -> write_32x(((Instruction32x) instruction), out, op);
-            case Format35c35mi35ms ->
-                    write_35c_35ms_35mi(((Instruction35c35mi35ms) instruction), writer, out, op);
-            case Format3rc3rmi3rms ->
-                    write_3rc_3rms_3rmi(((Instruction3rc3rmi3rms) instruction), writer, out, op);
+            case Format34c -> //noinspection DuplicateBranchesInSwitch
+                    throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format35c -> write_35c(((Instruction35c) instruction), writer, out, op);
+            case Format3rc -> write_3rc(((Instruction3rc) instruction), writer, out, op);
             case Format45cc -> write_45cc(((Instruction45cc) instruction), writer, out, op);
             case Format4rcc -> write_4rcc(((Instruction4rcc) instruction), writer, out, op);
             case Format51l -> write_51l(((Instruction51l) instruction), out, op);
@@ -102,9 +101,9 @@ public class InstructionWriter {
             case SparseSwitchPayload ->
                     write_sparse_switch_payload(((SparseSwitchPayload) instruction), out, op);
             // TODO?
-            case LegacyPackedSwitchPayload -> //noinspection DuplicateBranchesInSwitch
+            case MPackedSwitchPayload -> //noinspection DuplicateBranchesInSwitch
                     throw new UnsupportedOperationException("Unimplemented yet!");
-            case LegacySparseSwitchPayload -> //noinspection DuplicateBranchesInSwitch
+            case MSparseSwitchPayload -> //noinspection DuplicateBranchesInSwitch
                     throw new UnsupportedOperationException("Unimplemented yet!");
             case FormatRaw -> write_raw(((InstructionRaw) instruction), out);
             default -> throw shouldNotReachHere();
@@ -286,7 +285,7 @@ public class InstructionWriter {
         write_21lh(out, opcode, value.getRegister1(), value.getWideLiteral());
     }
 
-    public static void write_22c_22cs(RandomOutput out, int opcode, int A, int B, int cCCCC) {
+    public static void write_22c(RandomOutput out, int opcode, int A, int B, int cCCCC) {
         A = unsigned(A, 4);
         B = unsigned(B, 4);
         cCCCC = unsigned(cCCCC, 16);
@@ -294,8 +293,8 @@ public class InstructionWriter {
         out.writeShort(cCCCC);
     }
 
-    public static void write_22c_22cs(Instruction22c22cs value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_22c_22cs(out, opcode, value.getRegister1(), value.getRegister2(),
+    public static void write_22c(Instruction22c value, DexWriter indexer, RandomOutput out, int opcode) {
+        write_22c(out, opcode, value.getRegister1(), value.getRegister2(),
                 refToIndex(value.getReferenceType1(), indexer, value.getReference1()));
     }
 
@@ -383,8 +382,8 @@ public class InstructionWriter {
                 .getReferenceType1(), indexer, value.getReference1()));
     }
 
-    public static void write_35c_35ms_35mi(RandomOutput out, int opcode, int A,
-                                           int BBBB, int C, int D, int E, int F, int G) {
+    public static void write_35c(RandomOutput out, int opcode, int A,
+                                 int BBBB, int C, int D, int E, int F, int G) {
         A = unsigned(A, 4);
         BBBB = unsigned(BBBB, 16);
         C = unsigned(C, 4);
@@ -397,15 +396,15 @@ public class InstructionWriter {
         out.writeShort((F << 12) | (E << 8) | (D << 4) | C);
     }
 
-    public static void write_35c_35ms_35mi(Instruction35c35mi35ms value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_35c_35ms_35mi(out, opcode, value.getRegisterCount(), refToIndex(value
+    public static void write_35c(Instruction35c value, DexWriter indexer, RandomOutput out, int opcode) {
+        write_35c(out, opcode, value.getRegisterCount(), refToIndex(value
                         .getReferenceType1(), indexer, value.getReference1()),
                 value.getRegister1(), value.getRegister2(), value.getRegister3(),
                 value.getRegister4(), value.getRegister5());
     }
 
-    public static void write_3rc_3rms_3rmi(RandomOutput out, int opcode,
-                                           int AA, int BBBB, int CCCC) {
+    public static void write_3rc(RandomOutput out, int opcode,
+                                 int AA, int BBBB, int CCCC) {
         AA = unsigned(AA, 8);
         BBBB = unsigned(BBBB, 16);
         CCCC = unsigned(CCCC, 16);
@@ -414,8 +413,8 @@ public class InstructionWriter {
         out.writeShort(CCCC);
     }
 
-    public static void write_3rc_3rms_3rmi(Instruction3rc3rmi3rms value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_3rc_3rms_3rmi(out, opcode, value.getRegisterCount(), refToIndex(value
+    public static void write_3rc(Instruction3rc value, DexWriter indexer, RandomOutput out, int opcode) {
+        write_3rc(out, opcode, value.getRegisterCount(), refToIndex(value
                 .getReferenceType1(), indexer, value.getReference1()), value.getStartRegister());
     }
 

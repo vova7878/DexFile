@@ -16,7 +16,7 @@ public final class PackedSwitchPayload extends Instruction implements SwitchPayl
 
     private PackedSwitchPayload(Opcode opcode, NavigableSet<SwitchElement> elements) {
         super(Preconditions.checkFormat(opcode,
-                Format.PackedSwitchPayload, Format.LegacyPackedSwitchPayload));
+                Format.PackedSwitchPayload, Format.MPackedSwitchPayload));
         this.elements = Objects.requireNonNull(elements);
     }
 
@@ -37,7 +37,7 @@ public final class PackedSwitchPayload extends Instruction implements SwitchPayl
 
     @Override
     public int getUnitCount() {
-        if (getOpcode().format() == Format.LegacyPackedSwitchPayload) {
+        if (getOpcode().format() == Format.MPackedSwitchPayload) {
             return Preconditions.getLegacyPackedSwitchPayloadUnitCount(getSwitchElements().size());
         }
         return Preconditions.getPackedSwitchPayloadUnitCount(getSwitchElements().size());
