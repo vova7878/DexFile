@@ -1,5 +1,6 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.DexOffsets.PAYLOAD_INSTRUCTION_ALIGNMENT;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.MathUtils.extend_sign32;
 
@@ -34,9 +35,11 @@ import com.v7878.dex.immutable.bytecode.Instruction32x;
 import com.v7878.dex.immutable.bytecode.Instruction34c;
 import com.v7878.dex.immutable.bytecode.Instruction35c;
 import com.v7878.dex.immutable.bytecode.Instruction3rc;
+import com.v7878.dex.immutable.bytecode.Instruction41c;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
+import com.v7878.dex.immutable.bytecode.Instruction52c;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -97,17 +100,17 @@ public class InstructionReader {
             case Format34c -> read_34c(opcode, in, reader, arg);
             case Format35c -> read_35c(opcode, in, reader, arg);
             case Format3rc -> read_3rc(opcode, in, reader, arg);
-            case Format41c -> throw new UnsupportedOperationException("TODO");
+            case Format41c -> read_41c(opcode, in, reader);
             case Format45cc -> read_45cc(opcode, in, reader, arg);
             case Format4rcc -> read_4rcc(opcode, in, reader, arg);
             case Format51l -> read_51l(opcode, in, arg);
-            case Format52c -> throw new UnsupportedOperationException("TODO");
-            case Format5rc -> throw new UnsupportedOperationException("TODO");
-            case ArrayPayload -> read_array_payload(opcode, in, arg);
-            case PackedSwitchPayload -> read_packed_switch_payload(opcode, in, arg);
-            case SparseSwitchPayload -> read_sparse_switch_payload(opcode, in, arg);
-            case MPackedSwitchPayload -> read_m_packed_switch_payload(opcode, in, arg);
-            case MSparseSwitchPayload -> read_m_sparse_switch_payload(opcode, in, arg);
+            case Format52c -> read_52c(opcode, in, reader);
+            case Format5rc -> read_5rc(opcode, in, reader);
+            case ArrayPayload -> read_array_payload(opcode, in);
+            case PackedSwitchPayload -> read_packed_switch_payload(opcode, in);
+            case SparseSwitchPayload -> read_sparse_switch_payload(opcode, in);
+            case MPackedSwitchPayload -> read_m_packed_switch_payload(opcode, in);
+            case MSparseSwitchPayload -> read_m_sparse_switch_payload(opcode, in);
             case FormatRaw -> throw shouldNotReachHere();
         };
     }
@@ -323,6 +326,15 @@ public class InstructionReader {
                 indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
+    public static Instruction41c read_41c(
+            Opcode opcode, RandomInput in, DexReader context) {
+        int BBBBlo = in.readUShort();
+        int BBBBhi = in.readUShort();
+        int BBBBBBBB = BBBBlo | (BBBBhi << 16);
+        int AAAA = in.readUShort();
+        return Instruction41c.of(opcode, AAAA, indexToRef(opcode.getReferenceType1(), context, BBBBBBBB));
+    }
+
     public static Instruction45cc read_45cc(
             Opcode opcode, RandomInput in, DexReader context, int AG) {
         int A = AG >> 4;
@@ -358,9 +370,31 @@ public class InstructionReader {
                 | (BBBBhilo << 16) | BBBBlolo);
     }
 
+    public static Instruction52c read_52c(
+            Opcode opcode, RandomInput in, DexReader context) {
+        int CCCClo = in.readUShort();
+        int CCCChi = in.readUShort();
+        int CCCCCCCC = CCCClo | (CCCChi << 16);
+        int AAAA = in.readUShort();
+        int BBBB = in.readUShort();
+        return Instruction52c.of(opcode, AAAA, BBBB,
+                indexToRef(opcode.getReferenceType1(), context, CCCCCCCC));
+    }
+
+    public static Instruction3rc read_5rc(
+            Opcode opcode, RandomInput in, DexReader context) {
+        int BBBBlo = in.readUShort();
+        int BBBBhi = in.readUShort();
+        int BBBBBBBB = BBBBlo | (BBBBhi << 16);
+        int AAAA = in.readUShort();
+        int CCCC = in.readUShort();
+        return Instruction3rc.of(opcode, AAAA, CCCC,
+                indexToRef(opcode.getReferenceType1(), context, BBBBBBBB));
+    }
+
     public static PackedSwitchPayload read_packed_switch_payload(
-            Opcode opcode, RandomInput in, int _00) {
-        check_zero_arg(_00);
+            Opcode opcode, RandomInput in) {
+        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int size = in.readUShort();
         int first_key = in.readInt();
         int[] targets = in.readIntArray(size);
@@ -372,8 +406,8 @@ public class InstructionReader {
     }
 
     public static SparseSwitchPayload read_sparse_switch_payload(
-            Opcode opcode, RandomInput in, int _00) {
-        check_zero_arg(_00);
+            Opcode opcode, RandomInput in) {
+        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int size = in.readUShort();
         int[] keys = in.readIntArray(size);
         int[] targets = in.readIntArray(size);
@@ -385,8 +419,8 @@ public class InstructionReader {
     }
 
     public static ArrayPayload read_array_payload(
-            Opcode opcode, RandomInput in, int _00) {
-        check_zero_arg(_00);
+            Opcode opcode, RandomInput in) {
+        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int element_width = in.readUShort();
         int size = in.readSmallUInt();
         var data = new ArrayList<Number>(size);
@@ -419,8 +453,8 @@ public class InstructionReader {
     }
 
     public static PackedSwitchPayload read_m_packed_switch_payload(
-            Opcode opcode, RandomInput in, int _00) {
-        check_zero_arg(_00);
+            Opcode opcode, RandomInput in) {
+        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int size = in.readUShort();
         int first_key = in.readInt();
         short[] targets = in.readShortArray(size);
@@ -432,8 +466,8 @@ public class InstructionReader {
     }
 
     public static SparseSwitchPayload read_m_sparse_switch_payload(
-            Opcode opcode, RandomInput in, int _00) {
-        check_zero_arg(_00);
+            Opcode opcode, RandomInput in) {
+        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int size = in.readUShort();
         int[] keys = in.readIntArray(size);
         short[] targets = in.readShortArray(size);

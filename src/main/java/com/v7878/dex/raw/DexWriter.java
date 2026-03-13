@@ -347,8 +347,10 @@ public class DexWriter {
         protos = collector.protos.toArray(EmptyArrays.PROTO_ID);
         checkSizeLimit(protos.length, 0xffff, "proto");
         fields = collector.fields.toArray(EmptyArrays.FIELD_ID);
+        // TODO: dex036
         checkSizeLimit(fields.length, 0xffff, "field");
         methods = collector.methods.toArray(EmptyArrays.METHOD_ID);
+        // TODO: dex036
         checkSizeLimit(methods.length, 0xffff, "method");
         // Technically, the callsite and methodhandle sections are
         // not limited from above in the number of elements.

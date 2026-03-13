@@ -33,9 +33,12 @@ import static com.v7878.dex.Format.Format32x;
 import static com.v7878.dex.Format.Format34c;
 import static com.v7878.dex.Format.Format35c;
 import static com.v7878.dex.Format.Format3rc;
+import static com.v7878.dex.Format.Format41c;
 import static com.v7878.dex.Format.Format45cc;
 import static com.v7878.dex.Format.Format4rcc;
 import static com.v7878.dex.Format.Format51l;
+import static com.v7878.dex.Format.Format52c;
+import static com.v7878.dex.Format.Format5rc;
 import static com.v7878.dex.Format.FormatRaw;
 import static com.v7878.dex.Format.MPackedSwitchPayload;
 import static com.v7878.dex.Format.MSparseSwitchPayload;
@@ -366,7 +369,7 @@ public enum Opcode {
     INVOKE_SUPER_QUICK(dalvikOnly(modern(0xfa)), "invoke-super-quick", Format35c, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
     INVOKE_SUPER_QUICK_RANGE(dalvikOnly(common(0xfb)), "invoke-super-quick/range", Format3rc, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
-    //TODO THROW_VERIFICATION_ERROR(onlyDalvik(firstApi(0xed, 5)), "throw-verification-error", Format20bc, ODEX_ONLY | CAN_THROW | END_FLOW),
+    // TODO THROW_VERIFICATION_ERROR(onlyDalvik(firstApi(0xed, 5)), "throw-verification-error", Format20bc, ODEX_ONLY | CAN_THROW | END_FLOW),
 
     // Note: breakpoint replaces the original opcode and restores it back when executed (it only exists at runtime)
     // BREAKPOINT(onlyDalvik(firstApi(0xec, 8)), "breakpoint", Format00x, RUNTIME_ONLY),
@@ -400,14 +403,59 @@ public enum Opcode {
 
     // legacy android 7.x lambda opcodes
 
-    //TODO INVOKE_LAMBDA(onlyArt(betweenApi(0xf3, 24, 25)), "invoke-lambda", Format25x, EXPERIMENTAL_LAMBDA),
-    //TODO CAPTURE_VARIABLE(onlyArt(betweenApi(0xf5, 24, 25)), "capture-variable", Format21c(string), EXPERIMENTAL_LAMBDA),
-    //TODO CREATE_LAMBDA(onlyArt(betweenApi(0xf6, 24, 25)), "create-lambda", Format21c(method), EXPERIMENTAL_LAMBDA),
-    //TODO LIBERATE_LAMBDA(onlyArt(betweenApi(0xf7, 24, 25)), "liberate-lambda", Format22c(string), EXPERIMENTAL_LAMBDA),
-    //TODO BOX_LAMBDA(onlyArt(betweenApi(0xf8, 24, 25)), "box-lambda", Format22x, EXPERIMENTAL_LAMBDA),
-    //TODO UNBOX_LAMBDA(onlyArt(betweenApi(0xf9, 24, 25)), "unbox-lambda", Format22c(type), EXPERIMENTAL_LAMBDA)
+    // TODO INVOKE_LAMBDA(betweenApi(0xf3, 24, 25), "invoke-lambda", Format25x, EXPERIMENTAL_LAMBDA),
+    // TODO CAPTURE_VARIABLE(betweenApi(0xf5, 24, 25), "capture-variable", Format21c(string), EXPERIMENTAL_LAMBDA),
+    // TODO CREATE_LAMBDA(betweenApi(0xf6, 24, 25), "create-lambda", Format21c(method), EXPERIMENTAL_LAMBDA),
+    // TODO LIBERATE_LAMBDA(betweenApi(0xf7, 24, 25), "liberate-lambda", Format22c(string), EXPERIMENTAL_LAMBDA),
+    // TODO BOX_LAMBDA(betweenApi(0xf8, 24, 25), "box-lambda", Format22x, EXPERIMENTAL_LAMBDA),
+    // TODO UNBOX_LAMBDA(betweenApi(0xf9, 24, 25), "unbox-lambda", Format22c(type), EXPERIMENTAL_LAMBDA),
 
-    //TODO: jumbo opcodes for dex036
+    // legacy dex036 expanded opcodes
+
+    CONST_CLASS_JUMBO(betweenApi(0x00ff, 14, 15), "const-class/jumbo", Format41c, TYPE, CAN_THROW),
+    CHECK_CAST_JUMBO(betweenApi(0x01ff, 14, 15), "check-cast/jumbo", Format41c, TYPE, CAN_THROW),
+    INSTANCE_OF_JUMBO(betweenApi(0x02ff, 14, 15), "instance-of/jumbo", Format52c, TYPE, CAN_THROW),
+    NEW_INSTANCE_JUMBO(betweenApi(0x03ff, 14, 15), "new-instance/jumbo", Format41c, TYPE, CAN_THROW),
+    NEW_ARRAY_JUMBO(betweenApi(0x04ff, 14, 15), "new-array/jumbo", Format52c, TYPE, CAN_THROW),
+    FILLED_NEW_ARRAY_JUMBO(betweenApi(0x05ff, 14, 15), "filled-new-array/jumbo", Format5rc, TYPE, CAN_THROW),
+
+    IGET_JUMBO(betweenApi(0x06ff, 14, 15), "iget/jumbo", Format52c, FIELD, CAN_THROW),
+    IGET_WIDE_JUMBO(betweenApi(0x07ff, 14, 15), "iget-wide/jumbo", Format52c, FIELD, CAN_THROW),
+    IGET_OBJECT_JUMBO(betweenApi(0x08ff, 14, 15), "iget-object/jumbo", Format52c, FIELD, CAN_THROW),
+    IGET_BOOLEAN_JUMBO(betweenApi(0x09ff, 14, 15), "iget-boolean/jumbo", Format52c, FIELD, CAN_THROW),
+    IGET_BYTE_JUMBO(betweenApi(0x0aff, 14, 15), "iget-byte/jumbo", Format52c, FIELD, CAN_THROW),
+    IGET_CHAR_JUMBO(betweenApi(0x0bff, 14, 15), "iget-char/jumbo", Format52c, FIELD, CAN_THROW),
+    IGET_SHORT_JUMBO(betweenApi(0x0cff, 14, 15), "iget-short/jumbo", Format52c, FIELD, CAN_THROW),
+    IPUT_JUMBO(betweenApi(0x0dff, 14, 15), "iput/jumbo", Format52c, FIELD, CAN_THROW),
+    IPUT_WIDE_JUMBO(betweenApi(0x0eff, 14, 15), "iput-wide/jumbo", Format52c, FIELD, CAN_THROW),
+    IPUT_OBJECT_JUMBO(betweenApi(0x0fff, 14, 15), "iput-object/jumbo", Format52c, FIELD, CAN_THROW),
+    IPUT_BOOLEAN_JUMBO(betweenApi(0x10ff, 14, 15), "iput-boolean/jumbo", Format52c, FIELD, CAN_THROW),
+    IPUT_BYTE_JUMBO(betweenApi(0x11ff, 14, 15), "iput-byte/jumbo", Format52c, FIELD, CAN_THROW),
+    IPUT_CHAR_JUMBO(betweenApi(0x12ff, 14, 15), "iput-char/jumbo", Format52c, FIELD, CAN_THROW),
+    IPUT_SHORT_JUMBO(betweenApi(0x13ff, 14, 15), "iput-short/jumbo", Format52c, FIELD, CAN_THROW),
+
+    SGET_JUMBO(betweenApi(0x14ff, 14, 15), "sget/jumbo", Format41c, FIELD, CAN_THROW),
+    SGET_WIDE_JUMBO(betweenApi(0x15ff, 14, 15), "sget-wide/jumbo", Format41c, FIELD, CAN_THROW),
+    SGET_OBJECT_JUMBO(betweenApi(0x16ff, 14, 15), "sget-object/jumbo", Format41c, FIELD, CAN_THROW),
+    SGET_BOOLEAN_JUMBO(betweenApi(0x17ff, 14, 15), "sget-boolean/jumbo", Format41c, FIELD, CAN_THROW),
+    SGET_BYTE_JUMBO(betweenApi(0x18ff, 14, 15), "sget-byte/jumbo", Format41c, FIELD, CAN_THROW),
+    SGET_CHAR_JUMBO(betweenApi(0x19ff, 14, 15), "sget-char/jumbo", Format41c, FIELD, CAN_THROW),
+    SGET_SHORT_JUMBO(betweenApi(0x1aff, 14, 15), "sget-short/jumbo", Format41c, FIELD, CAN_THROW),
+    SPUT_JUMBO(betweenApi(0x1bff, 14, 15), "sput/jumbo", Format41c, FIELD, CAN_THROW),
+    SPUT_WIDE_JUMBO(betweenApi(0x1cff, 14, 15), "sput-wide/jumbo", Format41c, FIELD, CAN_THROW),
+    SPUT_OBJECT_JUMBO(betweenApi(0x1dff, 14, 15), "sput-object/jumbo", Format41c, FIELD, CAN_THROW),
+    SPUT_BOOLEAN_JUMBO(betweenApi(0x1eff, 14, 15), "sput-boolean/jumbo", Format41c, FIELD, CAN_THROW),
+    SPUT_BYTE_JUMBO(betweenApi(0x1fff, 14, 15), "sput-byte/jumbo", Format41c, FIELD, CAN_THROW),
+    SPUT_CHAR_JUMBO(betweenApi(0x20ff, 14, 15), "sput-char/jumbo", Format41c, FIELD, CAN_THROW),
+    SPUT_SHORT_JUMBO(betweenApi(0x21ff, 14, 15), "sput-short/jumbo", Format41c, FIELD, CAN_THROW),
+
+    INVOKE_VIRTUAL_JUMBO(betweenApi(0x22ff, 14, 15), "invoke-virtual/jumbo", Format5rc, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_SUPER_JUMBO(betweenApi(0x23ff, 14, 15), "invoke-super/jumbo", Format5rc, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_DIRECT_JUMBO(betweenApi(0x24ff, 14, 15), "invoke-direct/jumbo", Format5rc, METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    INVOKE_STATIC_JUMBO(betweenApi(0x25ff, 14, 15), "invoke-static/jumbo", Format5rc, METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_INTERFACE_JUMBO(betweenApi(0x26ff, 14, 15), "invoke-interface/jumbo", Format5rc, METHOD, CAN_THROW | TYPE_INVOKE),
+
+    // TODO: odex036 opcodes
 
     RAW(raw(), "raw", FormatRaw, 0);
 
@@ -432,6 +480,8 @@ public enum Opcode {
         static final int CAN_THROW = 0x100;
         // odex only instruction
         static final int ODEX_ONLY = 0x200;
+
+        // TODO: flag for expanded opcodes
     }
 
     record DexInfo(int api, boolean art, boolean odex, DexVersion dex) {
