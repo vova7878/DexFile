@@ -11,11 +11,10 @@ import com.v7878.dex.immutable.bytecode.Instruction21t;
 import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction31i;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
+import com.v7878.dex.immutable.bytecode.Instruction41c;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
 
 public sealed interface OneRegisterInstruction extends InstructionI
-        permits Instruction11n, Instruction11p, Instruction11x, Instruction21c,
-        Instruction21ih, Instruction21lh, Instruction21s, Instruction21t, Instruction31c,
-        Instruction31i, Instruction31t, Instruction51l, TwoRegisterInstruction {
+        permits Instruction11n, Instruction11p, Instruction11x, Instruction21c, Instruction21ih, Instruction21lh, Instruction21s, Instruction21t, Instruction31c, Instruction31i, Instruction31t, Instruction41c, Instruction51l, TwoRegisterInstruction {
     int getRegister1();
 }

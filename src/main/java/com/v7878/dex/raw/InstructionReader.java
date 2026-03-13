@@ -56,6 +56,13 @@ public class InstructionReader {
         if (raw_opcode == 0x00 && arg != 0) {
             raw_opcode = unit;
             arg = 0;
+        } else if (raw_opcode == 0xff) {
+            // extended opcodes
+            var api = reader.options().getTargetApi();
+            if (api == 14 || api == 15) {
+                raw_opcode = unit;
+                arg = 0;
+            }
         }
 
         var opcode = reader.opcodes().getOpcodeByValue(raw_opcode);
@@ -90,9 +97,12 @@ public class InstructionReader {
             case Format34c -> read_34c(opcode, in, reader, arg);
             case Format35c -> read_35c(opcode, in, reader, arg);
             case Format3rc -> read_3rc(opcode, in, reader, arg);
+            case Format41c -> throw new UnsupportedOperationException("TODO");
             case Format45cc -> read_45cc(opcode, in, reader, arg);
             case Format4rcc -> read_4rcc(opcode, in, reader, arg);
             case Format51l -> read_51l(opcode, in, arg);
+            case Format52c -> throw new UnsupportedOperationException("TODO");
+            case Format5rc -> throw new UnsupportedOperationException("TODO");
             case ArrayPayload -> read_array_payload(opcode, in, arg);
             case PackedSwitchPayload -> read_packed_switch_payload(opcode, in, arg);
             case SparseSwitchPayload -> read_sparse_switch_payload(opcode, in, arg);

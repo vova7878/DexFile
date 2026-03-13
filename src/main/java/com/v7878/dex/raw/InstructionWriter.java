@@ -92,9 +92,12 @@ public class InstructionWriter {
                     throw new UnsupportedOperationException("Unimplemented yet!");
             case Format35c -> write_35c(((Instruction35c) instruction), writer, out, op);
             case Format3rc -> write_3rc(((Instruction3rc) instruction), writer, out, op);
+            case Format41c -> throw new UnsupportedOperationException("TODO");
             case Format45cc -> write_45cc(((Instruction45cc) instruction), writer, out, op);
             case Format4rcc -> write_4rcc(((Instruction4rcc) instruction), writer, out, op);
             case Format51l -> write_51l(((Instruction51l) instruction), out, op);
+            case Format52c -> throw new UnsupportedOperationException("TODO");
+            case Format5rc -> throw new UnsupportedOperationException("TODO");
             case ArrayPayload -> write_array_payload(((ArrayPayload) instruction), out, op);
             case PackedSwitchPayload ->
                     write_packed_switch_payload(((PackedSwitchPayload) instruction), out, op);
