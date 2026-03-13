@@ -1,6 +1,5 @@
 package com.v7878.dex.raw;
 
-import static com.v7878.dex.DexOffsets.PAYLOAD_INSTRUCTION_ALIGNMENT;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.MathUtils.extend_sign32;
 
@@ -394,7 +393,6 @@ public class InstructionReader {
 
     public static PackedSwitchPayload read_packed_switch_payload(
             Opcode opcode, RandomInput in) {
-        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int size = in.readUShort();
         int first_key = in.readInt();
         int[] targets = in.readIntArray(size);
@@ -407,7 +405,6 @@ public class InstructionReader {
 
     public static SparseSwitchPayload read_sparse_switch_payload(
             Opcode opcode, RandomInput in) {
-        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int size = in.readUShort();
         int[] keys = in.readIntArray(size);
         int[] targets = in.readIntArray(size);
@@ -420,7 +417,6 @@ public class InstructionReader {
 
     public static ArrayPayload read_array_payload(
             Opcode opcode, RandomInput in) {
-        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int element_width = in.readUShort();
         int size = in.readSmallUInt();
         var data = new ArrayList<Number>(size);
@@ -454,7 +450,6 @@ public class InstructionReader {
 
     public static PackedSwitchPayload read_m_packed_switch_payload(
             Opcode opcode, RandomInput in) {
-        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int size = in.readUShort();
         int first_key = in.readInt();
         short[] targets = in.readShortArray(size);
@@ -467,7 +462,6 @@ public class InstructionReader {
 
     public static SparseSwitchPayload read_m_sparse_switch_payload(
             Opcode opcode, RandomInput in) {
-        in.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         int size = in.readUShort();
         int[] keys = in.readIntArray(size);
         short[] targets = in.readShortArray(size);
