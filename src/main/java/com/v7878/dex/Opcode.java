@@ -3,8 +3,6 @@ package com.v7878.dex;
 import static com.v7878.dex.DexVersion.DEX009;
 import static com.v7878.dex.DexVersion.DEX013;
 import static com.v7878.dex.DexVersion.DEX035;
-import static com.v7878.dex.DexVersion.DEX038;
-import static com.v7878.dex.DexVersion.DEX039;
 import static com.v7878.dex.Format.ArrayPayload;
 import static com.v7878.dex.Format.Format10t;
 import static com.v7878.dex.Format.Format10x;
@@ -304,12 +302,12 @@ public enum Opcode {
 
     // e3 - f9 unused
 
-    INVOKE_POLYMORPHIC(firstDex(DEX038, firstApi(0xfa, 26)), "invoke-polymorphic", Format45cc, METHOD, PROTO, CAN_THROW | TYPE_INVOKE),
-    INVOKE_POLYMORPHIC_RANGE(firstDex(DEX038, firstApi(0xfb, 26)), "invoke-polymorphic/range", Format4rcc, METHOD, PROTO, CAN_THROW | TYPE_INVOKE),
-    INVOKE_CUSTOM(firstDex(DEX038, firstApi(0xfc, 26)), "invoke-custom", Format35c, CALLSITE, CAN_THROW | TYPE_INVOKE),
-    INVOKE_CUSTOM_RANGE(firstDex(DEX038, firstApi(0xfd, 26)), "invoke-custom/range", Format3rc, CALLSITE, CAN_THROW | TYPE_INVOKE),
-    CONST_METHOD_HANDLE(firstDex(DEX039, firstApi(0xfe, 28)), "const-method-handle", Format21c, METHOD_HANDLE, CAN_THROW),
-    CONST_METHOD_TYPE(firstDex(DEX039, firstApi(0xff, 28)), "const-method-type", Format21c, PROTO, CAN_THROW),
+    INVOKE_POLYMORPHIC(firstApi(0xfa, 26), "invoke-polymorphic", Format45cc, METHOD, PROTO, CAN_THROW | TYPE_INVOKE),
+    INVOKE_POLYMORPHIC_RANGE(firstApi(0xfb, 26), "invoke-polymorphic/range", Format4rcc, METHOD, PROTO, CAN_THROW | TYPE_INVOKE),
+    INVOKE_CUSTOM(firstApi(0xfc, 26), "invoke-custom", Format35c, CALLSITE, CAN_THROW | TYPE_INVOKE),
+    INVOKE_CUSTOM_RANGE(firstApi(0xfd, 26), "invoke-custom/range", Format3rc, CALLSITE, CAN_THROW | TYPE_INVOKE),
+    CONST_METHOD_HANDLE(firstApi(0xfe, 28), "const-method-handle", Format21c, METHOD_HANDLE, CAN_THROW),
+    CONST_METHOD_TYPE(firstApi(0xff, 28), "const-method-type", Format21c, PROTO, CAN_THROW),
 
     PACKED_SWITCH_PAYLOAD(modern(0x100), "packed-switch-payload", PackedSwitchPayload, 0),
     SPARSE_SWITCH_PAYLOAD(modern(0x200), "sparse-switch-payload", SparseSwitchPayload, 0),
@@ -319,6 +317,7 @@ public enum Opcode {
 
     M_CONST_SPECIAL(legacy(0x1a, 0x1a), "const/special", Format11p, 0),
     M_CONST_WIDE_SPECIAL(legacy(0x1b, 0x1b), "const-wide/special", Format11p, 0),
+
     // The semantics of the new-array instruction differ from newer versions of dex.
     // The instruction takes the type of array component, not the type of the array itself
     M_NEW_ARRAY(legacy(0x22, 0x22), "new-array", Format22c, TYPE, CAN_THROW),
@@ -331,14 +330,17 @@ public enum Opcode {
     M_NEW_ARRAY_FLOAT(legacy(0x29, 0x29), "new-array-float", Format12x, CAN_THROW),
     M_NEW_ARRAY_DOUBLE(legacy(0x2a, 0x2a), "new-array-double", Format12x, CAN_THROW),
     M_FILLED_NEW_ARRAY(legacy(0x2b, 0x2b), "filled-new-array", Format34c, TYPE, CAN_THROW),
+
     M_GOTO_24(legacy(52, 53), "goto/24", Format20t_24, TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
     M_PACKED_SWITCH(legacy(0x35, 0x36), "packed-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
     M_SPARSE_SWITCH(legacy(0x36, 0x37), "sparse-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
+
     M_INVOKE_VIRTUAL(legacy(0x6d, 0x6e), "invoke-virtual", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
     M_INVOKE_SUPER(legacy(0x6e, 0x6f), "invoke-super", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
     M_INVOKE_DIRECT(legacy(0x6f, 0x70), "invoke-direct", Format34c, METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
     M_INVOKE_STATIC(legacy(0x70, 0x71), "invoke-static", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
     M_INVOKE_INTERFACE(legacy(0x71, 0x72), "invoke-interface", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
+
     M_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "packed-switch-payload", MPackedSwitchPayload, 0),
     M_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "sparse-switch-payload", MSparseSwitchPayload, 0),
 
@@ -360,12 +362,14 @@ public enum Opcode {
     IGET_QUICK(dalvikOrArt(common(0xf2), lastApi(0xe3, 30)), "iget-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IGET_WIDE_QUICK(dalvikOrArt(common(0xf3), lastApi(0xe4, 30)), "iget-wide-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IGET_OBJECT_QUICK(dalvikOrArt(common(0xf4), lastApi(0xe5, 30)), "iget-object-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
+
     IPUT_QUICK(dalvikOrArt(common(0xf5), lastApi(0xe6, 30)), "iput-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IPUT_WIDE_QUICK(dalvikOrArt(common(0xf6), lastApi(0xe7, 30)), "iput-wide-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IPUT_OBJECT_QUICK(dalvikOrArt(common(0xf7), lastApi(0xe8, 30)), "iput-object-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
 
     INVOKE_VIRTUAL_QUICK(dalvikOrArt(modern(0xf8), lastApi(0xe9, 30)), "invoke-virtual-quick", Format35c, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
     INVOKE_VIRTUAL_QUICK_RANGE(dalvikOrArt(common(0xf9), lastApi(0xea, 30)), "invoke-virtual-quick/range", Format3rc, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+
     INVOKE_SUPER_QUICK(dalvikOnly(modern(0xfa)), "invoke-super-quick", Format35c, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
     INVOKE_SUPER_QUICK_RANGE(dalvikOnly(common(0xfb)), "invoke-super-quick/range", Format3rc, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
@@ -376,16 +380,19 @@ public enum Opcode {
 
     IGET_VOLATILE(dalvikOnly(firstApi(0xe3, 9)), "iget-volatile", Format22c, FIELD, ODEX_ONLY | CAN_THROW),
     IPUT_VOLATILE(dalvikOnly(firstApi(0xe4, 9)), "iput-volatile", Format22c, FIELD, ODEX_ONLY | CAN_THROW),
+
     SGET_VOLATILE(dalvikOnly(firstApi(0xe5, 9)), "sget-volatile", Format21c, FIELD, ODEX_ONLY | CAN_THROW),
     SPUT_VOLATILE(dalvikOnly(firstApi(0xe6, 9)), "sput-volatile", Format21c, FIELD, ODEX_ONLY | CAN_THROW),
 
     IGET_WIDE_VOLATILE(dalvikOnly(firstApi(0xe8, 9)), "iget-wide-volatile", Format22c, FIELD, ODEX_ONLY | CAN_THROW),
     IPUT_WIDE_VOLATILE(dalvikOnly(firstApi(0xe9, 9)), "iput-wide-volatile", Format22c, FIELD, ODEX_ONLY | CAN_THROW),
+
     SGET_WIDE_VOLATILE(dalvikOnly(firstApi(0xea, 9)), "sget-wide-volatile", Format21c, FIELD, ODEX_ONLY | CAN_THROW),
     SPUT_WIDE_VOLATILE(dalvikOnly(firstApi(0xeb, 9)), "sput-wide-volatile", Format21c, FIELD, ODEX_ONLY | CAN_THROW),
 
     IGET_OBJECT_VOLATILE(dalvikOnly(firstApi(0xe7, 9)), "iget-object-volatile", Format22c, FIELD, ODEX_ONLY | CAN_THROW),
     IPUT_OBJECT_VOLATILE(dalvikOnly(firstApi(0xfc, 9)), "iput-object-volatile", Format22c, FIELD, ODEX_ONLY | CAN_THROW),
+
     SGET_OBJECT_VOLATILE(dalvikOnly(firstApi(0xfd, 9)), "sget-object-volatile", Format21c, FIELD, ODEX_ONLY | CAN_THROW),
     SPUT_OBJECT_VOLATILE(dalvikOnly(firstApi(0xfe, 9)), "sput-object-volatile", Format21c, FIELD, ODEX_ONLY | CAN_THROW),
 
@@ -396,6 +403,7 @@ public enum Opcode {
     IPUT_BYTE_QUICK(betweenApi(0xec, 23, 30), "iput-byte-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IPUT_CHAR_QUICK(betweenApi(0xed, 23, 30), "iput-char-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IPUT_SHORT_QUICK(betweenApi(0xee, 23, 30), "iput-short-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
+
     IGET_BOOLEAN_QUICK(betweenApi(0xef, 23, 30), "iget-boolean-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IGET_BYTE_QUICK(betweenApi(0xf0, 23, 30), "iget-byte-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IGET_CHAR_QUICK(betweenApi(0xf1, 23, 30), "iget-char-quick", Format22c, RAW_INDEX, ODEX_ONLY | CAN_THROW),
@@ -455,8 +463,27 @@ public enum Opcode {
     INVOKE_STATIC_JUMBO(betweenApi(0x25ff, 14, 15), "invoke-static/jumbo", Format5rc, METHOD, CAN_THROW | TYPE_INVOKE),
     INVOKE_INTERFACE_JUMBO(betweenApi(0x26ff, 14, 15), "invoke-interface/jumbo", Format5rc, METHOD, CAN_THROW | TYPE_INVOKE),
 
-    // TODO: odex036 opcodes
+    // legacy dex036 odex opcodes
 
+    INVOKE_OBJECT_INIT_JUMBO(betweenApi(0xf2ff, 14, 15), "invoke-object-init/jumbo", Format5rc, METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+
+    IGET_VOLATILE_JUMBO(betweenApi(0xf3ff, 14, 15), "iget-volatile/jumbo", Format52c, FIELD, ODEX_ONLY | CAN_THROW),
+    IGET_WIDE_VOLATILE_JUMBO(betweenApi(0xf4ff, 14, 15), "iget-wide-volatile/jumbo", Format52c, FIELD, ODEX_ONLY | CAN_THROW),
+    IGET_OBJECT_VOLATILE_JUMBO(betweenApi(0xf5ff, 14, 15), "iget-object-volatile/jumbo", Format52c, FIELD, ODEX_ONLY | CAN_THROW),
+    IPUT_VOLATILE_JUMBO(betweenApi(0xf6ff, 14, 15), "iput-volatile/jumbo", Format52c, FIELD, ODEX_ONLY | CAN_THROW),
+    IPUT_WIDE_VOLATILE_JUMBO(betweenApi(0xf7ff, 14, 15), "iput-wide-volatile/jumbo", Format52c, FIELD, ODEX_ONLY | CAN_THROW),
+    IPUT_OBJECT_VOLATILE_JUMBO(betweenApi(0xf8ff, 14, 15), "iput-object-volatile/jumbo", Format52c, FIELD, ODEX_ONLY | CAN_THROW),
+
+    SGET_VOLATILE_JUMBO(betweenApi(0xf9ff, 14, 15), "sget-volatile/jumbo", Format41c, FIELD, ODEX_ONLY | CAN_THROW),
+    SGET_WIDE_VOLATILE_JUMBO(betweenApi(0xfaff, 14, 15), "sget-wide-volatile/jumbo", Format41c, FIELD, ODEX_ONLY | CAN_THROW),
+    SGET_OBJECT_VOLATILE_JUMBO(betweenApi(0xfbff, 14, 15), "sget-object-volatile/jumbo", Format41c, FIELD, ODEX_ONLY | CAN_THROW),
+    SPUT_VOLATILE_JUMBO(betweenApi(0xfcff, 14, 15), "sput-volatile/jumbo", Format41c, FIELD, ODEX_ONLY | CAN_THROW),
+    SPUT_WIDE_VOLATILE_JUMBO(betweenApi(0xfdff, 14, 15), "sput-wide-volatile/jumbo", Format41c, FIELD, ODEX_ONLY | CAN_THROW),
+    SPUT_OBJECT_VOLATILE_JUMBO(betweenApi(0xfeff, 14, 15), "sput-object-volatile/jumbo", Format41c, FIELD, ODEX_ONLY | CAN_THROW),
+
+    // TODO THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40cs, ODEX_ONLY | CAN_THROW | END_FLOW),
+
+    // special single 16-bit opcode
     RAW(raw(), "raw", FormatRaw, 0);
 
     protected static class Constants {
@@ -749,10 +776,6 @@ public enum Opcode {
         return betweenApi(value(opcodeValue), minApi, maxApi);
     }
 
-    private static boolean checkDexVersion(DexVersion min, DexVersion target) {
-        return target.isCompact() || (min.ordinal() >= target.ordinal());
-    }
-
     private static Constraint onlyDex(DexVersion version, Constraint constraint) {
         return new Constraint() {
             @Override
@@ -772,6 +795,11 @@ public enum Opcode {
         };
     }
 
+    private static boolean checkDexVersion(DexVersion min, DexVersion target) {
+        return target.isCompact() || (min.ordinal() >= target.ordinal());
+    }
+
+    @SuppressWarnings("SameParameterValue")
     private static Constraint firstDex(DexVersion version, Constraint constraint) {
         return new Constraint() {
             @Override
