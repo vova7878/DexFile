@@ -41,9 +41,12 @@ import com.v7878.dex.immutable.bytecode.Instruction31t;
 import com.v7878.dex.immutable.bytecode.Instruction32x;
 import com.v7878.dex.immutable.bytecode.Instruction35c;
 import com.v7878.dex.immutable.bytecode.Instruction3rc;
+import com.v7878.dex.immutable.bytecode.Instruction41c;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
+import com.v7878.dex.immutable.bytecode.Instruction52c;
+import com.v7878.dex.immutable.bytecode.Instruction5rc;
 import com.v7878.dex.immutable.bytecode.InstructionRaw;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
@@ -92,9 +95,12 @@ public class InstructionWriter {
                     throw new UnsupportedOperationException("Unimplemented yet!");
             case Format35c -> write_35c(((Instruction35c) instruction), writer, out, op);
             case Format3rc -> write_3rc(((Instruction3rc) instruction), writer, out, op);
+            case Format41c -> write_41c(((Instruction41c) instruction), writer, out, op);
             case Format45cc -> write_45cc(((Instruction45cc) instruction), writer, out, op);
             case Format4rcc -> write_4rcc(((Instruction4rcc) instruction), writer, out, op);
             case Format51l -> write_51l(((Instruction51l) instruction), out, op);
+            case Format52c -> write_52c(((Instruction52c) instruction), writer, out, op);
+            case Format5rc -> throw new UnsupportedOperationException("TODO");
             case ArrayPayload -> write_array_payload(((ArrayPayload) instruction), out, op);
             case PackedSwitchPayload ->
                     write_packed_switch_payload(((PackedSwitchPayload) instruction), out, op);
@@ -168,11 +174,11 @@ public class InstructionWriter {
         out.writeShort((arg << 8) | opcode);
     }
 
-    private static void write_base(RandomOutput out, int payload_opcode) {
-        if (!uwidth(payload_opcode, 16)) {
-            throw new IllegalStateException("Illegal payload_opcode: " + payload_opcode);
+    private static void write_base(RandomOutput out, int opcode) {
+        if (!uwidth(opcode, 16)) {
+            throw new IllegalStateException("Illegal opcode: " + opcode);
         }
-        out.writeShort(payload_opcode);
+        out.writeShort(opcode);
     }
 
     public static void write_10x(RandomOutput out, int opcode) {
@@ -362,7 +368,7 @@ public class InstructionWriter {
     }
 
     public static void write_31i_31t_31c(RandomOutput out, int opcode, int AA, int BBBBBBBB) {
-        unsigned(AA, 8);
+        AA = unsigned(AA, 8);
         // no need to check BBBBBBBB
         write_base(out, opcode, AA);
         out.writeShort(BBBBBBBB & 0xffff);
@@ -416,6 +422,20 @@ public class InstructionWriter {
     public static void write_3rc(Instruction3rc value, DexWriter indexer, RandomOutput out, int opcode) {
         write_3rc(out, opcode, value.getRegisterCount(), refToIndex(value
                 .getReferenceType1(), indexer, value.getReference1()), value.getStartRegister());
+    }
+
+    public static void write_41c(RandomOutput out, int opcode, int AAAA, int BBBBBBBB) {
+        AAAA = unsigned(AAAA, 16);
+        // no need to check BBBBBBBB
+        write_base(out, opcode);
+        out.writeShort(BBBBBBBB & 0xffff);
+        out.writeShort(BBBBBBBB >>> 16);
+        out.writeShort(AAAA);
+    }
+
+    public static void write_41c(Instruction41c value, DexWriter indexer, RandomOutput out, int opcode) {
+        write_41c(out, opcode, value.getRegister1(), refToIndex(value
+                .getReferenceType1(), indexer, value.getReference1()));
     }
 
     public static void write_45cc(RandomOutput out, int opcode, int A,
@@ -472,6 +492,37 @@ public class InstructionWriter {
 
     public static void write_51l(Instruction51l value, RandomOutput out, int opcode) {
         write_51l(out, opcode, value.getRegister1(), value.getWideLiteral());
+    }
+
+    public static void write_52c(RandomOutput out, int opcode, int AAAA, int BBBB, int CCCCCCCC) {
+        AAAA = unsigned(AAAA, 16);
+        BBBB = unsigned(BBBB, 16);
+        write_base(out, opcode);
+        out.writeShort(CCCCCCCC & 0xffff);
+        out.writeShort(CCCCCCCC >>> 16);
+        out.writeShort(AAAA);
+        out.writeShort(BBBB);
+    }
+
+    public static void write_52c(Instruction52c value, DexWriter indexer, RandomOutput out, int opcode) {
+        write_52c(out, opcode, value.getRegister1(), value.getRegister2(),
+                refToIndex(value.getReferenceType1(), indexer, value.getReference1()));
+    }
+
+    public static void write_5rc(RandomOutput out, int opcode,
+                                 int AAAA, int BBBBBBBB, int CCCC) {
+        AAAA = unsigned(AAAA, 16);
+        CCCC = unsigned(CCCC, 16);
+        write_base(out, opcode);
+        out.writeShort(BBBBBBBB & 0xffff);
+        out.writeShort(BBBBBBBB >>> 16);
+        out.writeShort(AAAA);
+        out.writeShort(CCCC);
+    }
+
+    public static void write_5rc(Instruction5rc value, DexWriter indexer, RandomOutput out, int opcode) {
+        write_5rc(out, opcode, value.getRegisterCount(), refToIndex(value
+                .getReferenceType1(), indexer, value.getReference1()), value.getStartRegister());
     }
 
     public static void write_packed_switch_payload(RandomOutput out, int opcode,

@@ -280,10 +280,18 @@ public class Preconditions {
         return registerCount;
     }
 
-    public static int checkRegisterRangeCount(int registerCount) {
+    public static int checkByteRegisterRangeCount(int registerCount) {
         if ((registerCount & 0xFFFFFF00) != 0) {
             throw new IllegalArgumentException(
                     String.format("Invalid register count: %d. Must be between 0 and 255, inclusive", registerCount));
+        }
+        return registerCount;
+    }
+
+    public static int checkShortRegisterRangeCount(int registerCount) {
+        if ((registerCount & 0xFFFF0000) != 0) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid register count: %d. Must be between 0 and 65535, inclusive", registerCount));
         }
         return registerCount;
     }

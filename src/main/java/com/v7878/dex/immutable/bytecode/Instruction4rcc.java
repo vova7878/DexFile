@@ -21,7 +21,7 @@ public final class Instruction4rcc extends Instruction
     private Instruction4rcc(Opcode opcode, int register_count, int start_register,
                             Object reference1, Object reference2) {
         super(Preconditions.checkFormat(opcode, Format4rcc));
-        this.register_count = Preconditions.checkRegisterRangeCount(register_count);
+        this.register_count = Preconditions.checkByteRegisterRangeCount(register_count);
         this.start_register = Preconditions.checkShortRegister(start_register);
         Preconditions.checkShortRegister(start_register + register_count);
         this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
