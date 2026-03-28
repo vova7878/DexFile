@@ -441,7 +441,7 @@ public final class CodeBuilder {
 
     public static MethodImplementation build(int regs_size, int ins_size,
                                              Consumer<CodeBuilder> consumer) {
-        return build(regs_size, 0, false, consumer);
+        return build(regs_size, ins_size, false, consumer);
     }
 
     public static MethodImplementation build(int regs_size, Consumer<CodeBuilder> consumer) {

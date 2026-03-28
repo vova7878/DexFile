@@ -9,7 +9,6 @@ import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.ArrayList;
@@ -23,12 +22,46 @@ import java.util.function.Consumer;
 public final class ClassBuilder {
     private TypeId type;
     private int access_flags;
+
     private TypeId superclass;
-    private List<TypeId> interfaces;
+
+    private final List<TypeId> interfaces;
+
     private String source_file;
-    private NavigableSet<FieldDef> fields;
-    private NavigableSet<MethodDef> methods;
-    private NavigableSet<Annotation> annotations;
+
+    private final NavigableSet<FieldDef> fields;
+
+    private final NavigableSet<MethodDef> methods;
+
+    private final NavigableSet<Annotation> annotations;
+
+    public TypeId getType() {
+        return type;
+    }
+
+    public int getAccessFlags() {
+        return access_flags;
+    }
+
+    public TypeId getSuperClass() {
+        return superclass;
+    }
+
+    public List<TypeId> getInterfaces() {
+        return interfaces;
+    }
+
+    public String getSourceFile() {
+        return source_file;
+    }
+
+    public NavigableSet<FieldDef> getFields() {
+        return fields;
+    }
+
+    public NavigableSet<MethodDef> getMethods() {
+        return methods;
+    }
 
     private ClassBuilder() {
         this.interfaces = new ArrayList<>();
@@ -115,7 +148,8 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder setInterfaces(Iterable<TypeId> interfaces) {
-        this.interfaces = Converter.mutableList(interfaces);
+        this.interfaces.clear();
+        CollectionUtils.addAll(this.interfaces, interfaces);
         return this;
     }
 
@@ -124,8 +158,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder withInterfaces(Iterable<TypeId> interfaces) {
-        withoutInterfaces(interfaces);
-        this.interfaces.addAll(Converter.toList(interfaces));
+        CollectionUtils.addAll(this.interfaces, interfaces);
         return this;
     }
 
@@ -143,7 +176,8 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder setAnnotations(Iterable<Annotation> annotations) {
-        this.annotations = Converter.mutableNavigableSet(annotations);
+        this.annotations.clear();
+        CollectionUtils.addAll(this.annotations, annotations);
         return this;
     }
 
@@ -152,8 +186,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder withAnnotations(Iterable<Annotation> annotations) {
-        withoutAnnotations(annotations);
-        this.annotations.addAll(Converter.toList(annotations));
+        CollectionUtils.replaceAll(this.annotations, annotations);
         return this;
     }
 
@@ -171,7 +204,8 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder setFields(Iterable<FieldDef> fields) {
-        this.fields = Converter.mutableNavigableSet(fields);
+        this.fields.clear();
+        CollectionUtils.addAll(this.fields, fields);
         return this;
     }
 
@@ -180,8 +214,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder withFields(Iterable<FieldDef> fields) {
-        withoutFields(fields);
-        this.fields.addAll(Converter.toList(fields));
+        CollectionUtils.replaceAll(this.fields, fields);
         return this;
     }
 
@@ -218,7 +251,8 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder setMethods(Iterable<MethodDef> methods) {
-        this.methods = Converter.mutableNavigableSet(methods);
+        this.methods.clear();
+        CollectionUtils.addAll(this.methods, methods);
         return this;
     }
 
@@ -227,8 +261,7 @@ public final class ClassBuilder {
     }
 
     public ClassBuilder withMethods(Iterable<MethodDef> methods) {
-        withoutMethods(methods);
-        this.methods.addAll(Converter.toList(methods));
+        CollectionUtils.replaceAll(this.methods, methods);
         return this;
     }
 

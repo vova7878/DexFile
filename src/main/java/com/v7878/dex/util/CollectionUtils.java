@@ -56,7 +56,31 @@ public class CollectionUtils {
         return Collections.unmodifiableList(stream.collect(Collectors.toList()));
     }
 
+    public static <T> void replaceAll(NavigableSet<T> set, Iterable<T> iterable) {
+        if (iterable == null) return;
+        for (T tmp : iterable) {
+            Objects.requireNonNull(tmp);
+            set.remove(tmp);
+            set.add(tmp);
+        }
+    }
+
+    public static <T> void addAll(NavigableSet<T> set, Iterable<T> iterable) {
+        if (iterable == null) return;
+        for (T tmp : iterable) {
+            set.add(Objects.requireNonNull(tmp));
+        }
+    }
+
+    public static <T> void addAll(List<T> list, Iterable<T> iterable) {
+        if (iterable == null) return;
+        for (T tmp : iterable) {
+            list.add(Objects.requireNonNull(tmp));
+        }
+    }
+
     public static <T> void removeAll(NavigableSet<T> set, Iterable<T> iterable) {
+        if (iterable == null) return;
         // You cannot use removeAll here because it
         //  compares objects using equals() instead of compare()
         for (T tmp : iterable) {
@@ -65,12 +89,11 @@ public class CollectionUtils {
     }
 
     public static <T> void removeAll(List<T> list, Iterable<T> iterable) {
+        if (iterable == null) return;
         if (iterable instanceof Collection<T> collection) {
             list.removeAll(collection);
-        } else {
-            for (T tmp : iterable) {
-                while (list.remove(tmp)) { /* nop */ }
-            }
+        } else for (T tmp : iterable) {
+            while (list.remove(tmp)) { /* nop */ }
         }
     }
 
