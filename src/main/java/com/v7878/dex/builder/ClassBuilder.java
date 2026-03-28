@@ -22,17 +22,11 @@ import java.util.function.Consumer;
 public final class ClassBuilder {
     private TypeId type;
     private int access_flags;
-
     private TypeId superclass;
-
     private final List<TypeId> interfaces;
-
     private String source_file;
-
     private final NavigableSet<FieldDef> fields;
-
     private final NavigableSet<MethodDef> methods;
-
     private final NavigableSet<Annotation> annotations;
 
     public TypeId getType() {

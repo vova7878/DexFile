@@ -25,7 +25,6 @@ import java.util.function.Consumer;
 public final class MethodBuilder {
     private String name;
     private TypeId return_type;
-
     // Note: non-final
     private List<Parameter> parameters;
     private int access_flags;

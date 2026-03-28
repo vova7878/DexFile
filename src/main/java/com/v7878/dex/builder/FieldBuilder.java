@@ -17,15 +17,10 @@ import java.util.function.Consumer;
 
 public final class FieldBuilder {
     private String name;
-
     private TypeId type;
-
     private int access_flags;
-
     private int hiddenapi_flags;
-
     private EncodedValue initial_value;
-
     private final NavigableSet<Annotation> annotations;
 
     public String getName() {
