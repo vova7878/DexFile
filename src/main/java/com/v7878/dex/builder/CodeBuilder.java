@@ -2044,7 +2044,7 @@ public final class CodeBuilder {
             return this;
         }
         if (table.size() == 1 && table.firstKey() == 0) {
-            return if_testz(Test.EQ, reg_to_test, table.valueAt(0));
+            return if_testz(Test.EQ, reg_to_test, table.firstValue());
         }
         // TODO: what if all targets is next instruction? Can we generate nothing?
         if (table.size() <= 1 || (table.lastKey() - table.firstKey()) == (table.size() - 1)) {

@@ -8,6 +8,7 @@ import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Preconditions;
 
@@ -232,6 +233,23 @@ public final class ClassBuilder {
         return withField(fb -> fb
                 .of(descriptor)
                 .withFlags(flags)
+        );
+    }
+
+    public ClassBuilder withField(String name, TypeId type, int flags, EncodedValue value) {
+        return withField(fb -> fb
+                .withName(name)
+                .withType(type)
+                .withFlags(flags)
+                .withInitialValue(value)
+        );
+    }
+
+    public ClassBuilder withField(String descriptor, int flags, EncodedValue value) {
+        return withField(fb -> fb
+                .of(descriptor)
+                .withFlags(flags)
+                .withInitialValue(value)
         );
     }
 
