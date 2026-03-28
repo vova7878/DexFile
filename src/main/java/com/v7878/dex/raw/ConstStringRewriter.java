@@ -25,8 +25,6 @@ import com.v7878.dex.immutable.bytecode.Instruction31t;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
-import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
-import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.debug.AdvancePC;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.EndLocal;
@@ -109,9 +107,9 @@ public class ConstStringRewriter {
         var opcode = insn.getOpcode();
         switch (opcode) {
             case CONST_STRING -> {
-                var ref = ((SingleReferenceInstruction) insn).getReference1();
-                var reg = ((OneRegisterInstruction) insn).getRegister1();
-                var str = (String) ref;
+                var tmp = (Instruction21c) insn;
+                var str = (String) tmp.getReference1();
+                var reg = tmp.getRegister1();
                 var index = strings.getStringIndex(str);
                 if (uwidth(index, 16)) {
                     ib.raw_const_string(reg, str);
