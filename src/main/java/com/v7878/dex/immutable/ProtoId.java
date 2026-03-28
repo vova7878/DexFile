@@ -87,8 +87,7 @@ public final class ProtoId implements Comparable<ProtoId> {
     }
 
     public ProtoId erased() {
-        UnaryOperator<TypeId> erased = type ->
-                type.isPrimitive() ? type : TypeId.OBJECT;
+        UnaryOperator<TypeId> erased = TypeId::erased;
         return raw(
                 erased.apply(return_type),
                 Converter.transform(parameters, erased)
@@ -96,10 +95,7 @@ public final class ProtoId implements Comparable<ProtoId> {
     }
 
     public ProtoId basic() {
-        UnaryOperator<TypeId> basic = type -> switch (type.getShorty()) {
-            case 'Z', 'B', 'S', 'C' -> TypeId.I;
-            default -> type.isPrimitive() ? type : TypeId.OBJECT;
-        };
+        UnaryOperator<TypeId> basic = TypeId::basic;
         return raw(
                 basic.apply(return_type),
                 Converter.transform(parameters, basic)
