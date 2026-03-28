@@ -1065,8 +1065,8 @@ public class DexWriter {
         data_buffer.writeULeb128(access_flags);
         var code = value.code();
         data_buffer.writeULeb128(code == null ? NO_OFFSET : getCodeItemOffset(code));
-        if (isCompact()) {
-            var debug_info = value.debug_info();
+        if (code != null && isCompact()) {
+            var debug_info = code.debug_info;
             if (debug_info != null) {
                 compact_debug_info.offsets[index] = getDebugInfoOffset(debug_info);
             }

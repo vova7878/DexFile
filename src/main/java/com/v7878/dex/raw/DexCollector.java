@@ -120,23 +120,24 @@ public class DexCollector {
 
     public static final class CodeContainer {
         public final MethodImplementation value;
-        // Not null only for standart dex files
         public final DebugInfo debug_info;
         public final TryBlockContainer[] tries;
         public final int ins;
         public final int outs;
+        public final boolean compact;
 
         public int debug_info_offset;
 
         private final int hash;
 
         public CodeContainer(MethodImplementation value, DebugInfo debug_info,
-                             TryBlockContainer[] tries, int ins, int outs) {
+                             TryBlockContainer[] tries, int ins, int outs, boolean compact) {
             this.value = Objects.requireNonNull(value);
             this.debug_info = debug_info;
             this.tries = tries;
             this.ins = ins;
             this.outs = outs;
+            this.compact = compact;
 
             this.debug_info_offset = -1;
             this.hash = Objects.hash(ins, /* outs, */ value.getRegisterCount(),
@@ -155,7 +156,10 @@ public class DexCollector {
                     && value.getRegisterCount() == other.value.getRegisterCount()
                     && Objects.equals(value.getInstructions(), other.value.getInstructions())
                     && Arrays.equals(tries, other.tries)
-                    && Objects.equals(debug_info, other.debug_info);
+                    // This comparison is at the end because it should never fail
+                    && compact == other.compact
+                    // For compact dex files, debug info is not compared
+                    && (compact || Objects.equals(debug_info, other.debug_info));
         }
 
         @Override
@@ -167,19 +171,16 @@ public class DexCollector {
             return Converter.transform(tries, TryBlockContainer::of, TryBlockContainer[]::new);
         }
 
-        public static CodeContainer of(MethodImplementation value,
-                                       DebugInfo debug_info,
-                                       MethodId id, int flags) {
+        public static CodeContainer of(boolean compact, MethodImplementation value,
+                                       DebugInfo debug_info, MethodId id, int flags) {
             if (value == null) return null;
             return new CodeContainer(value, debug_info, toTriesArray(value.getTryBlocks()),
                     ShortyUtils.getInputRegisterCount(id.getParameterTypes(), flags),
-                    ShortyUtils.getOutputRegisters(value.getInstructions()));
+                    ShortyUtils.getOutputRegisters(value.getInstructions()), compact);
         }
     }
 
     public record MethodDefContainer(MethodDef value, MethodId id,
-                                     // Not null only for compact dex files
-                                     DebugInfo debug_info,
                                      CodeContainer code) {
         // equals and hashCode are not used
 
@@ -206,16 +207,16 @@ public class DexCollector {
             return new DebugInfo(names, items);
         }
 
-        public static MethodDefContainer of(boolean is_compact, boolean collect_debug_info,
+        public static MethodDefContainer of(boolean compact, boolean collect_debug_info,
                                             TypeId declaring_class, MethodDef value) {
-            var code = value.getImplementation();
+            var impl = value.getImplementation();
             var parameters = value.getParameters();
-            var debug_info = (code == null || !collect_debug_info) ? null :
-                    toDebugInfo(toNamesList(parameters), code.getDebugItems());
-            MethodId id = MethodId.of(declaring_class, value.getName(),
+            var debug_info = (impl == null || !collect_debug_info) ? null :
+                    toDebugInfo(toNamesList(parameters), impl.getDebugItems());
+            var id = MethodId.of(declaring_class, value.getName(),
                     value.getReturnType(), value.getParameterTypes());
-            return new MethodDefContainer(value, id, is_compact ? debug_info : null,
-                    CodeContainer.of(code, is_compact ? null : debug_info, id, value.getAccessFlags()));
+            var code = CodeContainer.of(compact, impl, debug_info, id, value.getAccessFlags());
+            return new MethodDefContainer(value, id, code);
         }
     }
 
@@ -297,14 +298,14 @@ public class DexCollector {
             return out.isEmpty() ? null : EncodedArray.raw(out);
         }
 
-        public static ClassDefContainer of(boolean is_compact, boolean collect_debug_info, ClassDef value) {
+        public static ClassDefContainer of(boolean compact, boolean collect_debug_info, ClassDef value) {
             var type = value.getType();
             var interfaces = value.getInterfaces();
             var static_fields = toFieldsArray(type, value.getStaticFields());
             var instance_fields = toFieldsArray(type, value.getInstanceFields());
-            var direct_methods = toMethodsArray(is_compact,
+            var direct_methods = toMethodsArray(compact,
                     collect_debug_info, type, value.getDirectMethods());
-            var virtual_methods = toMethodsArray(is_compact,
+            var virtual_methods = toMethodsArray(compact,
                     collect_debug_info, type, value.getVirtualMethods());
             var annotations = AnnotationDirectory.of(value, static_fields,
                     instance_fields, direct_methods, virtual_methods);
@@ -533,13 +534,13 @@ public class DexCollector {
     }
 
     public void addAnnotation(Annotation value) {
-        if (annotations.put(value, NO_OFFSET_I) == null) {
+        if (annotations.putIfAbsent(value, NO_OFFSET_I) == null) {
             fillCommonAnnotation(value);
         }
     }
 
     public void addAnnotationSet(NavigableSet<Annotation> value) {
-        if (annotation_sets.put(value, NO_OFFSET_I) == null) {
+        if (annotation_sets.putIfAbsent(value, NO_OFFSET_I) == null) {
             for (var tmp : value) {
                 addAnnotation(tmp);
             }
@@ -547,7 +548,7 @@ public class DexCollector {
     }
 
     public void addAnnotationSetList(List<NavigableSet<Annotation>> value) {
-        if (annotation_set_lists.put(value, NO_OFFSET_I) == null) {
+        if (annotation_set_lists.putIfAbsent(value, NO_OFFSET_I) == null) {
             for (var tmp : value) {
                 if (tmp != null) addAnnotationSet(tmp);
             }
@@ -555,7 +556,7 @@ public class DexCollector {
     }
 
     public void addAnnotationDirectory(AnnotationDirectory value) {
-        if (annotation_directories.put(value, NO_OFFSET_I) == null) {
+        if (annotation_directories.putIfAbsent(value, NO_OFFSET_I) == null) {
             var class_annotations = value.class_annotations();
             if (class_annotations != null) addAnnotationSet(class_annotations);
             for (var entry : value.field_annotations.entrySet()) {
@@ -571,7 +572,7 @@ public class DexCollector {
     }
 
     public void addTypeList(List<TypeId> value) {
-        if (type_lists.put(value, NO_OFFSET_I) == null) {
+        if (type_lists.putIfAbsent(value, NO_OFFSET_I) == null) {
             for (var tmp : value) {
                 addType(tmp);
             }
@@ -579,14 +580,14 @@ public class DexCollector {
     }
 
     public void addEncodedArray(EncodedArray value) {
-        if (encoded_arrays.put(value, NO_OFFSET_I) == null) {
+        if (encoded_arrays.putIfAbsent(value, NO_OFFSET_I) == null) {
             fillEncodedArray(value);
         }
     }
 
     public void addDebugInfo(DebugInfo value) {
         assert collect_debug_info;
-        if (debug_infos.put(value, NO_OFFSET_I) == null) {
+        if (debug_infos.putIfAbsent(value, NO_OFFSET_I) == null) {
             for (var tmp : value.parameter_names()) {
                 if (tmp != null) addString(tmp);
             }
@@ -597,7 +598,7 @@ public class DexCollector {
     }
 
     public void addCodeItem(CodeContainer value) {
-        if (code_items.put(value, NO_OFFSET_I) == null) {
+        if (code_items.putIfAbsent(value, NO_OFFSET_I) == null) {
             for (var tmp : value.value.getInstructions()) {
                 fillInstruction(tmp);
             }
@@ -671,8 +672,6 @@ public class DexCollector {
         addMethod(value.id());
         var code = value.code();
         if (code != null) addCodeItem(code);
-        var debug_info = value.debug_info();
-        if (debug_info != null) addDebugInfo(debug_info);
     }
 
     public void fillEncodedArray(EncodedArray value) {
