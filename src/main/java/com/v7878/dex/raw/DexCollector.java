@@ -24,7 +24,6 @@ import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.iface.DualReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.debug.DebugItem;
-import com.v7878.dex.immutable.debug.SetFile;
 import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
 import com.v7878.dex.immutable.value.EncodedArray;
@@ -36,7 +35,6 @@ import com.v7878.dex.immutable.value.EncodedMethodType;
 import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
-import com.v7878.dex.raw.SharedData.StringPosition;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.ShortyUtils;
@@ -54,6 +52,12 @@ import java.util.TreeSet;
 
 public class DexCollector {
     private static final Integer NO_OFFSET_I = NO_OFFSET;
+
+    public interface StringIndexer {
+        int getStringCount();
+
+        int getStringIndex(String value);
+    }
 
     public record CallSiteIdContainer(CallSiteId value, EncodedArray array)
             implements Comparable<CallSiteIdContainer> {
@@ -207,9 +211,12 @@ public class DexCollector {
             return new DebugInfo(names, items);
         }
 
-        public static MethodDefContainer of(boolean compact, boolean collect_debug_info,
+        public static MethodDefContainer of(StringIndexer strings, boolean compact, boolean collect_debug_info,
                                             TypeId declaring_class, MethodDef value) {
             var impl = value.getImplementation();
+            if (impl != null) {
+                impl = ConstStringRewriter.process(strings, impl, collect_debug_info);
+            }
             var parameters = value.getParameters();
             var debug_info = (impl == null || !collect_debug_info) ? null :
                     toDebugInfo(toNamesList(parameters), impl.getDebugItems());
@@ -277,10 +284,10 @@ public class DexCollector {
         }
 
         private static MethodDefContainer[] toMethodsArray(
-                boolean is_compact, boolean collect_debug_info,
+                StringIndexer strings, boolean is_compact, boolean collect_debug_info,
                 TypeId declaring_class, NavigableSet<MethodDef> methods) {
             return Converter.transform(methods,
-                    value -> MethodDefContainer.of(is_compact,
+                    value -> MethodDefContainer.of(strings, is_compact,
                             collect_debug_info, declaring_class, value),
                     MethodDefContainer[]::new);
         }
@@ -298,14 +305,15 @@ public class DexCollector {
             return out.isEmpty() ? null : EncodedArray.raw(out);
         }
 
-        public static ClassDefContainer of(boolean compact, boolean collect_debug_info, ClassDef value) {
+        public static ClassDefContainer of(StringIndexer strings, boolean compact,
+                                           boolean collect_debug_info, ClassDef value) {
             var type = value.getType();
             var interfaces = value.getInterfaces();
             var static_fields = toFieldsArray(type, value.getStaticFields());
             var instance_fields = toFieldsArray(type, value.getInstanceFields());
-            var direct_methods = toMethodsArray(compact,
+            var direct_methods = toMethodsArray(strings, compact,
                     collect_debug_info, type, value.getDirectMethods());
-            var virtual_methods = toMethodsArray(compact,
+            var virtual_methods = toMethodsArray(strings, compact,
                     collect_debug_info, type, value.getVirtualMethods());
             var annotations = AnnotationDirectory.of(value, static_fields,
                     instance_fields, direct_methods, virtual_methods);
@@ -405,7 +413,6 @@ public class DexCollector {
         }
     }
 
-    public final NavigableSet<StringPosition> strings;
     public final NavigableSet<TypeId> types;
     public final NavigableSet<ProtoId> protos;
     public final NavigableSet<FieldId> fields;
@@ -424,16 +431,16 @@ public class DexCollector {
 
     public final List<ClassDefContainer> class_defs;
 
-    private final SharedData shared_data;
     private final boolean is_compact;
     private final boolean collect_debug_info;
 
-    public DexCollector(SharedData shared_data, boolean is_compact, boolean collect_debug_info) {
-        this.shared_data = shared_data;
+    private final StringIndexer strings;
+
+    public DexCollector(boolean is_compact, boolean collect_debug_info, StringIndexer strings) {
         this.is_compact = is_compact;
         this.collect_debug_info = collect_debug_info;
+        this.strings = strings;
 
-        strings = new TreeSet<>();
         types = new TreeSet<>();
         protos = new TreeSet<>();
         fields = new TreeSet<>();
@@ -453,27 +460,20 @@ public class DexCollector {
         class_defs = new ArrayList<>();
     }
 
-    public void addString(String value) {
-        strings.add(shared_data.addString(value));
-    }
-
     public void addType(TypeId value) {
-        if (types.add(value)) {
-            addString(value.getDescriptor());
-        }
+        types.add(value);
     }
 
     public void addField(FieldId value) {
         if (fields.add(value)) {
             addType(value.getDeclaringClass());
-            addString(value.getName());
             addType(value.getType());
         }
     }
 
     public void addProto(ProtoId value) {
         if (protos.add(value)) {
-            addString(value.computeShorty());
+            value.computeShorty();
             addType(value.getReturnType());
             addTypeList(value.getParameterTypes());
         }
@@ -482,7 +482,6 @@ public class DexCollector {
     public void addMethod(MethodId value) {
         if (methods.add(value)) {
             addType(value.getDeclaringClass());
-            addString(value.getName());
             addProto(value.getProto());
         }
     }
@@ -506,15 +505,13 @@ public class DexCollector {
     }
 
     public void addClassDef(ClassDef value) {
-        var container = ClassDefContainer.of(is_compact, collect_debug_info, value);
+        var container = ClassDefContainer.of(strings, is_compact, collect_debug_info, value);
         class_defs.add(container);
         addType(value.getType());
         var superclass = value.getSuperclass();
         if (superclass != null) addType(superclass);
         var interfaces = container.interfaces;
         if (interfaces != null) addTypeList(interfaces);
-        var source_file = value.getSourceFile();
-        if (source_file != null) addString(source_file);
         var static_values = container.static_values;
         if (static_values != null) addEncodedArray(static_values);
         for (var field : container.static_fields) {
@@ -588,9 +585,6 @@ public class DexCollector {
     public void addDebugInfo(DebugInfo value) {
         assert collect_debug_info;
         if (debug_infos.putIfAbsent(value, NO_OFFSET_I) == null) {
-            for (var tmp : value.parameter_names()) {
-                if (tmp != null) addString(tmp);
-            }
             for (var tmp : value.items()) {
                 fillDebugItem(tmp);
             }
@@ -619,14 +613,13 @@ public class DexCollector {
     public void collect(ReferenceType type, Object value) {
         Objects.requireNonNull(value);
         switch (type) {
-            case STRING -> addString((String) value);
             case TYPE -> addType((TypeId) value);
             case FIELD -> addField((FieldId) value);
             case METHOD -> addMethod((MethodId) value);
             case PROTO -> addProto((ProtoId) value);
             case CALLSITE -> addCallSite((CallSiteId) value);
             case METHOD_HANDLE -> addMethodHandle((MethodHandleId) value);
-            case RAW_INDEX -> { /* nop */ }
+            case STRING, RAW_INDEX -> { /* nop */ }
         }
     }
 
@@ -655,16 +648,9 @@ public class DexCollector {
 
     public void fillDebugItem(DebugItem value) {
         assert collect_debug_info;
-        if (value instanceof SetFile item) {
-            var name = item.getName();
-            if (name != null) addString(name);
-        } else if (value instanceof StartLocal item) {
-            var name = item.getName();
-            if (name != null) addString(name);
+        if (value instanceof StartLocal item) {
             var type = item.getType();
             if (type != null) addType(type);
-            var signature = item.getSignature();
-            if (signature != null) addString(signature);
         }
     }
 
@@ -681,7 +667,6 @@ public class DexCollector {
     }
 
     public void fillAnnotationElement(AnnotationElement value) {
-        addString(value.getName());
         fillEncodedValue(value.getValue());
     }
 
@@ -693,7 +678,6 @@ public class DexCollector {
     }
 
     public void fillEncodedValue(EncodedValue raw) {
-        if (raw instanceof EncodedString value) addString(value.getValue());
         if (raw instanceof EncodedType value) addType(value.getValue());
         if (raw instanceof EncodedEnum value) addField(value.getValue());
         if (raw instanceof EncodedField value) addField(value.getValue());

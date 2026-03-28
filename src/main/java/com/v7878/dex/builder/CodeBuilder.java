@@ -1616,8 +1616,8 @@ public final class CodeBuilder {
      * @param value   u32 ref
      */
     public CodeBuilder const_string(int dst_reg, String value) {
-        //TODO: Generate smaller instructions if possible
-        return raw_const_string_jumbo(dst_reg, value);
+        // Note: Instruction size will be corrected when writing
+        return raw_const_string(dst_reg, value);
     }
 
     /**
