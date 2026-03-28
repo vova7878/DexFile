@@ -51,7 +51,8 @@ public class DexBalancer {
     private final boolean debug;
 
     private static boolean check(Collection<?> collection) {
-        return collection.size() > 65535;
+        // One less than 0xffff because this value is reserved
+        return collection.size() >= 0xffff;
     }
 
     private boolean check() {

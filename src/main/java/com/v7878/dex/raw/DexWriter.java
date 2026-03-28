@@ -78,6 +78,7 @@ import static com.v7878.dex.raw.CompactDexConstants.kOutsSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kRegistersSizeShift;
 import static com.v7878.dex.raw.CompactDexConstants.kTriesSizeSizeShift;
 import static com.v7878.dex.raw.DexCollector.ClassDefContainer;
+import static com.v7878.dex.raw.DexCollector.StringIndexer;
 import static com.v7878.dex.util.MathUtils.roundUp;
 
 import com.v7878.dex.DexIO;
@@ -150,7 +151,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.Adler32;
 
-public class DexWriter {
+public class DexWriter implements StringIndexer {
     private static class FileMap {
         public int header_size;
 
@@ -251,12 +252,12 @@ public class DexWriter {
     // Not null only for compact dex files
     private final CompactData compact_debug_info;
 
-    @SuppressWarnings("SameParameterValue")
-    private static void checkSizeLimit(int size, int limit, String name) {
-        if (size > limit) {
+    private static void checkSizeLimit(int size, String name) {
+        // One less than 0xffff because this value is reserved
+        if (size >= 65535) {
             throw new IllegalStateException(String.format(
                     "Size(%d) should not exceed limit(%d) for %s section",
-                    size, limit, name));
+                    size, 65535, name));
         }
     }
 
@@ -337,21 +338,26 @@ public class DexWriter {
             map.compact_feature_flags = flags == null ? defaultFlags : flags;
         }
 
-        var collector = new DexCollector(shared_data, isCompact(), options.hasDebugInfo());
-        collector.fillDex(dexfile);
+        var scollector = new StringCollector(shared_data, options.hasDebugInfo());
+        scollector.fillDex(dexfile);
 
         // The number of strings is limited to 32 bits, so no checks are needed.
-        strings = collector.strings.toArray(EmptyArrays.STRING);
+        strings = scollector.strings.toArray(EmptyArrays.STRING);
+
+        var collector = new DexCollector(isCompact(),
+                options.hasDebugInfo(), this);
+        collector.fillDex(dexfile);
+
         types = collector.types.toArray(EmptyArrays.TYPE_ID);
-        checkSizeLimit(types.length, 0xffff, "type");
+        checkSizeLimit(types.length, "type");
         protos = collector.protos.toArray(EmptyArrays.PROTO_ID);
-        checkSizeLimit(protos.length, 0xffff, "proto");
+        checkSizeLimit(protos.length, "proto");
         fields = collector.fields.toArray(EmptyArrays.FIELD_ID);
         // TODO: dex036
-        checkSizeLimit(fields.length, 0xffff, "field");
+        checkSizeLimit(fields.length, "field");
         methods = collector.methods.toArray(EmptyArrays.METHOD_ID);
         // TODO: dex036
-        checkSizeLimit(methods.length, 0xffff, "method");
+        checkSizeLimit(methods.length, "method");
         // Technically, the callsite and methodhandle sections are
         // not limited from above in the number of elements.
         // But unlike the similar case with strings, there are no jumbo
@@ -367,9 +373,9 @@ public class DexWriter {
         // this is necessary for callsites - they can have state. But why this is
         // necessary for methodhandles? I don't know. But that's what the documentation says
         call_sites = collector.call_sites.toArray(EmptyArrays.CALLSITE_ID_CONTAINER);
-        checkSizeLimit(call_sites.length, 0xffff, "callsite");
+        checkSizeLimit(call_sites.length, "callsite");
         method_handles = collector.method_handles.toArray(EmptyArrays.METHOD_HANDLE_ID);
-        checkSizeLimit(method_handles.length, 0xffff, "method handle");
+        checkSizeLimit(method_handles.length, "method handle");
 
         class_defs = options.isClassSorting() ? sort(collector.class_defs) :
                 collector.class_defs.toArray(EmptyArrays.CLASS_DEF_CONTAINER);
@@ -435,7 +441,7 @@ public class DexWriter {
         data_buffer.alignPosition(DATA_SECTION_ALIGNMENT);
 
         // Note: for compact dex, data section is placed
-        // after the entire file and isn`t included in its size
+        // after the entire file and isn't included in its size
         if (isCompact()) {
             map.file_size = map.main_end;
             map.data_size = data_buffer.position();
@@ -539,6 +545,12 @@ public class DexWriter {
         map.main_end = roundUp(offset, DATA_SECTION_ALIGNMENT);
     }
 
+    @Override
+    public int getStringCount() {
+        return strings.length;
+    }
+
+    @Override
     public int getStringIndex(String value) {
         int out = CollectionUtils.binarySearch(strings, value,
                 (c, v) -> c.value.compareTo(v));
@@ -1065,8 +1077,8 @@ public class DexWriter {
         data_buffer.writeULeb128(access_flags);
         var code = value.code();
         data_buffer.writeULeb128(code == null ? NO_OFFSET : getCodeItemOffset(code));
-        if (isCompact()) {
-            var debug_info = value.debug_info();
+        if (code != null && isCompact()) {
+            var debug_info = code.debug_info;
             if (debug_info != null) {
                 compact_debug_info.offsets[index] = getDebugInfoOffset(debug_info);
             }

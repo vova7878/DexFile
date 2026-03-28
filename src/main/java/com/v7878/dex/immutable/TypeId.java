@@ -277,6 +277,20 @@ public final class TypeId implements Comparable<TypeId> {
         return raw(0, descriptor.substring(array_depth));
     }
 
+    public TypeId erased() {
+        return isPrimitive() ? this : TypeId.OBJECT;
+    }
+
+    public TypeId basic() {
+        return switch (this.getShorty()) {
+            case 'Z', 'B', 'S', 'C', 'I' -> TypeId.I;
+            case 'F' -> TypeId.F;
+            case 'J' -> TypeId.J;
+            case 'D' -> TypeId.D;
+            default -> TypeId.OBJECT;
+        };
+    }
+
     public String getBinaryName() {
         if (isArray()) {
             return descriptor.replace('/', '.');

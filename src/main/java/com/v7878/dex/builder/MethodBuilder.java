@@ -25,11 +25,41 @@ import java.util.function.Consumer;
 public final class MethodBuilder {
     private String name;
     private TypeId return_type;
+    // Note: non-final
     private List<Parameter> parameters;
     private int access_flags;
     private int hiddenapi_flags;
+
     private MethodImplementation implementation;
-    private NavigableSet<Annotation> annotations;
+    private final NavigableSet<Annotation> annotations;
+
+    public String getName() {
+        return name;
+    }
+
+    public TypeId getReturnType() {
+        return return_type;
+    }
+
+    public List<Parameter> getParameters() {
+        return parameters;
+    }
+
+    public int getAccessFlags() {
+        return access_flags;
+    }
+
+    public int getHiddenApiFlags() {
+        return hiddenapi_flags;
+    }
+
+    public MethodImplementation getImplementation() {
+        return implementation;
+    }
+
+    public NavigableSet<Annotation> getAnnotations() {
+        return annotations;
+    }
 
     private MethodBuilder() {
         this.annotations = new TreeSet<>();
@@ -176,7 +206,8 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder setAnnotations(Iterable<Annotation> annotations) {
-        this.annotations = Converter.mutableNavigableSet(annotations);
+        this.annotations.clear();
+        CollectionUtils.addAll(this.annotations, annotations);
         return this;
     }
 
@@ -185,8 +216,7 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withAnnotations(Iterable<Annotation> annotations) {
-        withoutAnnotations(annotations);
-        this.annotations.addAll(Converter.toList(annotations));
+        CollectionUtils.replaceAll(this.annotations, annotations);
         return this;
     }
 

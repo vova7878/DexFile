@@ -441,7 +441,7 @@ public final class CodeBuilder {
 
     public static MethodImplementation build(int regs_size, int ins_size,
                                              Consumer<CodeBuilder> consumer) {
-        return build(regs_size, 0, false, consumer);
+        return build(regs_size, ins_size, false, consumer);
     }
 
     public static MethodImplementation build(int regs_size, Consumer<CodeBuilder> consumer) {
@@ -1616,8 +1616,8 @@ public final class CodeBuilder {
      * @param value   u32 ref
      */
     public CodeBuilder const_string(int dst_reg, String value) {
-        //TODO: Generate smaller instructions if possible
-        return raw_const_string_jumbo(dst_reg, value);
+        // Note: Instruction size will be corrected when writing
+        return raw_const_string(dst_reg, value);
     }
 
     /**
@@ -2044,7 +2044,7 @@ public final class CodeBuilder {
             return this;
         }
         if (table.size() == 1 && table.firstKey() == 0) {
-            return if_testz(Test.EQ, reg_to_test, table.valueAt(0));
+            return if_testz(Test.EQ, reg_to_test, table.firstValue());
         }
         // TODO: what if all targets is next instruction? Can we generate nothing?
         if (table.size() <= 1 || (table.lastKey() - table.firstKey()) == (table.size() - 1)) {

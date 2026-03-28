@@ -7,7 +7,6 @@ import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Arrays;
@@ -22,7 +21,31 @@ public final class FieldBuilder {
     private int access_flags;
     private int hiddenapi_flags;
     private EncodedValue initial_value;
-    private NavigableSet<Annotation> annotations;
+    private final NavigableSet<Annotation> annotations;
+
+    public String getName() {
+        return name;
+    }
+
+    public TypeId getType() {
+        return type;
+    }
+
+    public int getAccessFlags() {
+        return access_flags;
+    }
+
+    public int getHiddenApiFlags() {
+        return hiddenapi_flags;
+    }
+
+    public EncodedValue getInitialValue() {
+        return initial_value;
+    }
+
+    public NavigableSet<Annotation> getAnnotations() {
+        return annotations;
+    }
 
     private FieldBuilder() {
         this.annotations = new TreeSet<>();
@@ -122,7 +145,8 @@ public final class FieldBuilder {
     }
 
     public FieldBuilder setAnnotations(Iterable<Annotation> annotations) {
-        this.annotations = Converter.mutableNavigableSet(annotations);
+        this.annotations.clear();
+        CollectionUtils.addAll(this.annotations, annotations);
         return this;
     }
 
@@ -131,8 +155,7 @@ public final class FieldBuilder {
     }
 
     public FieldBuilder withAnnotations(Iterable<Annotation> annotations) {
-        withoutAnnotations(annotations);
-        this.annotations.addAll(Converter.toList(annotations));
+        CollectionUtils.replaceAll(this.annotations, annotations);
         return this;
     }
 
