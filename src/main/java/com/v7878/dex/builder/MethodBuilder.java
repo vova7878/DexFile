@@ -29,7 +29,6 @@ public final class MethodBuilder {
     private List<Parameter> parameters;
     private int access_flags;
     private int hiddenapi_flags;
-
     private MethodImplementation implementation;
     private final NavigableSet<Annotation> annotations;
 

@@ -2085,18 +2085,18 @@ public final class CodeBuilder {
     }
 
     public enum Cmp {
-        CMPL_FLOAT(Opcode.CMPL_FLOAT, false),
-        CMPG_FLOAT(Opcode.CMPG_FLOAT, false),
-        CMPL_DOUBLE(Opcode.CMPL_DOUBLE, true),
-        CMPG_DOUBLE(Opcode.CMPG_DOUBLE, true),
-        CMP_LONG(Opcode.CMP_LONG, true);
+        CMPL_FLOAT(Opcode.CMPL_FLOAT, TypeId.F),
+        CMPG_FLOAT(Opcode.CMPG_FLOAT, TypeId.F),
+        CMPL_DOUBLE(Opcode.CMPL_DOUBLE, TypeId.D),
+        CMPG_DOUBLE(Opcode.CMPG_DOUBLE, TypeId.D),
+        CMP_LONG(Opcode.CMP_LONG, TypeId.J);
 
         private final Opcode opcode;
-        private final boolean isWide;
+        private final TypeId src;
 
-        Cmp(Opcode opcode, boolean isWide) {
+        Cmp(Opcode opcode, TypeId src) {
             this.opcode = opcode;
-            this.isWide = isWide;
+            this.src = src;
         }
 
         public static Cmp of(Opcode op) {
@@ -2113,6 +2113,14 @@ public final class CodeBuilder {
         public Opcode opcode() {
             return opcode;
         }
+
+        public TypeId getSrcId() {
+            return src;
+        }
+
+        public boolean isWide() {
+            return src.isWidePrimitive();
+        }
     }
 
     /**
@@ -2123,7 +2131,7 @@ public final class CodeBuilder {
     public CodeBuilder cmp_kind(Cmp kind, int dst_reg, int first_src_reg_or_pair,
                                 int second_src_reg_or_pair) {
         return f23x(kind.opcode, dst_reg, false,
-                first_src_reg_or_pair, kind.isWide, second_src_reg_or_pair, kind.isWide);
+                first_src_reg_or_pair, kind.isWide(), second_src_reg_or_pair, kind.isWide());
     }
 
     public enum Test {
