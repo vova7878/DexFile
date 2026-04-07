@@ -62,7 +62,6 @@ import com.v7878.dex.immutable.bytecode.InstructionRaw;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
-import com.v7878.dex.immutable.debug.AdvancePC;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.EndLocal;
 import com.v7878.dex.immutable.debug.LineNumber;
@@ -72,6 +71,8 @@ import com.v7878.dex.immutable.debug.SetFile;
 import com.v7878.dex.immutable.debug.SetPrologueEnd;
 import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.DebugInfoMerger;
+import com.v7878.dex.util.DebugInfoMerger.MergerDebugItem;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
 import com.v7878.dex.util.TryBlocksMerger;
@@ -145,7 +146,7 @@ public final class CodeBuilder {
         }
     }
 
-    private class BuilderDebugItem implements Comparable<BuilderDebugItem> {
+    private class BuilderDebugItem implements MergerDebugItem<BuilderDebugItem> {
         private final Object label;
         private final DebugItem item;
         private final int index;
@@ -342,22 +343,6 @@ public final class CodeBuilder {
         this.synthetic_line = 0;
     }
 
-    private static List<DebugItem> mergeDebugItems(List<BuilderDebugItem> debug_items) {
-        Collections.sort(debug_items);
-
-        var out = new ArrayList<DebugItem>(debug_items.size());
-        int pc = 0;
-        for (var item : debug_items) {
-            int position = item.position();
-            if (pc != position) {
-                out.add(AdvancePC.of(position - pc));
-                pc = position;
-            }
-            out.add(item.item());
-        }
-        return Collections.unmodifiableList(out);
-    }
-
     private List<Instruction> mergeInstructions() {
         var begin = head;
 
@@ -427,7 +412,7 @@ public final class CodeBuilder {
 
         List<Instruction> insns = mergeInstructions();
         NavigableSet<TryBlock> try_blocks = TryBlocksMerger.mergeTryItems(try_items);
-        List<DebugItem> debug_info = mergeDebugItems(debug_items);
+        List<DebugItem> debug_info = DebugInfoMerger.mergeDebugItems(debug_items);
 
         return MethodImplementation.raw(regs_size, insns, try_blocks, debug_info);
     }

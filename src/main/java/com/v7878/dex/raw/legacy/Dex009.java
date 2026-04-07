@@ -19,6 +19,11 @@ import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
+import com.v7878.dex.immutable.debug.DebugItem;
+import com.v7878.dex.immutable.debug.EndLocal;
+import com.v7878.dex.immutable.debug.LineNumber;
+import com.v7878.dex.immutable.debug.SetFile;
+import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.immutable.value.EncodedBoolean;
 import com.v7878.dex.immutable.value.EncodedByte;
 import com.v7878.dex.immutable.value.EncodedChar;
@@ -35,6 +40,8 @@ import com.v7878.dex.raw.DebugInfo;
 import com.v7878.dex.raw.DexReader;
 import com.v7878.dex.raw.DexReader.CodeItem;
 import com.v7878.dex.raw.InstructionReader;
+import com.v7878.dex.util.DebugInfoMerger;
+import com.v7878.dex.util.DebugInfoMerger.MergerDebugItem;
 import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.TryBlocksMerger;
 
@@ -147,6 +154,58 @@ public class Dex009 {
         return InstructionReader.readArray(reader, in, insns_count);
     }
 
+    private record RawDebugItem(int index, int position, DebugItem item)
+            implements MergerDebugItem<RawDebugItem> {
+        @Override
+        public int compareTo(RawDebugItem other) {
+            if (other == this) return 0;
+            int out = Integer.compare(position(), other.position());
+            if (out != 0) return out;
+            return Integer.compare(index, other.index);
+        }
+    }
+
+    private static void readLocals(DexReader reader, int offset, List<RawDebugItem> items) {
+        var in = reader.dataAt(offset);
+
+        var size = in.readSmallUInt();
+        for (int i = 0; i < size; i++) {
+            int start = in.readSmallUInt();
+            int end = in.readSmallUInt();
+
+            int name_id = in.readSmallUIntWithM1();
+            int descriptor_id = in.readSmallUIntWithM1();
+
+            int register = in.readSmallUInt();
+
+            String name = name_id == NO_INDEX ?
+                    null : reader.getString(name_id);
+            String descriptor = descriptor_id == NO_INDEX ?
+                    null : reader.getString(descriptor_id);
+            // Note: This version had an additional value
+            // for the register type that meant untyped null
+            var type = "<null>".equals(descriptor) ? null :
+                    TypeId.of(descriptor);
+
+            items.add(new RawDebugItem(items.size(), start,
+                    StartLocal.of(register, name, type, null)));
+            items.add(new RawDebugItem(items.size(),
+                    end, EndLocal.of(register)));
+        }
+    }
+
+    private static void readPositions(DexReader reader, int offset, List<RawDebugItem> items) {
+        var in = reader.dataAt(offset);
+
+        var size = in.readSmallUInt();
+        for (int i = 0; i < size; i++) {
+            int address = in.readSmallUInt();
+            int line = in.readUShort();
+            items.add(new RawDebugItem(items.size(),
+                    address, LineNumber.of(line)));
+        }
+    }
+
     public static CodeItem readCodeItem(DexReader reader, MethodId mid, int offset) {
         var in = reader.dataAt(offset);
 
@@ -165,7 +224,28 @@ public class Dex009 {
         NavigableSet<TryBlock> tries = exceptions_off == NO_OFFSET ?
                 Collections.emptyNavigableSet() : readTries(reader, exceptions_off);
 
-        DebugInfo debug_info = null; // TODO
+
+        DebugInfo debug_info;
+        if (reader.options().hasDebugInfo()) {
+            List<RawDebugItem> debug_items = new ArrayList<>();
+
+            if (source_file_idx != NO_INDEX) {
+                var source_file = reader.getString(source_file_idx);
+                debug_items.add(new RawDebugItem(
+                        0, 0, SetFile.of(source_file)));
+            }
+            if (positions_off != NO_OFFSET) {
+                readPositions(reader, positions_off, debug_items);
+            }
+            if (locals_off != NO_OFFSET) {
+                readLocals(reader, locals_off, debug_items);
+            }
+
+            debug_info = new DebugInfo(null,
+                    DebugInfoMerger.mergeDebugItems(debug_items));
+        } else {
+            debug_info = null;
+        }
 
         return new CodeItem(registers_size, ins_size,
                 outs_size, debug_info, instructions, tries);
@@ -189,7 +269,7 @@ public class Dex009 {
             }
 
             var code = code_off == NO_OFFSET ? null : readCodeItem(reader, mid, code_off);
-            DebugInfo debug_info = null;// TODO: code == null ? null : code.debug_info();
+            DebugInfo debug_info = code == null ? null : code.debug_info();
             list.add(MethodDef.of(mid.getName(), mid.getReturnType(),
                     Parameter.listOf(mid.getParameterTypes()), access_flags, 0,
                     DexReader.toImplementation(code, debug_info), annotations));
