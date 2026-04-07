@@ -498,6 +498,12 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private List<TypeId> readTypeList(int offset) {
+        if (version == DEX013) {
+            return Dex013.readTypeList(this, offset);
+        }
+        if (version == DEX009) {
+            return Dex009.readTypeList(this, offset);
+        }
         var in = dataAt(offset);
         int size = in.readSmallUInt();
         var out = new ArrayList<TypeId>(size);

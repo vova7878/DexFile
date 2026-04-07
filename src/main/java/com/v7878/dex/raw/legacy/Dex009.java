@@ -51,6 +51,16 @@ import java.util.List;
 import java.util.NavigableSet;
 
 public class Dex009 {
+    public static List<TypeId> readTypeList(DexReader reader, int offset) {
+        var in = reader.dataAt(offset);
+        int size = in.readSmallUInt();
+        var out = new ArrayList<TypeId>(size);
+        for (int i = 0; i < size; i++) {
+            out.add(i, reader.getType(in.readSmallUInt()));
+        }
+        return Collections.unmodifiableList(out);
+    }
+
     public static String readString(DexReader reader, int index, int offset) {
         var in = reader.mainAt(offset);
         int data_offset = in.readSmallUInt();
