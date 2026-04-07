@@ -11,6 +11,7 @@ public final class DexOffsets {
 
     public static int headerSize(DexVersion version) {
         return switch (version) {
+            case DEX009 -> M3_HEADER_SIZE;
             case DEX013 -> M5_HEADER_SIZE;
             case CDEX001 -> COMPACT_HEADER_SIZE;
             case DEX041 -> DEXCONTAINER_HEADER_SIZE;
@@ -81,7 +82,6 @@ public final class DexOffsets {
     public static final int M5_HEADER_SIZE = 0x7c;
     public static final int M5_STRING_COUNT_OFFSET = 0x30;
     public static final int M5_STRING_START_OFFSET = 0x34;
-    // TODO ??? string_objects_size offset = 0x38
     public static final int M5_TYPE_COUNT_OFFSET = 0x3c;
     public static final int M5_TYPE_START_OFFSET = 0x40;
     public static final int M5_FIELD_COUNT_OFFSET = 0x44;
@@ -100,4 +100,27 @@ public final class DexOffsets {
     // m5 dex element alignments
     public static final int M5_STATIC_FIELD_DEF_ALIGNMENT = 8;
     public static final int M5_INSTANCE_FIELD_DEF_ALIGNMENT = 4;
+
+    // m3 constants
+    public static final int M3_HEADER_SIZE = 0x5c;
+    public static final int M3_STRING_COUNT_OFFSET = 0x30;
+    public static final int M3_STRING_START_OFFSET = 0x34;
+    public static final int M3_TYPE_COUNT_OFFSET = 0x3c;
+    public static final int M3_TYPE_START_OFFSET = 0x40;
+    public static final int M3_FIELD_COUNT_OFFSET = 0x44;
+    public static final int M3_FIELD_START_OFFSET = 0x48;
+    public static final int M3_METHOD_COUNT_OFFSET = 0x4c;
+    public static final int M3_METHOD_START_OFFSET = 0x50;
+    public static final int M3_CLASS_COUNT_OFFSET = 0x54;
+    public static final int M3_CLASS_START_OFFSET = 0x58;
+
+    // m3 dex element sizes
+    public static final int M3_STRING_ID_SIZE = 8;
+    public static final int M3_FIELD_ID_SIZE = 12;
+    public static final int M3_METHOD_ID_SIZE = 12;
+    public static final int M3_CLASS_DEF_SIZE = 32;
+
+    // m3 dex element alignments
+    public static final int M3_STATIC_FIELD_DEF_ALIGNMENT = 8;
+    public static final int M3_INSTANCE_FIELD_DEF_ALIGNMENT = 4;
 }
