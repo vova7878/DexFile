@@ -38,6 +38,20 @@ import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_START_OFFSET;
 import static com.v7878.dex.DexOffsets.FILE_SIZE_OFFSET;
 import static com.v7878.dex.DexOffsets.HEADER_OFF_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_CLASS_COUNT_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_CLASS_DEF_SIZE;
+import static com.v7878.dex.DexOffsets.M3_CLASS_START_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_FIELD_COUNT_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_FIELD_ID_SIZE;
+import static com.v7878.dex.DexOffsets.M3_FIELD_START_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_METHOD_COUNT_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_METHOD_ID_SIZE;
+import static com.v7878.dex.DexOffsets.M3_METHOD_START_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_STRING_COUNT_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_STRING_ID_SIZE;
+import static com.v7878.dex.DexOffsets.M3_STRING_START_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_TYPE_COUNT_OFFSET;
+import static com.v7878.dex.DexOffsets.M3_TYPE_START_OFFSET;
 import static com.v7878.dex.DexOffsets.M5_CLASS_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.M5_CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.M5_CLASS_START_OFFSET;
@@ -140,6 +154,7 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.io.ValueCoder;
+import com.v7878.dex.raw.legacy.Dex009;
 import com.v7878.dex.raw.legacy.Dex013;
 import com.v7878.dex.util.CachedFixedSizeList;
 import com.v7878.dex.util.MemberUtils;
@@ -217,16 +232,12 @@ public class DexReader implements DexIO.DexReaderCache {
             throw new NotADexFile("File is too short");
         }
         version = DexVersion.forMagic(mainAt(header_offset + MAGIC_OFFSET).readLong());
-        if (version == DEX009) {
-            // TODO
-            throw new InvalidDexFile("Unsupported dex version: " + version);
-        }
         version.checkApi(options.getTargetApi());
         if (main_buffer.size() < Math.addExact(header_offset, headerSize(version))) {
             throw new NotADexFile("File is too short");
         }
 
-        if (version != DEX013) {
+        if (version != DEX013 && version != DEX009) {
             int endian_tag = mainAt(header_offset + ENDIAN_TAG_OFFSET).readInt();
             switch (endian_tag) {
                 case ENDIAN_CONSTANT -> { /* ok */ }
@@ -278,69 +289,101 @@ public class DexReader implements DexIO.DexReaderCache {
         annotation_set_list_cache = makeOffsetCache(this::readAnnotationSetList);
         annotation_directory_cache = makeOffsetCache(this::readAnnotationDirectory);
 
-        if (version == DEX013) {
-            code_cache = null;
-            string_section = makeSection(
-                    mainAt(header_offset + M5_STRING_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + M5_STRING_START_OFFSET).readSmallUInt(),
-                    M5_STRING_ID_SIZE, this::readString
-            );
-            type_section = makeSection(
-                    mainAt(header_offset + M5_TYPE_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + M5_TYPE_START_OFFSET).readSmallUInt(),
-                    TYPE_ID_SIZE, this::readTypeId
-            );
-            field_section = makeSection(
-                    mainAt(header_offset + M5_FIELD_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + M5_FIELD_START_OFFSET).readSmallUInt(),
-                    M5_FIELD_ID_SIZE, this::readFieldId
-            );
-            proto_section = null;
-            method_section = makeSection(
-                    mainAt(header_offset + M5_METHOD_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + M5_METHOD_START_OFFSET).readSmallUInt(),
-                    M5_METHOD_ID_SIZE, this::readMethodId
-            );
-            class_section = makeSection(
-                    mainAt(header_offset + M5_CLASS_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + M5_CLASS_START_OFFSET).readSmallUInt(),
-                    M5_CLASS_DEF_SIZE, this::readClassDef
-            );
-        } else {
-            code_cache = makeOffsetCache(this::readCodeItem);
-            string_section = makeSection(
-                    mainAt(header_offset + STRING_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + STRING_START_OFFSET).readSmallUInt(),
-                    STRING_ID_SIZE, this::readString
-            );
-            type_section = makeSection(
-                    mainAt(header_offset + TYPE_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + TYPE_START_OFFSET).readSmallUInt(),
-                    TYPE_ID_SIZE, this::readTypeId
-            );
-            field_section = makeSection(
-                    mainAt(header_offset + FIELD_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + FIELD_START_OFFSET).readSmallUInt(),
-                    FIELD_ID_SIZE, this::readFieldId
-            );
-            proto_section = makeSection(
-                    mainAt(header_offset + PROTO_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + PROTO_START_OFFSET).readSmallUInt(),
-                    PROTO_ID_SIZE, this::readProtoId
-            );
-            method_section = makeSection(
-                    mainAt(header_offset + METHOD_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + METHOD_START_OFFSET).readSmallUInt(),
-                    METHOD_ID_SIZE, this::readMethodId
-            );
-            class_section = makeSection(
-                    mainAt(header_offset + CLASS_COUNT_OFFSET).readSmallUInt(),
-                    mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt(),
-                    CLASS_DEF_SIZE, this::readClassDef
-            );
+        switch (version) {
+            case DEX009 -> {
+                code_cache = null;
+                string_section = makeSection(
+                        mainAt(header_offset + M3_STRING_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M3_STRING_START_OFFSET).readSmallUInt(),
+                        M3_STRING_ID_SIZE, this::readString
+                );
+                type_section = makeSection(
+                        mainAt(header_offset + M3_TYPE_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M3_TYPE_START_OFFSET).readSmallUInt(),
+                        TYPE_ID_SIZE, this::readTypeId
+                );
+                field_section = makeSection(
+                        mainAt(header_offset + M3_FIELD_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M3_FIELD_START_OFFSET).readSmallUInt(),
+                        M3_FIELD_ID_SIZE, this::readFieldId
+                );
+                proto_section = null;
+                method_section = makeSection(
+                        mainAt(header_offset + M3_METHOD_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M3_METHOD_START_OFFSET).readSmallUInt(),
+                        M3_METHOD_ID_SIZE, this::readMethodId
+                );
+                class_section = makeSection(
+                        mainAt(header_offset + M3_CLASS_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M3_CLASS_START_OFFSET).readSmallUInt(),
+                        M3_CLASS_DEF_SIZE, this::readClassDef
+                );
+            }
+            case DEX013 -> {
+                code_cache = null;
+                string_section = makeSection(
+                        mainAt(header_offset + M5_STRING_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M5_STRING_START_OFFSET).readSmallUInt(),
+                        M5_STRING_ID_SIZE, this::readString
+                );
+                type_section = makeSection(
+                        mainAt(header_offset + M5_TYPE_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M5_TYPE_START_OFFSET).readSmallUInt(),
+                        TYPE_ID_SIZE, this::readTypeId
+                );
+                field_section = makeSection(
+                        mainAt(header_offset + M5_FIELD_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M5_FIELD_START_OFFSET).readSmallUInt(),
+                        M5_FIELD_ID_SIZE, this::readFieldId
+                );
+                proto_section = null;
+                method_section = makeSection(
+                        mainAt(header_offset + M5_METHOD_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M5_METHOD_START_OFFSET).readSmallUInt(),
+                        M5_METHOD_ID_SIZE, this::readMethodId
+                );
+                class_section = makeSection(
+                        mainAt(header_offset + M5_CLASS_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + M5_CLASS_START_OFFSET).readSmallUInt(),
+                        M5_CLASS_DEF_SIZE, this::readClassDef
+                );
+            }
+            default -> {
+                code_cache = makeOffsetCache(this::readCodeItem);
+                string_section = makeSection(
+                        mainAt(header_offset + STRING_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + STRING_START_OFFSET).readSmallUInt(),
+                        STRING_ID_SIZE, this::readString
+                );
+                type_section = makeSection(
+                        mainAt(header_offset + TYPE_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + TYPE_START_OFFSET).readSmallUInt(),
+                        TYPE_ID_SIZE, this::readTypeId
+                );
+                field_section = makeSection(
+                        mainAt(header_offset + FIELD_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + FIELD_START_OFFSET).readSmallUInt(),
+                        FIELD_ID_SIZE, this::readFieldId
+                );
+                proto_section = makeSection(
+                        mainAt(header_offset + PROTO_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + PROTO_START_OFFSET).readSmallUInt(),
+                        PROTO_ID_SIZE, this::readProtoId
+                );
+                method_section = makeSection(
+                        mainAt(header_offset + METHOD_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + METHOD_START_OFFSET).readSmallUInt(),
+                        METHOD_ID_SIZE, this::readMethodId
+                );
+                class_section = makeSection(
+                        mainAt(header_offset + CLASS_COUNT_OFFSET).readSmallUInt(),
+                        mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt(),
+                        CLASS_DEF_SIZE, this::readClassDef
+                );
+            }
         }
 
-        if (version == DEX013) {
+        if (version == DEX013 || version == DEX009) {
             map_items = null;
             method_handle_section = null;
             callsite_section = null;
@@ -455,6 +498,12 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private List<TypeId> readTypeList(int offset) {
+        if (version == DEX013) {
+            return Dex013.readTypeList(this, offset);
+        }
+        if (version == DEX009) {
+            return Dex009.readTypeList(this, offset);
+        }
         var in = dataAt(offset);
         int size = in.readSmallUInt();
         var out = new ArrayList<TypeId>(size);
@@ -641,6 +690,9 @@ public class DexReader implements DexIO.DexReaderCache {
         if (version == DEX013) {
             return Dex013.readString(this, index, offset);
         }
+        if (version == DEX009) {
+            return Dex009.readString(this, index, offset);
+        }
         var in = mainAt(offset);
         int data_offset = in.readSmallUInt();
         return dataAt(data_offset).readMUTF8();
@@ -652,6 +704,9 @@ public class DexReader implements DexIO.DexReaderCache {
     }
 
     private TypeId readTypeId(int index, int offset) {
+        if (version == DEX009) {
+            return Dex009.readTypeId(this, index, offset);
+        }
         var descriptor = getString(mainAt(offset).readSmallUInt());
         return TypeId.of(descriptor);
     }
@@ -664,6 +719,9 @@ public class DexReader implements DexIO.DexReaderCache {
     private FieldId readFieldId(int index, int offset) {
         if (version == DEX013) {
             return Dex013.readFieldId(this, index, offset);
+        }
+        if (version == DEX009) {
+            return Dex009.readFieldId(this, index, offset);
         }
         var in = mainAt(offset);
         var declaring_class = getType(in.readUShort());
@@ -695,6 +753,9 @@ public class DexReader implements DexIO.DexReaderCache {
     private MethodId readMethodId(int index, int offset) {
         if (version == DEX013) {
             return Dex013.readMethodId(this, index, offset);
+        }
+        if (version == DEX009) {
+            return Dex009.readMethodId(this, index, offset);
         }
         var in = mainAt(offset);
         var declaring_class = getType(in.readUShort());
@@ -1142,6 +1203,9 @@ public class DexReader implements DexIO.DexReaderCache {
     private ClassDef readClassDef(int index, int offset) {
         if (version == DEX013) {
             return Dex013.readClassDef(this, index, offset);
+        }
+        if (version == DEX009) {
+            return Dex009.readClassDef(this, index, offset);
         }
         var in = mainAt(offset);
 

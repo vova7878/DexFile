@@ -24,8 +24,10 @@ import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction34c;
 import com.v7878.dex.immutable.bytecode.Instruction35c;
 import com.v7878.dex.immutable.bytecode.Instruction3rc;
+import com.v7878.dex.immutable.bytecode.Instruction41c;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
+import com.v7878.dex.immutable.bytecode.Instruction52c;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
@@ -37,23 +39,28 @@ import com.v7878.dex.immutable.value.EncodedMethodHandle;
 import com.v7878.dex.immutable.value.EncodedMethodType;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
+import com.v7878.dex.util.Converter;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class DexRewriter {
-    private static <T> List<T> rewriteList(List<? extends T> value, Function<T, T> rewriter) {
-        // TODO: improve
-        return value.stream().map(rewriter).collect(Collectors.toList());
+    private static <T> List<T> rewriteList(List<? extends T> list, Function<T, T> rewriter) {
+        return Converter.transform(list, value ->
+                Objects.requireNonNull(rewriter.apply(value)));
     }
 
-    private static <T> NavigableSet<T> rewriteNavigableSet(NavigableSet<? extends T> value, Function<T, T> rewriter) {
-        // TODO: improve
-        return value.stream().map(rewriter).collect(Collectors.toCollection(TreeSet::new));
+    private static <T extends Comparable<? super T>> NavigableSet<T> rewriteNavigableSet(
+            NavigableSet<? extends T> set, Function<T, T> rewriter) {
+        var out = new TreeSet<T>();
+        for (var value : set) {
+            out.add(Objects.requireNonNull(rewriter.apply(value)));
+        }
+        return Collections.unmodifiableNavigableSet(out);
     }
 
     private static <T> T rewriteNullable(T value, Function<T, T> rewriter) {
@@ -61,11 +68,11 @@ public class DexRewriter {
     }
 
     public Dex rewriteDex(Dex value) {
-        return Dex.of(rewriteList(value.getClasses(), this::rewriteClassDef));
+        return Dex.raw(rewriteList(value.getClasses(), this::rewriteClassDef));
     }
 
     public ClassDef rewriteClassDef(ClassDef value) {
-        return ClassDef.of(
+        return ClassDef.raw(
                 rewriteTypeId(value.getType()),
                 value.getAccessFlags(),
                 rewriteNullable(value.getSuperclass(), this::rewriteTypeId),
@@ -90,7 +97,7 @@ public class DexRewriter {
     }
 
     public ProtoId rewriteProtoId(ProtoId value) {
-        return ProtoId.of(
+        return ProtoId.raw(
                 rewriteTypeId(value.getReturnType()),
                 rewriteList(value.getParameterTypes(), this::rewriteTypeId)
         );
@@ -114,7 +121,7 @@ public class DexRewriter {
     }
 
     public CallSiteId rewriteCallSiteId(CallSiteId value) {
-        return CallSiteId.of(
+        return CallSiteId.raw(
                 // This String does not refer to the dex format, but is simply for identification purposes
                 value.getName(),
                 rewriteMethodHandleId(value.getMethodHandle()),
@@ -125,7 +132,7 @@ public class DexRewriter {
     }
 
     public Annotation rewriteAnnotation(Annotation value) {
-        return Annotation.of(
+        return Annotation.raw(
                 value.getVisibility(),
                 rewriteTypeId(value.getType()),
                 rewriteNavigableSet(value.getElements(), this::rewriteAnnotationElement)
@@ -150,10 +157,10 @@ public class DexRewriter {
             case METHOD_HANDLE ->
                     EncodedMethodHandle.of(rewriteMethodHandleId(((EncodedMethodHandle) value).getValue()));
             case ARRAY ->
-                    EncodedArray.of(rewriteList(((EncodedArray) value).getValue(), this::rewriteEncodedValue));
+                    EncodedArray.raw(rewriteList(((EncodedArray) value).getValue(), this::rewriteEncodedValue));
             case ANNOTATION -> {
                 var annotation = (EncodedAnnotation) value;
-                yield EncodedAnnotation.of(
+                yield EncodedAnnotation.raw(
                         rewriteTypeId(annotation.getType()),
                         rewriteNavigableSet(annotation.getElements(), this::rewriteAnnotationElement)
                 );
@@ -163,7 +170,7 @@ public class DexRewriter {
     }
 
     public FieldDef rewriteFieldDef(FieldDef value) {
-        return FieldDef.of(
+        return FieldDef.raw(
                 value.getName(),
                 rewriteTypeId(value.getType()),
                 value.getAccessFlags(),
@@ -174,7 +181,7 @@ public class DexRewriter {
     }
 
     public MethodDef rewriteMethodDef(MethodDef value) {
-        return MethodDef.of(
+        return MethodDef.raw(
                 value.getName(),
                 rewriteTypeId(value.getReturnType()),
                 rewriteList(value.getParameters(), this::rewriteParameter),
@@ -186,7 +193,7 @@ public class DexRewriter {
     }
 
     public MethodImplementation rewriteMethodImplementation(MethodImplementation value) {
-        return MethodImplementation.of(
+        return MethodImplementation.raw(
                 value.getRegisterCount(),
                 rewriteList(value.getInstructions(), this::rewriteInstruction),
                 rewriteNavigableSet(value.getTryBlocks(), this::rewriteTryBlock),
@@ -261,6 +268,13 @@ public class DexRewriter {
                     rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
+        if (value instanceof Instruction41c i) {
+            return Instruction41c.of(
+                    i.getOpcode(),
+                    i.getRegister1(),
+                    rewriteReference(i.getReferenceType1(), i.getReference1())
+            );
+        }
         if (value instanceof Instruction45cc i) {
             return Instruction45cc.of(
                     i.getOpcode(),
@@ -283,11 +297,19 @@ public class DexRewriter {
                     rewriteReference(i.getReferenceType2(), i.getReference2())
             );
         }
+        if (value instanceof Instruction52c i) {
+            return Instruction52c.of(
+                    i.getOpcode(),
+                    i.getRegister1(),
+                    i.getRegister2(),
+                    rewriteReference(i.getReferenceType1(), i.getReference1())
+            );
+        }
         return value;
     }
 
     public TryBlock rewriteTryBlock(TryBlock value) {
-        return TryBlock.of(
+        return TryBlock.raw(
                 value.getStartAddress(),
                 value.getUnitCount(),
                 value.getCatchAllAddress(),
@@ -311,7 +333,7 @@ public class DexRewriter {
     }
 
     public Parameter rewriteParameter(Parameter value) {
-        return Parameter.of(
+        return Parameter.raw(
                 rewriteTypeId(value.getType()),
                 value.getName(),
                 rewriteNavigableSet(value.getAnnotations(), this::rewriteAnnotation)
