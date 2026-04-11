@@ -19,6 +19,7 @@ import com.v7878.dex.raw.SharedData;
 import com.v7878.dex.util.EmptyArrays;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -230,10 +231,10 @@ public final class DexIO {
         classes.subList(0, count).clear();
     }
 
-    public static Dex[] balanceAll(WriteOptions options, List<ClassDef> classes) {
+    public static List<Dex> balanceAll(WriteOptions options, List<ClassDef> classes) {
         var dexes = new ArrayList<Dex>();
         balance(options, classes, dexes, true);
-        return dexes.toArray(EmptyArrays.DEX);
+        return Collections.unmodifiableList(dexes);
     }
 
     public static byte[] write(WriteOptions options, Dex data) {

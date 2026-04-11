@@ -3,6 +3,7 @@ package com.v7878.dex.raw;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 
 import com.v7878.dex.ReferenceType;
+import com.v7878.dex.WriteOptions.StringFix;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
 import com.v7878.dex.immutable.CallSiteId;
@@ -211,14 +212,15 @@ public class DexCollector {
             return new DebugInfo(names, items);
         }
 
-        public static MethodDefContainer of(StringIndexer strings, boolean compact, boolean collect_debug_info,
+        public static MethodDefContainer of(StringIndexer strings, StringFix rewrite,
+                                            boolean compact, boolean debug,
                                             TypeId declaring_class, MethodDef value) {
             var impl = value.getImplementation();
             if (impl != null) {
-                impl = ConstStringRewriter.process(strings, impl, collect_debug_info);
+                impl = ConstStringRewriter.process(impl, strings, rewrite, debug);
             }
             var parameters = value.getParameters();
-            var debug_info = (impl == null || !collect_debug_info) ? null :
+            var debug_info = (impl == null || !debug) ? null :
                     toDebugInfo(toNamesList(parameters), impl.getDebugItems());
             var id = MethodId.of(declaring_class, value.getName(),
                     value.getReturnType(), value.getParameterTypes());
@@ -284,11 +286,11 @@ public class DexCollector {
         }
 
         private static MethodDefContainer[] toMethodsArray(
-                StringIndexer strings, boolean is_compact, boolean collect_debug_info,
-                TypeId declaring_class, NavigableSet<MethodDef> methods) {
+                StringIndexer strings, StringFix rewrite, boolean compact,
+                boolean debug, TypeId declaring_class, NavigableSet<MethodDef> methods) {
             return Converter.transform(methods,
-                    value -> MethodDefContainer.of(strings, is_compact,
-                            collect_debug_info, declaring_class, value),
+                    value -> MethodDefContainer.of(strings, rewrite,
+                            compact, debug, declaring_class, value),
                     MethodDefContainer[]::new);
         }
 
@@ -305,16 +307,16 @@ public class DexCollector {
             return out.isEmpty() ? null : EncodedArray.raw(out);
         }
 
-        public static ClassDefContainer of(StringIndexer strings, boolean compact,
-                                           boolean collect_debug_info, ClassDef value) {
+        public static ClassDefContainer of(StringIndexer strings, StringFix rewrite,
+                                           boolean compact, boolean debug, ClassDef value) {
             var type = value.getType();
             var interfaces = value.getInterfaces();
             var static_fields = toFieldsArray(type, value.getStaticFields());
             var instance_fields = toFieldsArray(type, value.getInstanceFields());
-            var direct_methods = toMethodsArray(strings, compact,
-                    collect_debug_info, type, value.getDirectMethods());
-            var virtual_methods = toMethodsArray(strings, compact,
-                    collect_debug_info, type, value.getVirtualMethods());
+            var direct_methods = toMethodsArray(strings, rewrite,
+                    compact, debug, type, value.getDirectMethods());
+            var virtual_methods = toMethodsArray(strings, rewrite,
+                    compact, debug, type, value.getVirtualMethods());
             var annotations = AnnotationDirectory.of(value, static_fields,
                     instance_fields, direct_methods, virtual_methods);
             return new ClassDefContainer(value,
@@ -431,15 +433,17 @@ public class DexCollector {
 
     public final List<ClassDefContainer> class_defs;
 
-    private final boolean is_compact;
-    private final boolean collect_debug_info;
+    private final boolean compact;
+    private final boolean debug;
 
     private final StringIndexer strings;
+    private final StringFix rewrite;
 
-    public DexCollector(boolean is_compact, boolean collect_debug_info, StringIndexer strings) {
-        this.is_compact = is_compact;
-        this.collect_debug_info = collect_debug_info;
+    public DexCollector(StringIndexer strings, StringFix rewrite, boolean compact, boolean debug) {
         this.strings = strings;
+        this.rewrite = rewrite;
+        this.compact = compact;
+        this.debug = debug;
 
         types = new TreeSet<>();
         protos = new TreeSet<>();
@@ -505,7 +509,7 @@ public class DexCollector {
     }
 
     public void addClassDef(ClassDef value) {
-        var container = ClassDefContainer.of(strings, is_compact, collect_debug_info, value);
+        var container = ClassDefContainer.of(strings, rewrite, compact, debug, value);
         class_defs.add(container);
         addType(value.getType());
         var superclass = value.getSuperclass();
@@ -583,7 +587,7 @@ public class DexCollector {
     }
 
     public void addDebugInfo(DebugInfo value) {
-        assert collect_debug_info;
+        assert debug;
         if (debug_infos.putIfAbsent(value, NO_OFFSET_I) == null) {
             for (var tmp : value.items()) {
                 fillDebugItem(tmp);
@@ -647,7 +651,7 @@ public class DexCollector {
     }
 
     public void fillDebugItem(DebugItem value) {
-        assert collect_debug_info;
+        assert debug;
         if (value instanceof StartLocal item) {
             var type = item.getType();
             if (type != null) addType(type);

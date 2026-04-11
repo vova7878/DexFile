@@ -10,7 +10,6 @@ public final class Dex {
     private final List<ClassDef> classes;
 
     private Dex(List<ClassDef> classes) {
-        // TODO: check if there are classes with the same type
         this.classes = Objects.requireNonNull(classes);
     }
 

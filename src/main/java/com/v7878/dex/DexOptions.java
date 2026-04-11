@@ -6,7 +6,7 @@ import com.v7878.misc.Version;
 
 public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOptions, WriteOptions {
     private static final int MIN_TARGET_API = API_M3;
-    private static final int MAX_TARGET_API = 36;
+    private static final int MAX_TARGET_API = 37;
     private static final int FIRST_ART_TARGET = 19;
     private static final int LAST_DALVIK_TARGET = 20;
     private static final int FIRST_HIDDEN_API_TARGET = 28;
