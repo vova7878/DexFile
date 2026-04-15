@@ -469,7 +469,6 @@ public sealed abstract class Register {
         }
     }
 
-    // type is null if exact is unknown
     public static sealed class Reference extends TypedRegister {
         private Reference(Identifier source, TypeInfo type) {
             super(source, type);
@@ -483,6 +482,7 @@ public sealed abstract class Register {
             return new Reference(source, type);
         }
 
+        // type is null if exact is unknown
         public static Reference of(Identifier source, TypeId type) {
             return of(source, TypeInfo.of(type));
         }

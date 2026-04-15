@@ -322,7 +322,7 @@ public final class CodeBuilder {
     private final List<BuilderDebugItem> debug_items;
     private final Map<Object, BuilderPosition> labels;
     private final Set<BuilderPosition> detached;
-    private final BuilderPosition head, payloads;
+    private final BuilderPosition root, payloads;
     private BuilderPosition current;
 
     private boolean generate_lines;
@@ -337,14 +337,14 @@ public final class CodeBuilder {
         this.debug_items = new ArrayList<>();
         this.labels = new HashMap<>();
         this.detached = new LinkedHashSet<>();
-        this.head = this.current = new BuilderPosition(null);
+        this.root = this.current = new BuilderPosition(null);
         this.payloads = new BuilderPosition(null);
         this.generate_lines = false;
         this.synthetic_line = 0;
     }
 
     private List<Instruction> mergeInstructions() {
-        var begin = head;
+        var begin = root;
 
         boolean changed;
         do {
@@ -391,7 +391,7 @@ public final class CodeBuilder {
 
     private MethodImplementation finish() {
         {
-            var end = tail(head);
+            var end = tail(root);
             for (var iter = detached.iterator(); iter.hasNext(); ) {
                 var pos = iter.next();
                 iter.remove();
@@ -400,7 +400,7 @@ public final class CodeBuilder {
             attach(end, payloads);
 
             int offset = 0;
-            for (var tmp = head; tmp != null; tmp = tmp.next()) {
+            for (var tmp = root; tmp != null; tmp = tmp.next()) {
                 var node = tmp.node();
                 if (node != null) {
                     node.attach(tmp);
@@ -678,6 +678,10 @@ public final class CodeBuilder {
     private void insert_block(Object label, boolean move_to_head) {
         BuilderPosition pos = position(label);
         var cur = current;
+        if (pos.head() == root) {
+            throw new IllegalArgumentException(
+                    "Attempt to attach root code block to leaf");
+        }
         if (cur.head() == pos.head()) {
             throw new IllegalArgumentException(
                     "Attempt to attach '" + label + "' code block to itself");
@@ -691,19 +695,27 @@ public final class CodeBuilder {
         current = exact(target);
     }
 
-    ///      ↓----------↑
-    /// A->B->*C->D->X  E->F->G->X
-    ///
-    /// A->B->\->E->F->G->*C->D->X
+    /**
+     * <pre>
+     *      ↓----------↑
+     * A->B->*C->D->X  E->F->G->X
+     *
+     * A->B->\->E->F->G->*C->D->X
+     * </pre>
+     */
     public CodeBuilder insert_block(Object label) {
         insert_block(label, false);
         return this;
     }
 
-    ///      ↓----------↑
-    /// A->B->*C->D->X  E->F->G->X
-    ///
-    /// A->B->\->*E->F->G->C->D->X
+    /**
+     * <pre>
+     *      ↓----------↑
+     * A->B->*C->D->X  E->F->G->X
+     *
+     * A->B->\->*E->F->G->C->D->X
+     * </pre>
+     */
     public CodeBuilder attach_block(Object label) {
         insert_block(label, true);
         return this;

@@ -19,7 +19,25 @@ public final class Position {
     public static final int RESULT_REGISTER = -2; // -1 for high wide half
     public static final int EXCEPTION_REGISTER = -3;
 
-    public record Transition(int address, TypeId exception) implements Comparable<Transition> {
+    public static final class Transition implements Comparable<Transition> {
+        private final int address;
+        private final TypeId exception;
+        private final boolean fallthrough;
+
+        /* package */ Transition(int address, TypeId exception, boolean fallthrough) {
+            this.address = address;
+            this.exception = exception;
+            this.fallthrough = fallthrough;
+        }
+
+        public int address() {
+            return address;
+        }
+
+        public TypeId exception() {
+            return exception;
+        }
+
         public boolean isCatch() {
             return exception != null;
         }
@@ -28,17 +46,39 @@ public final class Position {
             return !isCatch();
         }
 
+        public boolean isFallThrough() {
+            return fallthrough;
+        }
+
         @Override
         public int compareTo(Transition other) {
             if (other == this) return 0;
-            int out = Integer.compare(address(), other.address());
+            int out = -Boolean.compare(fallthrough, other.fallthrough);
             if (out != 0) return out;
-            return CollectionUtils.compareNullable(exception(), other.exception());
+            out = CollectionUtils.compareNullable(exception, other.exception);
+            if (out != 0) return out;
+            return Integer.compare(address, other.address);
         }
 
         @Override
         public String toString() {
-            return Formatter.unsignedHex(address) + (exception == null ? "" : " -> " + exception);
+            return Formatter.unsignedHex(address)
+                    + (fallthrough ? " (fallthrough)" : "")
+                    + (exception == null ? "" : " -> " + exception);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            return obj instanceof Transition other &&
+                    address == other.address &&
+                    fallthrough == other.fallthrough &&
+                    Objects.equals(exception, other.exception);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(address, exception, fallthrough);
         }
     }
 
@@ -138,6 +178,10 @@ public final class Position {
 
     public int address() {
         return address;
+    }
+
+    public int nextAddress() {
+        return address + instruction.getUnitCount();
     }
 
     public NavigableSet<Transition> predecessors() {

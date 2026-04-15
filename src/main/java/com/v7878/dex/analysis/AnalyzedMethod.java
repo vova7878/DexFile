@@ -198,6 +198,7 @@ public final class AnalyzedMethod {
                 value = UninitializedRef.of(ident, declaring_class, true);
             } else {
                 value = Reference.of(ident, declaring_class);
+                line.markThisInitialized();
             }
             line.copy(address, pos, value);
         }
@@ -221,8 +222,9 @@ public final class AnalyzedMethod {
 
     private static void transition(BitSet todo, Position from,
                                    Position to, TypeId exception) {
-        from.successors.add(new Transition(to.address(), exception));
-        to.predecessors.add(new Transition(from.address(), exception));
+        boolean fallthrogh = exception == null && to.index() == from.index() + 1;
+        from.successors.add(new Transition(to.address(), exception, fallthrogh));
+        to.predecessors.add(new Transition(from.address(), exception, fallthrogh));
         todo.set(to.index());
     }
 
@@ -1007,6 +1009,12 @@ public final class AnalyzedMethod {
         ));
     }
 
+    private static RuntimeException uncalledSuperInit(Position current) {
+        throw new AnalysisException(
+                "Constructor returning without calling superclass constructor at " + describe(current)
+        );
+    }
+
     private static void merge(TypeResolver resolver, BitSet touched, BitSet todo,
                               Position current, Position target,
                               RegisterLine line, boolean reachable_from_current) {
@@ -1038,11 +1046,10 @@ public final class AnalyzedMethod {
             throw new AnalysisException(
                     "Exception handler begins with " + describe(current));
         }
-        var position = position(transition.address());
-        if (position.index() + 1 != current.index()) {
+        if (!transition.isFallThrough()) {
             throw invalidBranchTarget(current);
         }
-        var proto = position.accessProto();
+        var proto = position(transition.address()).accessProto();
         if (proto == null) {
             // TODO: msg
             throw new AnalysisException();
@@ -1089,6 +1096,9 @@ public final class AnalyzedMethod {
             if (Objects.equals(line.at(i), this_reg)) {
                 line.replace(i, value);
             }
+        }
+        if (this_reg.isUninitializedThis()) {
+            line.markThisInitialized();
         }
     }
 
@@ -1405,7 +1415,13 @@ public final class AnalyzedMethod {
                 output(current, idst, type);
             }
             case RETURN_VOID -> {
-                // TODO: Check for constructors that 'this' is initialized
+                if (verify) {
+                    if (method.isInstanceInitializer()) {
+                        if (!current.before().isThisInitialized()) {
+                            throw uncalledSuperInit(current);
+                        }
+                    }
+                }
             }
             case RETURN, RETURN_WIDE, RETURN_OBJECT -> {
                 var ireg = ((OneRegisterInstruction) insn).getRegister1();
