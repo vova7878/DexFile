@@ -12,7 +12,7 @@ java {
 }
 
 dependencies {
-    implementation(libs.android.misc)
+    implementation(project(":"))
 }
 
 mavenPublishing {
@@ -27,12 +27,12 @@ mavenPublishing {
 
     coordinates(
         groupId = "io.github.vova7878",
-        artifactId = "DexFile",
+        artifactId = "Smali",
         version = project.version.toString()
     )
 
     pom {
-        name.set("DexFile")
+        name.set("DexFile Smali")
         description.set("Library for reading and writing dex files")
         inceptionYear.set("2026")
         url.set("https://github.com/vova7878/DexFile")
