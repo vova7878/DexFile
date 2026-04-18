@@ -32,7 +32,7 @@ PACKED_SWITCH_DIRECTIVE     : '.packed-switch';
 END_PACKED_SWITCH_DIRECTIVE : '.end packed-switch';
 SPARSE_SWITCH_DIRECTIVE     : '.sparse-switch';
 END_SPARSE_SWITCH_DIRECTIVE : '.end sparse-switch';
-CATCH_DIRECTIVE             : '.catch' ;
+CATCH_DIRECTIVE             : '.catch';
 CATCHALL_DIRECTIVE          : '.catchall';
 LINE_DIRECTIVE              : '.line';
 PARAMETER_DIRECTIVE         : '.param';
@@ -60,32 +60,47 @@ DOT    : '.';
 ASSIGN   : '=';
 COLON    : ':';
 ARROW    : '->';
+DOTDOT   : '..';
 
 // Literals
-DEC_LITERAL : ('0' | [1-9] (Digits? | '_'+ Digits));
-HEX_LITERAL : '0' [xX] [0-9a-fA-F] ([0-9a-fA-F_]* [0-9a-fA-F])?;
 
-DEC_LONG_LITERAL : DEC_LITERAL [lL];
-HEX_LONG_LITERAL : HEX_LITERAL [lL];
+fragment HexPrefix : '0' [xX];
+fragment HexDigit : [0-9a-fA-F];
 
-DEC_SHORT_LITERAL : DEC_LITERAL [sS];
-HEX_SHORT_LITERAL : HEX_LITERAL [sS];
+fragment Integer1 : '0';
+fragment Integer2 : [1-9] [0-9]*;
+fragment Integer3 : '0' [0-7]+;
+fragment Integer4 : HexPrefix HexDigit+;
+fragment Integer : Integer1 | Integer2 | Integer3 | Integer4;
 
-DEC_BYTE_LITERAL : DEC_LITERAL [tT];
-HEX_BYTE_LITERAL : HEX_LITERAL [tT];
+fragment DecimalExponent : [eE] '-'? [0-9]+;
+fragment BinaryExponent : [pP] '-'? [0-9]+;
 
-// For floats, suffix 'f' is required
-DEC_FLOAT_LITERAL:
-    (Digits '.' Digits? | '.' Digits) ExponentPart? [fF]
-    | Digits ExponentPart? [fF]
-;
-HEX_FLOAT_LITERAL: '0' [xX] (HexDigits '.'? | HexDigits? '.' HexDigits) [pP] [+-]? Digits [fF];
+/*This can either be a floating point number or an identifier*/
+fragment FloatOrID1 : '-'? [0-9]+ DecimalExponent;
+fragment FloatOrID2 : '-'? HexPrefix HexDigit+ BinaryExponent;
+fragment FloatOrID3 : '-'? [iI][nN][fF][iI][nN][iI][tT][yY];
+fragment FloatOrID4 : [nN][aA][nN];
+fragment FloatOrID :  FloatOrID1 | FloatOrID2 | FloatOrID3 | FloatOrID4;
 
-DEC_DOUBLE_LITERAL:
-    (Digits '.' Digits? | '.' Digits) ExponentPart? [dD]?
-    | Digits (ExponentPart [dD]? | [dD])
-;
-HEX_DOUBLE_LITERAL: '0' [xX] (HexDigits '.'? | HexDigits? '.' HexDigits) [pP] [+-]? Digits [dD]?;
+/*This can only be a float and not an identifier, due to the decimal point*/
+fragment Float1 : '-'? [0-9]+ '.' [0-9]* DecimalExponent?;
+fragment Float2 : '-'? '.' [0-9]+ DecimalExponent?;
+fragment Float3 : '-'? HexPrefix HexDigit+ '.' HexDigit* BinaryExponent;
+fragment Float4 : '-'? HexPrefix '.' HexDigit+ BinaryExponent;
+fragment Float :  Float1 | Float2 | Float3 | Float4;
+
+POSITIVE_INTEGER_LITERAL : Integer;
+NEGATIVE_INTEGER_LITERAL : '-' Integer;
+LONG_LITERAL  : '-'? Integer [lL];
+SHORT_LITERAL : '-'? Integer [sS];
+BYTE_LITERAL  : '-'? Integer [tT];
+
+FLOAT_LITERAL_OR_ID  : FloatOrID [fF] | '-'? [0-9]+ [fF];
+DOUBLE_LITERAL_OR_ID : FloatOrID [dD]? | '-'? [0-9]+ [dD];
+
+FLOAT_LITERAL  : Float [fF];
+DOUBLE_LITERAL : Float [dD]?;
 
 BOOL_LITERAL: 'true' | 'false';
 CHAR_LITERAL: '\'' Char '\'';
@@ -94,40 +109,19 @@ STRING_LITERAL: '"' Char* '"';
 NULL_LITERAL: 'null';
 
 integer_literal
-    : DEC_LITERAL
-    | HEX_LITERAL
-    ;
-
-long_literal
-    : DEC_LONG_LITERAL
-    | HEX_LONG_LITERAL
-    ;
-
-short_literal
-    : DEC_SHORT_LITERAL
-    | HEX_SHORT_LITERAL
-    ;
-
-byte_literal
-    : DEC_BYTE_LITERAL
-    | HEX_BYTE_LITERAL
-    ;
+  : POSITIVE_INTEGER_LITERAL | NEGATIVE_INTEGER_LITERAL;
 
 float_literal
-    : DEC_FLOAT_LITERAL
-    | HEX_FLOAT_LITERAL
-    ;
+  : FLOAT_LITERAL_OR_ID | FLOAT_LITERAL;
 
 double_literal
-    : DEC_DOUBLE_LITERAL
-    | HEX_DOUBLE_LITERAL
-    ;
+  : DOUBLE_LITERAL_OR_ID | DOUBLE_LITERAL;
 
 literal
-  : integer_literal
-  | long_literal
-  | short_literal
-  | byte_literal
+  : LONG_LITERAL
+  | integer_literal
+  | SHORT_LITERAL
+  | BYTE_LITERAL
   | float_literal
   | double_literal
   | CHAR_LITERAL
@@ -138,71 +132,77 @@ literal
   | subannotation
   | type_field_method_literal
   | enum_literal
-//  | method_handle_literal
+// TODO: | method_handle_literal
   | method_prototype
-;
+  ;
 
 array_literal
   : LBRACE (literal (COMMA literal)* | ) RBRACE;
 
-type_field_method_literal
-  : TYPE_DESCRIPTOR
-  | method_reference
-  | field_reference;
-
-param_list
-  : TYPE_DESCRIPTOR*;
-
-method_prototype
-  : LPAREN param_list RPAREN TYPE_DESCRIPTOR;
-
-method_reference
-  : (TYPE_DESCRIPTOR ARROW)? MEMBER_NAME method_prototype;
-
-field_reference
-  : (TYPE_DESCRIPTOR ARROW)? MEMBER_NAME COLON TYPE_DESCRIPTOR;
-
-enum_literal
-    : ENUM_DIRECTIVE field_reference;
-
 annotation_element
-  : MEMBER_NAME ASSIGN literal;
+  : simple_name ASSIGN literal;
 
 annotation
-  : ANNOTATION_DIRECTIVE ANNOTATION_VISIBILITY TYPE_DESCRIPTOR
+  : ANNOTATION_DIRECTIVE ANNOTATION_VISIBILITY CLASS_DESCRIPTOR
     annotation_element* END_ANNOTATION_DIRECTIVE;
 
 subannotation
-  : SUBANNOTATION_DIRECTIVE TYPE_DESCRIPTOR annotation_element* END_SUBANNOTATION_DIRECTIVE;
+  : SUBANNOTATION_DIRECTIVE CLASS_DESCRIPTOR annotation_element* END_SUBANNOTATION_DIRECTIVE;
+
+enum_literal
+  : ENUM_DIRECTIVE field_reference;
+
+type_field_method_literal
+  : type_descriptor
+  | field_reference
+  | method_reference;
+
+method_prototype
+  : LPAREN param_list RPAREN type_descriptor;
+
+method_reference
+  : (reference_type_descriptor ARROW)? member_name method_prototype;
+
+field_reference
+  : (reference_type_descriptor ARROW)? member_name COLON nonvoid_type_descriptor;
+
+//integral_literal
+//  : LONG_LITERAL
+//  | integer_literal
+//  | SHORT_LITERAL
+//  | CHAR_LITERAL
+//  | BYTE_LITERAL;
+//
+//fixed_32bit_literal
+//  : LONG_LITERAL
+//  | integer_literal
+//  | SHORT_LITERAL
+//  | BYTE_LITERAL
+//  | float_literal
+//  | CHAR_LITERAL
+//  | BOOL_LITERAL;
+//
+//fixed_literal
+//  : integer_literal
+//  | LONG_LITERAL
+//  | SHORT_LITERAL
+//  | BYTE_LITERAL
+//  | float_literal
+//  | double_literal
+//  | CHAR_LITERAL
+//  | BOOL_LITERAL;
+
+// Fragments
 
 fragment EscapeSequence: '\\' [bstnfr"'\\]
     | '\\u'+ HexDigit HexDigit HexDigit HexDigit;
 fragment Char : (~["\\\r\n] | EscapeSequence);
 
-fragment HexDigit: [0-9a-fA-F];
-fragment HexDigits: HexDigit ((HexDigit | '_')* HexDigit)?;
-fragment Digits: [0-9] ([0-9_]* [0-9])?;
-
-fragment ExponentPart: [eE] [+-]? Digits;
-
-// Misc
-
-ANNOTATION_VISIBILITY : 'build' | 'runtime' | 'system';
-
-ACCESS_SPEC
-: 'public' | 'private' | 'protected' | 'static' | 'final' | 'synchronized' | 'super' | 'volatile'
-| 'bridge' | 'transient' | 'varargs' | 'native' | 'interface' | 'abstract' | 'strictfp' | 'synthetic'
-| 'annotation' | 'enum' | 'mandated' | 'constructor' | 'declared-synchronized' | 'verified' | 'optimized';
-
-MEMBER_NAME : MemberName;
-TYPE_DESCRIPTOR : TypeDescriptor;
-
-// https://source.android.com/docs/core/runtime/dex-format#simplename
 fragment SimpleNameChar
 : [A-Z]
 | [a-z]
 | [0-9]
-| '\\ ' // TODO? | ' ' // since DEX version 040
+// TODO? | ' ' // since DEX version 040
 | '$'
 | '-'
 | '_'
@@ -217,34 +217,98 @@ fragment SimpleNameChar
 ;
 
 fragment SimpleName : SimpleNameChar+;
-fragment MemberName : SimpleName | '<' SimpleName '>';
-fragment FullClassName : (SimpleName '/')* SimpleName;
-fragment NonArrayFieldTypeDescriptor : [ZBSCIFJD] | 'L' FullClassName ';';
-// TODO: '['{0,255}
-fragment FieldTypeDescriptor : '['* NonArrayFieldTypeDescriptor;
-fragment TypeDescriptor  : 'V' | FieldTypeDescriptor;
+fragment MemberName : '<' SimpleName '>';
+fragment ClassName : (SimpleName '/')* SimpleName;
+fragment ClassDescriptor : 'L' ClassName ';';
+
+REGISTER : [vp] [0-9]+;
+PRIMITIVE_TYPE : [ZBSCIFJD];
+VOID_TYPE : 'V';
+ARRAY_TYPE_PREFIX : '['+;
+CLASS_DESCRIPTOR : ClassDescriptor;
+
+ANNOTATION_VISIBILITY : 'build' | 'runtime' | 'system';
+
+ACCESS_SPEC
+: 'public' | 'private' | 'protected' | 'static' | 'final' | 'synchronized' | 'super' | 'volatile'
+| 'bridge' | 'transient' | 'varargs' | 'native' | 'interface' | 'abstract' | 'strictfp' | 'synthetic'
+| 'annotation' | 'enum' | 'mandated' | 'constructor' | 'declared-synchronized' | 'verified' | 'optimized';
+
+HIDDENAPI_RESTRICTION
+: 'whitelist' | 'greylist' | 'blacklist' | 'greylist-max-o' | 'greylist-max-p'
+| 'greylist-max-q' | 'greylist-max-r' | 'greylist-max-s' | 'core-platform-api' | 'test-api';
+
+MEMBER_NAME : MemberName;
+SIMPLE_NAME : SimpleName;
+
+simple_name
+  : SIMPLE_NAME
+  | ACCESS_SPEC
+  | HIDDENAPI_RESTRICTION
+// TODO: | VERIFICATION_ERROR_TYPE
+  | POSITIVE_INTEGER_LITERAL
+  | NEGATIVE_INTEGER_LITERAL
+  | FLOAT_LITERAL_OR_ID
+  | DOUBLE_LITERAL_OR_ID
+  | BOOL_LITERAL
+  | NULL_LITERAL
+  | REGISTER
+  | param_list_or_id
+  | PRIMITIVE_TYPE
+  | VOID_TYPE
+  | ANNOTATION_VISIBILITY
+// TODO: | METHOD_HANDLE_TYPE_FIELD
+// TODO: | METHOD_HANDLE_TYPE_METHOD
+  ;
+
+array_descriptor
+  : ARRAY_TYPE_PREFIX (PRIMITIVE_TYPE | CLASS_DESCRIPTOR);
+
+type_descriptor
+  : VOID_TYPE
+  | PRIMITIVE_TYPE
+  | CLASS_DESCRIPTOR
+  | array_descriptor;
+
+nonvoid_type_descriptor
+  : PRIMITIVE_TYPE
+  | CLASS_DESCRIPTOR
+  | array_descriptor;
+
+reference_type_descriptor
+  : CLASS_DESCRIPTOR
+  | array_descriptor;
+
+member_name
+  : simple_name | MEMBER_NAME;
+
+param_list_or_id
+  : PRIMITIVE_TYPE+;
+
+param_list
+  : param_list_or_id+
+  | nonvoid_type_descriptor*;
 
 smali
   :
-  ( class_spec
+  (class_spec
   | super_spec
   | implements_spec
   | source_spec
-//TODO:  | method
+// TODO: | method
   | field
   | annotation
   )+
   EOF
   ;
 
-class_spec
-  : CLASS_DIRECTIVE access_list TYPE_DESCRIPTOR;
+class_spec : CLASS_DIRECTIVE access_list CLASS_DESCRIPTOR;
 
 super_spec
-  : SUPER_DIRECTIVE TYPE_DESCRIPTOR;
+  : SUPER_DIRECTIVE CLASS_DESCRIPTOR;
 
 implements_spec
-  : IMPLEMENTS_DIRECTIVE TYPE_DESCRIPTOR;
+  : IMPLEMENTS_DIRECTIVE CLASS_DESCRIPTOR;
 
 source_spec
   : SOURCE_DIRECTIVE STRING_LITERAL;
@@ -252,17 +316,18 @@ source_spec
 access_list
   : ACCESS_SPEC*;
 
-//TODO: access_or_restriction
-//  : ACCESS_SPEC | HIDDENAPI_RESTRICTION;
-access_or_restriction : ACCESS_SPEC;
+access_or_restriction
+  : ACCESS_SPEC | HIDDENAPI_RESTRICTION;
 
 access_or_restriction_list
   : access_or_restriction*;
 
-field : FIELD_DIRECTIVE access_or_restriction_list MEMBER_NAME COLON TYPE_DESCRIPTOR (ASSIGN literal)?
+field : FIELD_DIRECTIVE access_or_restriction_list member_name
+COLON nonvoid_type_descriptor (ASSIGN literal)?
 (annotation END_FIELD_DIRECTIVE)?;
 
-// TODO
+// TODO:
 //method
 //  : METHOD_DIRECTIVE access_or_restriction_list member_name method_prototype statements_and_directives
-//    END_METHOD_DIRECTIVE;
+//    END_METHOD_DIRECTIVE
+//    -> ^(I_METHOD[$start, "I_METHOD"] member_name method_prototype access_or_restriction_list statements_and_directives);
