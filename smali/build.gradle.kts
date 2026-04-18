@@ -3,6 +3,7 @@ import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.SourcesJar
 
 plugins {
+    alias(libs.plugins.antlr)
     alias(libs.plugins.java.library)
     alias(libs.plugins.maven.publish)
 }
@@ -13,6 +14,8 @@ java {
 
 dependencies {
     implementation(project(":"))
+
+    antlr(libs.antlr.runtime)
 }
 
 mavenPublishing {
