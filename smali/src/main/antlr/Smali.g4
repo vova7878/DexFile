@@ -57,6 +57,7 @@ ASSIGN: '=';
 COLON: ':';
 COMMA: ',';
 ARROW: '->';
+DOTDOT: '..';
 
 // Fragments
 fragment HexDigit: [0-9a-fA-F];
@@ -238,15 +239,96 @@ source_spec
     ;
 
 field
-    : FIELD_DIRECTIVE access_list IDENTIFIER COLON
-    IDENTIFIER (ASSIGN literal)? 
+    : FIELD_DIRECTIVE access_list IDENTIFIER COLON IDENTIFIER
+    (ASSIGN literal)?
     (annotation END_FIELD_DIRECTIVE)?
     ;
 
 method
     : METHOD_DIRECTIVE access_list IDENTIFIER method_prototype 
-    // TODO: statements_and_directives
+    statements_and_directives
     END_METHOD_DIRECTIVE
+    ;
+
+statements_and_directives
+    : 
+    ( ordered_method_item
+    | registers_directive
+    | catch_directive
+    | catchall_directive
+    | parameter_directive
+    | annotation 
+    )*
+    ;
+
+parameter_directive
+    : PARAMETER_DIRECTIVE IDENTIFIER
+    (COMMA STRING_LITERAL)?
+    (annotation END_PARAMETER_DIRECTIVE)?
+    ;
+
+ordered_method_item
+    : label
+// TODO:    | instruction
+    | debug_directive
+    ;
+
+debug_directive
+    : line_directive
+    | local_directive
+    | end_local_directive
+    | restart_local_directive
+    | prologue_directive
+    | epilogue_directive
+    | source_directive
+    ;
+
+line_directive
+    : LINE_DIRECTIVE literal
+    ;
+
+local_directive
+    : LOCAL_DIRECTIVE IDENTIFIER
+    (
+    COMMA ('null' | name=STRING_LITERAL)
+    COLON ('null' | type=IDENTIFIER)
+    (COMMA signature=STRING_LITERAL)?
+    )?
+    ;
+
+end_local_directive
+    : END_LOCAL_DIRECTIVE IDENTIFIER
+    ;
+
+restart_local_directive
+    : RESTART_LOCAL_DIRECTIVE IDENTIFIER
+    ;
+
+prologue_directive: PROLOGUE_DIRECTIVE;
+
+epilogue_directive: EPILOGUE_DIRECTIVE;
+
+source_directive
+    : SOURCE_DIRECTIVE STRING_LITERAL?
+    ;
+
+registers_directive
+    : (
+      directive=REGISTERS_DIRECTIVE count=literal 
+    | directive=LOCALS_DIRECTIVE count=literal 
+    )
+    ;
+
+label
+    : COLON IDENTIFIER
+    ;
+
+catch_directive
+    : CATCH_DIRECTIVE IDENTIFIER LBRACE from=label DOTDOT to=label RBRACE using=label
+    ;
+
+catchall_directive
+    : CATCHALL_DIRECTIVE LBRACE from=label DOTDOT to=label RBRACE using=label
     ;
 
 smali
