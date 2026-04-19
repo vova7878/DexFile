@@ -118,6 +118,21 @@ public abstract class SmaliParserBase extends Parser {
         });
     }
 
+    public boolean isMethodHandleTypeField() {
+        return matchText(token -> switch (token) {
+            case "static-put", "static-get", "instance-put", "instance-get" -> true;
+            default -> false;
+        });
+    }
+
+    public boolean isMethodHandleTypeMethod() {
+        return matchText(token -> switch (token) {
+            case "invoke-instance", "invoke-constructor", "invoke-direct",
+                 "invoke-static", "invoke-interface" -> true;
+            default -> false;
+        });
+    }
+
     public boolean isInteger() {
         return matchText(INTEGER);
     }

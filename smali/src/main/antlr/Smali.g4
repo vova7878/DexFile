@@ -41,6 +41,10 @@ PACKED_SWITCH_DIRECTIVE: '.packed-switch';
 END_PACKED_SWITCH_DIRECTIVE: '.end packed-switch';
 SPARSE_SWITCH_DIRECTIVE: '.sparse-switch';
 END_SPARSE_SWITCH_DIRECTIVE: '.end sparse-switch';
+M_PACKED_SWITCH_DIRECTIVE: '.m-packed-switch';
+END_M_PACKED_SWITCH_DIRECTIVE: '.end m-packed-switch';
+M_SPARSE_SWITCH_DIRECTIVE: '.m-sparse-switch';
+END_M_SPARSE_SWITCH_DIRECTIVE: '.end m-sparse-switch';
 CATCH_DIRECTIVE: '.catch';
 CATCHALL_DIRECTIVE: '.catchall';
 LINE_DIRECTIVE: '.line';
@@ -64,6 +68,7 @@ COLON: ':';
 COMMA: ',';
 ARROW: '->';
 DOTDOT: '..';
+AT: '@';
 
 // Fragments
 fragment HexDigit: [0-9a-fA-F];
@@ -125,18 +130,17 @@ DOUBLE_LITERAL
     : Float [dD]?
     ;
 
-fragment At: '@';
-
+// TODO: move to parser rules
 INLINE_INDEX
-    : 'inline' At '0' [xX] HexDigit+
+    : 'inline' AT '0' [xX] HexDigit+
     ;
 
 VTABLE_INDEX
-    : 'vtable' At '0' [xX] HexDigit+
+    : 'vtable' AT '0' [xX] HexDigit+
     ;
 
 FIELD_OFFSET
-    : 'field' At '0' [xX] HexDigit+
+    : 'field' AT '0' [xX] HexDigit+
     ;
 
 // https://source.android.com/docs/core/runtime/dex-format#simplename
@@ -200,59 +204,62 @@ reference_type_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
 nonvoid_type_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
 
 literal
-    : integer_literal
+    : int_literal
     | long_literal
     | short_literal
     | byte_literal
     | float_literal
     | double_literal
-    | CHAR_LITERAL
-    | STRING_LITERAL
+    | char_literal
+    | string_literal
     | bool_literal
     | null_literal
     | array_literal
     | subannotation
     | type_field_method_literal
     | enum_literal
-//  | method_handle_reference
+    | method_handle_reference
     | method_prototype
     ;
 
 integral_literal
-    : integer_literal
+    : int_literal
     | long_literal
     | short_literal
     | byte_literal
-    | CHAR_LITERAL
+    | char_literal
     ;
 
 fixed_32bit_literal
-    : integer_literal
+    : int_literal
     | long_literal
     | short_literal
     | byte_literal
+    | char_literal
     | float_literal
-    | CHAR_LITERAL
     | bool_literal
     ;
 
-fixed_literal
-    : integer_literal
+fixed_64bit_literal
+    : int_literal
     | long_literal
     | short_literal
     | byte_literal
+    | char_literal
     | float_literal
     | double_literal
-    | CHAR_LITERAL
     | bool_literal
+    ;
+
+char_literal: CHAR_LITERAL;
+string_literal: STRING_LITERAL;
+
+int_literal
+    : {isInteger()}? IDENTIFIER
     ;
 
 long_literal
     : {isLong()}? IDENTIFIER
-    ;
-
-integer_literal
-    : {isInteger()}? IDENTIFIER
     ;
 
 short_literal
@@ -332,6 +339,23 @@ field_reference
     : (reference_type_descriptor ARROW)? member_name COLON nonvoid_type_descriptor
     ;
 
+method_handle_type_field
+    : {isMethodHandleTypeField()}? IDENTIFIER
+    ;
+
+method_handle_type_method
+    : {isMethodHandleTypeMethod()}? IDENTIFIER
+    ;
+
+method_handle_reference
+    : method_handle_type_field AT field_reference
+    | method_handle_type_method AT method_reference
+    ;
+
+call_site_reference
+    : simple_name LPAREN string_literal COMMA method_prototype (COMMA literal)* RPAREN AT method_reference
+    ;
+
 class_spec
     : CLASS_DIRECTIVE access_list class_descriptor
     ;
@@ -345,7 +369,7 @@ implements_spec
     ;
 
 source_spec
-    : SOURCE_DIRECTIVE STRING_LITERAL
+    : SOURCE_DIRECTIVE string_literal
     ;
 
 access_spec
@@ -397,10 +421,10 @@ line_directive
 
 local_directive
     : LOCAL_DIRECTIVE register
-    (COMMA (null_literal | name=STRING_LITERAL) 
-    // void as 'no type'
+    (COMMA (null_literal | name=string_literal) 
+    // V as 'no type'
     COLON (type_descriptor)
-    (COMMA signature=STRING_LITERAL)? )?
+    (COMMA signature=string_literal)? )?
     ;
 
 end_local_directive
@@ -416,7 +440,7 @@ prologue_directive: PROLOGUE_DIRECTIVE;
 epilogue_directive: EPILOGUE_DIRECTIVE;
 
 source_directive
-    : SOURCE_DIRECTIVE STRING_LITERAL?
+    : SOURCE_DIRECTIVE string_literal?
     ;
 
 label
@@ -433,7 +457,7 @@ catchall_directive
 
 parameter_directive
     : PARAMETER_DIRECTIVE register 
-    (COMMA STRING_LITERAL)?
+    (COMMA string_literal)?
     (annotation END_PARAMETER_DIRECTIVE)?
     ;
 
@@ -479,10 +503,12 @@ instruction
     ( {format($op) == Format10t}? args_format10t
     | {format($op) == Format10x}? args_format10x
     | {format($op) == Format11n}? args_format11n
+// TODO:    | {format($op) == Format11p}? args_format11p
     | {format($op) == Format11x}? args_format11x
     | {format($op) == Format12x}? args_format12x
 // TODO:    | {format($op) == Format20bc}? args_format20bc
     | {format($op) == Format20t}? args_format20t
+    | {format($op) == Format20t_24}? args_format20t_24
     | {format($op) == Format21c}? args_format21c
     | {format($op) == Format21ih}? args_format21ih
     | {format($op) == Format21lh}? args_format21lh
@@ -499,23 +525,29 @@ instruction
     | {format($op) == Format31i}? args_format31i
     | {format($op) == Format31t}? args_format31t
     | {format($op) == Format32x}? args_format32x
+    | {format($op) == Format34c}? args_format34c
     | {format($op) == Format35c}? args_format35c
     | {format($op) == Format3rc}? args_format3rc
+    | {format($op) == Format41c}? args_format41c
     | {format($op) == Format45cc}? args_format45cc
     | {format($op) == Format4rcc}? args_format4rcc
     | {format($op) == Format51l}? args_format51l
+    | {format($op) == Format52c}? args_format52c
+    | {format($op) == Format5rc}? args_format5rc
     )
     | insn_array_data_directive
     | insn_packed_switch_directive
     | insn_sparse_switch_directive
+    | insn_m_packed_switch_directive
+    | insn_m_sparse_switch_directive
     ;
 
 reference
-    : STRING_LITERAL
+    : string_literal
     | type_field_method_literal
     | method_prototype
-    //TODO: | callsite_reference
-    //TODO: | method_handle_reference
+    | call_site_reference
+    | method_handle_reference
     | INLINE_INDEX
     | VTABLE_INDEX
     | FIELD_OFFSET
@@ -546,6 +578,7 @@ args_format12x
     ;
 
 args_format20t: label;
+args_format20t_24: label;
 
 args_format21c
     : register COMMA reference
@@ -556,7 +589,7 @@ args_format21ih
     ;
 
 args_format21lh
-    : register COMMA fixed_32bit_literal
+    : register COMMA fixed_64bit_literal
     ;
 
 args_format21s
@@ -609,12 +642,20 @@ args_format32x
     : register COMMA register
     ;
 
+args_format34c
+    : LBRACE register_list RBRACE COMMA reference
+    ;
+
 args_format35c
     : LBRACE register_list RBRACE COMMA reference
     ;
 
 args_format3rc
     : LBRACE register_range RBRACE COMMA reference
+    ;
+
+args_format41c
+    : register COMMA reference
     ;
 
 args_format45cc
@@ -626,14 +667,22 @@ args_format4rcc
     ;
 
 args_format51l
-    : register COMMA fixed_literal
+    : register COMMA fixed_64bit_literal
+    ;
+
+args_format52c
+    : register COMMA register COMMA reference
+    ;
+
+args_format5rc
+    : LBRACE register_range RBRACE COMMA reference
     ;
 
 insn_array_data_directive
     : ARRAY_DATA_DIRECTIVE
     // TODO: check width (must be 1, 2, 4 or 8)
-    width=integer_literal
-    fixed_literal* END_ARRAY_DATA_DIRECTIVE
+    width=int_literal
+    fixed_64bit_literal* END_ARRAY_DATA_DIRECTIVE
     ;
 
 insn_packed_switch_directive
@@ -646,4 +695,16 @@ insn_sparse_switch_directive
     : SPARSE_SWITCH_DIRECTIVE
     (fixed_32bit_literal ARROW label)*
     END_SPARSE_SWITCH_DIRECTIVE
+    ;
+
+insn_m_packed_switch_directive
+    : M_PACKED_SWITCH_DIRECTIVE
+    fixed_32bit_literal label*
+    END_M_PACKED_SWITCH_DIRECTIVE
+    ;
+
+insn_m_sparse_switch_directive
+    : M_SPARSE_SWITCH_DIRECTIVE
+    (fixed_32bit_literal ARROW label)*
+    END_M_SPARSE_SWITCH_DIRECTIVE
     ;
