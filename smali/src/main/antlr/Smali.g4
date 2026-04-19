@@ -2,6 +2,12 @@ grammar Smali;
 
 @header {
    package com.v7878.dex.smali;
+
+   import static com.v7878.dex.Format.*;
+}
+
+options {
+    superClass=SmaliParserBase;
 }
 
 // Whitespace and comments
@@ -105,14 +111,19 @@ fragment Float4
     ;
 
 fragment Float
-    : (Float1
+    : Float1
     | Float2
     | Float3
-    | Float4)
-    ([fF] | [dD]?)
+    | Float4
     ;
 
-FLOAT_LITERAL: Float;
+FLOAT_LITERAL
+    : Float [fF]
+    ;
+
+DOUBLE_LITERAL
+    : Float [dD]?
+    ;
 
 // https://source.android.com/docs/core/runtime/dex-format#simplename
 fragment SimpleChar
@@ -162,34 +173,126 @@ fragment Identifier
 
 IDENTIFIER: Identifier;
 
+simple_name: /* TODO: {isSimpleName()}? */ IDENTIFIER;
+
+member_name: /* TODO: {isMemberName()}? */ IDENTIFIER;
+
+register
+    : {isRegister()}? IDENTIFIER
+    ;
+
+class_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
+
+type_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
+
+reference_type_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
+
+nonvoid_type_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
+
 literal
-    : IDENTIFIER
-    | FLOAT_LITERAL
+    : integer_literal
+    | long_literal
+    | short_literal
+    | byte_literal
+    | float_literal
+    | double_literal
     | CHAR_LITERAL
     | STRING_LITERAL
+    | bool_literal
+    | null_literal
     | array_literal
     | subannotation
     | type_field_method_literal
     | enum_literal
-// TODO: | method_handle_literal
+//  | method_handle_literal
     | method_prototype
+    ;
+
+integral_literal
+    : integer_literal
+    | long_literal
+    | short_literal
+    | byte_literal
+    | CHAR_LITERAL
+    ;
+
+fixed_32bit_literal
+    : integer_literal
+    | long_literal
+    | short_literal
+    | byte_literal
+    | float_literal
+    | CHAR_LITERAL
+    | bool_literal
+    ;
+
+fixed_literal
+    : integer_literal
+    | long_literal
+    | short_literal
+    | byte_literal
+    | float_literal
+    | double_literal
+    | CHAR_LITERAL
+    | bool_literal
+    ;
+
+long_literal
+    : {isLong()}? IDENTIFIER
+    ;
+
+integer_literal
+    : {isInteger()}? IDENTIFIER
+    ;
+
+short_literal
+    : {isShort()}? IDENTIFIER
+    ;
+
+byte_literal
+    : {isByte()}? IDENTIFIER
+    ;
+
+float_literal
+    : {isFloat()}? IDENTIFIER
+    | FLOAT_LITERAL // checked
+    ;
+
+double_literal
+    : {isDouble()}? IDENTIFIER
+    | DOUBLE_LITERAL // checked
+    ;
+
+null_literal
+    : {isNull()}? IDENTIFIER
+    ;
+
+bool_literal
+    : {isBool()}? IDENTIFIER
     ;
 
 array_literal
     : LBRACE (literal (COMMA literal)* | ) RBRACE
     ;
 
-annotation_element
-    : IDENTIFIER ASSIGN literal
-    ;
-
 annotation
-    : ANNOTATION_DIRECTIVE visibility=IDENTIFIER IDENTIFIER
-    annotation_element* END_ANNOTATION_DIRECTIVE
+    : ANNOTATION_DIRECTIVE annotation_visibility class_descriptor
+    annotation_element*
+    END_ANNOTATION_DIRECTIVE
     ;
 
 subannotation
-    : SUBANNOTATION_DIRECTIVE IDENTIFIER annotation_element* END_SUBANNOTATION_DIRECTIVE
+    : SUBANNOTATION_DIRECTIVE class_descriptor
+    annotation_element*
+    END_SUBANNOTATION_DIRECTIVE
+    ;
+
+annotation_element
+    : simple_name ASSIGN literal
+    ;
+
+annotation_visibility
+    : {isAnnotationVisibility()}? IDENTIFIER
     ;
 
 enum_literal
@@ -197,80 +300,75 @@ enum_literal
     ;
 
 type_field_method_literal
-    : IDENTIFIER
+    : type_descriptor
     | field_reference
     | method_reference
     ;
 
+// TODO: Multiple primitive types can be parsed as a single ID token
 param_list
-    : IDENTIFIER*
+    : nonvoid_type_descriptor*
     ;
 
 method_prototype
-    : LPAREN param_list RPAREN IDENTIFIER
+    : LPAREN param_list RPAREN type_descriptor
     ;
 
 method_reference
-    : (IDENTIFIER ARROW)? IDENTIFIER method_prototype
+    : (reference_type_descriptor ARROW)? member_name method_prototype
     ;
 
 field_reference
-    : (IDENTIFIER ARROW)? IDENTIFIER COLON IDENTIFIER
-    ;
-
-access_list
-    : IDENTIFIER*
+    : (reference_type_descriptor ARROW)? member_name COLON nonvoid_type_descriptor
     ;
 
 class_spec
-    : CLASS_DIRECTIVE access_list type=IDENTIFIER
+    : CLASS_DIRECTIVE access_list class_descriptor
     ;
 
 super_spec
-    : SUPER_DIRECTIVE type=IDENTIFIER
+    : SUPER_DIRECTIVE class_descriptor
     ;
 
 implements_spec
-    : IMPLEMENTS_DIRECTIVE type=IDENTIFIER
+    : IMPLEMENTS_DIRECTIVE class_descriptor
     ;
 
 source_spec
-    : SOURCE_DIRECTIVE file=STRING_LITERAL
+    : SOURCE_DIRECTIVE STRING_LITERAL
+    ;
+
+access_spec
+    : {isAccessFlag()}? IDENTIFIER
+    ;
+
+access_list
+    : access_spec*
+    ;
+
+restriction_spec
+    : {isRestrictionFlag()}? IDENTIFIER
+    ;
+
+access_or_restriction_spec
+    : access_spec
+    | restriction_spec
+    ;
+
+access_or_restriction_list
+    : access_or_restriction_spec*
     ;
 
 field
-    : FIELD_DIRECTIVE access_list IDENTIFIER COLON IDENTIFIER
+    : FIELD_DIRECTIVE access_or_restriction_list member_name COLON nonvoid_type_descriptor
     (ASSIGN literal)?
     (annotation END_FIELD_DIRECTIVE)?
     ;
 
 method
-    : METHOD_DIRECTIVE access_list IDENTIFIER method_prototype 
+    : METHOD_DIRECTIVE access_or_restriction_list member_name method_prototype
     statements_and_directives
     END_METHOD_DIRECTIVE
-    ;
-
-statements_and_directives
-    : 
-    ( ordered_method_item
-    | registers_directive
-    | catch_directive
-    | catchall_directive
-    | parameter_directive
-    | annotation 
-    )*
-    ;
-
-parameter_directive
-    : PARAMETER_DIRECTIVE IDENTIFIER
-    (COMMA STRING_LITERAL)?
-    (annotation END_PARAMETER_DIRECTIVE)?
-    ;
-
-ordered_method_item
-    : label
-// TODO:    | instruction
-    | debug_directive
     ;
 
 debug_directive
@@ -284,24 +382,23 @@ debug_directive
     ;
 
 line_directive
-    : LINE_DIRECTIVE literal
+    : LINE_DIRECTIVE integral_literal
     ;
 
 local_directive
-    : LOCAL_DIRECTIVE IDENTIFIER
-    (
-    COMMA ('null' | name=STRING_LITERAL)
-    COLON ('null' | type=IDENTIFIER)
-    (COMMA signature=STRING_LITERAL)?
-    )?
+    : LOCAL_DIRECTIVE register
+    (COMMA (null_literal | name=STRING_LITERAL) 
+    // void as 'no type'
+    COLON (type_descriptor)
+    (COMMA signature=STRING_LITERAL)? )?
     ;
 
 end_local_directive
-    : END_LOCAL_DIRECTIVE IDENTIFIER
+    : END_LOCAL_DIRECTIVE register
     ;
 
 restart_local_directive
-    : RESTART_LOCAL_DIRECTIVE IDENTIFIER
+    : RESTART_LOCAL_DIRECTIVE register
     ;
 
 prologue_directive: PROLOGUE_DIRECTIVE;
@@ -312,23 +409,49 @@ source_directive
     : SOURCE_DIRECTIVE STRING_LITERAL?
     ;
 
-registers_directive
-    : (
-      directive=REGISTERS_DIRECTIVE count=literal 
-    | directive=LOCALS_DIRECTIVE count=literal 
-    )
+label
+    : COLON simple_name
     ;
 
-label
-    : COLON IDENTIFIER
-    ;
+// TODO: remove
+label_ref: label;
 
 catch_directive
-    : CATCH_DIRECTIVE IDENTIFIER LBRACE from=label DOTDOT to=label RBRACE using=label
+    : CATCH_DIRECTIVE nonvoid_type_descriptor LBRACE from=label_ref DOTDOT to=label_ref RBRACE using=label_ref
     ;
 
 catchall_directive
-    : CATCHALL_DIRECTIVE LBRACE from=label DOTDOT to=label RBRACE using=label
+    : CATCHALL_DIRECTIVE LBRACE from=label_ref DOTDOT to=label_ref RBRACE using=label_ref
+    ;
+
+parameter_directive
+    : PARAMETER_DIRECTIVE register 
+    (COMMA STRING_LITERAL)?
+    (annotation END_PARAMETER_DIRECTIVE)?
+    ;
+
+statements_and_directives
+    : 
+    ( ordered_method_item
+    | registers_directive
+    | catch_directive
+    | catchall_directive
+    | parameter_directive
+    | annotation 
+    )*
+    ;
+
+ordered_method_item
+    : label
+//    | instruction
+    | debug_directive
+    ;
+
+registers_directive
+    : (
+      directive=REGISTERS_DIRECTIVE count=integral_literal 
+    | directive=LOCALS_DIRECTIVE count=integral_literal 
+    )
     ;
 
 smali
