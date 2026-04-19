@@ -125,6 +125,20 @@ DOUBLE_LITERAL
     : Float [dD]?
     ;
 
+fragment At: '@';
+
+INLINE_INDEX
+    : 'inline' At '0' [xX] HexDigit+
+    ;
+
+VTABLE_INDEX
+    : 'vtable' At '0' [xX] HexDigit+
+    ;
+
+FIELD_OFFSET
+    : 'field' At '0' [xX] HexDigit+
+    ;
+
 // https://source.android.com/docs/core/runtime/dex-format#simplename
 fragment SimpleChar
     : [A-Z]
@@ -153,21 +167,17 @@ fragment InitName
     ;
 
 fragment ClassName
-    : (SimpleName '/')* SimpleName
-    ;
-
-fragment ClassDescriptor
-    : 'L' ClassName ';'
+    : (SimpleName '/')* SimpleName ';'?
     ;
 
 fragment ArrayDescriptor
-    : '['+ ([ZBSCIFJD] | ClassDescriptor)
+    : '['+ ([ZBSCIFJD] | ClassName)
     ;
 
 fragment Identifier
     : SimpleName
     | InitName
-    | ClassDescriptor
+    | ClassName
     | ArrayDescriptor
     ;
 
@@ -204,7 +214,7 @@ literal
     | subannotation
     | type_field_method_literal
     | enum_literal
-//  | method_handle_literal
+//  | method_handle_reference
     | method_prototype
     ;
 
@@ -413,15 +423,12 @@ label
     : COLON simple_name
     ;
 
-// TODO: remove
-label_ref: label;
-
 catch_directive
-    : CATCH_DIRECTIVE nonvoid_type_descriptor LBRACE from=label_ref DOTDOT to=label_ref RBRACE using=label_ref
+    : CATCH_DIRECTIVE nonvoid_type_descriptor LBRACE from=label DOTDOT to=label RBRACE using=label
     ;
 
 catchall_directive
-    : CATCHALL_DIRECTIVE LBRACE from=label_ref DOTDOT to=label_ref RBRACE using=label_ref
+    : CATCHALL_DIRECTIVE LBRACE from=label DOTDOT to=label RBRACE using=label
     ;
 
 parameter_directive
@@ -443,7 +450,7 @@ statements_and_directives
 
 ordered_method_item
     : label
-//    | instruction
+    | instruction
     | debug_directive
     ;
 
@@ -465,4 +472,178 @@ smali
   | annotation
   )+
   EOF
+    ;
+
+instruction
+    : op=IDENTIFIER
+    ( {format($op) == Format10t}? args_format10t
+    | {format($op) == Format10x}? args_format10x
+    | {format($op) == Format11n}? args_format11n
+    | {format($op) == Format11x}? args_format11x
+    | {format($op) == Format12x}? args_format12x
+// TODO:    | {format($op) == Format20bc}? args_format20bc
+    | {format($op) == Format20t}? args_format20t
+    | {format($op) == Format21c}? args_format21c
+    | {format($op) == Format21ih}? args_format21ih
+    | {format($op) == Format21lh}? args_format21lh
+    | {format($op) == Format21s}? args_format21s
+    | {format($op) == Format21t}? args_format21t
+    | {format($op) == Format22b}? args_format22b
+    | {format($op) == Format22c}? args_format22c
+    | {format($op) == Format22s}? args_format22s
+    | {format($op) == Format22t}? args_format22t
+    | {format($op) == Format22x}? args_format22x
+    | {format($op) == Format23x}? args_format23x
+    | {format($op) == Format30t}? args_format30t
+    | {format($op) == Format31c}? args_format31c
+    | {format($op) == Format31i}? args_format31i
+    | {format($op) == Format31t}? args_format31t
+    | {format($op) == Format32x}? args_format32x
+    | {format($op) == Format35c}? args_format35c
+    | {format($op) == Format3rc}? args_format3rc
+    | {format($op) == Format45cc}? args_format45cc
+    | {format($op) == Format4rcc}? args_format4rcc
+    | {format($op) == Format51l}? args_format51l
+    )
+    | insn_array_data_directive
+    | insn_packed_switch_directive
+    | insn_sparse_switch_directive
+    ;
+
+reference
+    : STRING_LITERAL
+    | type_field_method_literal
+    | method_prototype
+    //TODO: | callsite_reference
+    //TODO: | method_handle_reference
+    | INLINE_INDEX
+    | VTABLE_INDEX
+    | FIELD_OFFSET
+    ;
+
+register_list
+    : (register (COMMA register)*)?
+    ;
+
+register_range
+    : (startreg=register (DOTDOT endreg=register)?)?
+    ;
+
+args_format10t: label;
+
+args_format10x
+    : // nothing
+    ;
+
+args_format11n
+    : register COMMA integral_literal
+    ;
+
+args_format11x: register;
+
+args_format12x
+    : register COMMA register
+    ;
+
+args_format20t: label;
+
+args_format21c
+    : register COMMA reference
+    ;
+
+args_format21ih
+    : register COMMA fixed_32bit_literal
+    ;
+
+args_format21lh
+    : register COMMA fixed_32bit_literal
+    ;
+
+args_format21s
+    : register COMMA integral_literal
+    ;
+
+args_format21t
+    : register COMMA label
+    ;
+
+args_format22b
+    : register COMMA register COMMA integral_literal
+    ;
+
+args_format22c
+    : register COMMA register COMMA reference
+    ;
+
+args_format22s
+    : register COMMA register COMMA integral_literal
+    ;
+
+args_format22t
+    : register COMMA register COMMA label
+    ;
+
+args_format22x
+    : register COMMA register
+    ;
+
+args_format23x
+    : register COMMA register COMMA register
+    ;
+
+args_format30t: label;
+
+args_format31c
+    : register COMMA reference
+    ;
+
+args_format31i
+    : register COMMA fixed_32bit_literal
+    ;
+
+args_format31t
+    : register COMMA label
+    ;
+
+args_format32x
+    : register COMMA register
+    ;
+
+args_format35c
+    : LBRACE register_list RBRACE COMMA reference
+    ;
+
+args_format3rc
+    : LBRACE register_range RBRACE COMMA reference
+    ;
+
+args_format45cc
+    : LBRACE register_list RBRACE COMMA reference COMMA reference
+    ;
+
+args_format4rcc
+    : LBRACE register_range RBRACE COMMA reference COMMA reference
+    ;
+
+args_format51l
+    : register COMMA fixed_literal
+    ;
+
+insn_array_data_directive
+    : ARRAY_DATA_DIRECTIVE
+    // TODO: check width (must be 1, 2, 4 or 8)
+    width=integer_literal
+    fixed_literal* END_ARRAY_DATA_DIRECTIVE
+    ;
+
+insn_packed_switch_directive
+    : PACKED_SWITCH_DIRECTIVE
+    fixed_32bit_literal label*
+    END_PACKED_SWITCH_DIRECTIVE
+    ;
+
+insn_sparse_switch_directive
+    : SPARSE_SWITCH_DIRECTIVE
+    (fixed_32bit_literal ARROW label)*
+    END_SPARSE_SWITCH_DIRECTIVE
     ;

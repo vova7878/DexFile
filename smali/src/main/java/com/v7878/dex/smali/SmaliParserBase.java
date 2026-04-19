@@ -17,12 +17,22 @@ public abstract class SmaliParserBase extends Parser {
     private static final Pattern REGISTER = Pattern.compile(
             "[vp][0-9]+"
     );
-    private static final String INTEGRAL = "-?(0|([1-9][0-9]*)|(0[0-7]+)|(0[xX][0-9a-fA-F]+))";
+    private static final String INTEGRAL = """
+            -?(0\
+            |([1-9][0-9]*)\
+            |(0[0-7]+)\
+            |(0[xX][0-9a-fA-F]+))\
+            """;
     private static final Pattern INTEGER = Pattern.compile(INTEGRAL);
     private static final Pattern LONG = Pattern.compile(INTEGRAL + "[lL]");
     private static final Pattern SHORT = Pattern.compile(INTEGRAL + "[sS]");
     private static final Pattern BYTE = Pattern.compile(INTEGRAL + "[tT]");
-    private static final String FP = "(-?[0-9]+[eE]-?[0-9]+)|(-?0[xX][0-9a-fA-F]+[pP]-?[0-9]+)|(-?[iI][nN][fF][iI][nN][iI][tT][yY])|([nN][aA][nN])";
+    private static final String FP = """
+            (-?[0-9]+[eE]-?[0-9]+)\
+            |(-?0[xX][0-9a-fA-F]+[pP]-?[0-9]+)\
+            |(-?[iI][nN][fF][iI][nN][iI][tT][yY])\
+            |([nN][aA][nN])\
+            """;
     private static final Pattern FLOAT = Pattern.compile(
             "(" + FP + ")[fF]|(-?[0-9]+[fF])"
     );
@@ -46,8 +56,11 @@ public abstract class SmaliParserBase extends Parser {
     }
 
     public static Format format(String name) {
-        System.out.println("TOKEN: " + name);
-        return opcodesByName.get(name).format();
+        var opcode = opcodesByName.get(name);
+        if (opcode == null) {
+            throw new IllegalStateException("Opcode not found: " + name);
+        }
+        return opcode.format();
     }
 
     public static Format format(Token token) {
