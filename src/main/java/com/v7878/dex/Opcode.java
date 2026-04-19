@@ -315,41 +315,41 @@ public enum Opcode {
 
     // legacy dex009 / dex013 opcodes
 
-    M_CONST_SPECIAL(legacy(0x1a, 0x1a), "const/special", Format11p, 0),
-    M_CONST_WIDE_SPECIAL(legacy(0x1b, 0x1b), "const-wide/special", Format11p, 0),
+    M_CONST_SPECIAL(legacy(0x1a, 0x1a), "m-const/special", Format11p, 0),
+    M_CONST_WIDE_SPECIAL(legacy(0x1b, 0x1b), "m-const-wide/special", Format11p, 0),
 
     // The semantics of the new-array instruction differ from newer versions of dex.
     // The instruction takes the type of array component, not the type of the array itself
-    M_NEW_ARRAY(legacy(0x22, 0x22), "new-array", Format22c, TYPE, CAN_THROW),
-    M_NEW_ARRAY_BOOLEAN(legacy(0x23, 0x23), "new-array-boolean", Format12x, CAN_THROW),
-    M_NEW_ARRAY_BYTE(legacy(0x24, 0x24), "new-array-byte", Format12x, CAN_THROW),
-    M_NEW_ARRAY_CHAR(legacy(0x25, 0x25), "new-array-char", Format12x, CAN_THROW),
-    M_NEW_ARRAY_SHORT(legacy(0x26, 0x26), "new-array-short", Format12x, CAN_THROW),
-    M_NEW_ARRAY_INT(legacy(0x27, 0x27), "new-array-int", Format12x, CAN_THROW),
-    M_NEW_ARRAY_LONG(legacy(0x28, 0x28), "new-array-long", Format12x, CAN_THROW),
-    M_NEW_ARRAY_FLOAT(legacy(0x29, 0x29), "new-array-float", Format12x, CAN_THROW),
-    M_NEW_ARRAY_DOUBLE(legacy(0x2a, 0x2a), "new-array-double", Format12x, CAN_THROW),
-    M_FILLED_NEW_ARRAY(legacy(0x2b, 0x2b), "filled-new-array", Format34c, TYPE, CAN_THROW),
+    M_NEW_ARRAY(legacy(0x22, 0x22), "m-new-array", Format22c, TYPE, CAN_THROW),
+    M_NEW_ARRAY_BOOLEAN(legacy(0x23, 0x23), "m-new-array-boolean", Format12x, CAN_THROW),
+    M_NEW_ARRAY_BYTE(legacy(0x24, 0x24), "m-new-array-byte", Format12x, CAN_THROW),
+    M_NEW_ARRAY_CHAR(legacy(0x25, 0x25), "m-new-array-char", Format12x, CAN_THROW),
+    M_NEW_ARRAY_SHORT(legacy(0x26, 0x26), "m-new-array-short", Format12x, CAN_THROW),
+    M_NEW_ARRAY_INT(legacy(0x27, 0x27), "m-new-array-int", Format12x, CAN_THROW),
+    M_NEW_ARRAY_LONG(legacy(0x28, 0x28), "m-new-array-long", Format12x, CAN_THROW),
+    M_NEW_ARRAY_FLOAT(legacy(0x29, 0x29), "m-new-array-float", Format12x, CAN_THROW),
+    M_NEW_ARRAY_DOUBLE(legacy(0x2a, 0x2a), "m-new-array-double", Format12x, CAN_THROW),
+    M_FILLED_NEW_ARRAY(legacy(0x2b, 0x2b), "m-filled-new-array", Format34c, TYPE, CAN_THROW),
 
-    M_GOTO_24(legacy(52, 53), "goto/24", Format20t_24, TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
-    M_PACKED_SWITCH(legacy(0x35, 0x36), "packed-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
-    M_SPARSE_SWITCH(legacy(0x36, 0x37), "sparse-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
+    M_GOTO_24(legacy(52, 53), "m-goto/24", Format20t_24, TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
+    M_PACKED_SWITCH(legacy(0x35, 0x36), "m-packed-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
+    M_SPARSE_SWITCH(legacy(0x36, 0x37), "m-sparse-switch", Format21t, HAS_PAYLOAD | TYPE_SWITCH),
 
-    M_INVOKE_VIRTUAL(legacy(0x6d, 0x6e), "invoke-virtual", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_SUPER(legacy(0x6e, 0x6f), "invoke-super", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_DIRECT(legacy(0x6f, 0x70), "invoke-direct", Format34c, METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
-    M_INVOKE_STATIC(legacy(0x70, 0x71), "invoke-static", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_INTERFACE(legacy(0x71, 0x72), "invoke-interface", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_VIRTUAL(legacy(0x6d, 0x6e), "m-invoke-virtual", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_SUPER(legacy(0x6e, 0x6f), "m-invoke-super", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_DIRECT(legacy(0x6f, 0x70), "m-invoke-direct", Format34c, METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    M_INVOKE_STATIC(legacy(0x70, 0x71), "m-invoke-static", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_INTERFACE(legacy(0x71, 0x72), "m-invoke-interface", Format34c, METHOD, CAN_THROW | TYPE_INVOKE),
 
-    M_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "packed-switch-payload", MPackedSwitchPayload, 0),
-    M_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "sparse-switch-payload", MSparseSwitchPayload, 0),
+    M_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "m-packed-switch-payload", MPackedSwitchPayload, 0),
+    M_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "m-sparse-switch-payload", MSparseSwitchPayload, 0),
 
     // legacy dex009 / dex013 odex opcodes
 
-    M_EXECUTE_INLINE(legacy(0xee, 0xee), "execute-inline", Format34c, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_DIRECT_EMPTY(legacy(0xf0, 0xf0), "invoke-direct-empty", Format34c, METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
-    M_INVOKE_VIRTUAL_QUICK(legacy(0xf8, 0xf8), "invoke-virtual-quick", Format34c, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_SUPER_QUICK(legacy(0xfa, 0xfa), "invoke-super-quick", Format34c, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    M_EXECUTE_INLINE(legacy(0xee, 0xee), "m-execute-inline", Format34c, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_DIRECT_EMPTY(legacy(0xf0, 0xf0), "m-invoke-direct-empty", Format34c, METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    M_INVOKE_VIRTUAL_QUICK(legacy(0xf8, 0xf8), "m-invoke-virtual-quick", Format34c, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_SUPER_QUICK(legacy(0xfa, 0xfa), "m-invoke-super-quick", Format34c, RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
     // odex opcodes
 
