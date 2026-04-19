@@ -4,6 +4,7 @@ grammar Smali;
    package com.v7878.dex.smali;
 
    import static com.v7878.dex.Format.*;
+   import com.v7878.dex.immutable.*;
 }
 
 options {
@@ -322,13 +323,19 @@ type_field_method_literal
     | method_reference
     ;
 
-// TODO: Multiple primitive types can be parsed as a single ID token
-param_list
-    : nonvoid_type_descriptor*
+unchecked_param_list
+    // Note: multiple primitive types can be parsed as simple_name token.
+    // A full analysis of the parameter list will occur later
+    : IDENTIFIER*
     ;
 
-method_prototype
-    : LPAREN param_list RPAREN type_descriptor
+unchecked_method_prototype
+    : LPAREN unchecked_param_list RPAREN type_descriptor
+    ;
+
+method_prototype returns[ProtoId value]
+    : whole=unchecked_method_prototype
+    { $value = ProtoId.of($unchecked_method_prototype.text); }
     ;
 
 method_reference
