@@ -198,13 +198,11 @@ register
     ;
 
 simple_name returns[String value]
-    : /* TODO: {isSimpleName()}? */ val=IDENTIFIER
-    { $value = LiteralUtils.parseSimpleName($val.text); }
+    : val=IDENTIFIER { $value = LiteralUtils.parseSimpleName($val.text); }
     ;
 
 member_name returns[String value]
-    : /* TODO: {isMemberName()}? */ val=IDENTIFIER
-    { $value = LiteralUtils.parseMemberName($val.text); }
+    : val=IDENTIFIER { $value = LiteralUtils.parseMemberName($val.text); }
     ;
 
 class_descriptor returns[TypeId value]
@@ -321,19 +319,19 @@ bool_literal returns[boolean value]
     ;
 
 array_literal returns[List<EncodedValue> value]
-    : { $value = new ArrayList<>(); }
-    LBRACE (literal { $value.add($literal.value); }
+    @init { $value = new ArrayList<>(); }
+    @after { $value = Collections.unmodifiableList($value); }
+    : LBRACE (literal { $value.add($literal.value); }
     (COMMA literal { $value.add($literal.value); })* | )
     RBRACE
-    { $value = Collections.unmodifiableList($value); }
     ;
 
 annotation_data
     returns [TypeId type, NavigableSet<AnnotationElement> elements]
-    : { $elements = new TreeSet<>(); }
-    class_descriptor { $type = $class_descriptor.value; }
+    @init { $elements = new TreeSet<>(); }
+    @after { $elements = Collections.unmodifiableNavigableSet($elements); }
+    : class_descriptor { $type = $class_descriptor.value; }
     (annotation_element { $elements.add($annotation_element.value); })*
-    { $elements = Collections.unmodifiableNavigableSet($elements); }
     ;
 
 annotation returns[Annotation value]
@@ -359,19 +357,15 @@ annotation_visibility returns[AnnotationVisibility value]
     { $value = AnnotationVisibility.of($val.text); }
     ;
 
-unchecked_param_list
-    // Note: multiple primitive types can be parsed as IDENTIFIER token.
-    // A full analysis of the parameter list will occur later
-    : IDENTIFIER*
-    ;
-
 unchecked_method_prototype
-    : LPAREN unchecked_param_list RPAREN type_descriptor
+    // Note: multiple primitive types can be parsed as
+    // IDENTIFIER token. A full analysis will occur later
+    : LPAREN IDENTIFIER* RPAREN IDENTIFIER
     ;
 
 method_prototype returns[ProtoId value]
     : whole=unchecked_method_prototype
-    { $value = ProtoId.of($unchecked_method_prototype.text); }
+    { $value = ProtoId.of($whole.text); }
     ;
 
 method_reference returns[MethodId value]
@@ -412,51 +406,59 @@ call_site_reference
     : simple_name LPAREN string_literal COMMA method_prototype (COMMA literal)* RPAREN AT method_reference
     ;
 
-class_spec
-    : CLASS_DIRECTIVE access_list class_descriptor
+class_spec returns[TypeId type, int access_flags]
+    : CLASS_DIRECTIVE
+    access_list { $access_flags = $access_list.access_flags; }
+    class_descriptor { $type = $class_descriptor.value; }
     ;
 
-super_spec
+super_spec returns[TypeId value]
     : SUPER_DIRECTIVE class_descriptor
+    { $value = $class_descriptor.value; }
     ;
 
-implements_spec
+implements_spec returns[TypeId value]
     : IMPLEMENTS_DIRECTIVE class_descriptor
+    { $value = $class_descriptor.value; }
     ;
 
-source_spec
+source_spec returns[String value]
     : SOURCE_DIRECTIVE string_literal
+    { $value = $string_literal.value; }
     ;
 
-access_spec
+access_spec returns[int value]
     : {isAccessFlag()}? IDENTIFIER
+    // TODO: parse
+    { $value = 0; }
     ;
 
-access_list
-    : access_spec*
+access_list returns[int access_flags]
+    : (access_spec { $access_flags |= $access_spec.value; })*
     ;
 
-restriction_spec
+restriction_spec returns[int value]
     : {isRestrictionFlag()}? IDENTIFIER
+    // TODO: parse
+    { $value = 0; }
     ;
 
-access_or_restriction_spec
-    : access_spec
-    | restriction_spec
-    ;
-
-access_or_restriction_list
-    : access_or_restriction_spec*
+access_or_restriction_list returns[int access_flags, int restriction_flags]
+    : (access_spec { $access_flags |= $access_spec.value; }
+    | restriction_spec { $restriction_flags |= $restriction_spec.value; }
+    )*
     ;
 
 field
-    : FIELD_DIRECTIVE access_or_restriction_list member_name COLON nonvoid_type_descriptor
+    : FIELD_DIRECTIVE access_or_restriction_list
+    member_name COLON nonvoid_type_descriptor
     (ASSIGN literal)?
     (annotation END_FIELD_DIRECTIVE)?
     ;
 
 method
-    : METHOD_DIRECTIVE access_or_restriction_list member_name method_prototype
+    : METHOD_DIRECTIVE access_or_restriction_list
+    member_name method_prototype
     statements_and_directives
     END_METHOD_DIRECTIVE
     ;
@@ -541,17 +543,27 @@ registers_directive
     )
     ;
 
-smali
-    : 
-  ( class_spec
-  | super_spec
-  | implements_spec
-  | source_spec
-  | method
-  | field
-  | annotation
-  )+
-  EOF
+class_def
+    returns[ClassDef value]
+    locals[TypeId type, int access_flags]
+    @init { }
+    @after { $value = ClassDef.of($type, $access_flags, null, null, null, null, null, null); }
+    : class_spec { $type = $class_spec.type; $access_flags = $class_spec.access_flags; }
+    // TODO: parse
+    ( super_spec
+    | implements_spec
+    | source_spec
+    | annotation
+    | method
+    | field
+    )+
+    ;
+
+smali returns[Dex dex] locals[List<ClassDef> classes]
+    @init { $classes = new ArrayList<>(); }
+    @after { $classes = Collections.unmodifiableList($classes);
+             $dex = Dex.raw($classes); }
+    : (class_def { $classes.add($class_def.value); })+ EOF
     ;
 
 instruction
