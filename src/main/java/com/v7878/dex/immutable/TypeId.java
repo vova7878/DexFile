@@ -133,12 +133,9 @@ public final class TypeId implements Comparable<TypeId> {
             }
         }
         /*
-         * Premature end for a type descriptor, but valid for
-         * a class name as long as we haven't encountered an
-         * empty component (including the degenerate case of
-         * the empty string "")
+         * Premature end of a type descriptor
          */
-        return sep_or_first ? -1 : array_depth;
+        return -1;
     }
 
     public static TypeId of(String descriptor) {
