@@ -119,4 +119,14 @@ public class LiteralUtils {
             default -> throw shouldNotReachHere();
         };
     }
+
+    public static String parseSimpleName(String value) {
+        // TODO
+        return value;
+    }
+
+    public static String parseMemberName(String value) {
+        // TODO
+        return value;
+    }
 }

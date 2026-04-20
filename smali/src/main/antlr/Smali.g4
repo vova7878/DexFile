@@ -1,10 +1,14 @@
 grammar Smali;
 
 @header {
-   package com.v7878.dex.smali;
+    package com.v7878.dex.smali;
 
-   import static com.v7878.dex.Format.*;
-   import com.v7878.dex.immutable.*;
+    import static com.v7878.dex.Format.*;
+    import com.v7878.dex.immutable.value.*;
+    import com.v7878.dex.immutable.*;
+    import com.v7878.dex.*;
+
+    import java.util.*;
 }
 
 options {
@@ -189,70 +193,80 @@ fragment Identifier
 
 IDENTIFIER: Identifier;
 
-simple_name: /* TODO: {isSimpleName()}? */ IDENTIFIER;
-
-member_name: /* TODO: {isMemberName()}? */ IDENTIFIER;
-
 register
     : {isRegister()}? IDENTIFIER
     ;
 
-class_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
-
-type_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
-
-reference_type_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
-
-nonvoid_type_descriptor: /* TODO: {is...()}? */ IDENTIFIER;
-
-literal
-    : int_literal
-    | long_literal
-    | short_literal
-    | byte_literal
-    | float_literal
-    | double_literal
-    | char_literal
-    | string_literal
-    | bool_literal
-    | null_literal
-    | array_literal
-    | subannotation
-    | type_descriptor
-    | field_reference
-    | method_reference
-    | enum_literal
-    | method_handle_reference
-    | method_prototype
+simple_name returns[String value]
+    : /* TODO: {isSimpleName()}? */ val=IDENTIFIER
+    { $value = LiteralUtils.parseSimpleName($val.text); }
     ;
 
-integral_literal
-    : int_literal
-    | long_literal
-    | short_literal
-    | byte_literal
-    | char_literal
+member_name returns[String value]
+    : /* TODO: {isMemberName()}? */ val=IDENTIFIER
+    { $value = LiteralUtils.parseMemberName($val.text); }
     ;
 
-fixed_32bit_literal
-    : int_literal
-    | long_literal
-    | short_literal
-    | byte_literal
-    | char_literal
-    | float_literal
-    | bool_literal
+class_descriptor returns[TypeId value]
+    : /* TODO: {is...()}? */ val=IDENTIFIER
+    { $value = TypeId.of($val.text); }
     ;
 
-fixed_64bit_literal
-    : int_literal
-    | long_literal
-    | short_literal
-    | byte_literal
-    | char_literal
-    | float_literal
-    | double_literal
-    | bool_literal
+type_descriptor returns[TypeId value]
+    : /* TODO: {is...()}? */ val=IDENTIFIER
+    { $value = TypeId.of($val.text); }
+    ;
+
+reference_type_descriptor returns[TypeId value]
+    : /* TODO: {is...()}? */ val=IDENTIFIER
+    { $value = TypeId.of($val.text); }
+    ;
+
+nonvoid_type_descriptor returns[TypeId value]
+    : /* TODO: {is...()}? */ val=IDENTIFIER
+    { $value = TypeId.of($val.text); }
+    ;
+
+literal returns[EncodedValue value]
+    : int_literal { $value = EncodedInt.of($int_literal.value); }
+    | long_literal { $value = EncodedLong.of($long_literal.value); }
+    | short_literal { $value = EncodedShort.of($short_literal.value); }
+    | byte_literal { $value = EncodedByte.of($byte_literal.value); }
+    | float_literal { $value = EncodedFloat.of($float_literal.value); }
+    | double_literal { $value = EncodedDouble.of($double_literal.value); }
+    | char_literal { $value = EncodedChar.of($char_literal.value); }
+    | string_literal { $value = EncodedString.of($string_literal.value); }
+    | bool_literal { $value = EncodedBoolean.of($bool_literal.value); }
+    | null_literal { $value = EncodedNull.INSTANCE; }
+    | array_literal { $value = EncodedArray.raw($array_literal.value); }
+    | subannotation { $value = $subannotation.value; }
+    | type_descriptor { $value = EncodedType.of($type_descriptor.value); }
+    | field_reference { $value = EncodedField.of($field_reference.value); }
+    | enum_literal { $value = EncodedEnum.of($enum_literal.value); }
+    | method_reference { $value = EncodedMethod.of($method_reference.value); }
+    | method_handle_reference { $value = EncodedMethodHandle.of($method_handle_reference.value); }
+    | method_prototype { $value = EncodedMethodType.of($method_prototype.value); }
+    ;
+
+integral_literal returns[int value]
+    : int_literal { $value = $int_literal.value; }
+    | long_literal { $value = Math.toIntExact($long_literal.value); }
+    | short_literal { $value = $short_literal.value; }
+    | byte_literal { $value = $byte_literal.value; }
+    | char_literal { $value = $char_literal.value; }
+    ;
+
+fixed_32bit_literal returns[int value]
+    : integral_literal { $value = $integral_literal.value; }
+    | float_literal { $value = Float.floatToRawIntBits($float_literal.value); }
+    | bool_literal { $value = $bool_literal.value ? 1 : 0; }
+    ;
+
+fixed_64bit_literal returns[long value]
+    : long_literal { $value = $long_literal.value; }
+    | double_literal { $value = Double.doubleToRawLongBits($double_literal.value); }
+    // long_literal case was above
+    | fixed_32bit_literal { $value = $fixed_32bit_literal.value; }
     ;
 
 char_literal returns[char value]
@@ -306,32 +320,43 @@ bool_literal returns[boolean value]
     { $value = LiteralUtils.parseBool($val.text); }
     ;
 
-array_literal
-    : LBRACE (literal (COMMA literal)* | ) RBRACE
+array_literal returns[List<EncodedValue> value]
+    : { $value = new ArrayList<>(); }
+    LBRACE (literal { $value.add($literal.value); }
+    (COMMA literal { $value.add($literal.value); })* | )
+    RBRACE
+    { $value = Collections.unmodifiableList($value); }
     ;
 
-annotation
-    : ANNOTATION_DIRECTIVE annotation_visibility class_descriptor
-    annotation_element*
+annotation_data
+    returns [TypeId type, NavigableSet<AnnotationElement> elements]
+    : { $elements = new TreeSet<>(); }
+    class_descriptor { $type = $class_descriptor.value; }
+    (annotation_element { $elements.add($annotation_element.value); })*
+    { $elements = Collections.unmodifiableNavigableSet($elements); }
+    ;
+
+annotation returns[Annotation value]
+    : ANNOTATION_DIRECTIVE annotation_visibility annotation_data
+    { $value = Annotation.raw($annotation_visibility.value,
+    $annotation_data.type, $annotation_data.elements); }
     END_ANNOTATION_DIRECTIVE
     ;
 
-subannotation
-    : SUBANNOTATION_DIRECTIVE class_descriptor
-    annotation_element*
+subannotation returns[EncodedAnnotation value]
+    : SUBANNOTATION_DIRECTIVE annotation_data
+    { $value = EncodedAnnotation.raw($annotation_data.type, $annotation_data.elements); }
     END_SUBANNOTATION_DIRECTIVE
     ;
 
-annotation_element
+annotation_element returns[AnnotationElement value]
     : simple_name ASSIGN literal
+    { $value = AnnotationElement.of($simple_name.value, $literal.value); }
     ;
 
-annotation_visibility
-    : {isAnnotationVisibility()}? IDENTIFIER
-    ;
-
-enum_literal
-    : ENUM_DIRECTIVE field_reference
+annotation_visibility returns[AnnotationVisibility value]
+    : {isAnnotationVisibility()}? val=IDENTIFIER
+    { $value = AnnotationVisibility.of($val.text); }
     ;
 
 unchecked_param_list
@@ -349,25 +374,38 @@ method_prototype returns[ProtoId value]
     { $value = ProtoId.of($unchecked_method_prototype.text); }
     ;
 
-method_reference
-    : (reference_type_descriptor ARROW)? member_name method_prototype
+method_reference returns[MethodId value]
+    // TODO: : (reference_type_descriptor ARROW)? member_name method_prototype
+    : dclass=reference_type_descriptor ARROW name=member_name proto=method_prototype
+    { $value = MethodId.of($dclass.value, $name.value, $proto.value); }
     ;
 
-field_reference
-    : (reference_type_descriptor ARROW)? member_name COLON nonvoid_type_descriptor
+field_reference returns[FieldId value]
+    // TODO: (reference_type_descriptor ARROW)? member_name COLON nonvoid_type_descriptor
+    : dclass=reference_type_descriptor ARROW name=member_name COLON type=nonvoid_type_descriptor
+    { $value = FieldId.of($dclass.value, $name.value, $type.value); }
     ;
 
-method_handle_type_field
-    : {isMethodHandleTypeField()}? IDENTIFIER
+enum_literal returns[FieldId value]
+    : ENUM_DIRECTIVE field_reference
+    { $value = $field_reference.value; }
     ;
 
-method_handle_type_method
-    : {isMethodHandleTypeMethod()}? IDENTIFIER
+method_handle_type_field returns[MethodHandleType value]
+    : {isMethodHandleTypeField()}? val=IDENTIFIER
+    { $value = MethodHandleType.of($val.text); }
     ;
 
-method_handle_reference
-    : method_handle_type_field AT field_reference
-    | method_handle_type_method AT method_reference
+method_handle_type_method returns[MethodHandleType value]
+    : {isMethodHandleTypeMethod()}? val=IDENTIFIER
+    { $value = MethodHandleType.of($val.text); }
+    ;
+
+method_handle_reference returns[MethodHandleId value]
+    : ftype=method_handle_type_field AT fid=field_reference
+    { $value = MethodHandleId.of($ftype.value, $fid.value); }
+    | mtype=method_handle_type_method AT mid=method_reference
+    { $value = MethodHandleId.of($mtype.value, $mid.value); }
     ;
 
 call_site_reference
