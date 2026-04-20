@@ -75,7 +75,7 @@ AT: '@';
 fragment HexDigit: [0-9a-fA-F];
 
 fragment EscapeSequence
-    : '\\' [bstnfr"'\\]
+    : '\\' [btnfr"'\\]
     | '\\u'+ HexDigit HexDigit HexDigit HexDigit
     ;
 
@@ -84,7 +84,7 @@ fragment Char
     ;
 
 CHAR_LITERAL
-    : '\'' Char '\''
+    : '\'' ('"' | Char) '\''
     ;
 
 STRING_LITERAL
@@ -149,7 +149,8 @@ fragment SimpleChar
     : [A-Z]
     | [a-z]
     | [0-9]
-// TODO? | ' ' // since DEX version 040
+    // The only character that requires post-processing '\ ' -> ' '
+    | '\\ ' // since DEX version 040
     | '$'
     | '-'
     | '_'
@@ -217,7 +218,9 @@ literal
     | null_literal
     | array_literal
     | subannotation
-    | type_field_method_literal
+    | type_descriptor
+    | field_reference
+    | method_reference
     | enum_literal
     | method_handle_reference
     | method_prototype
@@ -252,41 +255,55 @@ fixed_64bit_literal
     | bool_literal
     ;
 
-char_literal: CHAR_LITERAL;
-string_literal: STRING_LITERAL;
-
-int_literal
-    : {isInteger()}? IDENTIFIER
+char_literal returns[char value]
+    : val=CHAR_LITERAL
+    { $value = LiteralUtils.parseChar($val.text); }
     ;
 
-long_literal
-    : {isLong()}? IDENTIFIER
+string_literal returns[String value]
+    : val=STRING_LITERAL
+    { $value = LiteralUtils.parseString($val.text); }
     ;
 
-short_literal
-    : {isShort()}? IDENTIFIER
+int_literal returns[int value]
+    : {isInteger()}? val=IDENTIFIER
+    { $value = LiteralUtils.parseInt($val.text); }
     ;
 
-byte_literal
-    : {isByte()}? IDENTIFIER
+long_literal returns[long value]
+    : {isLong()}? val=IDENTIFIER
+    { $value = LiteralUtils.parseLong($val.text); }
     ;
 
-float_literal
-    : {isFloat()}? IDENTIFIER
-    | FLOAT_LITERAL // checked
+short_literal returns[short value]
+    : {isShort()}? val=IDENTIFIER
+    { $value = LiteralUtils.parseShort($val.text); }
     ;
 
-double_literal
-    : {isDouble()}? IDENTIFIER
-    | DOUBLE_LITERAL // checked
+byte_literal returns[byte value]
+    : {isByte()}? val=IDENTIFIER
+    { $value = LiteralUtils.parseByte($val.text); }
+    ;
+
+float_literal returns[float value]
+    : ({isFloat()}? val=IDENTIFIER
+    | /* checked */ val=FLOAT_LITERAL)
+    { $value = LiteralUtils.parseFloat($val.text); }
+    ;
+
+double_literal returns[double value]
+    : ({isDouble()}? val=IDENTIFIER
+    | /* checked */ val=DOUBLE_LITERAL)
+    { $value = LiteralUtils.parseDouble($val.text); }
     ;
 
 null_literal
     : {isNull()}? IDENTIFIER
     ;
 
-bool_literal
-    : {isBool()}? IDENTIFIER
+bool_literal returns[boolean value]
+    : {isBool()}? val=IDENTIFIER
+    { $value = LiteralUtils.parseBool($val.text); }
     ;
 
 array_literal
@@ -317,14 +334,8 @@ enum_literal
     : ENUM_DIRECTIVE field_reference
     ;
 
-type_field_method_literal
-    : type_descriptor
-    | field_reference
-    | method_reference
-    ;
-
 unchecked_param_list
-    // Note: multiple primitive types can be parsed as simple_name token.
+    // Note: multiple primitive types can be parsed as IDENTIFIER token.
     // A full analysis of the parameter list will occur later
     : IDENTIFIER*
     ;
@@ -510,7 +521,7 @@ instruction
     ( {format($op) == Format10t}? args_format10t
     | {format($op) == Format10x}? args_format10x
     | {format($op) == Format11n}? args_format11n
-// TODO:    | {format($op) == Format11p}? args_format11p
+    | {format($op) == Format11p}? args_format11p
     | {format($op) == Format11x}? args_format11x
     | {format($op) == Format12x}? args_format12x
 // TODO:    | {format($op) == Format20bc}? args_format20bc
@@ -551,7 +562,9 @@ instruction
 
 reference
     : string_literal
-    | type_field_method_literal
+    | type_descriptor
+    | field_reference
+    | method_reference
     | method_prototype
     | call_site_reference
     | method_handle_reference
@@ -576,6 +589,11 @@ args_format10x
 
 args_format11n
     : register COMMA integral_literal
+    ;
+
+args_format11p
+    // TODO: check index (must be [0, 15])
+    : register LBRACE index=int_literal RBRACE
     ;
 
 args_format11x: register;
