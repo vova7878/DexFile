@@ -467,18 +467,39 @@ restriction_spec returns[int value]
     { $value = 0; }
     ;
 
-access_or_restriction_list returns[int access_flags, int restriction_flags]
+access_or_restriction_list returns[int access_flags, int restrictions]
     : (access_spec { $access_flags |= $access_spec.value; }
-    | restriction_spec { $restriction_flags |= $restriction_spec.value; }
+    | restriction_spec { $restrictions |= $restriction_spec.value; }
     )*
     ;
 
 field returns[FieldDef value]
-    // TODO: parse
-    : FIELD_DIRECTIVE flags=access_or_restriction_list
-    name=member_name COLON type=nonvoid_type_descriptor
-    (ASSIGN literal)?
-    (annotation* END_FIELD_DIRECTIVE)?
+    @init{
+        String name;
+        TypeId type;
+        int access_flags;
+        int restrictions;
+        EncodedValue initial_value = null;
+        var annotations = new TreeSet<Annotation>();
+    }
+    @after {
+        $value = FieldDef.raw(
+            name, type, access_flags,
+            restrictions, initial_value,
+            Collections.unmodifiableNavigableSet(annotations)
+        );
+    }
+    : FIELD_DIRECTIVE
+    flags=access_or_restriction_list {
+        access_flags=$flags.access_flags;
+        restrictions=$flags.restrictions;
+    }
+    name=member_name { name=$name.value; }
+    COLON type=nonvoid_type_descriptor { type=$type.value; }
+    (ASSIGN literal { initial_value=$literal.value; })?
+    // TODO: check for duplicates
+    ((annotation { annotations.add($annotation.value); })*
+    END_FIELD_DIRECTIVE)?
     ;
 
 method returns[MethodDef value]
@@ -552,7 +573,7 @@ statements_and_directives
     | catch_directive
     | catchall_directive
     | parameter_directive
-    | annotation 
+    | annotation
     )*
     ;
 
@@ -607,9 +628,10 @@ class_def
           $has_source = true;
       }
     | implements_spec { interfaces.add($implements_spec.value); }
+    // TODO: check for duplicates
     | annotation { annotations.add($annotation.value); }
     | method // TODO: { methods.add($method.value); }
-    | field // TODO: { fields.add($field.value); }
+    | field { fields.add($field.value); }
     )+
     ;
 
