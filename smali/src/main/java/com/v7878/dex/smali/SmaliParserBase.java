@@ -1,10 +1,8 @@
 package com.v7878.dex.smali;
 
-import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
 
 import org.antlr.v4.runtime.Parser;
-import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.TokenStream;
 
 import java.util.Collections;
@@ -55,16 +53,12 @@ public abstract class SmaliParserBase extends Parser {
         super(input);
     }
 
-    public static Format format(String name) {
-        var opcode = opcodesByName.get(name);
-        if (opcode == null) {
-            throw new IllegalStateException("Opcode not found: " + name);
+    public static Opcode opcode(String opname) {
+        var opcode = opcodesByName.get(opname);
+        if (opcode == null || opcode.isPayload()) {
+            throw new IllegalStateException("Opcode not found: " + opname);
         }
-        return opcode.format();
-    }
-
-    public static Format format(Token token) {
-        return format(token.getText());
+        return opcode;
     }
 
     private boolean matchText(Predicate<String> predicate) {

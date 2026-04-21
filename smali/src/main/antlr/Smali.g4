@@ -369,7 +369,7 @@ method_prototype returns[ProtoId value]
     ;
 
 method_reference returns[MethodId value]
-    // TODO: : (reference_type_descriptor ARROW)? member_name method_prototype
+    // TODO: (reference_type_descriptor ARROW)? member_name method_prototype
     : dclass=reference_type_descriptor ARROW name=member_name proto=method_prototype
     { $value = MethodId.of($dclass.value, $name.value, $proto.value); }
     ;
@@ -545,69 +545,98 @@ registers_directive
 
 class_def
     returns[ClassDef value]
-    locals[TypeId type, int access_flags]
-    @init { }
-    @after { $value = ClassDef.of($type, $access_flags, null, null, null, null, null, null); }
-    : class_spec { $type = $class_spec.type; $access_flags = $class_spec.access_flags; }
+    locals[boolean has_super, boolean has_source]
+    @init {
+        TypeId type;
+        int access_flags;
+        TypeId superclass = null;
+        var interfaces = new ArrayList<TypeId>();
+        String source = null;
+        // TODO: fields
+        // TODO: methods
+        var annotations = new TreeSet<Annotation>();
+    }
+    @after {
+        $value = ClassDef.of(
+            type,
+            access_flags,
+            superclass,
+            Collections.unmodifiableList(interfaces),
+            source,
+            null,
+            null,
+            Collections.unmodifiableNavigableSet(annotations)
+        );
+    }
+    : class_spec {
+        type = $class_spec.type;
+        access_flags = $class_spec.access_flags;
+    }
+    (
+    { !$has_super }? super_spec {
+        superclass = $super_spec.value;
+        $has_super = true;
+    }
+    | { !$has_source }? source_spec {
+          source = $source_spec.value;
+          $has_source = true;
+      }
+    | implements_spec { interfaces.add($implements_spec.value); }
+    | annotation { annotations.add($annotation.value); }
     // TODO: parse
-    ( super_spec
-    | implements_spec
-    | source_spec
-    | annotation
     | method
     | field
     )+
     ;
 
-smali returns[Dex dex] locals[List<ClassDef> classes]
-    @init { $classes = new ArrayList<>(); }
-    @after { $classes = Collections.unmodifiableList($classes);
-             $dex = Dex.raw($classes); }
-    : (class_def { $classes.add($class_def.value); })+ EOF
+smali returns[Dex dex]
+    @init { var classes = new ArrayList<ClassDef>(); }
+    @after { $dex = Dex.raw(Collections.unmodifiableList(classes)); }
+    : (class_def { classes.add($class_def.value); })+ EOF
     ;
 
-instruction
-    : op=IDENTIFIER
-    ( {format($op) == Format10t}? args_format10t
-    | {format($op) == Format10x}? args_format10x
-    | {format($op) == Format11n}? args_format11n
-    | {format($op) == Format11p}? args_format11p
-    | {format($op) == Format11x}? args_format11x
-    | {format($op) == Format12x}? args_format12x
-// TODO:    | {format($op) == Format20bc}? args_format20bc
-    | {format($op) == Format20t}? args_format20t
-    | {format($op) == Format20t_24}? args_format20t_24
-    | {format($op) == Format21c}? args_format21c
-    | {format($op) == Format21ih}? args_format21ih
-    | {format($op) == Format21lh}? args_format21lh
-    | {format($op) == Format21s}? args_format21s
-    | {format($op) == Format21t}? args_format21t
-    | {format($op) == Format22b}? args_format22b
-    | {format($op) == Format22c}? args_format22c
-    | {format($op) == Format22s}? args_format22s
-    | {format($op) == Format22t}? args_format22t
-    | {format($op) == Format22x}? args_format22x
-    | {format($op) == Format23x}? args_format23x
-    | {format($op) == Format30t}? args_format30t
-    | {format($op) == Format31c}? args_format31c
-    | {format($op) == Format31i}? args_format31i
-    | {format($op) == Format31t}? args_format31t
-    | {format($op) == Format32x}? args_format32x
-    | {format($op) == Format34c}? args_format34c
-    | {format($op) == Format35c}? args_format35c
-    | {format($op) == Format3rc}? args_format3rc
-    | {format($op) == Format41c}? args_format41c
-    | {format($op) == Format45cc}? args_format45cc
-    | {format($op) == Format4rcc}? args_format4rcc
-    | {format($op) == Format51l}? args_format51l
-    | {format($op) == Format52c}? args_format52c
-    | {format($op) == Format5rc}? args_format5rc
+instruction locals[Opcode op]
+    : opname=IDENTIFIER { $op = opcode($opname.text); }
+    ( {$op.format() == Format10t}? args_format10t[$op]
+    | {$op.format() == Format10x}? args_format10x[$op]
+    | {$op.format() == Format11n}? args_format11n[$op]
+    | {$op.format() == Format11p}? args_format11p[$op]
+    | {$op.format() == Format11x}? args_format11x[$op]
+    | {$op.format() == Format12x}? args_format12x[$op]
+// TODO: | {$op.format() == Format20bc}? args_format20bc[$op]
+    | {$op.format() == Format20t}? args_format20t[$op]
+    | {$op.format() == Format20t_24}? args_format20t_24[$op]
+    | {$op.format() == Format21c}? args_format21c[$op]
+    | {$op.format() == Format21ih}? args_format21ih[$op]
+    | {$op.format() == Format21lh}? args_format21lh[$op]
+    | {$op.format() == Format21s}? args_format21s[$op]
+    | {$op.format() == Format21t}? args_format21t[$op]
+    | {$op.format() == Format22b}? args_format22b[$op]
+    | {$op.format() == Format22c}? args_format22c[$op]
+    | {$op.format() == Format22s}? args_format22s[$op]
+    | {$op.format() == Format22t}? args_format22t[$op]
+    | {$op.format() == Format22x}? args_format22x[$op]
+    | {$op.format() == Format23x}? args_format23x[$op]
+    | {$op.format() == Format30t}? args_format30t[$op]
+    | {$op.format() == Format31c}? args_format31c[$op]
+    | {$op.format() == Format31i}? args_format31i[$op]
+    | {$op.format() == Format31t}? args_format31t[$op]
+    | {$op.format() == Format32x}? args_format32x[$op]
+    | {$op.format() == Format34c}? args_format34c[$op]
+    | {$op.format() == Format35c}? args_format35c[$op]
+    | {$op.format() == Format3rc}? args_format3rc[$op]
+    | {$op.format() == Format41c}? args_format41c[$op]
+    | {$op.format() == Format45cc}? args_format45cc[$op]
+    | {$op.format() == Format4rcc}? args_format4rcc[$op]
+    | {$op.format() == Format51l}? args_format51l[$op]
+    | {$op.format() == Format52c}? args_format52c[$op]
+    | {$op.format() == Format5rc}? args_format5rc[$op]
     )
-    | insn_array_data_directive
-    | insn_packed_switch_directive
-    | insn_sparse_switch_directive
-    | insn_m_packed_switch_directive
-    | insn_m_sparse_switch_directive
+    | insn_array_data
+    | insn_packed_switch
+    | insn_sparse_switch
+    | insn_m_packed_switch
+    | insn_m_sparse_switch
     ;
 
 reference
@@ -631,155 +660,167 @@ register_range
     : (startreg=register (DOTDOT endreg=register)?)?
     ;
 
-args_format10t: label;
+args_format10t[Opcode op]: label;
 
-args_format10x
+args_format10x[Opcode op]
     : // nothing
     ;
 
-args_format11n
+args_format11n[Opcode op]
     : register COMMA integral_literal
     ;
 
-args_format11p
+args_format11p[Opcode op]
     // TODO: check index (must be [0, 15])
     : register LBRACE index=int_literal RBRACE
     ;
 
-args_format11x: register;
+args_format11x[Opcode op]: register;
 
-args_format12x
+args_format12x[Opcode op]
     : register COMMA register
     ;
 
-args_format20t: label;
-args_format20t_24: label;
+args_format20t[Opcode op]: label;
+args_format20t_24[Opcode op]: label;
 
-args_format21c
+args_format21c[Opcode op]
     : register COMMA reference
     ;
 
-args_format21ih
+args_format21ih[Opcode op]
     : register COMMA fixed_32bit_literal
     ;
 
-args_format21lh
+args_format21lh[Opcode op]
     : register COMMA fixed_64bit_literal
     ;
 
-args_format21s
+args_format21s[Opcode op]
     : register COMMA integral_literal
     ;
 
-args_format21t
+args_format21t[Opcode op]
     : register COMMA label
     ;
 
-args_format22b
+args_format22b[Opcode op]
     : register COMMA register COMMA integral_literal
     ;
 
-args_format22c
+args_format22c[Opcode op]
     : register COMMA register COMMA reference
     ;
 
-args_format22s
+args_format22s[Opcode op]
     : register COMMA register COMMA integral_literal
     ;
 
-args_format22t
+args_format22t[Opcode op]
     : register COMMA register COMMA label
     ;
 
-args_format22x
+args_format22x[Opcode op]
     : register COMMA register
     ;
 
-args_format23x
+args_format23x[Opcode op]
     : register COMMA register COMMA register
     ;
 
-args_format30t: label;
+args_format30t[Opcode op]: label;
 
-args_format31c
+args_format31c[Opcode op]
     : register COMMA reference
     ;
 
-args_format31i
+args_format31i[Opcode op]
     : register COMMA fixed_32bit_literal
     ;
 
-args_format31t
+args_format31t[Opcode op]
     : register COMMA label
     ;
 
-args_format32x
+args_format32x[Opcode op]
     : register COMMA register
     ;
 
-args_format34c
+args_format34c[Opcode op]
     : LBRACE register_list RBRACE COMMA reference
     ;
 
-args_format35c
+args_format35c[Opcode op]
     : LBRACE register_list RBRACE COMMA reference
     ;
 
-args_format3rc
+args_format3rc[Opcode op]
     : LBRACE register_range RBRACE COMMA reference
     ;
 
-args_format41c
+args_format41c[Opcode op]
     : register COMMA reference
     ;
 
-args_format45cc
+args_format45cc[Opcode op]
     : LBRACE register_list RBRACE COMMA reference COMMA reference
     ;
 
-args_format4rcc
+args_format4rcc[Opcode op]
     : LBRACE register_range RBRACE COMMA reference COMMA reference
     ;
 
-args_format51l
+args_format51l[Opcode op]
     : register COMMA fixed_64bit_literal
     ;
 
-args_format52c
+args_format52c[Opcode op]
     : register COMMA register COMMA reference
     ;
 
-args_format5rc
+args_format5rc[Opcode op]
     : LBRACE register_range RBRACE COMMA reference
     ;
 
-insn_array_data_directive
-    : ARRAY_DATA_DIRECTIVE
-    // TODO: check width (must be 1, 2, 4 or 8)
-    width=int_literal
-    fixed_64bit_literal* END_ARRAY_DATA_DIRECTIVE
+// TODO: check width (must be 1, 2, 4 or 8)
+args_array_data
+    : width=int_literal fixed_64bit_literal*
     ;
 
-insn_packed_switch_directive
+args_packed_switch
+    : fixed_32bit_literal label*
+    ;
+
+args_sparse_switch
+    : (fixed_32bit_literal ARROW label)*
+    ;
+
+insn_array_data
+    : ARRAY_DATA_DIRECTIVE
+    args_array_data
+    END_ARRAY_DATA_DIRECTIVE
+    ;
+
+insn_packed_switch
     : PACKED_SWITCH_DIRECTIVE
-    fixed_32bit_literal label*
+    args_packed_switch
     END_PACKED_SWITCH_DIRECTIVE
     ;
 
-insn_sparse_switch_directive
+insn_sparse_switch
     : SPARSE_SWITCH_DIRECTIVE
-    (fixed_32bit_literal ARROW label)*
+    args_sparse_switch
     END_SPARSE_SWITCH_DIRECTIVE
     ;
 
-insn_m_packed_switch_directive
+insn_m_packed_switch
     : M_PACKED_SWITCH_DIRECTIVE
-    fixed_32bit_literal label*
+    args_packed_switch
     END_M_PACKED_SWITCH_DIRECTIVE
     ;
 
-insn_m_sparse_switch_directive
+insn_m_sparse_switch
     : M_SPARSE_SWITCH_DIRECTIVE
-    (fixed_32bit_literal ARROW label)*
+    args_sparse_switch
     END_M_SPARSE_SWITCH_DIRECTIVE
     ;
