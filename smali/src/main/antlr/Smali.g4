@@ -453,9 +453,8 @@ source_spec returns[String value]
     ;
 
 access_spec returns[int value]
-    : {isAccessFlag()}? IDENTIFIER
-    // TODO: parse
-    { $value = 0; }
+    : {isAccessFlag()}? val=IDENTIFIER
+    { $value = AccessFlag.of($val.text).value(); }
     ;
 
 access_list returns[int access_flags]

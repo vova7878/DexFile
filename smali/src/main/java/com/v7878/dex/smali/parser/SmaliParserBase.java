@@ -83,7 +83,7 @@ public abstract class SmaliParserBase extends Parser {
         return transformText(token -> {
             try {
                 return TypeId.of(token);
-            } catch (Exception e) {
+            } catch (IllegalArgumentException e) {
                 return null;
             }
         });
