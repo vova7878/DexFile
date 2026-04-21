@@ -1,6 +1,7 @@
 package com.v7878.dex.smali;
 
 import com.v7878.dex.Opcode;
+import com.v7878.dex.immutable.TypeId;
 
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.TokenStream;
@@ -8,6 +9,7 @@ import org.antlr.v4.runtime.TokenStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -69,6 +71,40 @@ public abstract class SmaliParserBase extends Parser {
 
     private boolean matchText(Pattern pattern) {
         return matchText(token -> pattern.matcher(token).matches());
+    }
+
+    private <T> T transformText(Function<String, T> f) {
+        var token = getCurrentToken();
+        if (token == null) return null;
+        return f.apply(token.getText());
+    }
+
+    public TypeId getTypeId() {
+        return transformText(token -> {
+            try {
+                return TypeId.of(token);
+            } catch (Exception e) {
+                return null;
+            }
+        });
+    }
+
+    public TypeId getRefTypeId() {
+        var type = getTypeId();
+        if (type == null) return null;
+        return type.isReference() ? type : null;
+    }
+
+    public TypeId getClassId() {
+        var type = getTypeId();
+        if (type == null) return null;
+        return type.isPrimitive() || type.isArray() ? null : type;
+    }
+
+    public TypeId getNonVoidTypeId() {
+        var type = getTypeId();
+        if (type == null) return null;
+        return type.isVoid() ? null : type;
     }
 
     public boolean isRegister() {

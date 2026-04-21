@@ -567,6 +567,14 @@ public enum Opcode {
         return reference2;
     }
 
+    public ReferenceType getReferenceType(int index){
+        return switch (index){
+            case 0-> reference1;
+            case 1-> reference2;
+            default -> null;
+        };
+    }
+
     public final boolean canThrow() {
         return (flags & CAN_THROW) != 0;
     }

@@ -4,6 +4,8 @@ grammar Smali;
     package com.v7878.dex.smali;
 
     import static com.v7878.dex.Format.*;
+    import static com.v7878.dex.ReferenceType.*;
+    import static com.v7878.dex.MethodHandleType.*;
     import com.v7878.dex.immutable.value.*;
     import com.v7878.dex.immutable.*;
     import com.v7878.dex.*;
@@ -206,23 +208,19 @@ member_name returns[String value]
     ;
 
 class_descriptor returns[TypeId value]
-    : /* TODO: {is...()}? */ val=IDENTIFIER
-    { $value = TypeId.of($val.text); }
+    : {($value = getClassId()) != null}? val=IDENTIFIER
     ;
 
 type_descriptor returns[TypeId value]
-    : /* TODO: {is...()}? */ val=IDENTIFIER
-    { $value = TypeId.of($val.text); }
+    : {($value = getTypeId()) != null}? val=IDENTIFIER
     ;
 
 reference_type_descriptor returns[TypeId value]
-    : /* TODO: {is...()}? */ val=IDENTIFIER
-    { $value = TypeId.of($val.text); }
+    : {($value = getRefTypeId()) != null}? val=IDENTIFIER
     ;
 
 nonvoid_type_descriptor returns[TypeId value]
-    : /* TODO: {is...()}? */ val=IDENTIFIER
-    { $value = TypeId.of($val.text); }
+    : {($value = getNonVoidTypeId()) != null}? val=IDENTIFIER
     ;
 
 literal returns[EncodedValue value]
@@ -369,15 +367,23 @@ method_prototype returns[ProtoId value]
     ;
 
 method_reference returns[MethodId value]
-    // TODO: (reference_type_descriptor ARROW)? member_name method_prototype
-    : dclass=reference_type_descriptor ARROW name=member_name proto=method_prototype
-    { $value = MethodId.of($dclass.value, $name.value, $proto.value); }
+    @init { TypeId dclass = null; }
+    : (
+        (desc=reference_type_descriptor ARROW) { dclass = $desc.value; }
+        | { dclass = $class_def::type; }
+    )
+    name=member_name proto=method_prototype
+    { $value = MethodId.of(dclass, $name.value, $proto.value); }
     ;
 
 field_reference returns[FieldId value]
-    // TODO: (reference_type_descriptor ARROW)? member_name COLON nonvoid_type_descriptor
-    : dclass=reference_type_descriptor ARROW name=member_name COLON type=nonvoid_type_descriptor
-    { $value = FieldId.of($dclass.value, $name.value, $type.value); }
+    @init { TypeId dclass = null; }
+    : (
+        (desc=reference_type_descriptor ARROW) { dclass = $desc.value; }
+        | { dclass = $class_def::type; }
+    )
+    name=member_name COLON type=nonvoid_type_descriptor
+    { $value = FieldId.of(dclass, $name.value, $type.value); }
     ;
 
 enum_literal returns[FieldId value]
@@ -402,8 +408,27 @@ method_handle_reference returns[MethodHandleId value]
     { $value = MethodHandleId.of($mtype.value, $mid.value); }
     ;
 
-call_site_reference
-    : simple_name LPAREN string_literal COMMA method_prototype (COMMA literal)* RPAREN AT method_reference
+call_site_reference returns[CallSiteId value]
+    @init{
+        String name;
+        MethodHandleId method_handle;
+        String method_name;
+        ProtoId method_proto;
+        var arguments = new ArrayList<EncodedValue>();
+    }
+    @after{
+        $value = CallSiteId.raw(
+            name, method_handle, method_name, method_proto,
+            Collections.unmodifiableList(arguments)
+        );
+    }
+    : simple_name { name = $simple_name.value; }
+    LPAREN string_literal { method_name = $string_literal.value; }
+    COMMA method_prototype  { method_proto = $method_prototype.value; }
+    (COMMA literal { arguments.add($literal.value); })*
+    RPAREN AT method_reference {
+        method_handle = MethodHandleId.of(INVOKE_STATIC, $method_reference.value);
+    }
     ;
 
 class_spec returns[TypeId type, int access_flags]
@@ -545,9 +570,8 @@ registers_directive
 
 class_def
     returns[ClassDef value]
-    locals[boolean has_super, boolean has_source]
+    locals[TypeId type, boolean has_super, boolean has_source]
     @init {
-        TypeId type;
         int access_flags;
         TypeId superclass = null;
         var interfaces = new ArrayList<TypeId>();
@@ -558,7 +582,7 @@ class_def
     }
     @after {
         $value = ClassDef.of(
-            type,
+            $type,
             access_flags,
             superclass,
             Collections.unmodifiableList(interfaces),
@@ -569,7 +593,7 @@ class_def
         );
     }
     : class_spec {
-        type = $class_spec.type;
+        $type = $class_spec.type;
         access_flags = $class_spec.access_flags;
     }
     (
@@ -597,40 +621,40 @@ smali returns[Dex dex]
 
 instruction locals[Opcode op]
     : opname=IDENTIFIER { $op = opcode($opname.text); }
-    ( {$op.format() == Format10t}? args_format10t[$op]
-    | {$op.format() == Format10x}? args_format10x[$op]
-    | {$op.format() == Format11n}? args_format11n[$op]
-    | {$op.format() == Format11p}? args_format11p[$op]
-    | {$op.format() == Format11x}? args_format11x[$op]
-    | {$op.format() == Format12x}? args_format12x[$op]
-// TODO: | {$op.format() == Format20bc}? args_format20bc[$op]
-    | {$op.format() == Format20t}? args_format20t[$op]
-    | {$op.format() == Format20t_24}? args_format20t_24[$op]
-    | {$op.format() == Format21c}? args_format21c[$op]
-    | {$op.format() == Format21ih}? args_format21ih[$op]
-    | {$op.format() == Format21lh}? args_format21lh[$op]
-    | {$op.format() == Format21s}? args_format21s[$op]
-    | {$op.format() == Format21t}? args_format21t[$op]
-    | {$op.format() == Format22b}? args_format22b[$op]
-    | {$op.format() == Format22c}? args_format22c[$op]
-    | {$op.format() == Format22s}? args_format22s[$op]
-    | {$op.format() == Format22t}? args_format22t[$op]
-    | {$op.format() == Format22x}? args_format22x[$op]
-    | {$op.format() == Format23x}? args_format23x[$op]
-    | {$op.format() == Format30t}? args_format30t[$op]
-    | {$op.format() == Format31c}? args_format31c[$op]
-    | {$op.format() == Format31i}? args_format31i[$op]
-    | {$op.format() == Format31t}? args_format31t[$op]
-    | {$op.format() == Format32x}? args_format32x[$op]
-    | {$op.format() == Format34c}? args_format34c[$op]
-    | {$op.format() == Format35c}? args_format35c[$op]
-    | {$op.format() == Format3rc}? args_format3rc[$op]
-    | {$op.format() == Format41c}? args_format41c[$op]
-    | {$op.format() == Format45cc}? args_format45cc[$op]
-    | {$op.format() == Format4rcc}? args_format4rcc[$op]
-    | {$op.format() == Format51l}? args_format51l[$op]
-    | {$op.format() == Format52c}? args_format52c[$op]
-    | {$op.format() == Format5rc}? args_format5rc[$op]
+    ( {$op.format() == Format10t}? args_format10t
+    | {$op.format() == Format10x}? args_format10x
+    | {$op.format() == Format11n}? args_format11n
+    | {$op.format() == Format11p}? args_format11p
+    | {$op.format() == Format11x}? args_format11x
+    | {$op.format() == Format12x}? args_format12x
+// TODO: | {$op.format() == Format20bc}? args_format20bc
+    | {$op.format() == Format20t}? args_format20t
+    | {$op.format() == Format20t_24}? args_format20t_24
+    | {$op.format() == Format21c}? args_format21c
+    | {$op.format() == Format21ih}? args_format21ih
+    | {$op.format() == Format21lh}? args_format21lh
+    | {$op.format() == Format21s}? args_format21s
+    | {$op.format() == Format21t}? args_format21t
+    | {$op.format() == Format22b}? args_format22b
+    | {$op.format() == Format22c}? args_format22c
+    | {$op.format() == Format22s}? args_format22s
+    | {$op.format() == Format22t}? args_format22t
+    | {$op.format() == Format22x}? args_format22x
+    | {$op.format() == Format23x}? args_format23x
+    | {$op.format() == Format30t}? args_format30t
+    | {$op.format() == Format31c}? args_format31c
+    | {$op.format() == Format31i}? args_format31i
+    | {$op.format() == Format31t}? args_format31t
+    | {$op.format() == Format32x}? args_format32x
+    | {$op.format() == Format34c}? args_format34c
+    | {$op.format() == Format35c}? args_format35c
+    | {$op.format() == Format3rc}? args_format3rc
+    | {$op.format() == Format41c}? args_format41c
+    | {$op.format() == Format45cc}? args_format45cc
+    | {$op.format() == Format4rcc}? args_format4rcc
+    | {$op.format() == Format51l}? args_format51l
+    | {$op.format() == Format52c}? args_format52c
+    | {$op.format() == Format5rc}? args_format5rc
     )
     | insn_array_data
     | insn_packed_switch
@@ -639,18 +663,24 @@ instruction locals[Opcode op]
     | insn_m_sparse_switch
     ;
 
-reference
-    : string_literal
-    | type_descriptor
-    | field_reference
-    | method_reference
-    | method_prototype
-    | call_site_reference
-    | method_handle_reference
-    | INLINE_INDEX
-    | VTABLE_INDEX
-    | FIELD_OFFSET
+reference[int index] returns[Object ref] locals[ReferenceType type]
+    @init{ $type = $instruction::op.getReferenceType($index); }
+    : {$type == STRING}? string_literal { $ref = $string_literal.value; }
+    | {$type == TYPE}? type_descriptor { $ref = $type_descriptor.value; }
+    | {$type == FIELD}? field_reference { $ref = $field_reference.value; }
+    | {$type == METHOD}? method_reference { $ref = $method_reference.value; }
+    | {$type == PROTO}? method_prototype { $ref = $method_prototype.value; }
+    | {$type == CALLSITE}? call_site_reference { $ref = $call_site_reference.value; }
+    | {$type == METHOD_HANDLE}? method_handle_reference { $ref = $method_handle_reference.value; }
+    | {$type == RAW_INDEX}?
+    ( inline_index // TODO
+    | vtable_index // TODO
+    | field_offset // TODO
+    )
     ;
+inline_index: INLINE_INDEX;
+vtable_index: VTABLE_INDEX;
+field_offset: FIELD_OFFSET;
 
 register_list
     : (register (COMMA register)*)?
@@ -660,126 +690,126 @@ register_range
     : (startreg=register (DOTDOT endreg=register)?)?
     ;
 
-args_format10t[Opcode op]: label;
+args_format10t: label;
 
-args_format10x[Opcode op]
+args_format10x
     : // nothing
     ;
 
-args_format11n[Opcode op]
+args_format11n
     : register COMMA integral_literal
     ;
 
-args_format11p[Opcode op]
+args_format11p
     // TODO: check index (must be [0, 15])
     : register LBRACE index=int_literal RBRACE
     ;
 
-args_format11x[Opcode op]: register;
+args_format11x: register;
 
-args_format12x[Opcode op]
+args_format12x
     : register COMMA register
     ;
 
-args_format20t[Opcode op]: label;
-args_format20t_24[Opcode op]: label;
+args_format20t: label;
+args_format20t_24: label;
 
-args_format21c[Opcode op]
-    : register COMMA reference
+args_format21c
+    : register COMMA reference[0]
     ;
 
-args_format21ih[Opcode op]
+args_format21ih
     : register COMMA fixed_32bit_literal
     ;
 
-args_format21lh[Opcode op]
+args_format21lh
     : register COMMA fixed_64bit_literal
     ;
 
-args_format21s[Opcode op]
+args_format21s
     : register COMMA integral_literal
     ;
 
-args_format21t[Opcode op]
+args_format21t
     : register COMMA label
     ;
 
-args_format22b[Opcode op]
+args_format22b
     : register COMMA register COMMA integral_literal
     ;
 
-args_format22c[Opcode op]
-    : register COMMA register COMMA reference
+args_format22c
+    : register COMMA register COMMA reference[0]
     ;
 
-args_format22s[Opcode op]
+args_format22s
     : register COMMA register COMMA integral_literal
     ;
 
-args_format22t[Opcode op]
+args_format22t
     : register COMMA register COMMA label
     ;
 
-args_format22x[Opcode op]
+args_format22x
     : register COMMA register
     ;
 
-args_format23x[Opcode op]
+args_format23x
     : register COMMA register COMMA register
     ;
 
-args_format30t[Opcode op]: label;
+args_format30t: label;
 
-args_format31c[Opcode op]
-    : register COMMA reference
+args_format31c
+    : register COMMA reference[0]
     ;
 
-args_format31i[Opcode op]
+args_format31i
     : register COMMA fixed_32bit_literal
     ;
 
-args_format31t[Opcode op]
+args_format31t
     : register COMMA label
     ;
 
-args_format32x[Opcode op]
+args_format32x
     : register COMMA register
     ;
 
-args_format34c[Opcode op]
-    : LBRACE register_list RBRACE COMMA reference
+args_format34c
+    : LBRACE register_list RBRACE COMMA reference[0]
     ;
 
-args_format35c[Opcode op]
-    : LBRACE register_list RBRACE COMMA reference
+args_format35c
+    : LBRACE register_list RBRACE COMMA reference[0]
     ;
 
-args_format3rc[Opcode op]
-    : LBRACE register_range RBRACE COMMA reference
+args_format3rc
+    : LBRACE register_range RBRACE COMMA reference[0]
     ;
 
-args_format41c[Opcode op]
-    : register COMMA reference
+args_format41c
+    : register COMMA reference[0]
     ;
 
-args_format45cc[Opcode op]
-    : LBRACE register_list RBRACE COMMA reference COMMA reference
+args_format45cc
+    : LBRACE register_list RBRACE COMMA reference[0] COMMA reference[1]
     ;
 
-args_format4rcc[Opcode op]
-    : LBRACE register_range RBRACE COMMA reference COMMA reference
+args_format4rcc
+    : LBRACE register_range RBRACE COMMA reference[0] COMMA reference[1]
     ;
 
-args_format51l[Opcode op]
+args_format51l
     : register COMMA fixed_64bit_literal
     ;
 
-args_format52c[Opcode op]
-    : register COMMA register COMMA reference
+args_format52c
+    : register COMMA register COMMA reference[0]
     ;
 
-args_format5rc[Opcode op]
-    : LBRACE register_range RBRACE COMMA reference
+args_format5rc
+    : LBRACE register_range RBRACE COMMA reference[0]
     ;
 
 // TODO: check width (must be 1, 2, 4 or 8)
