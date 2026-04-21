@@ -1,7 +1,7 @@
 grammar Smali;
 
 @header {
-    package com.v7878.dex.smali;
+    package com.v7878.dex.smali.parser;
 
     import static com.v7878.dex.Format.*;
     import static com.v7878.dex.ReferenceType.*;
@@ -367,23 +367,23 @@ method_prototype returns[ProtoId value]
     ;
 
 method_reference returns[MethodId value]
-    @init { TypeId dclass = null; }
+    @init { TypeId declaring_class = null; }
     : (
-        (desc=reference_type_descriptor ARROW) { dclass = $desc.value; }
-        | { dclass = $class_def::type; }
+        (ref=reference_type_descriptor ARROW) { declaring_class = $ref.value; }
+        | { declaring_class = $class_def::type; }
     )
     name=member_name proto=method_prototype
-    { $value = MethodId.of(dclass, $name.value, $proto.value); }
+    { $value = MethodId.of(declaring_class, $name.value, $proto.value); }
     ;
 
 field_reference returns[FieldId value]
-    @init { TypeId dclass = null; }
+    @init { TypeId declaring_class = null; }
     : (
-        (desc=reference_type_descriptor ARROW) { dclass = $desc.value; }
-        | { dclass = $class_def::type; }
+        (ref=reference_type_descriptor ARROW) { declaring_class = $ref.value; }
+        | { declaring_class = $class_def::type; }
     )
     name=member_name COLON type=nonvoid_type_descriptor
-    { $value = FieldId.of(dclass, $name.value, $type.value); }
+    { $value = FieldId.of(declaring_class, $name.value, $type.value); }
     ;
 
 enum_literal returns[FieldId value]

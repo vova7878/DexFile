@@ -1,4 +1,4 @@
-package com.v7878.dex.smali;
+package com.v7878.dex.smali.parser;
 
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
