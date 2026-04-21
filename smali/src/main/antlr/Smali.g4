@@ -474,14 +474,16 @@ access_or_restriction_list returns[int access_flags, int restriction_flags]
     )*
     ;
 
-field
-    : FIELD_DIRECTIVE access_or_restriction_list
-    member_name COLON nonvoid_type_descriptor
+field returns[FieldDef value]
+    // TODO: parse
+    : FIELD_DIRECTIVE flags=access_or_restriction_list
+    name=member_name COLON type=nonvoid_type_descriptor
     (ASSIGN literal)?
-    (annotation END_FIELD_DIRECTIVE)?
+    (annotation* END_FIELD_DIRECTIVE)?
     ;
 
-method
+method returns[MethodDef value]
+    // TODO: parse
     : METHOD_DIRECTIVE access_or_restriction_list
     member_name method_prototype
     statements_and_directives
@@ -541,7 +543,7 @@ catchall_directive
 parameter_directive
     : PARAMETER_DIRECTIVE register 
     (COMMA string_literal)?
-    (annotation END_PARAMETER_DIRECTIVE)?
+    (annotation* END_PARAMETER_DIRECTIVE)?
     ;
 
 statements_and_directives
@@ -576,19 +578,19 @@ class_def
         TypeId superclass = null;
         var interfaces = new ArrayList<TypeId>();
         String source = null;
-        // TODO: fields
-        // TODO: methods
+        var fields = new TreeSet<FieldDef>();
+        var methods = new TreeSet<MethodDef>();
         var annotations = new TreeSet<Annotation>();
     }
     @after {
-        $value = ClassDef.of(
+        $value = ClassDef.raw(
             $type,
             access_flags,
             superclass,
             Collections.unmodifiableList(interfaces),
             source,
-            null,
-            null,
+            Collections.unmodifiableNavigableSet(fields),
+            Collections.unmodifiableNavigableSet(methods),
             Collections.unmodifiableNavigableSet(annotations)
         );
     }
@@ -607,9 +609,8 @@ class_def
       }
     | implements_spec { interfaces.add($implements_spec.value); }
     | annotation { annotations.add($annotation.value); }
-    // TODO: parse
-    | method
-    | field
+    | method // TODO: { methods.add($method.value); }
+    | field // TODO: { fields.add($field.value); }
     )+
     ;
 
