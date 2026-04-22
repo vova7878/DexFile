@@ -1,6 +1,7 @@
 package com.v7878.dex.smali.parser;
 
 import com.v7878.dex.Opcode;
+import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.TypeId;
 
 import org.antlr.v4.runtime.Parser;
@@ -9,6 +10,7 @@ import org.antlr.v4.runtime.TokenStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -185,5 +187,10 @@ public abstract class SmaliParserBase extends Parser {
 
     public boolean isDouble() {
         return matchText(DOUBLE);
+    }
+
+    public void add(NavigableSet<Annotation> annotations, Annotation value) {
+        // TODO: check for duplicates
+        annotations.add(value);
     }
 }

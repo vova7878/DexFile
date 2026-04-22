@@ -6,6 +6,7 @@ grammar Smali;
     import static com.v7878.dex.Format.*;
     import static com.v7878.dex.ReferenceType.*;
     import static com.v7878.dex.MethodHandleType.*;
+    import static com.v7878.dex.DexConstants.*;
     import com.v7878.dex.immutable.value.*;
     import com.v7878.dex.immutable.*;
     import com.v7878.dex.*;
@@ -491,23 +492,65 @@ field returns[FieldDef value]
     }
     : FIELD_DIRECTIVE
     flags=access_or_restriction_list {
-        access_flags=$flags.access_flags;
-        restrictions=$flags.restrictions;
+        access_flags = $flags.access_flags;
+        restrictions = $flags.restrictions;
     }
-    name=member_name { name=$name.value; }
-    COLON type=nonvoid_type_descriptor { type=$type.value; }
-    (ASSIGN literal { initial_value=$literal.value; })?
-    // TODO: check for duplicates
-    ((annotation { annotations.add($annotation.value); })*
+    member_name { name = $member_name.value; }
+    COLON type=nonvoid_type_descriptor { type = $type.value; }
+    (ASSIGN literal { initial_value = $literal.value; })?
+    ((annotation { add(annotations, $annotation.value); })*
     END_FIELD_DIRECTIVE)?
     ;
 
-method returns[MethodDef value]
+method returns[MethodDef value] locals[int args]
+    @init{
+        String name;
+        ProtoId proto;
+        int access_flags;
+        int restrictions;
+    }
+    : METHOD_DIRECTIVE
+    flags=access_or_restriction_list {
+        access_flags = $flags.access_flags;
+        restrictions = $flags.restrictions;
+    }
+    member_name { name = $member_name.value; }
+    method_prototype {
+        proto = $method_prototype.value;
+        $args = proto.countInputRegisters();
+        // Add 'this' reg
+        $args += (access_flags & ACC_STATIC) == 0 ? 1 : 0;
+    }
     // TODO: parse
-    : METHOD_DIRECTIVE access_or_restriction_list
-    member_name method_prototype
     statements_and_directives
     END_METHOD_DIRECTIVE
+    ;
+
+statements_and_directives
+    returns[int registers = -1]
+    : (
+    ({$registers == -1}? registers_directive
+        { $registers = $registers_directive.value; }
+    )
+    | ({$registers != -1}?
+        ( ordered_method_item
+        | catch_directive
+        | catchall_directive
+        | parameter_directive
+        )
+    )
+    | annotation
+    )*
+    ;
+
+ordered_method_item
+    : label
+    | instruction
+    | debug_directive
+    ;
+
+label
+    : COLON simple_name
     ;
 
 debug_directive
@@ -548,10 +591,6 @@ source_directive
     : SOURCE_DIRECTIVE string_literal?
     ;
 
-label
-    : COLON simple_name
-    ;
-
 catch_directive
     : CATCH_DIRECTIVE nonvoid_type_descriptor LBRACE from=label DOTDOT to=label RBRACE using=label
     ;
@@ -566,27 +605,11 @@ parameter_directive
     (annotation* END_PARAMETER_DIRECTIVE)?
     ;
 
-statements_and_directives
-    : 
-    ( ordered_method_item
-    | registers_directive
-    | catch_directive
-    | catchall_directive
-    | parameter_directive
-    | annotation
-    )*
-    ;
-
-ordered_method_item
-    : label
-    | instruction
-    | debug_directive
-    ;
-
-registers_directive
-    : (
-      directive=REGISTERS_DIRECTIVE count=integral_literal 
-    | directive=LOCALS_DIRECTIVE count=integral_literal 
+registers_directive returns[int value]
+    : ( REGISTERS_DIRECTIVE count=integral_literal
+    { $value = $count.value; }
+    | LOCALS_DIRECTIVE count=integral_literal
+    { $value = $count.value + $method::args; }
     )
     ;
 
@@ -628,8 +651,7 @@ class_def
           $has_source = true;
       }
     | implements_spec { interfaces.add($implements_spec.value); }
-    // TODO: check for duplicates
-    | annotation { annotations.add($annotation.value); }
+    | annotation { add(annotations, $annotation.value); }
     | method // TODO: { methods.add($method.value); }
     | field { fields.add($field.value); }
     )+

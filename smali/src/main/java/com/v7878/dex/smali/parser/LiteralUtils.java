@@ -121,12 +121,12 @@ public class LiteralUtils {
     }
 
     public static String parseSimpleName(String value) {
-        // TODO
-        return value;
+        // TODO: validate
+        return value.replace("\\ ", " ");
     }
 
     public static String parseMemberName(String value) {
-        // TODO
-        return value;
+        // TODO: validate
+        return parseSimpleName(value);
     }
 }
