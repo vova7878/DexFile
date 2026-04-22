@@ -207,8 +207,8 @@ IDENTIFIER
 file: smali;
 
 register returns[int value]
-    // TODO: parse
-    : {isRegister()}? IDENTIFIER
+    : {isRegister()}? val=IDENTIFIER
+    { $value = parseRegister($method_body::ib, $val.text); }
     ;
 
 simple_name returns[String value]
@@ -529,11 +529,11 @@ method returns[MethodDef value]
     }
     @after{
         $pnames.freeze(); $pannos.freeze();
+        $annotations = Collections.unmodifiableNavigableSet($annotations);
         $value = MethodDef.of(
             name, proto.getReturnType(),
             parseParameters(proto.getParameterTypes(), $pnames, $pannos),
-            access_flags, restrictions, impl,
-            Collections.unmodifiableNavigableSet($annotations)
+            access_flags, restrictions, impl, $annotations
         );
     }
     : METHOD_DIRECTIVE
@@ -562,7 +562,7 @@ method_body
     )
     | ({$ib != null}?
         ( instruction
-        | label
+        | label_directive
         | debug_directive
         | catch_directive
         | catchall_directive
@@ -573,8 +573,40 @@ method_body
     )*
     ;
 
+registers_directive returns[int value]
+    : ( REGISTERS_DIRECTIVE count=integral_literal
+    { $value = $count.value; }
+    | LOCALS_DIRECTIVE count=integral_literal
+    { $value = $count.value + $method::args; }
+    )
+    ;
+
+parameter_directive
+    @init{ var annotations = new TreeSet<Annotation>(); }
+    : PARAMETER_DIRECTIVE register
+    (COMMA name=string_literal { $method::pnames.append($register.value, $name.value); })?
+    ((annotation { add(annotations, $annotation.value); })* END_PARAMETER_DIRECTIVE)?
+    { $method::pannos.append($register.value, Collections.unmodifiableNavigableSet(annotations)); }
+    ;
+
 label returns[String value]
     : COLON simple_name { $value = $simple_name.value; }
+    ;
+
+label_directive
+    : label { $method_body::ib.label($label.value); }
+    ;
+
+catch_directive
+    : CATCH_DIRECTIVE ex=nonvoid_type_descriptor
+    LBRACE from=label DOTDOT to=label RBRACE handler=label
+    { $method_body::ib.try_catch($from.value, $to.value, $ex.value, $handler.value); }
+    ;
+
+catchall_directive
+    : CATCHALL_DIRECTIVE
+    LBRACE from=label DOTDOT to=label RBRACE handler=label
+    { $method_body::ib.try_catch_all($from.value, $to.value, $handler.value); }
     ;
 
 debug_directive
@@ -589,60 +621,45 @@ debug_directive
 
 line_directive
     : LINE_DIRECTIVE line=integral_literal
+    { $method_body::ib.line($line.value); }
     ;
 
 local_directive
-    : LOCAL_DIRECTIVE register
-    (COMMA (null_literal | name=string_literal) 
+    @init{
+        int reg; String name = null;
+        TypeId type = null; String signature = null;
+    }
+    : LOCAL_DIRECTIVE register { reg = $register.value; }
+    (COMMA (null_literal | (name=string_literal { name=$name.value; }))
     // V as 'no type'
-    COLON (type_descriptor)
-    (COMMA signature=string_literal)?)?
+    COLON (type=type_descriptor { type = $type.value; })
+    (COMMA signature=string_literal { signature = $signature.value; })?)?
+    { $method_body::ib.local(reg, name, type, signature); }
     ;
-
 end_local_directive
     : END_LOCAL_DIRECTIVE register
+    { $method_body::ib.end_local($register.value); }
     ;
 
 restart_local_directive
     : RESTART_LOCAL_DIRECTIVE register
+    { $method_body::ib.restart_local($register.value); }
     ;
 
-prologue_directive: PROLOGUE_DIRECTIVE;
+prologue_directive
+    : PROLOGUE_DIRECTIVE
+    { $method_body::ib.prologue(); }
+    ;
 
-epilogue_directive: EPILOGUE_DIRECTIVE;
+epilogue_directive
+    : EPILOGUE_DIRECTIVE
+    { $method_body::ib.epilogue(); }
+    ;
 
 source_directive
-    : SOURCE_DIRECTIVE string_literal?
-    ;
-
-catch_directive
-    : CATCH_DIRECTIVE ex=nonvoid_type_descriptor
-    LBRACE from=label
-    DOTDOT to=label
-    RBRACE handler=label
-    ;
-
-catchall_directive
-    : CATCHALL_DIRECTIVE
-    LBRACE from=label
-    DOTDOT to=label
-    RBRACE handler=label
-    ;
-
-parameter_directive
-    @init{ var annotations = new TreeSet<Annotation>(); }
-    : PARAMETER_DIRECTIVE register
-    (COMMA name=string_literal { $method::pnames.append($register.value, $name.value); })?
-    ((annotation { add(annotations, $annotation.value); })* END_PARAMETER_DIRECTIVE)?
-    { $method::pannos.append($register.value, Collections.unmodifiableNavigableSet(annotations)); }
-    ;
-
-registers_directive returns[int value]
-    : ( REGISTERS_DIRECTIVE count=integral_literal
-    { $value = $count.value; }
-    | LOCALS_DIRECTIVE count=integral_literal
-    { $value = $count.value + $method::args; }
-    )
+    @init{ String name = null; }
+    : SOURCE_DIRECTIVE (name=string_literal { name = $name.value; })?
+    { $method_body::ib.source(name); }
     ;
 
 class_def

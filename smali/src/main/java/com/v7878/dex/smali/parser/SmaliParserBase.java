@@ -1,7 +1,10 @@
 package com.v7878.dex.smali.parser;
 
+import static com.v7878.dex.util.Checks.shouldNotReachHere;
+
 import com.v7878.collections.IntMap;
 import com.v7878.dex.Opcode;
+import com.v7878.dex.builder.CodeBuilder;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.TypeId;
@@ -193,12 +196,12 @@ public abstract class SmaliParserBase extends Parser {
         return matchText(DOUBLE);
     }
 
-    public void add(NavigableSet<Annotation> annotations, Annotation value) {
+    public static void add(NavigableSet<Annotation> annotations, Annotation value) {
         // TODO: check for duplicates
         annotations.add(value);
     }
 
-    public List<Parameter> parseParameters(
+    public static List<Parameter> parseParameters(
             List<TypeId> types, IntMap<String> names,
             IntMap<NavigableSet<Annotation>> annos) {
         int count = types.size();
@@ -211,5 +214,15 @@ public abstract class SmaliParserBase extends Parser {
             params.add(i, Parameter.raw(types.get(i), names.get(i), annotations));
         }
         return Collections.unmodifiableList(params);
+    }
+
+    public static int parseRegister(CodeBuilder ib, String text) {
+        char kind = text.charAt(0);
+        int reg = Integer.parseUnsignedInt(text, 1, text.length(), 10);
+        return switch (kind) {
+            case 'v' -> ib.v(reg);
+            case 'p' -> ib.p(reg);
+            default -> throw shouldNotReachHere();
+        };
     }
 }
