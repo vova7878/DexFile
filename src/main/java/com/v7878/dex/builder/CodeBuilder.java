@@ -389,7 +389,7 @@ public final class CodeBuilder {
         return Collections.unmodifiableList(out);
     }
 
-    private MethodImplementation finish() {
+    public MethodImplementation finish() {
         {
             var end = tail(root);
             for (var iter = detached.iterator(); iter.hasNext(); ) {
@@ -433,6 +433,19 @@ public final class CodeBuilder {
         return build(regs_size, 0, consumer);
     }
 
+    public static CodeBuilder newInstance(int regs_size, int ins_size,
+                                          boolean add_hidden_this) {
+        return new CodeBuilder(regs_size, ins_size, add_hidden_this);
+    }
+
+    public static CodeBuilder newInstance(int regs_size, int ins_size) {
+        return newInstance(regs_size, ins_size, false);
+    }
+
+    public static CodeBuilder newInstance(int regs_size) {
+        return newInstance(regs_size, 0);
+    }
+
     public CodeBuilder if_(boolean value, Consumer<CodeBuilder> true_branch,
                            Consumer<CodeBuilder> false_branch) {
         if (value) {
@@ -456,25 +469,25 @@ public final class CodeBuilder {
     }
 
     public int v(int reg) {
-        //all registers
+        // All registers
         return checkRange(reg, 0, regs_size);
     }
 
     public int l(int reg) {
-        //only local registers
+        // Only local registers
         int locals = regs_size - ins_size;
         return checkRange(reg, 0, locals);
     }
 
     private int p(int reg, boolean include_this) {
-        //only parameter registers
+        // Only parameter registers
         int this_reg = include_this ? 1 : 0;
         int locals = regs_size - ins_size;
         return locals + checkRange(reg, 0, ins_size - this_reg) + this_reg;
     }
 
     public int p(int reg) {
-        //only parameter registers without hidden this
+        // Only parameter registers without hidden this
         return p(reg, has_this);
     }
 

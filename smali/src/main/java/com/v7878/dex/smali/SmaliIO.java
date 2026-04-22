@@ -17,6 +17,6 @@ public class SmaliIO {
         var parser = new SmaliParser(tokens);
         parser.setErrorHandler(new BailErrorStrategy());
 
-        return parser.smali().dex;
+        return parser.file().smali().dex;
     }
 }

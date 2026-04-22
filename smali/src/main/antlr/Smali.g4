@@ -7,9 +7,13 @@ grammar Smali;
     import static com.v7878.dex.ReferenceType.*;
     import static com.v7878.dex.MethodHandleType.*;
     import static com.v7878.dex.DexConstants.*;
+
     import com.v7878.dex.immutable.value.*;
+    import com.v7878.dex.immutable.debug.*;
     import com.v7878.dex.immutable.*;
+    import com.v7878.dex.builder.*;
     import com.v7878.dex.*;
+    import com.v7878.collections.*;
 
     import java.util.*;
 }
@@ -194,9 +198,16 @@ fragment Identifier
     | ArrayDescriptor
     ;
 
-IDENTIFIER: Identifier;
+IDENTIFIER
+    : (Identifier)
+    ;
 
-register
+// For some reason, antlr thinks the first parser rule is the entry point,
+// and that this rule can't have a returns block. This is ugly
+file: smali;
+
+register returns[int value]
+    // TODO: parse
     : {isRegister()}? IDENTIFIER
     ;
 
@@ -502,12 +513,28 @@ field returns[FieldDef value]
     END_FIELD_DIRECTIVE)?
     ;
 
-method returns[MethodDef value] locals[int args]
+method returns[MethodDef value]
+    locals[
+        int args,
+        IntMap<String> pnames = new IntMap(),
+        IntMap<NavigableSet<Annotation>> pannos = new IntMap(),
+        NavigableSet<Annotation> annotations = new TreeSet<Annotation>()
+    ]
     @init{
         String name;
         ProtoId proto;
         int access_flags;
         int restrictions;
+        MethodImplementation impl;
+    }
+    @after{
+        $pnames.freeze(); $pannos.freeze();
+        $value = MethodDef.of(
+            name, proto.getReturnType(),
+            parseParameters(proto.getParameterTypes(), $pnames, $pannos),
+            access_flags, restrictions, impl,
+            Collections.unmodifiableNavigableSet($annotations)
+        );
     }
     : METHOD_DIRECTIVE
     flags=access_or_restriction_list {
@@ -521,36 +548,33 @@ method returns[MethodDef value] locals[int args]
         // Add 'this' reg
         $args += (access_flags & ACC_STATIC) == 0 ? 1 : 0;
     }
-    // TODO: parse
-    statements_and_directives
+    method_body { impl = $method_body.value; }
     END_METHOD_DIRECTIVE
     ;
 
-statements_and_directives
-    returns[int registers = -1]
+method_body
+    returns[MethodImplementation value]
+    locals[CodeBuilder ib]
+    @after{ if($ib != null) $value = $ib.finish(); }
     : (
-    ({$registers == -1}? registers_directive
-        { $registers = $registers_directive.value; }
+    ({$ib == null}? regs=registers_directive
+        { $ib = CodeBuilder.newInstance($regs.value, $method::args); }
     )
-    | ({$registers != -1}?
-        ( ordered_method_item
+    | ({$ib != null}?
+        ( instruction
+        | label
+        | debug_directive
         | catch_directive
         | catchall_directive
         | parameter_directive
         )
     )
-    | annotation
+    | annotation { add($method::annotations, $annotation.value); }
     )*
     ;
 
-ordered_method_item
-    : label
-    | instruction
-    | debug_directive
-    ;
-
-label
-    : COLON simple_name
+label returns[String value]
+    : COLON simple_name { $value = $simple_name.value; }
     ;
 
 debug_directive
@@ -564,7 +588,7 @@ debug_directive
     ;
 
 line_directive
-    : LINE_DIRECTIVE integral_literal
+    : LINE_DIRECTIVE line=integral_literal
     ;
 
 local_directive
@@ -572,7 +596,7 @@ local_directive
     (COMMA (null_literal | name=string_literal) 
     // V as 'no type'
     COLON (type_descriptor)
-    (COMMA signature=string_literal)? )?
+    (COMMA signature=string_literal)?)?
     ;
 
 end_local_directive
@@ -592,17 +616,25 @@ source_directive
     ;
 
 catch_directive
-    : CATCH_DIRECTIVE nonvoid_type_descriptor LBRACE from=label DOTDOT to=label RBRACE using=label
+    : CATCH_DIRECTIVE ex=nonvoid_type_descriptor
+    LBRACE from=label
+    DOTDOT to=label
+    RBRACE handler=label
     ;
 
 catchall_directive
-    : CATCHALL_DIRECTIVE LBRACE from=label DOTDOT to=label RBRACE using=label
+    : CATCHALL_DIRECTIVE
+    LBRACE from=label
+    DOTDOT to=label
+    RBRACE handler=label
     ;
 
 parameter_directive
-    : PARAMETER_DIRECTIVE register 
-    (COMMA string_literal)?
-    (annotation* END_PARAMETER_DIRECTIVE)?
+    @init{ var annotations = new TreeSet<Annotation>(); }
+    : PARAMETER_DIRECTIVE register
+    (COMMA name=string_literal { $method::pnames.append($register.value, $name.value); })?
+    ((annotation { add(annotations, $annotation.value); })* END_PARAMETER_DIRECTIVE)?
+    { $method::pannos.append($register.value, Collections.unmodifiableNavigableSet(annotations)); }
     ;
 
 registers_directive returns[int value]
@@ -627,9 +659,7 @@ class_def
     }
     @after {
         $value = ClassDef.raw(
-            $type,
-            access_flags,
-            superclass,
+            $type, access_flags, superclass,
             Collections.unmodifiableList(interfaces),
             source,
             Collections.unmodifiableNavigableSet(fields),
@@ -652,7 +682,7 @@ class_def
       }
     | implements_spec { interfaces.add($implements_spec.value); }
     | annotation { add(annotations, $annotation.value); }
-    | method // TODO: { methods.add($method.value); }
+    | method { methods.add($method.value); }
     | field { fields.add($field.value); }
     )+
     ;

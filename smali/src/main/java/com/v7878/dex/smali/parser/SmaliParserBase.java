@@ -1,14 +1,18 @@
 package com.v7878.dex.smali.parser;
 
+import com.v7878.collections.IntMap;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.Annotation;
+import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.TypeId;
 
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.TokenStream;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.function.Function;
@@ -192,5 +196,20 @@ public abstract class SmaliParserBase extends Parser {
     public void add(NavigableSet<Annotation> annotations, Annotation value) {
         // TODO: check for duplicates
         annotations.add(value);
+    }
+
+    public List<Parameter> parseParameters(
+            List<TypeId> types, IntMap<String> names,
+            IntMap<NavigableSet<Annotation>> annos) {
+        int count = types.size();
+        var params = new ArrayList<Parameter>(count);
+        for (int i = 0; i < count; i++) {
+            var annotations = annos.get(i);
+            if (annotations == null) {
+                annotations = Collections.emptyNavigableSet();
+            }
+            params.add(i, Parameter.raw(types.get(i), names.get(i), annotations));
+        }
+        return Collections.unmodifiableList(params);
     }
 }
