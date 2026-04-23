@@ -3,10 +3,12 @@ package com.v7878.dex.smali.parser;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
 import com.v7878.collections.IntMap;
+import com.v7878.collections.IntSet;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.builder.CodeBuilder;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.Parameter;
+import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 
 import org.antlr.v4.runtime.Parser;
@@ -202,18 +204,46 @@ public abstract class SmaliParserBase extends Parser {
     }
 
     public static List<Parameter> parseParameters(
-            List<TypeId> types, IntMap<String> names,
+            int regs, ProtoId proto, IntMap<String> names,
             IntMap<NavigableSet<Annotation>> annos) {
-        int count = types.size();
-        var params = new ArrayList<Parameter>(count);
-        for (int i = 0; i < count; i++) {
-            var annotations = annos.get(i);
-            if (annotations == null) {
-                annotations = Collections.emptyNavigableSet();
-            }
-            params.add(i, Parameter.raw(types.get(i), names.get(i), annotations));
+        var types = proto.getParameterTypes();
+        int start = regs - proto.countInputRegisters();
+
+        int currentReg = start;
+        var validParams = new IntSet(types.size());
+        for (TypeId type : types) {
+            validParams.add(currentReg);
+            currentReg += type.getRegisterCount();
         }
-        return Collections.unmodifiableList(params);
+
+        for (int reg : names.keysArray()) {
+            if (!validParams.contains(reg)) {
+                throw new IllegalArgumentException(
+                        "Invalid register index in parameter names: " + reg);
+            }
+        }
+        for (int reg : annos.keysArray()) {
+            if (!validParams.contains(reg)) {
+                throw new IllegalArgumentException(
+                        "Invalid register index in parameter annotations: " + reg);
+            }
+        }
+
+        var result = new ArrayList<Parameter>(types.size());
+        currentReg = start;
+
+        for (TypeId type : types) {
+            var name = names.get(currentReg);
+            var anno = annos.get(currentReg);
+            if (anno == null) {
+                anno = Collections.emptyNavigableSet();
+            }
+
+            result.add(Parameter.raw(type, name, anno));
+            currentReg += type.getRegisterCount();
+        }
+
+        return Collections.unmodifiableList(result);
     }
 
     public static int parseRegister(CodeBuilder ib, String text) {

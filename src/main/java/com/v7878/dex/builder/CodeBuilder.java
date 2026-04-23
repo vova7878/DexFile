@@ -467,6 +467,22 @@ public final class CodeBuilder {
         return this;
     }
 
+    public int registers() {
+        return regs_size;
+    }
+
+    public int locals() {
+        return regs_size - ins_size;
+    }
+
+    public int parameters() {
+        return ins_size - (has_this ? 1 : 0);
+    }
+
+    public int full_parameters() {
+        return ins_size;
+    }
+
     public int v(int reg) {
         // All registers
         return checkRange(reg, 0, regs_size);
@@ -474,15 +490,13 @@ public final class CodeBuilder {
 
     public int l(int reg) {
         // Only local registers
-        int locals = regs_size - ins_size;
-        return checkRange(reg, 0, locals);
+        return checkRange(reg, 0, locals());
     }
 
     private int p(int reg, boolean include_this) {
         // Only parameter registers
         int this_reg = include_this ? 1 : 0;
-        int locals = regs_size - ins_size;
-        return locals + checkRange(reg, 0, ins_size - this_reg) + this_reg;
+        return locals() + checkRange(reg, 0, ins_size - this_reg) + this_reg;
     }
 
     public int p(int reg) {
@@ -1121,7 +1135,8 @@ public final class CodeBuilder {
     }
 
     // <A|G|op BBBB F|E|D|C> [A] op {vC, vD, vE, vF, vG}, @BBBB
-    public CodeBuilder f35c(Opcode op, Object constant, int arg_count, int... args) {
+    public CodeBuilder f35c(Opcode op, Object constant, int... args) {
+        int arg_count = args.length;
         format_35c_checks(arg_count, args);
         add(Instruction35c.of(op, arg_count,
                 arg_count > 0 ? args[0] : 0,
@@ -1141,8 +1156,8 @@ public final class CodeBuilder {
     }
 
     // <A|G|op BBBB F|E|D|C HHHH> [A] op {vC, vD, vE, vF, vG}, @BBBB
-    public CodeBuilder f45cc(Opcode op, Object constant1, Object constant2,
-                             int arg_count, int... args) {
+    public CodeBuilder f45cc(Opcode op, Object constant1, Object constant2, int... args) {
+        int arg_count = args.length;
         format_35c_checks(arg_count, args);
         add(Instruction45cc.of(op, arg_count,
                 arg_count > 0 ? args[0] : 0,
@@ -1700,7 +1715,7 @@ public final class CodeBuilder {
      * @param args u4[0 .. 5]
      */
     public CodeBuilder filled_new_array(TypeId type, int... args) {
-        return f35c(FILLED_NEW_ARRAY, type, args.length, args);
+        return f35c(FILLED_NEW_ARRAY, type, args);
     }
 
     /**
@@ -2520,7 +2535,7 @@ public final class CodeBuilder {
      * @param args   u4[0 .. 5]
      */
     public CodeBuilder invoke(InvokeKind kind, MethodId method, int... args) {
-        return f35c(kind.regular, method, args.length, args);
+        return f35c(kind.regular, method, args);
     }
 
     /**
@@ -3151,7 +3166,7 @@ public final class CodeBuilder {
      * @param args   u4[0 .. 5]
      */
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int... args) {
-        return f45cc(INVOKE_POLYMORPHIC, method, proto, args.length, args);
+        return f45cc(INVOKE_POLYMORPHIC, method, proto, args);
     }
 
     /**
@@ -3181,7 +3196,7 @@ public final class CodeBuilder {
      * @param args     u4[0 .. 5]
      */
     public CodeBuilder invoke_custom(CallSiteId callsite, int... args) {
-        return f35c(INVOKE_CUSTOM, callsite, args.length, args);
+        return f35c(INVOKE_CUSTOM, callsite, args);
     }
 
     /**
