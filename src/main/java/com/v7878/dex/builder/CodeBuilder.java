@@ -1263,7 +1263,7 @@ public final class CodeBuilder {
     public CodeBuilder move(int dst_reg, int src_reg) {
         if (dst_reg == src_reg) {
             check_reg(dst_reg);
-            nop();
+            return nop();
         }
         if (uwidth(src_reg, 4) && uwidth(dst_reg, 4)) {
             return raw_move(dst_reg, src_reg);
@@ -1305,7 +1305,7 @@ public final class CodeBuilder {
     public CodeBuilder move_wide(int dst_reg_pair, int src_reg_pair) {
         if (dst_reg_pair == src_reg_pair) {
             check_reg_pair(dst_reg_pair);
-            nop();
+            return nop();
         }
         if (uwidth(src_reg_pair, 4) && uwidth(dst_reg_pair, 4)) {
             return raw_move_wide(dst_reg_pair, src_reg_pair);
@@ -1347,7 +1347,7 @@ public final class CodeBuilder {
     public CodeBuilder move_object(int dst_reg, int src_reg) {
         if (dst_reg == src_reg) {
             check_reg(dst_reg);
-            nop();
+            return nop();
         }
         if (uwidth(src_reg, 4) && uwidth(dst_reg, 4)) {
             return raw_move_object(dst_reg, src_reg);
@@ -1368,8 +1368,7 @@ public final class CodeBuilder {
             case 'V' -> {
                 check_reg_empty_range(dst_reg_or_pair);
                 check_reg_empty_range(src_reg_or_pair);
-                nop();
-                yield this;
+                yield nop();
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> move(dst_reg_or_pair, src_reg_or_pair);
             case 'J', 'D' -> move_wide(dst_reg_or_pair, src_reg_or_pair);
@@ -1392,8 +1391,7 @@ public final class CodeBuilder {
         check_reg_range(first_dst_reg, size);
         check_reg_range(first_src_reg, size);
         if (size <= 0 || (first_dst_reg == first_src_reg)) {
-            nop();
-            return this;
+            return nop();
         }
         if (first_src_reg < first_dst_reg) {
             // Copy backwards
@@ -1444,8 +1442,7 @@ public final class CodeBuilder {
         return switch (shorty) {
             case 'V' -> {
                 check_reg_empty_range(dst_reg_or_pair);
-                nop();
-                yield this;
+                yield nop();
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> move_result(dst_reg_or_pair);
             case 'J', 'D' -> move_result_wide(dst_reg_or_pair);
@@ -1494,8 +1491,7 @@ public final class CodeBuilder {
         return switch (shorty) {
             case 'V' -> {
                 check_reg_empty_range(return_value_reg_or_pair);
-                nop();
-                yield return_void();
+                yield nop();
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> return_(return_value_reg_or_pair);
             case 'J', 'D' -> return_wide(return_value_reg_or_pair);
@@ -1977,8 +1973,7 @@ public final class CodeBuilder {
 
     private CodeBuilder switch_internal(int reg_to_test, IntMap<?> table) {
         if (table.isEmpty()) {
-            nop();
-            return this;
+            return nop();
         }
         if (table.size() == 1 && table.firstKey() == 0) {
             return if_testz(Test.EQ, reg_to_test, table.firstValue());
@@ -1996,8 +1991,7 @@ public final class CodeBuilder {
     public CodeBuilder switch_(int reg_to_test, IntMap<?> table) {
         check_reg(reg_to_test);
         if (table.isEmpty()) {
-            nop();
-            return this;
+            return nop();
         }
         table = table.duplicate();
         int size = table.size();
@@ -2013,8 +2007,7 @@ public final class CodeBuilder {
     public CodeBuilder switch_(int reg_to_test, Map<Integer, ?> table) {
         check_reg(reg_to_test);
         if (table.isEmpty()) {
-            nop();
-            return this;
+            return nop();
         }
         var map = new IntMap<>(table.size());
         table.forEach((key, value) -> map.put(key, Objects.requireNonNull(value)));
