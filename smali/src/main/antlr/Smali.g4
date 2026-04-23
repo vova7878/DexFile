@@ -764,21 +764,29 @@ reference[int index] returns[Object ref] locals[ReferenceType type]
     | {$type == CALLSITE}? call_site_reference { $ref = $call_site_reference.value; }
     | {$type == METHOD_HANDLE}? method_handle_reference { $ref = $method_handle_reference.value; }
     | {$type == RAW_INDEX}?
-    ( inline_index // TODO
-    | vtable_index // TODO
-    | field_offset // TODO
+    ( inline_index { $ref = $inline_index.value; }
+    | vtable_index { $ref = $vtable_index.value; }
+    | field_offset { $ref = $field_offset.value; }
     )
     ;
-inline_index: INLINE_INDEX;
-vtable_index: VTABLE_INDEX;
-field_offset: FIELD_OFFSET;
 
-register_list
-    : (register (COMMA register)*)?
+// TODO: parse values
+inline_index returns[int value]: INLINE_INDEX;
+vtable_index returns[int value]: VTABLE_INDEX;
+field_offset returns[int value]: FIELD_OFFSET;
+
+register_list returns[int[] value]
+    : (regs+=register (COMMA regs+=register)*)?
+    { $value = $regs.stream().mapToInt(r -> r.value).toArray(); }
     ;
 
-register_range
-    : (startreg=register (DOTDOT endreg=register)?)?
+register_range returns[int start, int count]
+    : (register { $start = $register.value; }
+         ((DOTDOT register { $count = $register.value - $start + 1; })
+         | { $count = 1; }
+         )
+    )
+    | { $start = $count = 0; }
     ;
 
 args_format10t: label;
