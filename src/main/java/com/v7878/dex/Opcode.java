@@ -620,16 +620,16 @@ public enum Opcode {
         };
     }
 
-    public Boolean isRegPair(int index) {
+    public boolean isRegPair(int index) {
         var out = switch (index) {
-            case 0 -> !regs_info.r0;
-            case 1 -> !regs_info.r1;
-            case 2 -> !regs_info.r2;
-            case 3 -> !regs_info.r3;
-            case 4 -> !regs_info.r4;
+            case 0 -> regs_info.r0;
+            case 1 -> regs_info.r1;
+            case 2 -> regs_info.r2;
+            case 3 -> regs_info.r3;
+            case 4 -> regs_info.r4;
             default -> null;
         };
-        return out != null && out;
+        return out != null && !out;
     }
 
     public final boolean canThrow() {
