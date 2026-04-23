@@ -10,6 +10,7 @@ import static com.v7878.dex.Format.Format11n;
 import static com.v7878.dex.Format.Format11p;
 import static com.v7878.dex.Format.Format11x;
 import static com.v7878.dex.Format.Format12x;
+import static com.v7878.dex.Format.Format20bc;
 import static com.v7878.dex.Format.Format20t;
 import static com.v7878.dex.Format.Format20t_24;
 import static com.v7878.dex.Format.Format21c;
@@ -31,6 +32,7 @@ import static com.v7878.dex.Format.Format32x;
 import static com.v7878.dex.Format.Format34c;
 import static com.v7878.dex.Format.Format35c;
 import static com.v7878.dex.Format.Format3rc;
+import static com.v7878.dex.Format.Format40cs;
 import static com.v7878.dex.Format.Format41c;
 import static com.v7878.dex.Format.Format45cc;
 import static com.v7878.dex.Format.Format4rcc;
@@ -375,7 +377,7 @@ public enum Opcode {
     INVOKE_SUPER_QUICK(dalvikOnly(modern(0xfa)), "invoke-super-quick", Format35c, regs5(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
     INVOKE_SUPER_QUICK_RANGE(dalvikOnly(common(0xfb)), "invoke-super-quick/range", Format3rc, regsr(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
-    // TODO THROW_VERIFICATION_ERROR(onlyDalvik(firstApi(0xed, 5)), "throw-verification-error", Format20bc, regs(), ODEX_ONLY | CAN_THROW | END_FLOW),
+    THROW_VERIFICATION_ERROR(dalvikOnly(firstApi(0xed, 5)), "throw-verification-error", Format20bc, regs(), ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
     // Note: breakpoint replaces the original opcode and restores it back when executed (it only exists at runtime)
     // BREAKPOINT(onlyDalvik(firstApi(0xec, 8)), "breakpoint", Format00x, regs(), RUNTIME_ONLY),
@@ -484,7 +486,7 @@ public enum Opcode {
     SPUT_WIDE_VOLATILE_JUMBO(betweenApi(0xfdff, 14, 15), "sput-wide-volatile/jumbo", Format41c, regs(false), FIELD, ODEX_ONLY | CAN_THROW),
     SPUT_OBJECT_VOLATILE_JUMBO(betweenApi(0xfeff, 14, 15), "sput-object-volatile/jumbo", Format41c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
 
-    // TODO THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40cs, regs(), ODEX_ONLY | CAN_THROW | END_FLOW),
+    THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40cs, regs(), ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
     // special single 16-bit opcode
     RAW(raw(), "raw", FormatRaw, regs(), 0);

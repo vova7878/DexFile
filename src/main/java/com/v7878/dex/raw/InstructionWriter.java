@@ -95,6 +95,9 @@ public class InstructionWriter {
                     throw new UnsupportedOperationException("Unimplemented yet!");
             case Format35c -> write_35c(((Instruction35c) instruction), writer, out, op);
             case Format3rc -> write_3rc(((Instruction3rc) instruction), writer, out, op);
+            // TODO
+            case Format40cs -> //noinspection DuplicateBranchesInSwitch
+                    throw new UnsupportedOperationException("Unimplemented yet!");
             case Format41c -> write_41c(((Instruction41c) instruction), writer, out, op);
             case Format45cc -> write_45cc(((Instruction45cc) instruction), writer, out, op);
             case Format4rcc -> write_4rcc(((Instruction4rcc) instruction), writer, out, op);

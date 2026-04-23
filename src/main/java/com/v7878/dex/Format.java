@@ -29,6 +29,7 @@ public enum Format {
     Format34c(3, true, false),
     Format35c(3, true, false),
     Format3rc(3, true, false),
+    Format40cs(4, true, false),
     Format41c(4, true, false),
     Format45cc(4, true, true),
     Format4rcc(4, true, true),

@@ -99,6 +99,9 @@ public class InstructionReader {
             case Format34c -> read_34c(opcode, in, reader, arg);
             case Format35c -> read_35c(opcode, in, reader, arg);
             case Format3rc -> read_3rc(opcode, in, reader, arg);
+            // TODO
+            case Format40cs -> //noinspection DuplicateBranchesInSwitch
+                    throw new UnsupportedOperationException("Unimplemented yet!");
             case Format41c -> read_41c(opcode, in, reader);
             case Format45cc -> read_45cc(opcode, in, reader, arg);
             case Format4rcc -> read_4rcc(opcode, in, reader, arg);
