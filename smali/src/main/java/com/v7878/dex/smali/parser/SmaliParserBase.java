@@ -89,6 +89,7 @@ public abstract class SmaliParserBase extends Parser {
 
     public TypeId getTypeId() {
         return transformText(token -> {
+            token = LiteralUtils.unquote(token);
             try {
                 return TypeId.of(token);
             } catch (IllegalArgumentException e) {
@@ -113,6 +114,10 @@ public abstract class SmaliParserBase extends Parser {
         var type = getTypeId();
         if (type == null) return null;
         return type.isVoid() ? null : type;
+    }
+
+    public static ProtoId parseProto(String token) {
+        return ProtoId.of(LiteralUtils.unquote(token));
     }
 
     public boolean isRegister() {

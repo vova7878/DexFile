@@ -171,13 +171,16 @@ public class LiteralUtils {
         };
     }
 
-    public static String parseSimpleName(String value) {
-        // TODO: validate
-        return value.replace("\\ ", " ");
-    }
+    public static String unquote(String s) {
+        if (s.indexOf('`') < 0) return s;
 
-    public static String parseMemberName(String value) {
-        // TODO: validate
-        return parseSimpleName(value);
+        int len = s.length();
+        char[] buf = new char[len];
+        int dst = 0;
+        for (int i = 0; i < len; i++) {
+            char c = s.charAt(i);
+            if (c != '`') buf[dst++] = c;
+        }
+        return new String(buf, 0, dst);
     }
 }

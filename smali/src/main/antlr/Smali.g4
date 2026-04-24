@@ -156,8 +156,7 @@ fragment SimpleChar
     : [A-Z]
     | [a-z]
     | [0-9]
-    // The only character that requires post-processing '\ ' -> ' '
-    | '\\ ' // since DEX version 040
+    // | ' ' // since DEX version 040
     | '$'
     | '-'
     | '_'
@@ -171,64 +170,78 @@ fragment SimpleChar
     | [\u{10000}-\u{10ffff}]
     ;
 
-fragment SimpleName
+fragment RawSimpleName
     : SimpleChar+
     ;
 
-fragment InitName
-    : '<' SimpleName '>'
+fragment QuotedSimpleName
+    : '`' (' ' | SimpleChar)+ '`'
     ;
 
-fragment ClassName
-    : (SimpleName '/')* SimpleName ';'?
+fragment SimpleName
+    : RawSimpleName
+    | QuotedSimpleName
     ;
 
-fragment ArrayDescriptor
-    : '['+ ([ZBSCIFJD] | ClassName)
+RAW_SIMPLE_NAME: RawSimpleName;
+
+QUOTED_SIMPLE_NAME: QuotedSimpleName;
+
+INIT_NAME
+    : '<init>'
+    | '<clinit>'
     ;
 
-fragment Identifier
-    : SimpleName
-    | InitName
-    | ClassName
-    | ArrayDescriptor
+INSTRUCTION_NAME
+    : RawSimpleName '/' RawSimpleName
     ;
 
-IDENTIFIER
-    : (Identifier)
+CLASS_NAME
+    : 'L' (SimpleName '/')* SimpleName ';'
+    ;
+
+ARRAY_DESCRIPTOR
+    : '['+ ([ZBSCIFJD] | CLASS_NAME)
+    ;
+
+// Note: multiple primitive types can be parsed as
+// a single token. A full analysis will occur later
+UNCHECKED_METHOD_PROTO
+    : LPAREN ([ZBSCIFJD] | CLASS_NAME | ARRAY_DESCRIPTOR)* RPAREN
+    ([ZBSCIFJDV] | CLASS_NAME | ARRAY_DESCRIPTOR)
     ;
 
 // For some reason, antlr thinks the first parser rule is the entry point,
 // and that this rule can't have a returns block. This is ugly
 file: smali;
 
-register returns[int value]
-    : {isRegister()}? val=IDENTIFIER
-    { $value = CodeUtils.parseRegister($method_body::ib, $val.text); }
-    ;
-
 simple_name returns[String value]
-    : val=IDENTIFIER { $value = LiteralUtils.parseSimpleName($val.text); }
+    : val=RAW_SIMPLE_NAME { $value = $val.text; }
+    | val=QUOTED_SIMPLE_NAME { $value = LiteralUtils.unquote($val.text); }
     ;
 
 member_name returns[String value]
-    : val=IDENTIFIER { $value = LiteralUtils.parseMemberName($val.text); }
+    : simple_name { $value = $simple_name.value; }
+    | val=INIT_NAME { $value = $val.text; }
     ;
 
 class_descriptor returns[TypeId value]
-    : {($value = getClassId()) != null}? val=IDENTIFIER
+    : {($value = getClassId()) != null}? CLASS_NAME
     ;
 
 type_descriptor returns[TypeId value]
-    : {($value = getTypeId()) != null}? val=IDENTIFIER
+    : {($value = getTypeId()) != null}?
+    (RAW_SIMPLE_NAME | CLASS_NAME | ARRAY_DESCRIPTOR)
     ;
 
 reference_type_descriptor returns[TypeId value]
-    : {($value = getRefTypeId()) != null}? val=IDENTIFIER
+    : {($value = getRefTypeId()) != null}?
+    (CLASS_NAME | ARRAY_DESCRIPTOR)
     ;
 
 nonvoid_type_descriptor returns[TypeId value]
-    : {($value = getNonVoidTypeId()) != null}? val=IDENTIFIER
+    : {($value = getNonVoidTypeId()) != null}?
+    (RAW_SIMPLE_NAME | CLASS_NAME | ARRAY_DESCRIPTOR)
     ;
 
 literal returns[EncodedValue value]
@@ -284,43 +297,43 @@ string_literal returns[String value]
     ;
 
 int_literal returns[int value]
-    : {isInteger()}? val=IDENTIFIER
+    : {isInteger()}? val=RAW_SIMPLE_NAME
     { $value = LiteralUtils.parseInt($val.text); }
     ;
 
 long_literal returns[long value]
-    : {isLong()}? val=IDENTIFIER
+    : {isLong()}? val=RAW_SIMPLE_NAME
     { $value = LiteralUtils.parseLong($val.text); }
     ;
 
 short_literal returns[short value]
-    : {isShort()}? val=IDENTIFIER
+    : {isShort()}? val=RAW_SIMPLE_NAME
     { $value = LiteralUtils.parseShort($val.text); }
     ;
 
 byte_literal returns[byte value]
-    : {isByte()}? val=IDENTIFIER
+    : {isByte()}? val=RAW_SIMPLE_NAME
     { $value = LiteralUtils.parseByte($val.text); }
     ;
 
 float_literal returns[float value]
-    : ({isFloat()}? val=IDENTIFIER
+    : ({isFloat()}? val=RAW_SIMPLE_NAME
     | /* checked */ val=FLOAT_LITERAL)
     { $value = LiteralUtils.parseFloat($val.text); }
     ;
 
 double_literal returns[double value]
-    : ({isDouble()}? val=IDENTIFIER
+    : ({isDouble()}? val=RAW_SIMPLE_NAME
     | /* checked */ val=DOUBLE_LITERAL)
     { $value = LiteralUtils.parseDouble($val.text); }
     ;
 
 null_literal
-    : {isNull()}? IDENTIFIER
+    : {isNull()}? RAW_SIMPLE_NAME
     ;
 
 bool_literal returns[boolean value]
-    : {isBool()}? val=IDENTIFIER
+    : {isBool()}? val=RAW_SIMPLE_NAME
     { $value = LiteralUtils.parseBool($val.text); }
     ;
 
@@ -359,19 +372,13 @@ annotation_element returns[AnnotationElement value]
     ;
 
 annotation_visibility returns[AnnotationVisibility value]
-    : {isAnnotationVisibility()}? val=IDENTIFIER
+    : {isAnnotationVisibility()}? val=RAW_SIMPLE_NAME
     { $value = AnnotationVisibility.of($val.text); }
     ;
 
-unchecked_method_prototype
-    // Note: multiple primitive types can be parsed as
-    // IDENTIFIER token. A full analysis will occur later
-    : LPAREN IDENTIFIER* RPAREN IDENTIFIER
-    ;
-
 method_prototype returns[ProtoId value]
-    : whole=unchecked_method_prototype
-    { $value = ProtoId.of($whole.text); }
+    : whole=UNCHECKED_METHOD_PROTO
+    { $value = parseProto($whole.text); }
     ;
 
 method_reference returns[MethodId value]
@@ -400,12 +407,12 @@ enum_literal returns[FieldId value]
     ;
 
 method_handle_type_field returns[MethodHandleType value]
-    : {isMethodHandleTypeField()}? val=IDENTIFIER
+    : {isMethodHandleTypeField()}? val=RAW_SIMPLE_NAME
     { $value = MethodHandleType.of($val.text); }
     ;
 
 method_handle_type_method returns[MethodHandleType value]
-    : {isMethodHandleTypeMethod()}? val=IDENTIFIER
+    : {isMethodHandleTypeMethod()}? val=RAW_SIMPLE_NAME
     { $value = MethodHandleType.of($val.text); }
     ;
 
@@ -461,7 +468,7 @@ source_spec returns[String value]
     ;
 
 access_spec returns[int value]
-    : {isAccessFlag()}? val=IDENTIFIER
+    : {isAccessFlag()}? val=RAW_SIMPLE_NAME
     { $value = AccessFlag.of($val.text).value(); }
     ;
 
@@ -470,7 +477,7 @@ access_list returns[int access_flags]
     ;
 
 restriction_spec returns[int value]
-    : {isRestrictionFlag()}? IDENTIFIER
+    : {isRestrictionFlag()}? RAW_SIMPLE_NAME
     // TODO: parse
     { $value = 0; }
     ;
@@ -593,6 +600,11 @@ registers_directive returns[int value]
     | LOCALS_DIRECTIVE count=integral_literal
     { $value = $count.value + $method::args; }
     )
+    ;
+
+register returns[int value]
+    : {isRegister()}? val=RAW_SIMPLE_NAME
+    { $value = CodeUtils.parseRegister($method_body::ib, $val.text); }
     ;
 
 parameter_directive
@@ -724,8 +736,13 @@ smali returns[Dex dex]
     : (class_def { classes.add($class_def.value); })+ EOF
     ;
 
+instruction_name
+    : RAW_SIMPLE_NAME
+    | INSTRUCTION_NAME
+    ;
+
 instruction locals[Opcode op]
-    : opname=IDENTIFIER { $op = opcode($opname.text); }
+    : opname=instruction_name { $op = opcode($opname.text); }
     ( {$op.format() == Format10t}? args_format10t
     | {$op.format() == Format10x}? args_format10x
     | {$op.format() == Format11n}? args_format11n
