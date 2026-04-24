@@ -53,10 +53,6 @@ PACKED_SWITCH_DIRECTIVE: '.packed-switch';
 END_PACKED_SWITCH_DIRECTIVE: '.end packed-switch';
 SPARSE_SWITCH_DIRECTIVE: '.sparse-switch';
 END_SPARSE_SWITCH_DIRECTIVE: '.end sparse-switch';
-M_PACKED_SWITCH_DIRECTIVE: '.m-packed-switch';
-END_M_PACKED_SWITCH_DIRECTIVE: '.end m-packed-switch';
-M_SPARSE_SWITCH_DIRECTIVE: '.m-sparse-switch';
-END_M_SPARSE_SWITCH_DIRECTIVE: '.end m-sparse-switch';
 CATCH_DIRECTIVE: '.catch';
 CATCHALL_DIRECTIVE: '.catchall';
 LINE_DIRECTIVE: '.line';
@@ -208,7 +204,7 @@ file: smali;
 
 register returns[int value]
     : {isRegister()}? val=IDENTIFIER
-    { $value = parseRegister($method_body::ib, $val.text); }
+    { $value = CodeUtils.parseRegister($method_body::ib, $val.text); }
     ;
 
 simple_name returns[String value]
@@ -560,13 +556,15 @@ method_body
     locals[
         CodeBuilder ib, IntMap<String> pnames,
         IntMap<NavigableSet<Annotation>> pannos,
+        List<Runnable> actions
     ]
     @after{
         if ($ib == null) {
             $parameters = Parameter.listOf($method::proto.getParameterTypes());
         } else {
+            $actions.forEach(Runnable::run);
             $value = $ib.finish();
-            $parameters = parseParameters($ib.registers(),
+            $parameters = mergeParameters($ib.registers(),
                 $method::proto, $pnames.freeze(), $pannos.freeze());
         }
     }
@@ -574,6 +572,7 @@ method_body
     ({$ib == null}? regs=registers_directive {
         $ib = CodeBuilder.newInstance($regs.value, $method::args);
         $pnames = new IntMap<>(); $pannos = new IntMap<>();
+        $actions = new ArrayList<>();
     })
     | ({$ib != null}?
         ( instruction
@@ -762,12 +761,11 @@ instruction locals[Opcode op]
     | {$op.format() == Format51l}? args_format51l
     | {$op.format() == Format52c}? args_format52c
     | {$op.format() == Format5rc}? args_format5rc
+    // TODO: | {$op.format() == FormatRaw}? args_format_raw
     )
     | insn_array_data
     | insn_packed_switch
     | insn_sparse_switch
-    | insn_m_packed_switch
-    | insn_m_sparse_switch
     ;
 
 reference[int index] returns[Object value] locals[ReferenceType type]
@@ -820,244 +818,348 @@ register_range returns[int start, int count]
 
 args_format10t returns[String target]
     : label { $target = $label.value; }
-    { $method_body::ib.f10t($instruction::op, $target); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f10t($instruction::op, $target);
+    }
     ;
 
 args_format10x
     : // nothing
-    { $method_body::ib.f10x($instruction::op); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f10x($instruction::op);
+    }
     ;
 
 args_format11n returns[int reg, int lit]
     : register { $reg = $register.value; }
     COMMA integral_literal { $lit = $integral_literal.value; }
-    { $method_body::ib.f11n($instruction::op, $reg, $lit); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f11n($instruction::op, $reg, $lit);
+    }
     ;
 
 args_format11p
     // TODO: check index (must be [0, 15])
     : register LBRACE index=int_literal RBRACE
     // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            throw new UnsupportedOperationException("Unimplemented yet!");
+    }
     ;
 
 args_format11x returns[int reg]
     : register { $reg = $register.value; }
-    { $method_body::ib.f11x($instruction::op, $reg); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f11x($instruction::op, $reg);
+    }
     ;
 
 args_format12x returns[int reg1, int reg2]
     : r1=register { $reg1 = $r1.value; }
     COMMA r2=register { $reg2 = $r2.value; }
-    { $method_body::ib.f12x($instruction::op, $reg1, $reg2); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f12x($instruction::op, $reg1, $reg2);
+    }
     ;
 
 args_format20t returns[String target]
     : label { $target = $label.value; }
-    { $method_body::ib.f20t($instruction::op, $target); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f20t($instruction::op, $target);
+    }
     ;
 
 args_format20t_24 returns[String target]
     : label { $target = $label.value; }
     // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            throw new UnsupportedOperationException("Unimplemented yet!");
+    }
     ;
 
 args_format21c returns[int reg, Object ref]
     : register { $reg = $register.value; }
     COMMA reference[0] { $ref = $reference.value; }
-    { $method_body::ib.f21c($instruction::op, $reg, $ref); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f21c($instruction::op, $reg, $ref);
+    }
     ;
 
 args_format21ih returns[int reg, int lit]
     : register { $reg = $register.value; }
     COMMA l32=fixed_32bit_literal { $lit = $l32.value; }
-    { $method_body::ib.f21ih($instruction::op, $reg, $lit); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f21ih($instruction::op, $reg, $lit);
+    }
     ;
 
 args_format21lh returns[int reg, long lit]
     : register { $reg = $register.value; }
     COMMA l64=fixed_64bit_literal { $lit = $l64.value; }
-    { $method_body::ib.f21lh($instruction::op, $reg, $lit); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f21lh($instruction::op, $reg, $lit);
+    }
     ;
 
 args_format21s returns[int reg, int lit]
     : register { $reg = $register.value; }
     COMMA integral_literal { $lit = $integral_literal.value; }
-    { $method_body::ib.f21s($instruction::op, $reg, $lit); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f21s($instruction::op, $reg, $lit);
+    }
     ;
 
 args_format21t returns[int reg, String target]
     : register { $reg = $register.value; }
     COMMA label { $target = $label.value; }
-    { $method_body::ib.f21t($instruction::op, $reg, $target); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f21t($instruction::op, $reg, $target);
+    }
     ;
 
 args_format22b returns[int reg1, int reg2, int lit]
     : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
     COMMA integral_literal { $lit = $integral_literal.value; }
-    { $method_body::ib.f22b($instruction::op, $reg1, $reg2, $lit); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f22b($instruction::op, $reg1, $reg2, $lit);
+    }
     ;
 
 args_format22c returns[int reg1, int reg2, Object ref]
     : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
     COMMA reference[0] { $ref = $reference.value; }
-    { $method_body::ib.f22c($instruction::op, $reg1, $reg2, $ref); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f22c($instruction::op, $reg1, $reg2, $ref);
+    }
     ;
 
 args_format22s returns[int reg1, int reg2, int lit]
     : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
     COMMA integral_literal { $lit = $integral_literal.value; }
-    { $method_body::ib.f22s($instruction::op, $reg1, $reg2, $lit); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f22s($instruction::op, $reg1, $reg2, $lit);
+    }
     ;
 
 args_format22t returns[int reg1, int reg2, String target]
     : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
     COMMA label { $target = $label.value; }
-    { $method_body::ib.f22t($instruction::op, $reg1, $reg2, $target); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f22t($instruction::op, $reg1, $reg2, $target);
+    }
     ;
 
 args_format22x returns[int reg1, int reg2]
     : r1=register { $reg1 = $r1.value; }
     COMMA r2=register { $reg2 = $r2.value; }
-    { $method_body::ib.f22x($instruction::op, $reg1, $reg2); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f22x($instruction::op, $reg1, $reg2);
+    }
     ;
 
 args_format23x returns[int reg1, int reg2, int reg3]
     : r1=register { $reg1 = $r1.value; }
     COMMA r2=register { $reg2 = $r2.value; }
     COMMA r3=register { $reg3 = $r3.value; }
-    { $method_body::ib.f23x($instruction::op, $reg1, $reg2, $reg3); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f23x($instruction::op, $reg1, $reg2, $reg3);
+    }
     ;
 
 args_format30t returns[String target]
     : label { $target = $label.value; }
-    { $method_body::ib.f30t($instruction::op, $target); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f30t($instruction::op, $target);
+    }
     ;
 
 args_format31c returns[int reg, Object ref]
     : register { $reg = $register.value; }
     COMMA reference[0] { $ref = $reference.value; }
-    { $method_body::ib.f31c($instruction::op, $reg, $ref); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f31c($instruction::op, $reg, $ref);
+    }
     ;
 
 args_format31i returns[int reg, int lit]
     : register { $reg = $register.value; }
     COMMA l32=fixed_32bit_literal { $lit = $l32.value; }
-    { $method_body::ib.f31i($instruction::op, $reg, $lit); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f31i($instruction::op, $reg, $lit);
+    }
     ;
 
 args_format31t returns[int reg, String target]
     : register { $reg = $register.value; }
     COMMA label { $target = $label.value; }
-    { $method_body::ib.f31t($instruction::op, $reg, $target); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f31t($instruction::op, $reg, $target);
+    }
     ;
 
 args_format32x returns[int reg1, int reg2]
     : r1=register { $reg1 = $r1.value; }
     COMMA r2=register { $reg2 = $r2.value; }
-    { $method_body::ib.f32x($instruction::op, $reg1, $reg2); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f32x($instruction::op, $reg1, $reg2);
+    }
     ;
 
 args_format34c returns[int[] args, Object ref]
     : LBRACE register_list { $args = $register_list.value; }
     RBRACE COMMA reference[0] { $ref = $reference.value; }
     // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            throw new UnsupportedOperationException("Unimplemented yet!");
+    }
     ;
 
 args_format35c returns[int[] args, Object ref]
     : LBRACE register_list { $args = $register_list.value; }
     RBRACE COMMA reference[0] { $ref = $reference.value; }
-    { $method_body::ib.f35c($instruction::op, $ref, $args); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f35c($instruction::op, $ref, $args);
+    }
     ;
 
 args_format3rc returns[int start, int count, Object ref]
     : LBRACE rr=register_range { $start = $rr.start; $count = $rr.count; }
     RBRACE COMMA reference[0] { $ref = $reference.value; }
-    { $method_body::ib.f3rc($instruction::op, $ref, $count, $start); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f3rc($instruction::op, $ref, $count, $start);
+    }
     ;
 
 args_format41c returns[int reg, Object ref]
     : register { $reg = $register.value; }
     COMMA reference[0] { $ref = $reference.value; }
     // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            throw new UnsupportedOperationException("Unimplemented yet!");
+    }
     ;
 
 args_format45cc returns[int[] args, Object ref1, Object ref2]
     : LBRACE register_list { $args = $register_list.value; }
     RBRACE COMMA r1=reference[0] { $ref1 = $r1.value; }
     COMMA r2=reference[1] { $ref2 = $r2.value; }
-    { $method_body::ib.f45cc($instruction::op, $ref1, $ref2, $args); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f45cc($instruction::op, $ref1, $ref2, $args);
+    }
     ;
 
 args_format4rcc returns[int start, int count, Object ref1, Object ref2]
     : LBRACE rr=register_range { $start = $rr.start; $count = $rr.count; }
     RBRACE COMMA r1=reference[0] { $ref1 = $r1.value; }
     COMMA r2=reference[1] { $ref2 = $r2.value; }
-    { $method_body::ib.f4rcc($instruction::op, $ref1, $ref2, $count, $start); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f4rcc($instruction::op, $ref1, $ref2, $count, $start);
+    }
     ;
 
 args_format51l returns[int reg, long lit]
     : register { $reg = $register.value; }
     COMMA l64=fixed_64bit_literal { $lit = $l64.value; }
-    { $method_body::ib.f51l($instruction::op, $reg, $lit); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            $method_body::ib.f51l($instruction::op, $reg, $lit);
+    }
     ;
 
 args_format52c returns[int reg1, int reg2, Object ref]
     : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
     COMMA reference[0] { $ref = $reference.value; }
     // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            throw new UnsupportedOperationException("Unimplemented yet!");
+    }
     ;
 
 args_format5rc returns[int start, int count, Object ref]
     : LBRACE rr=register_range { $start = $rr.start; $count = $rr.count; }
     RBRACE COMMA reference[0] { $ref = $reference.value; }
     // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    {
+        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
+            throw new UnsupportedOperationException("Unimplemented yet!");
+    }
     ;
 
-// TODO: check width (must be 1, 2, 4 or 8)
-args_array_data
-    : width=int_literal fixed_64bit_literal*
+args_array_data returns[int width, List<Number> table]
+    : int_literal v+=fixed_64bit_literal*
+    {
+        $width = $int_literal.value;
+        var data = $v.stream().mapToLong(v -> v.value).toArray();
+        $table = CodeUtils.parseArrayData($width, data);
+    }
     ;
 
-args_packed_switch
-    : fixed_32bit_literal label*
+args_packed_switch returns[IntMap<Object> table]
+    : key=fixed_32bit_literal l+=label*
+    {
+        var first_key = $key.value;
+        var labels = $l.stream().map(v -> v.value).toArray();
+        $table = CodeUtils.parsePackedSwitch(first_key, labels);
+    }
     ;
 
-args_sparse_switch
-    : (fixed_32bit_literal ARROW label)*
+args_sparse_switch returns[IntMap<Object> table]
+    : (v+=fixed_32bit_literal ARROW l+=label)*
+    {
+        var keys = $v.stream().mapToInt(v -> v.value).toArray();
+        var labels = $l.stream().map(v -> v.value).toArray();
+        $table = CodeUtils.parseSparseSwitch(keys, labels);
+    }
     ;
 
 insn_array_data
     : ARRAY_DATA_DIRECTIVE
-    args_array_data
+    payload=args_array_data
+    { $method_body::ib.put_metadata($payload.ctx); }
     END_ARRAY_DATA_DIRECTIVE
     ;
 
 insn_packed_switch
     : PACKED_SWITCH_DIRECTIVE
-    args_packed_switch
+    payload=args_packed_switch
+    { $method_body::ib.put_metadata($payload.ctx); }
     END_PACKED_SWITCH_DIRECTIVE
     ;
 
 insn_sparse_switch
     : SPARSE_SWITCH_DIRECTIVE
-    args_sparse_switch
+    payload=args_sparse_switch
+    { $method_body::ib.put_metadata($payload.ctx); }
     END_SPARSE_SWITCH_DIRECTIVE
-    ;
-
-insn_m_packed_switch
-    : M_PACKED_SWITCH_DIRECTIVE
-    args_packed_switch
-    END_M_PACKED_SWITCH_DIRECTIVE
-    ;
-
-insn_m_sparse_switch
-    : M_SPARSE_SWITCH_DIRECTIVE
-    args_sparse_switch
-    END_M_SPARSE_SWITCH_DIRECTIVE
     ;
