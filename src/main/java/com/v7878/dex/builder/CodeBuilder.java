@@ -194,8 +194,24 @@ public final class CodeBuilder {
             }
         }
 
+        class Metadata extends Empty {
+            private final Object value;
+
+            Metadata(Object value) {
+                this.value = value;
+            }
+
+            public Object metadata() {
+                return value;
+            }
+        }
+
         BuilderNode PLACEHOLDER = new Empty();
         BuilderNode EMPTY = new Empty();
+
+        default Object metadata() {
+            return null;
+        }
 
         default void attach(BuilderPosition position) {
         }
@@ -952,6 +968,17 @@ public final class CodeBuilder {
 
     public CodeBuilder restart_local(int register) {
         return restart_local(current_label(), register);
+    }
+
+    public CodeBuilder put_metadata(Object value) {
+        Objects.requireNonNull(value);
+        add(new BuilderNode.Metadata(value), 0);
+        return this;
+    }
+
+    public Object get_metadata(Object label) {
+        var node = position(label).node;
+        return node == null ? null : node.metadata();
     }
 
     private void format_35c_checks(int arg_count, int... args) {
@@ -1738,6 +1765,15 @@ public final class CodeBuilder {
         f31t(FILL_ARRAY_DATA, arr_ref_reg, payload);
 
         return this;
+    }
+
+    /**
+     * @param arr_ref_reg   u8
+     * @param element_width 1, 2, 4 or 8
+     */
+    public CodeBuilder fill_array_data_raw(int arr_ref_reg, int element_width, List<? extends Number> data) {
+        Objects.requireNonNull(data);
+        return fill_array_data_internal(arr_ref_reg, element_width, data);
     }
 
     /**
