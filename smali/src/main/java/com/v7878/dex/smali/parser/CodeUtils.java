@@ -57,10 +57,10 @@ public class CodeUtils {
                         String.format("%d does not fit into a %d-byte integer", value, width));
             }
             table.add(switch (width) {
-                case 1 -> (byte) value;
-                case 2 -> (short) value;
-                case 4 -> (int) value;
-                default -> value; // width == 8
+                case 1 -> (Number) (byte) value;
+                case 2 -> (Number) (short) value;
+                case 4 -> (Number) (int) value;
+                default -> (Number) value; // width == 8
             });
         }
         return Collections.unmodifiableList(table);

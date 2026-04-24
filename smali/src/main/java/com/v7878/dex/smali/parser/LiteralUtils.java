@@ -56,20 +56,71 @@ public class LiteralUtils {
         return sb.toString();
     }
 
+    private static long parseSULong(String nm) {
+        int radix = 10;
+        int index = 0;
+        boolean negative = false;
+
+        if (nm.isEmpty()) {
+            throw new NumberFormatException("Zero length string");
+        }
+
+        char firstChar = nm.charAt(0);
+        // Handle sign, if present
+        if (firstChar == '-') {
+            negative = true;
+            index++;
+        } else if (firstChar == '+') {
+            index++;
+        }
+
+        // Handle radix specifier, if present
+        if (nm.startsWith("0x", index) || nm.startsWith("0X", index)) {
+            index += 2;
+            radix = 16;
+        } else if (nm.startsWith("0", index) && nm.length() > 1 + index) {
+            index++;
+            radix = 8;
+        }
+
+        if (nm.startsWith("-", index) || nm.startsWith("+", index))
+            throw new NumberFormatException("Sign character in wrong position");
+
+        long result = Long.parseUnsignedLong(nm.substring(index), radix);
+        if (negative && Long.compareUnsigned(Long.MIN_VALUE, result) < 0)
+            throw new NumberFormatException(String.format(
+                    "String value %s exceeds range of long", nm));
+        return negative ? -result : result;
+    }
+
     public static int parseInt(String value) {
-        return Integer.decode(value);
+        long l = parseSULong(value);
+        if (l < Integer.MIN_VALUE || l > 0xffffffffL)
+            throw new NumberFormatException(String.format(
+                    "String value %s exceeds range of 4-byte integer", value));
+        return (int) l;
     }
 
     public static long parseLong(String value) {
-        return Long.decode(value.substring(0, value.length() - 1));
+        return parseSULong(value.substring(0, value.length() - 1));
     }
 
     public static short parseShort(String value) {
-        return Short.decode(value.substring(0, value.length() - 1));
+        value = value.substring(0, value.length() - 1);
+        long l = parseSULong(value);
+        if (l < Short.MIN_VALUE || l > 0xffffL)
+            throw new NumberFormatException(String.format(
+                    "String value %s exceeds range of 2-byte integer", value));
+        return (short) l;
     }
 
     public static byte parseByte(String value) {
-        return Byte.decode(value.substring(0, value.length() - 1));
+        value = value.substring(0, value.length() - 1);
+        long l = parseSULong(value);
+        if (l < Byte.MIN_VALUE || l > 0xffL)
+            throw new NumberFormatException(String.format(
+                    "String value %s exceeds range of 1-byte integer", value));
+        return (byte) l;
     }
 
     private static final Pattern SPECIAL_FLOAT_REGEX = Pattern.compile(
