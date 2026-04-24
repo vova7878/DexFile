@@ -172,15 +172,6 @@ public class LiteralUtils {
     }
 
     public static String unquote(String s) {
-        if (s.indexOf('`') < 0) return s;
-
-        int len = s.length();
-        char[] buf = new char[len];
-        int dst = 0;
-        for (int i = 0; i < len; i++) {
-            char c = s.charAt(i);
-            if (c != '`') buf[dst++] = c;
-        }
-        return new String(buf, 0, dst);
+        return s.substring(1, s.length() - 1);
     }
 }

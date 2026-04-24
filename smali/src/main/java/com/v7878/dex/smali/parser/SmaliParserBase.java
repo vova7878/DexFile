@@ -87,9 +87,22 @@ public abstract class SmaliParserBase extends Parser {
         return f.apply(token.getText());
     }
 
+    private static String unquote(String s) {
+        if (s.indexOf('`') < 0) return s;
+
+        int len = s.length();
+        char[] buf = new char[len];
+        int dst = 0;
+        for (int i = 0; i < len; i++) {
+            char c = s.charAt(i);
+            if (c != '`') buf[dst++] = c;
+        }
+        return new String(buf, 0, dst);
+    }
+
     public TypeId getTypeId() {
         return transformText(token -> {
-            token = LiteralUtils.unquote(token);
+            token = unquote(token);
             try {
                 return TypeId.of(token);
             } catch (IllegalArgumentException e) {
@@ -117,7 +130,7 @@ public abstract class SmaliParserBase extends Parser {
     }
 
     public static ProtoId parseProto(String token) {
-        return ProtoId.of(LiteralUtils.unquote(token));
+        return ProtoId.of(unquote(token));
     }
 
     public boolean isRegister() {
