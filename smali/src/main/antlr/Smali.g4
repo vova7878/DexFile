@@ -24,11 +24,11 @@ options {
 
 // Whitespace and comments
 WS
-    : [ \t\r\n]+   -> channel(HIDDEN)
+    : [ \t\r\n]+ -> skip
     ;
 
 LINE_COMMENT
-    : '#' ~[\r\n]* -> channel(HIDDEN)
+    : '#' ~[\r\n]* -> skip
     ;
 
 // Directives
@@ -87,7 +87,7 @@ fragment EscapeSequence
     ;
 
 fragment Char
-    : (~["\\\r\n] | EscapeSequence)
+    : (~["'\\\r\n] | EscapeSequence)
     ;
 
 CHAR_LITERAL
@@ -95,24 +95,24 @@ CHAR_LITERAL
     ;
 
 STRING_LITERAL
-    : '"' Char* '"'
+    : '"' ('\'' | Char)* '"'
     ;
 
+// This can only be a float and not an identifier, due to the decimal point
 fragment DecExponent
     : [eE] '-'? [0-9]+
     ;
 
-fragment BinExponent
-    : [pP] '-'? [0-9]+
-    ;
-
-// This can only be a float and not an identifier, due to the decimal point
 fragment Float1
     : '-'? [0-9]+ '.' [0-9]* DecExponent?
     ;
 
 fragment Float2
     : '-'? '.' [0-9]+ DecExponent?
+    ;
+
+fragment BinExponent
+    : [pP] '-'? [0-9]+
     ;
 
 fragment Float3
@@ -725,8 +725,8 @@ class_def
       }
     | implements_spec { interfaces.add($implements_spec.value); }
     | annotation { add(annotations, $annotation.value); }
-    | method { methods.add($method.value); }
-    | field { fields.add($field.value); }
+    | method { add(methods, $method.value); }
+    | field { add(fields, $field.value); }
     )+
     ;
 

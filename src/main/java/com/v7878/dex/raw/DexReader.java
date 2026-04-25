@@ -969,6 +969,7 @@ public class DexReader implements DexIO.DexReaderCache {
                 initial_value = (static_values != null && i < static_values.size()) ?
                         static_values.get(i) : EncodedValue.defaultValue(id.getType());
             }
+            // TODO: check for duplicates
             out.add(FieldDef.raw(id.getName(), id.getType(), access_flags, hiddenapi_flags,
                     initial_value, annotations_map.get(index, Collections.emptyNavigableSet())));
         }
@@ -1192,6 +1193,7 @@ public class DexReader implements DexIO.DexReaderCache {
                     debug_info == null ? null : debug_info.parameter_names(),
                     id.getParameterTypes(), parameter_annotations.get(index, List.of()));
             MethodImplementation implementation = toImplementation(code, debug_info);
+            // TODO: check for duplicates
             out.add(MethodDef.raw(id.getName(), id.getReturnType(), parameters,
                     access_flags, hiddenapi_flags, implementation,
                     method_annotations.get(index, Collections.emptyNavigableSet())));

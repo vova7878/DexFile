@@ -47,14 +47,15 @@ public class CodeUtils {
                 min = Long.MIN_VALUE;
                 max = Long.MAX_VALUE;
             }
-            default -> throw new IllegalArgumentException("Not a valid element width: " + width);
+            default -> throw new IllegalArgumentException(
+                    "Not a valid element width: " + width);
         }
 
         var table = new ArrayList<Number>(data.length);
         for (long value : data) {
             if (value < min || value > max) {
-                throw new IllegalArgumentException(
-                        String.format("%d does not fit into a %d-byte integer", value, width));
+                throw new IllegalArgumentException(String.format(
+                        "%d does not fit into a %d-byte integer", value, width));
             }
             table.add(switch (width) {
                 case 1 -> (Number) (byte) value;
@@ -96,8 +97,8 @@ public class CodeUtils {
                 actions.add(() -> {
                     var metadata = ib.get_metadata(args.target);
                     if (!(metadata instanceof Args_packed_switchContext switch_args)) {
-                        // TODO: msg
-                        throw new IllegalArgumentException();
+                        throw new IllegalArgumentException(
+                                "No packed switch payload at label: " + args.target);
                     }
 
                     var backup = ib.current_label();
@@ -117,8 +118,8 @@ public class CodeUtils {
                 actions.add(() -> {
                     var metadata = ib.get_metadata(args.target);
                     if (!(metadata instanceof Args_sparse_switchContext switch_args)) {
-                        // TODO: msg
-                        throw new IllegalArgumentException();
+                        throw new IllegalArgumentException(
+                                "No sparse switch payload at label: " + args.target);
                     }
 
                     var backup = ib.current_label();
@@ -138,8 +139,8 @@ public class CodeUtils {
                 actions.add(() -> {
                     var metadata = ib.get_metadata(args.target);
                     if (!(metadata instanceof Args_array_dataContext array_args)) {
-                        // TODO: msg
-                        throw new IllegalArgumentException();
+                        throw new IllegalArgumentException(
+                                "No array payload at label: " + args.target);
                     }
 
                     var backup = ib.current_label();
