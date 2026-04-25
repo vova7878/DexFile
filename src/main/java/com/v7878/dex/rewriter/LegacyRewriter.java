@@ -30,8 +30,6 @@ import com.v7878.dex.immutable.bytecode.Instruction35c;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
-import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
-import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.debug.AdvancePC;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.EndLocal;
@@ -114,13 +112,9 @@ public class LegacyRewriter extends DexRewriter {
                                         IntFunction<Instruction> code_map) {
         var opcode = insn.getOpcode();
         switch (opcode) {
-            case CONST_STRING, CONST_STRING_JUMBO -> {
-                var ref = ((SingleReferenceInstruction) insn).getReference1();
-                var reg = ((OneRegisterInstruction) insn).getRegister1();
-                ib.const_string(reg, (String) ref);
-            }
-            case M_FILLED_NEW_ARRAY, M_INVOKE_VIRTUAL, M_INVOKE_SUPER, M_INVOKE_DIRECT,
-                 M_INVOKE_STATIC, M_INVOKE_INTERFACE, M_EXECUTE_INLINE, M_INVOKE_DIRECT_EMPTY,
+            case M_FILLED_NEW_ARRAY, M_INVOKE_VIRTUAL, M_INVOKE_SUPER,
+                 M_INVOKE_DIRECT, M_INVOKE_STATIC, M_INVOKE_INTERFACE,
+                 M_EXECUTE_INLINE, M_INVOKE_DIRECT_EMPTY,
                  M_INVOKE_VIRTUAL_QUICK, M_INVOKE_SUPER_QUICK -> {
                 var tmp = ((Instruction34c) insn);
                 ib.raw(Instruction35c.of(
@@ -219,47 +213,37 @@ public class LegacyRewriter extends DexRewriter {
             }
             case M_PACKED_SWITCH -> {
                 var tmp = ((Instruction21t) insn);
-                var payload = (PackedSwitchPayload) code_map.apply(offset + tmp.getBranchOffset());
+                var payload = (PackedSwitchPayload) code_map
+                        .apply(offset + tmp.getBranchOffset());
                 var branches = new TreeMap<Integer, Integer>();
                 for (var entry : payload.getSwitchElements()) {
-                    branches.put(entry.getKey(), label(offset + entry.getOffset()));
+                    branches.put(entry.getKey(),
+                            label(offset + entry.getOffset()));
                 }
                 ib.switch_(tmp.getRegister1(), branches);
             }
             case M_SPARSE_SWITCH -> {
                 var tmp = ((Instruction21t) insn);
-                var payload = (SparseSwitchPayload) code_map.apply(offset + tmp.getBranchOffset());
+                var payload = (SparseSwitchPayload) code_map
+                        .apply(offset + tmp.getBranchOffset());
                 var branches = new TreeMap<Integer, Integer>();
                 for (var entry : payload.getSwitchElements()) {
-                    branches.put(entry.getKey(), label(offset + entry.getOffset()));
+                    branches.put(entry.getKey(),
+                            label(offset + entry.getOffset()));
                 }
                 ib.switch_(tmp.getRegister1(), branches);
             }
             case IF_EQ, IF_NE, IF_LT, IF_GE, IF_GT, IF_LE -> {
                 var tmp = ((Instruction22t) insn);
-                var test = switch (opcode) {
-                    case IF_EQ -> Test.EQ;
-                    case IF_NE -> Test.NE;
-                    case IF_LT -> Test.LT;
-                    case IF_GE -> Test.GE;
-                    case IF_GT -> Test.GT;
-                    case IF_LE -> Test.LE;
-                    default -> throw new AssertionError();
-                };
-                ib.if_test(test, tmp.getRegister1(), tmp.getRegister2(), label(offset + tmp.getBranchOffset()));
+                var test = Test.of(opcode);
+                ib.if_test(test, tmp.getRegister1(), tmp.getRegister2(),
+                        label(offset + tmp.getBranchOffset()));
             }
             case IF_EQZ, IF_NEZ, IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> {
                 var tmp = ((Instruction21t) insn);
-                var test = switch (opcode) {
-                    case IF_EQZ -> Test.EQ;
-                    case IF_NEZ -> Test.NE;
-                    case IF_LTZ -> Test.LT;
-                    case IF_GEZ -> Test.GE;
-                    case IF_GTZ -> Test.GT;
-                    case IF_LEZ -> Test.LE;
-                    default -> throw new AssertionError();
-                };
-                ib.if_testz(test, tmp.getRegister1(), label(offset + tmp.getBranchOffset()));
+                var test = Test.of(opcode);
+                ib.if_testz(test, tmp.getRegister1(),
+                        label(offset + tmp.getBranchOffset()));
             }
             case NOP, M_PACKED_SWITCH_PAYLOAD, M_SPARSE_SWITCH_PAYLOAD -> {
                 // nop

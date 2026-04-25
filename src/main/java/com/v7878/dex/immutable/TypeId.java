@@ -98,23 +98,15 @@ public final class TypeId implements Comparable<TypeId> {
         }
         position++;
 
-        /*
-         * We just consumed the 'L' that introduces a class name as part
-         * of a type descriptor, or we are looking for an unadorned class
-         * name
-         */
-
         // First character or just encountered a separator
         boolean sep_or_first = true;
         for (; position < length; position++) {
             switch (descriptor.charAt(position)) {
                 case ';' -> {
                     /*
-                     * Invalid character for a class name, but the
-                     * legitimate end of a type descriptor. In the latter
-                     * case, make sure that this is the end of the string
-                     * and that it doesn't end with an empty component
-                     * (including the degenerate case of "L;")
+                     * Legitimate end of a type descriptor. Make sure that this
+                     * is the end of the string and that it doesn't end with an
+                     * empty component (including the degenerate case of "L;")
                      */
                     return (!sep_or_first && position + 1 == length) ? array_depth : -1;
                 }
@@ -132,13 +124,8 @@ public final class TypeId implements Comparable<TypeId> {
                 default -> sep_or_first = false;
             }
         }
-        /*
-         * Premature end for a type descriptor, but valid for
-         * a class name as long as we haven't encountered an
-         * empty component (including the degenerate case of
-         * the empty string "")
-         */
-        return sep_or_first ? -1 : array_depth;
+        // Premature end of a type descriptor
+        return -1;
     }
 
     public static TypeId of(String descriptor) {
