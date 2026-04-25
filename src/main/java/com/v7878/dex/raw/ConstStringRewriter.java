@@ -1,5 +1,10 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.Opcode.CONST_STRING;
+import static com.v7878.dex.Opcode.CONST_STRING_JUMBO;
+import static com.v7878.dex.WriteOptions.StringFix.FIX_ALL;
+import static com.v7878.dex.WriteOptions.StringFix.FIX_JUMBO;
+import static com.v7878.dex.WriteOptions.StringFix.NONE;
 import static com.v7878.dex.builder.CodeBuilder.Test.EQ;
 import static com.v7878.dex.builder.CodeBuilder.Test.GE;
 import static com.v7878.dex.builder.CodeBuilder.Test.GT;
@@ -12,7 +17,7 @@ import static com.v7878.dex.util.MathUtils.uwidth;
 
 import com.v7878.collections.IntMap;
 import com.v7878.collections.IntSet;
-import com.v7878.dex.Opcode;
+import com.v7878.dex.WriteOptions.StringFix;
 import com.v7878.dex.builder.CodeBuilder;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.TryBlock;
@@ -21,6 +26,7 @@ import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.Instruction21c;
 import com.v7878.dex.immutable.bytecode.Instruction21t;
 import com.v7878.dex.immutable.bytecode.Instruction22t;
+import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
@@ -102,12 +108,27 @@ public class ConstStringRewriter {
         }
     }
 
-    private static void copyInstruction(CodeBuilder ib, StringIndexer strings, int offset,
-                                        Instruction insn, IntFunction<Instruction> code_map) {
+    private static void copyInstruction(CodeBuilder ib, StringIndexer strings, StringFix rewrite,
+                                        int offset, Instruction insn, IntFunction<Instruction> code_map) {
         var opcode = insn.getOpcode();
         switch (opcode) {
             case CONST_STRING -> {
                 var tmp = (Instruction21c) insn;
+                var str = (String) tmp.getReference1();
+                var reg = tmp.getRegister1();
+                var index = strings.getStringIndex(str);
+                if (uwidth(index, 16)) {
+                    ib.raw_const_string(reg, str);
+                } else {
+                    ib.raw_const_string_jumbo(reg, str);
+                }
+            }
+            case CONST_STRING_JUMBO -> {
+                if (rewrite != FIX_ALL) {
+                    ib.raw(insn);
+                    break;
+                }
+                var tmp = (Instruction31c) insn;
                 var str = (String) tmp.getReference1();
                 var reg = tmp.getRegister1();
                 var index = strings.getStringIndex(str);
@@ -177,17 +198,26 @@ public class ConstStringRewriter {
         }
     }
 
-    public static MethodImplementation process(StringIndexer strings, MethodImplementation impl, boolean debug) {
-        if (strings.getStringCount() < 65535) {
+    public static MethodImplementation process(MethodImplementation impl, StringIndexer strings,
+                                               StringFix rewrite, boolean debug) {
+        if (rewrite == NONE || (rewrite == FIX_JUMBO && strings.getStringCount() < 65535)) {
             return impl;
         }
 
         boolean needs_fix = false;
         for (var i : impl.getInstructions()) {
-            if (i.getOpcode() == Opcode.CONST_STRING) {
+            var opcode = i.getOpcode();
+            if (opcode == CONST_STRING) {
                 var tmp = (Instruction21c) i;
                 var str = (String) tmp.getReference1();
                 if (!uwidth(strings.getStringIndex(str), 16)) {
+                    needs_fix = true;
+                    break;
+                }
+            } else if (rewrite == FIX_ALL && opcode == CONST_STRING_JUMBO) {
+                var tmp = (Instruction31c) i;
+                var str = (String) tmp.getReference1();
+                if (uwidth(strings.getStringIndex(str), 16)) {
                     needs_fix = true;
                     break;
                 }
@@ -205,9 +235,10 @@ public class ConstStringRewriter {
             }
 
             for (int i = 0; i < size; i++) {
-                int offset2 = code_map.keyAt(i);
-                ib.label(label(offset2));
-                copyInstruction(ib, strings, offset2, code_map.valueAt(i), code_map::get);
+                int position = code_map.keyAt(i);
+                ib.label(label(position));
+                copyInstruction(ib, strings, rewrite, position,
+                        code_map.valueAt(i), code_map::get);
             }
             ib.label(label(offset));
 

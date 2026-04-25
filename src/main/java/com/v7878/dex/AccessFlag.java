@@ -203,5 +203,33 @@ public enum AccessFlag {
         return name;
     }
 
-    // TODO: valueof(String name)
+    public static AccessFlag of(String name) {
+        return switch (name) {
+            case "public" -> PUBLIC;
+            case "private" -> PRIVATE;
+            case "protected" -> PROTECTED;
+            case "static" -> STATIC;
+            case "final" -> FINAL;
+            case "synchronized" -> SYNCHRONIZED;
+            case "super" -> SUPER;
+            case "volatile" -> VOLATILE;
+            case "bridge" -> BRIDGE;
+            case "transient" -> TRANSIENT;
+            case "varargs" -> VARARGS;
+            case "native" -> NATIVE;
+            case "interface" -> INTERFACE;
+            case "abstract" -> ABSTRACT;
+            case "strictfp" -> STRICTFP;
+            case "synthetic" -> SYNTHETIC;
+            case "annotation" -> ANNOTATION;
+            case "enum" -> ENUM;
+            case "mandated" -> MANDATED;
+            case "constructor" -> CONSTRUCTOR;
+            case "declared-synchronized" -> DECLARED_SYNCHRONIZED;
+            case "verified" -> VERIFIED;
+            case "optimized" -> OPTIMIZED;
+            default -> throw new IllegalArgumentException(
+                    "Unknown access flag: " + name);
+        };
+    }
 }

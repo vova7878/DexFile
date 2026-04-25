@@ -3,6 +3,7 @@ import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.SourcesJar
 
 plugins {
+    alias(libs.plugins.antlr)
     alias(libs.plugins.java.library)
     alias(libs.plugins.maven.publish)
 }
@@ -12,7 +13,9 @@ java {
 }
 
 dependencies {
-    implementation(libs.android.misc)
+    implementation(project(":"))
+
+    antlr(libs.antlr.runtime)
 }
 
 mavenPublishing {
@@ -27,12 +30,12 @@ mavenPublishing {
 
     coordinates(
         groupId = "io.github.vova7878",
-        artifactId = "DexFile",
+        artifactId = "Smali",
         version = project.version.toString()
     )
 
     pom {
-        name.set("DexFile")
+        name.set("DexFile Smali")
         description.set("Library for reading and writing dex files")
         inceptionYear.set("2026")
         url.set("https://github.com/vova7878/DexFile")

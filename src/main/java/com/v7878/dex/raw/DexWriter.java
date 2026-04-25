@@ -344,8 +344,8 @@ public class DexWriter implements StringIndexer {
         // The number of strings is limited to 32 bits, so no checks are needed.
         strings = scollector.strings.toArray(EmptyArrays.STRING);
 
-        var collector = new DexCollector(isCompact(),
-                options.hasDebugInfo(), this);
+        var collector = new DexCollector(this, options.getStringFix(),
+                isCompact(), options.hasDebugInfo());
         collector.fillDex(dexfile);
 
         types = collector.types.toArray(EmptyArrays.TYPE_ID);

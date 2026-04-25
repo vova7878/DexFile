@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 
 public final class RegisterLine {
     private final Register[] registers;
+    private boolean this_initialized;
 
     /* package */ RegisterLine(int count) {
         var array = new Register[count];
@@ -29,6 +30,14 @@ public final class RegisterLine {
 
     public Register at(int index) {
         return registers[index];
+    }
+
+    public boolean isThisInitialized() {
+        return this_initialized;
+    }
+
+    /* package */ void markThisInitialized() {
+        this_initialized = true;
     }
 
     public record RegisterPair(Register lo, Register hi) {
@@ -105,6 +114,7 @@ public final class RegisterLine {
     /* package */ void copy(RegisterLine line) {
         int length = assertSame(registers.length, line.registers.length);
         System.arraycopy(line.registers, 0, registers, 0, length);
+        this_initialized = line.this_initialized;
     }
 
     /* package */ boolean merge(TypeResolver resolver, int address, RegisterLine line) {
@@ -118,6 +128,10 @@ public final class RegisterLine {
                 registers[i] = merged;
             }
             changed = changed || replace;
+        }
+        if (this_initialized && !line.this_initialized) {
+            this_initialized = false;
+            changed = true;
         }
         return changed;
     }
