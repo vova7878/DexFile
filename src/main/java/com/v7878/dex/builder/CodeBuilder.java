@@ -1518,7 +1518,7 @@ public final class CodeBuilder {
         return switch (shorty) {
             case 'V' -> {
                 check_reg_empty_range(return_value_reg_or_pair);
-                yield nop();
+                yield return_void();
             }
             case 'Z', 'B', 'C', 'S', 'I', 'F' -> return_(return_value_reg_or_pair);
             case 'J', 'D' -> return_wide(return_value_reg_or_pair);
