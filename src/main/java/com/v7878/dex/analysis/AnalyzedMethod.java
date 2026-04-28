@@ -858,36 +858,33 @@ public final class AnalyzedMethod {
                  REM_INT_2ADDR, AND_INT_2ADDR, OR_INT_2ADDR, XOR_INT_2ADDR,
                  SHL_INT_2ADDR, SHR_INT_2ADDR, USHR_INT_2ADDR,
                  ADD_FLOAT_2ADDR, SUB_FLOAT_2ADDR, MUL_FLOAT_2ADDR,
-                 DIV_FLOAT_2ADDR, REM_FLOAT_2ADDR ->
-            //noinspection DuplicateBranchesInSwitch
-            {
+                 DIV_FLOAT_2ADDR, REM_FLOAT_2ADDR -> {
                 var tmp = (Instruction12x) insn;
                 var idst_src1 = tmp.getRegister1();
                 var isrc2 = tmp.getRegister2();
 
+                current.input(idst_src1);
                 current.input(isrc2);
                 current.output(idst_src1);
             }
             case ADD_LONG_2ADDR, SUB_LONG_2ADDR, MUL_LONG_2ADDR, DIV_LONG_2ADDR,
                  REM_LONG_2ADDR, AND_LONG_2ADDR, OR_LONG_2ADDR, XOR_LONG_2ADDR,
                  ADD_DOUBLE_2ADDR, SUB_DOUBLE_2ADDR, MUL_DOUBLE_2ADDR,
-                 DIV_DOUBLE_2ADDR, REM_DOUBLE_2ADDR ->
-            //noinspection DuplicateBranchesInSwitch
-            {
+                 DIV_DOUBLE_2ADDR, REM_DOUBLE_2ADDR -> {
                 var tmp = (Instruction12x) insn;
                 var idst_src1 = tmp.getRegister1();
                 var isrc2 = tmp.getRegister2();
 
+                current.wideInput(idst_src1);
                 current.wideInput(isrc2);
                 current.wideOutput(idst_src1);
             }
-            case SHL_LONG_2ADDR, SHR_LONG_2ADDR, USHR_LONG_2ADDR ->
-            //noinspection DuplicateBranchesInSwitch
-            {
+            case SHL_LONG_2ADDR, SHR_LONG_2ADDR, USHR_LONG_2ADDR -> {
                 var tmp = (Instruction12x) insn;
                 var idst_src1 = tmp.getRegister1();
                 var isrc2 = tmp.getRegister2();
 
+                current.wideInput(idst_src1);
                 current.input(isrc2);
                 current.wideOutput(idst_src1);
             }
@@ -925,9 +922,10 @@ public final class AnalyzedMethod {
             var target = positionAt(index + 1);
             transition(todo, current, target, null);
         }
-        if (opcode.canThrow()) {
-            var block = implementation.getTryBlock(address);
-            if (block != null) {
+        var block = implementation.getTryBlock(address);
+        if (block != null) {
+            current.setInsideTryBlock();
+            if (opcode.canThrow()) {
                 for (var handler : block.getHandlers()) {
                     var target = position(handler.getAddress());
                     transition(todo, current, target, handler.getExceptionType());

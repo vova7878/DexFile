@@ -82,6 +82,11 @@ public final class Position {
         }
     }
 
+    private static final int REACHABLE = 0b1;
+    private static final int NOP_EXACT = 0b10;
+    private static final int NOP_NAROWWING = 0b100;
+    private static final int INSIDE_TRY_BLOCK = 0b1000;
+
     private final Instruction instruction;
     private int flags;
     private PayloadInstruction payload;
@@ -256,9 +261,17 @@ public final class Position {
         return isFirst() || !predecessors.isEmpty();
     }
 
-    private static final int REACHABLE = 0b1;
-    private static final int NOP_EXACT = 0b10;
-    private static final int NOP_NAROWWING = 0b100;
+    public boolean isBranchTarget() {
+        var preds = predecessors();
+        if (preds.isEmpty()) {
+            return false;
+        }
+        if (preds.size() > 1) {
+            return true;
+        }
+        var single = preds.first();
+        return !single.isFallThrough();
+    }
 
     /* package */ void setRuntimeReachable() {
         flags |= REACHABLE;
@@ -289,6 +302,14 @@ public final class Position {
     // or cast zero to anything
     public boolean isNarrowingNop() {
         return (flags & NOP_NAROWWING) != 0;
+    }
+
+    /* package */ void setInsideTryBlock() {
+        flags |= INSIDE_TRY_BLOCK;
+    }
+
+    public boolean isInsideTryBlock() {
+        return (flags & INSIDE_TRY_BLOCK) != 0;
     }
 
     private String printFlags() {
