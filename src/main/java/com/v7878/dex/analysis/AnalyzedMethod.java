@@ -925,9 +925,10 @@ public final class AnalyzedMethod {
             var target = positionAt(index + 1);
             transition(todo, current, target, null);
         }
-        if (opcode.canThrow()) {
-            var block = implementation.getTryBlock(address);
-            if (block != null) {
+        var block = implementation.getTryBlock(address);
+        if (block != null) {
+            current.setInsideTryBlock();
+            if (opcode.canThrow()) {
                 for (var handler : block.getHandlers()) {
                     var target = position(handler.getAddress());
                     transition(todo, current, target, handler.getExceptionType());
