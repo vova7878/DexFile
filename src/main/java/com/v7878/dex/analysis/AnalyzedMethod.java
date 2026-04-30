@@ -1194,8 +1194,8 @@ public final class AnalyzedMethod {
         ThreeRegisterInstruction insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc1 = insn.getRegister2();
-        if (verify) verifyReg(null, current, isrc1, tsrc1);
         var isrc2 = insn.getRegister3();
+        if (verify) verifyReg(null, current, isrc1, tsrc1);
         if (verify) verifyReg(null, current, isrc2, tsrc2);
         if (check_bool_op
                 && current.before().at(isrc1).isBool()
@@ -1210,8 +1210,8 @@ public final class AnalyzedMethod {
         assert tdst_src1.isPrimitive() && tsrc2.isPrimitive();
         TwoRegisterInstruction insn = current.instruction();
         var idst_src1 = insn.getRegister1();
-        if (verify) verifyReg(null, current, idst_src1, tdst_src1);
         var isrc2 = insn.getRegister2();
+        if (verify) verifyReg(null, current, idst_src1, tdst_src1);
         if (verify) verifyReg(null, current, isrc2, tsrc2);
         if (check_bool_op
                 && current.before().at(idst_src1).isBool()
@@ -1319,7 +1319,7 @@ public final class AnalyzedMethod {
         }
         boolean next_reachable = true;
         boolean is_nop = current.isNopExact();
-        boolean is_nnop = current.isNarrowingNop();
+        boolean is_narrowing_nop = current.isNarrowingNop();
         switch (opcode) {
             case NOP, GOTO, GOTO_16, GOTO_32 -> {
                 // No effect on or use of registers
@@ -1462,6 +1462,8 @@ public final class AnalyzedMethod {
                 if (verify) if (!reg.isRef()) {
                     throw unexpectedReg(current, ireg, reg);
                 }
+
+                if (reg.isZeroOrNull()) next_reachable = false;
             }
             case CHECK_CAST -> {
                 var tmp = (Instruction21c) insn;
@@ -1474,26 +1476,26 @@ public final class AnalyzedMethod {
                 }
 
                 if (reg.isZeroOrNull()) {
-                    is_nnop = true;
+                    is_narrowing_nop = true;
                     is_nop = false;
                 } else {
                     var type = reg.getTypeInfo();
                     assert type != null;
                     if (Objects.equals(type.exactType(), ref)) {
-                        is_nnop = false;
+                        is_narrowing_nop = false;
                         is_nop = true;
                     } else if (!TypeResolver._instanceOf(resolver, type, ref, true) &&
                             !TypeResolver._instanceOf(resolver, ref, type, true)) {
                         // Mutually incompatible types.
                         // i.e. Integer and String or Object[] and int[] etc.
-                        is_nnop = false;
+                        is_narrowing_nop = false;
                         is_nop = false;
                         next_reachable = false;
                     } else if (TypeResolver._instanceOf(resolver, type, ref, false)) {
-                        is_nnop = true;
+                        is_narrowing_nop = true;
                         is_nop = false;
                     } else {
-                        is_nnop = false;
+                        is_narrowing_nop = false;
                         is_nop = false;
                     }
                 }
@@ -1521,6 +1523,8 @@ public final class AnalyzedMethod {
                 if (verify) if (!arr.isArray() && !arr.isZeroOrNull()) {
                     throw unexpectedReg(current, iarr, arr);
                 }
+
+                if (arr.isZeroOrNull()) next_reachable = false;
 
                 output(current, idst, TypeId.I);
             }
@@ -1559,6 +1563,7 @@ public final class AnalyzedMethod {
                 var reg = current.before().at(ireg);
                 if (reg.isZeroOrNull()) {
                     // Runtime exception
+                    next_reachable = false;
                 } else {
                     var info = reg.getTypeInfo();
                     if (info == null || !info.isComponentPrimitive()) {
@@ -1905,11 +1910,12 @@ public final class AnalyzedMethod {
                 var tmp = (Instruction35c) insn;
                 var ref = (MethodId) tmp.getReference1();
 
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getRegister1();
+                var this_reg = current.before().at(ithis_reg);
+
                 var check_this = true;
                 if (ref.isInstanceInitializer()) {
-                    assert tmp.getRegisterCount() > 0;
-                    int ithis_reg = tmp.getRegister1();
-                    var this_reg = current.before().at(ithis_reg);
                     if (!this_reg.isUninitializedRef()) {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
@@ -1918,16 +1924,19 @@ public final class AnalyzedMethod {
                 }
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, check_this);
+
+                if (this_reg.isZeroOrNull()) next_reachable = false;
             }
             case INVOKE_DIRECT_RANGE -> {
                 var tmp = (Instruction3rc) insn;
                 var ref = (MethodId) tmp.getReference1();
 
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getStartRegister();
+                var this_reg = current.before().at(ithis_reg);
+
                 var check_this = true;
                 if (ref.isInstanceInitializer()) {
-                    assert tmp.getRegisterCount() > 0;
-                    int ithis_reg = tmp.getStartRegister();
-                    var this_reg = current.before().at(ithis_reg);
                     if (!this_reg.isUninitializedRef()) {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
@@ -1938,11 +1947,27 @@ public final class AnalyzedMethod {
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, check_this);
             }
             case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_INTERFACE, INVOKE_POLYMORPHIC -> {
+                var tmp = (Instruction35c) insn;
+
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getRegister1();
+                var this_reg = current.before().at(ithis_reg);
+
                 if (verify) verify_35c_45cc_args(resolver, current, true, true);
+
+                if (this_reg.isZeroOrNull()) next_reachable = false;
             }
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
                  INVOKE_INTERFACE_RANGE, INVOKE_POLYMORPHIC_RANGE -> {
+                var tmp = (Instruction3rc) insn;
+
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getStartRegister();
+                var this_reg = current.before().at(ithis_reg);
+
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
+
+                if (this_reg.isZeroOrNull()) next_reachable = false;
             }
             case INVOKE_STATIC, INVOKE_CUSTOM ->
             //noinspection DuplicateBranchesInSwitch
@@ -2013,7 +2038,7 @@ public final class AnalyzedMethod {
             default -> throw shouldNotReachHere();
         }
         current.setNopExact(is_nop);
-        current.setNarrowingNop(is_nnop);
+        current.setNarrowingNop(is_narrowing_nop);
         if (opcode.isConditionalBranch() || opcode.isSwitch()) {
             // 'if' and 'switch' instructions have special handling because they
             // provide information about the state of the register in different branches
