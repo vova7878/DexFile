@@ -1482,11 +1482,10 @@ public final class AnalyzedMethod {
                     if (Objects.equals(type.exactType(), ref)) {
                         is_nnop = false;
                         is_nop = true;
-                    } else //noinspection ConstantValue
-                        if (false/*!TypeResolver._instanceOf(resolver, type, ref, true)*/) {
-                        // TODO: There are some check-cast cases that can never be true.
-                        //  For example, [I to [B. But I haven't yet understood the general
-                        //  principles for detecting them.
+                    } else if (!TypeResolver._instanceOf(resolver, type, ref, true) &&
+                            !TypeResolver._instanceOf(resolver, ref, type, true)) {
+                        // Mutually incompatible types.
+                        // i.e. Integer and String or Object[] and int[] etc.
                         is_nnop = false;
                         is_nop = false;
                         next_reachable = false;
