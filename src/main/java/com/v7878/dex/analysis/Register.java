@@ -11,6 +11,7 @@ import static com.v7878.dex.analysis.Register.ConstantKind.SHORT;
 import static com.v7878.dex.analysis.Register.ConstantKind.WIDE_HI;
 import static com.v7878.dex.analysis.Register.ConstantKind.WIDE_LO;
 import static com.v7878.dex.analysis.Register.ConstantKind.ZERO;
+import static com.v7878.dex.immutable.TypeId.OBJECT;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
@@ -470,38 +471,46 @@ public sealed abstract class Register {
     }
 
     public static sealed class Reference extends TypedRegister {
-        private Reference(Identifier source, TypeInfo type) {
+        private final boolean non_null;
+
+        private Reference(Identifier source, TypeInfo type, boolean non_null) {
             super(source, type);
             if (type.isPrimitive()) {
                 throw new IllegalArgumentException(
                         type + " must not be primitive");
             }
+            this.non_null = non_null;
         }
 
-        public static Reference of(Identifier source, TypeInfo type) {
-            return new Reference(source, type);
+        public static Reference of(Identifier source, TypeInfo type, boolean non_null) {
+            return new Reference(source, type, non_null);
         }
 
         // type is null if exact is unknown
-        public static Reference of(Identifier source, TypeId type) {
-            return of(source, TypeInfo.of(type));
+        public static Reference of(Identifier source, TypeId type, boolean non_null) {
+            return of(source, TypeInfo.of(type), non_null);
+        }
+
+        /* package */ boolean isNonNull() {
+            return non_null;
         }
 
         @Override
         public String toString() {
-            return toString(typeInfo().toString());
+            return toString(typeInfo().toString()) + (non_null ? "!" : "");
         }
 
         @Override
         public boolean equals(Object obj) {
             if (obj == this) return true;
             if (!super.equals(obj)) return false;
-            return obj instanceof Reference;
+            return obj instanceof Reference other
+                    && non_null == other.non_null;
         }
 
         @Override
         public int hashCode() {
-            return super.hashCode();
+            return Objects.hash(super.hashCode(), non_null);
         }
     }
 
@@ -509,8 +518,8 @@ public sealed abstract class Register {
         private final boolean thiz;
 
         private UninitializedRef(Identifier source, TypeId type, boolean thiz) {
-            // Uninitialized ref type must always be known
-            super(source, TypeInfo.of(Objects.requireNonNull(type)));
+            // Uninitialized ref type must always be known and non-null
+            super(source, TypeInfo.of(Objects.requireNonNull(type)), true);
             assert !type.isArray();
             this.thiz = thiz;
         }
@@ -611,6 +620,13 @@ public sealed abstract class Register {
                 // Merge NULL with a primitive type
                 return Conflict.of(ident);
             }
+            if (ak.isNonZeroOrNullRef() || bk.isNonZeroOrNullRef()) {
+                if (ak.isNonZeroOrNullRef() == bk.isNonZeroOrNullRef()) {
+                    return Reference.of(ident, OBJECT, true);
+                }
+                // Merge ref constant with a primitive type
+                return Conflict.of(ident);
+            }
             return Constant.of(ident, mergeInt(ak, bk));
         }
         if (a.isInt() && b.isInt()) {
@@ -626,18 +642,19 @@ public sealed abstract class Register {
         if (a.isDoubleLo() && b.isDoubleLo()) return WidePrimitive.of(ident, TypeId.D, true);
         if (a.isDoubleHi() && b.isDoubleHi()) return WidePrimitive.of(ident, TypeId.D, false);
         if (a.isRef() && b.isRef()) {
+            var non_null = a.isRuntimeNonNullRef() && b.isRuntimeNonNullRef();
             var a_type = a.getTypeInfo();
             var b_type = b.getTypeInfo();
             if (a_type == null) {
                 assert a.isZeroOrNull();
-                return Reference.of(ident, b_type);
+                return Reference.of(ident, b_type, non_null);
             }
             if (b_type == null) {
                 assert b.isZeroOrNull();
-                return Reference.of(ident, a_type);
+                return Reference.of(ident, a_type, non_null);
             }
             assert a_type.isReference() && b_type.isReference();
-            return Reference.of(ident, TypeResolver._join(resolver, a_type, b_type));
+            return Reference.of(ident, TypeResolver._join(resolver, a_type, b_type), non_null);
         }
         return Conflict.of(ident);
     }
@@ -871,22 +888,16 @@ public sealed abstract class Register {
         return this instanceof Reference;
     }
 
+    public final boolean isRuntimeNonNullRef() {
+        if (this instanceof Constant constant) {
+            return constant.classify().isNonZeroOrNullRef();
+        }
+        return this instanceof Reference ref && ref.isNonNull();
+    }
+
     public final boolean isArray() {
         return this instanceof Reference reference
                 && reference.typeInfo().isArray();
-    }
-
-    public final TypeInfo getTypeInfo() {
-        if (this instanceof TypedRegister reg) {
-            return reg.typeInfo();
-        }
-        if (this instanceof Constant constant) {
-            var kind = constant.classify();
-            if (kind.isNonZeroOrNullRef()) {
-                return getRefTypeInfo(kind);
-            }
-        }
-        return null;
     }
 
     public final boolean isInitializedRef() {
@@ -903,6 +914,19 @@ public sealed abstract class Register {
 
     public final boolean isUninitializedThis() {
         return this instanceof UninitializedRef ref && ref.isThis();
+    }
+
+    public final TypeInfo getTypeInfo() {
+        if (this instanceof TypedRegister reg) {
+            return reg.typeInfo();
+        }
+        if (this instanceof Constant constant) {
+            var kind = constant.classify();
+            if (kind.isNonZeroOrNullRef()) {
+                return getRefTypeInfo(kind);
+            }
+        }
+        return null;
     }
 
     // Note: only for ref types
