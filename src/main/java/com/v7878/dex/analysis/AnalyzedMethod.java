@@ -3,6 +3,8 @@ package com.v7878.dex.analysis;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 import static com.v7878.dex.Opcode.APUT_WIDE;
 import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
+import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY;
+import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY_RANGE;
 import static com.v7878.dex.Opcode.IF_EQ;
 import static com.v7878.dex.Opcode.IF_EQZ;
 import static com.v7878.dex.Opcode.IF_NE;
@@ -18,6 +20,7 @@ import static com.v7878.dex.analysis.Position.RESULT_REGISTER;
 import static com.v7878.dex.immutable.TypeId.OBJECT;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.Ids.METHOD_HANDLE;
+import static com.v7878.dex.util.Ids.OBJECTS;
 import static com.v7878.dex.util.Ids.THROWABLE;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
@@ -56,6 +59,7 @@ import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
 import com.v7878.dex.immutable.bytecode.iface.LiteralInstruction;
 import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
+import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
 import com.v7878.dex.immutable.bytecode.iface.ThreeRegisterInstruction;
 import com.v7878.dex.immutable.bytecode.iface.TwoRegisterInstruction;
@@ -1041,7 +1045,7 @@ public final class AnalyzedMethod {
         }
     }
 
-    private TypeId getResultType(Position current) {
+    private Position getResultPredecessor(Position current) {
         var predecessors = current.predecessors;
         if (predecessors.size() != 1) {
             throw invalidBranchTarget(current);
@@ -1054,12 +1058,42 @@ public final class AnalyzedMethod {
         if (!transition.isFallThrough()) {
             throw invalidBranchTarget(current);
         }
-        var proto = position(transition.address()).accessProto();
+        var predecessor = position(transition.address());
+        var proto = predecessor.accessProto();
         if (proto == null) {
-            // TODO: msg
-            throw new AnalysisException();
+            throw new AnalysisException("Instruction " + describe(predecessor) +
+                    " has no result for " + describe(current));
         }
-        return proto.getReturnType();
+        return predecessor;
+    }
+
+    private TypeId getResultType(Position current) {
+        var predecessor = getResultPredecessor(current);
+        return predecessor.accessProto().getReturnType();
+    }
+
+    private static boolean hasNonNullResult(Position target) {
+        var i = target.instruction();
+        var op = i.getOpcode();
+        var non_null = op == FILLED_NEW_ARRAY || op == FILLED_NEW_ARRAY_RANGE;
+        if (!non_null && (op == INVOKE_STATIC || op == INVOKE_STATIC_RANGE)) {
+            var mid = (MethodId) ((SingleReferenceInstruction) i).getReference1();
+            if (OBJECTS.equals(mid.getDeclaringClass())
+                    && ("requireNonNull".equals(mid.getName())
+                    || "requireNonNullElse".equals(mid.getName())
+                    || "requireNonNullElseGet".equals(mid.getName()))) {
+                non_null = true;
+            }
+        }
+        return non_null;
+    }
+
+    private static boolean isRequireNonNull(MethodId mid) {
+        return OBJECTS.equals(mid.getDeclaringClass())
+                && "requireNonNull".equals(mid.getName())
+                // Methods without parameters don't exist,
+                // but no one stops bad code from existing
+                && !mid.getParameterTypes().isEmpty();
     }
 
     private TypeInfo getExceptionType(TypeResolver resolver, Position current) {
@@ -1436,13 +1470,14 @@ public final class AnalyzedMethod {
                 var tmp = (OneRegisterInstruction) insn;
                 var idst = tmp.getRegister1();
 
-                var type = getResultType(current);
+                var predecessor = getResultPredecessor(current);
+                var type = predecessor.accessProto().getReturnType();
                 if (verify) if (!type.isReference()) {
                     throw unexpectedType(current, type);
                 }
 
-                // TODO: result of Objects.requireNonNull is non-null
-                outputRef(current, idst, type, false);
+                var non_null = hasNonNullResult(predecessor);
+                outputRef(current, idst, type, non_null);
             }
             case MOVE_EXCEPTION -> {
                 if (address == 0) {
@@ -2083,11 +2118,27 @@ public final class AnalyzedMethod {
             }
             case INVOKE_STATIC, INVOKE_CUSTOM -> {
                 if (verify) verify_35c_45cc_args(resolver, current, false, false);
-                // TODO: first args of Objects.requireNonNull is non-null
+                if (opcode == INVOKE_STATIC) {
+                    var tmp = (Instruction35c) insn;
+                    if (isRequireNonNull((MethodId) tmp.getReference1())) {
+                        assert tmp.getRegisterCount() > 0;
+                        int iobj_reg = tmp.getRegister1();
+                        var obj_reg = current.before().at(iobj_reg);
+                        markNonNull(current, iobj_reg, obj_reg);
+                    }
+                }
             }
             case INVOKE_STATIC_RANGE, INVOKE_CUSTOM_RANGE -> {
                 if (verify) verify_3rc_4rcc_args(resolver, current, false, false);
-                // TODO: first args of Objects.requireNonNull is non-null
+                if (opcode == INVOKE_STATIC_RANGE) {
+                    var tmp = (Instruction3rc) insn;
+                    if (isRequireNonNull((MethodId) tmp.getReference1())) {
+                        assert tmp.getRegisterCount() > 0;
+                        int iobj_reg = tmp.getStartRegister();
+                        var obj_reg = current.before().at(iobj_reg);
+                        markNonNull(current, iobj_reg, obj_reg);
+                    }
+                }
             }
             case NEG_INT, NOT_INT -> unop(current, TypeId.I, TypeId.I, verify);
             case NEG_LONG, NOT_LONG -> unop(current, TypeId.J, TypeId.J, verify);

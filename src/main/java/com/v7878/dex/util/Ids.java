@@ -6,6 +6,7 @@ import com.v7878.dex.immutable.TypeId;
 import java.io.Serializable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
+import java.util.Objects;
 
 public class Ids {
     public static final TypeId THROWABLE = TypeId.of(Throwable.class);
@@ -25,6 +26,7 @@ public class Ids {
     public static final TypeId METHOD_TYPE = TypeId.of(MethodType.class);
     public static final TypeId METHOD_HANDLE = TypeId.of(MethodHandle.class);
 
+    public static final TypeId OBJECTS = TypeId.of(Objects.class);
     public static final TypeId CLONEABLE = TypeId.of(Cloneable.class);
     public static final TypeId SERIALIZABLE = TypeId.of(Serializable.class);
 
