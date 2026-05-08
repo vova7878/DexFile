@@ -21,7 +21,15 @@ import static com.v7878.dex.Opcode.SPARSE_SWITCH_PAYLOAD;
 import static com.v7878.dex.Opcode.THROW;
 import static com.v7878.dex.analysis.Position.EXCEPTION_REGISTER;
 import static com.v7878.dex.analysis.Position.RESULT_REGISTER;
+import static com.v7878.dex.immutable.TypeId.B;
+import static com.v7878.dex.immutable.TypeId.C;
+import static com.v7878.dex.immutable.TypeId.D;
+import static com.v7878.dex.immutable.TypeId.F;
+import static com.v7878.dex.immutable.TypeId.I;
+import static com.v7878.dex.immutable.TypeId.J;
 import static com.v7878.dex.immutable.TypeId.OBJECT;
+import static com.v7878.dex.immutable.TypeId.S;
+import static com.v7878.dex.immutable.TypeId.Z;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.Ids.METHOD_HANDLE;
 import static com.v7878.dex.util.Ids.OBJECTS;
@@ -73,6 +81,7 @@ import com.v7878.dex.util.Formatter;
 
 import java.util.BitSet;
 import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.function.ToIntFunction;
 
 public final class AnalyzedMethod {
@@ -119,6 +128,16 @@ public final class AnalyzedMethod {
 
     public int getRegisterCount() {
         return register_count;
+    }
+
+    public String describe() {
+        var j = new StringJoiner("\n\n", "\n\n", "");
+        var size = positions.size();
+        for (int i = 0; i < size; i++) {
+            var pos = positions.valueAt(i);
+            j.add(pos.describe());
+        }
+        return method.getName() + method.getProto() + j;
     }
 
     private Position position(int address) {
@@ -1281,7 +1300,7 @@ public final class AnalyzedMethod {
         if (check_bool_op
                 && current.before().at(isrc1).isBool()
                 && current.before().at(isrc2).isBool()) {
-            tdst = TypeId.Z;
+            tdst = Z;
         }
         outputPrim(current, idst, tdst);
     }
@@ -1297,7 +1316,7 @@ public final class AnalyzedMethod {
         if (check_bool_op
                 && current.before().at(idst_src1).isBool()
                 && current.before().at(isrc2).isBool()) {
-            tdst_src1 = TypeId.Z;
+            tdst_src1 = Z;
         }
         outputPrim(current, idst_src1, tdst_src1);
     }
@@ -1306,12 +1325,12 @@ public final class AnalyzedMethod {
         TwoRegisterInstruction insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc = insn.getRegister2();
-        if (verify) verifyReg(null, current, isrc, TypeId.I);
-        var type = TypeId.I;
+        if (verify) verifyReg(null, current, isrc, I);
+        var type = I;
         if (check_bool_op && current.before().at(isrc).isBool()) {
             LiteralInstruction lit = current.instruction();
             if ((lit.getLiteral() & ~1) == 0) {
-                type = TypeId.Z;
+                type = Z;
             }
         }
         outputPrim(current, idst, type);
@@ -1598,7 +1617,7 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, isrc, src);
                 }
 
-                outputPrim(current, idst, TypeId.Z);
+                outputPrim(current, idst, Z);
             }
             case ARRAY_LENGTH -> {
                 var tmp = (TwoRegisterInstruction) insn;
@@ -1612,7 +1631,7 @@ public final class AnalyzedMethod {
 
                 if (arr.isZeroOrNull()) next_reachable = false;
 
-                outputPrim(current, idst, TypeId.I);
+                outputPrim(current, idst, I);
 
                 markNonNull(current, iarr, arr);
             }
@@ -1702,11 +1721,9 @@ public final class AnalyzedMethod {
                 var target = positionAt(index + 1);
                 merge(resolver, touched, todo, current, target, work_line, true);
             }
-            case CMPL_FLOAT, CMPG_FLOAT ->
-                    binop(current, TypeId.I, TypeId.F, TypeId.F, false, verify);
-            case CMPL_DOUBLE, CMPG_DOUBLE ->
-                    binop(current, TypeId.I, TypeId.D, TypeId.D, false, verify);
-            case CMP_LONG -> binop(current, TypeId.I, TypeId.J, TypeId.J, false, verify);
+            case CMPL_FLOAT, CMPG_FLOAT -> binop(current, I, F, F, false, verify);
+            case CMPL_DOUBLE, CMPG_DOUBLE -> binop(current, I, D, D, false, verify);
+            case CMP_LONG -> binop(current, I, J, J, false, verify);
             case IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> {
                 var tmp = (Instruction21t) insn;
                 int ireg = tmp.getRegister1();
@@ -2174,57 +2191,51 @@ public final class AnalyzedMethod {
                     }
                 }
             }
-            case NEG_INT, NOT_INT -> unop(current, TypeId.I, TypeId.I, verify);
-            case NEG_LONG, NOT_LONG -> unop(current, TypeId.J, TypeId.J, verify);
-            case NEG_FLOAT -> unop(current, TypeId.F, TypeId.F, verify);
-            case NEG_DOUBLE -> unop(current, TypeId.D, TypeId.D, verify);
-            case INT_TO_LONG -> unop(current, TypeId.J, TypeId.I, verify);
-            case INT_TO_FLOAT -> unop(current, TypeId.F, TypeId.I, verify);
-            case INT_TO_DOUBLE -> unop(current, TypeId.D, TypeId.I, verify);
-            case LONG_TO_INT -> unop(current, TypeId.I, TypeId.J, verify);
-            case LONG_TO_FLOAT -> unop(current, TypeId.F, TypeId.J, verify);
-            case LONG_TO_DOUBLE -> unop(current, TypeId.D, TypeId.J, verify);
-            case FLOAT_TO_INT -> unop(current, TypeId.I, TypeId.F, verify);
-            case FLOAT_TO_LONG -> unop(current, TypeId.J, TypeId.F, verify);
-            case FLOAT_TO_DOUBLE -> unop(current, TypeId.D, TypeId.F, verify);
-            case DOUBLE_TO_INT -> unop(current, TypeId.I, TypeId.D, verify);
-            case DOUBLE_TO_LONG -> unop(current, TypeId.J, TypeId.D, verify);
-            case DOUBLE_TO_FLOAT -> unop(current, TypeId.F, TypeId.D, verify);
+            case NEG_INT, NOT_INT -> unop(current, I, I, verify);
+            case NEG_LONG, NOT_LONG -> unop(current, J, J, verify);
+            case NEG_FLOAT -> unop(current, F, F, verify);
+            case NEG_DOUBLE -> unop(current, D, D, verify);
+            case INT_TO_LONG -> unop(current, J, I, verify);
+            case INT_TO_FLOAT -> unop(current, F, I, verify);
+            case INT_TO_DOUBLE -> unop(current, D, I, verify);
+            case LONG_TO_INT -> unop(current, I, J, verify);
+            case LONG_TO_FLOAT -> unop(current, F, J, verify);
+            case LONG_TO_DOUBLE -> unop(current, D, J, verify);
+            case FLOAT_TO_INT -> unop(current, I, F, verify);
+            case FLOAT_TO_LONG -> unop(current, J, F, verify);
+            case FLOAT_TO_DOUBLE -> unop(current, D, F, verify);
+            case DOUBLE_TO_INT -> unop(current, I, D, verify);
+            case DOUBLE_TO_LONG -> unop(current, J, D, verify);
+            case DOUBLE_TO_FLOAT -> unop(current, F, D, verify);
             // TODO: Mark as nop if the required type is already in the register
-            case INT_TO_BYTE -> unop(current, TypeId.B, TypeId.I, verify);
-            case INT_TO_CHAR -> unop(current, TypeId.C, TypeId.I, verify);
-            case INT_TO_SHORT -> unop(current, TypeId.S, TypeId.I, verify);
+            case INT_TO_BYTE -> unop(current, B, I, verify);
+            case INT_TO_CHAR -> unop(current, C, I, verify);
+            case INT_TO_SHORT -> unop(current, S, I, verify);
             // TODO: Mark division by zero as unreachable
             case ADD_INT, SUB_INT, MUL_INT, DIV_INT,
-                 REM_INT, SHL_INT, SHR_INT, USHR_INT ->
-                    binop(current, TypeId.I, TypeId.I, TypeId.I, false, verify);
-            case AND_INT, OR_INT, XOR_INT ->
-                    binop(current, TypeId.I, TypeId.I, TypeId.I, true, verify);
+                 REM_INT, SHL_INT, SHR_INT, USHR_INT -> binop(current, I, I, I, false, verify);
+            case AND_INT, OR_INT, XOR_INT -> binop(current, I, I, I, true, verify);
             case ADD_LONG, SUB_LONG, MUL_LONG, DIV_LONG,
-                 REM_LONG, AND_LONG, OR_LONG, XOR_LONG ->
-                    binop(current, TypeId.J, TypeId.J, TypeId.J, false, verify);
-            case SHL_LONG, SHR_LONG, USHR_LONG ->
-                    binop(current, TypeId.J, TypeId.J, TypeId.I, false, verify);
+                 REM_LONG, AND_LONG, OR_LONG, XOR_LONG -> binop(current, J, J, J, false, verify);
+            case SHL_LONG, SHR_LONG, USHR_LONG -> binop(current, J, J, I, false, verify);
             case ADD_FLOAT, SUB_FLOAT, MUL_FLOAT, DIV_FLOAT, REM_FLOAT ->
-                    binop(current, TypeId.F, TypeId.F, TypeId.F, false, verify);
+                    binop(current, F, F, F, false, verify);
             case ADD_DOUBLE, SUB_DOUBLE, MUL_DOUBLE, DIV_DOUBLE, REM_DOUBLE ->
-                    binop(current, TypeId.D, TypeId.D, TypeId.D, false, verify);
+                    binop(current, D, D, D, false, verify);
             case ADD_INT_2ADDR, SUB_INT_2ADDR, MUL_INT_2ADDR, DIV_INT_2ADDR,
                  REM_INT_2ADDR, SHL_INT_2ADDR, SHR_INT_2ADDR, USHR_INT_2ADDR ->
-                    binop_2addr(current, TypeId.I, TypeId.I, false, verify);
+                    binop_2addr(current, I, I, false, verify);
             case AND_INT_2ADDR, OR_INT_2ADDR, XOR_INT_2ADDR ->
-                    binop_2addr(current, TypeId.I, TypeId.I, true, verify);
+                    binop_2addr(current, I, I, true, verify);
             case ADD_LONG_2ADDR, SUB_LONG_2ADDR, MUL_LONG_2ADDR, DIV_LONG_2ADDR,
                  REM_LONG_2ADDR, AND_LONG_2ADDR, OR_LONG_2ADDR, XOR_LONG_2ADDR ->
-                    binop_2addr(current, TypeId.J, TypeId.J, false, verify);
+                    binop_2addr(current, J, J, false, verify);
             case SHL_LONG_2ADDR, SHR_LONG_2ADDR, USHR_LONG_2ADDR ->
-                    binop_2addr(current, TypeId.J, TypeId.I, false, verify);
+                    binop_2addr(current, J, I, false, verify);
             case ADD_FLOAT_2ADDR, SUB_FLOAT_2ADDR, MUL_FLOAT_2ADDR,
-                 DIV_FLOAT_2ADDR, REM_FLOAT_2ADDR ->
-                    binop_2addr(current, TypeId.F, TypeId.F, false, verify);
+                 DIV_FLOAT_2ADDR, REM_FLOAT_2ADDR -> binop_2addr(current, F, F, false, verify);
             case ADD_DOUBLE_2ADDR, SUB_DOUBLE_2ADDR, MUL_DOUBLE_2ADDR,
-                 DIV_DOUBLE_2ADDR, REM_DOUBLE_2ADDR ->
-                    binop_2addr(current, TypeId.D, TypeId.D, false, verify);
+                 DIV_DOUBLE_2ADDR, REM_DOUBLE_2ADDR -> binop_2addr(current, D, D, false, verify);
             case ADD_INT_LIT16, RSUB_INT, MUL_INT_LIT16, DIV_INT_LIT16, REM_INT_LIT16,
                  ADD_INT_LIT8, RSUB_INT_LIT8, MUL_INT_LIT8, DIV_INT_LIT8, REM_INT_LIT8,
                  SHL_INT_LIT8, SHR_INT_LIT8, USHR_INT_LIT8 -> binop_lit_int(current, false, verify);
