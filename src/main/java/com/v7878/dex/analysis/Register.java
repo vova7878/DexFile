@@ -6,7 +6,9 @@ import static com.v7878.dex.analysis.Register.ConstantKind.CHAR;
 import static com.v7878.dex.analysis.Register.ConstantKind.INT;
 import static com.v7878.dex.analysis.Register.ConstantKind.NULL;
 import static com.v7878.dex.analysis.Register.ConstantKind.POSITIVE_BYTE;
+import static com.v7878.dex.analysis.Register.ConstantKind.POSITIVE_INT;
 import static com.v7878.dex.analysis.Register.ConstantKind.POSITIVE_SHORT;
+import static com.v7878.dex.analysis.Register.ConstantKind.REFERENCE;
 import static com.v7878.dex.analysis.Register.ConstantKind.SHORT;
 import static com.v7878.dex.analysis.Register.ConstantKind.WIDE_HI;
 import static com.v7878.dex.analysis.Register.ConstantKind.WIDE_LO;
@@ -170,13 +172,16 @@ public sealed abstract class Register {
         // Constant [0x8000 - 0xffff]
         // Merged [0 - 0xffff]
         CHAR,
+        // Constant [0x10000 - 0x7fffffff]
+        // Merged [0 - 0x7fffffff]
+        POSITIVE_INT,
         // Constant [-0x80 - -1]
         // Merged [-0x80 - 0x7f]
         BYTE,
         // Constant [-0x8000 - -0x81]
         // Merged [-0x8000 - 0x7fff]
         SHORT,
-        // Constant [-0x80000000 - -0x8001] | [0x10000 - 0x7fffffff]
+        // Constant [-0x80000000 - -0x8001]
         // Merged [-0x80000000 - 0x7fffffff]
         INT,
         WIDE_LO,
@@ -185,6 +190,7 @@ public sealed abstract class Register {
         CLASS,
         METHOD_TYPE,
         METHOD_HANDLE,
+        REFERENCE,
         // Result of dereferencing null
         NULL;
 
@@ -201,32 +207,36 @@ public sealed abstract class Register {
                     || this == POSITIVE_BYTE;
         }
 
-        public boolean isByte() {
-            return isPositiveByte()
-                    || this == BYTE;
-        }
-
         public boolean isPositiveShort() {
             return isPositiveByte()
                     || this == POSITIVE_SHORT;
         }
 
-        public boolean isShort() {
-            return isByte()
-                    || this == POSITIVE_SHORT
-                    || this == SHORT;
-        }
-
         public boolean isChar() {
-            return isBool()
-                    || this == POSITIVE_BYTE
-                    || this == POSITIVE_SHORT
+            return isPositiveShort()
                     || this == CHAR;
         }
 
+        public boolean isPositiveInt() {
+            return isChar()
+                    || this == POSITIVE_INT;
+        }
+
+        public boolean isByte() {
+            return isPositiveByte()
+                    || this == BYTE;
+        }
+
+        public boolean isShort() {
+            return isPositiveShort()
+                    || this == BYTE
+                    || this == SHORT;
+        }
+
         public boolean isInt() {
-            return isShort()
-                    || this == CHAR
+            return isPositiveInt()
+                    || this == BYTE
+                    || this == SHORT
                     || this == INT;
         }
 
@@ -262,7 +272,8 @@ public sealed abstract class Register {
             return isString()
                     || isClass()
                     || isMethodType()
-                    || isMethodHandle();
+                    || isMethodHandle()
+                    || this == REFERENCE;
         }
 
         public boolean isNull() {
@@ -286,6 +297,7 @@ public sealed abstract class Register {
                 case POSITIVE_BYTE -> "+byte";
                 case POSITIVE_SHORT -> "+short";
                 case CHAR -> "char";
+                case POSITIVE_INT -> "+int";
                 case BYTE -> "byte";
                 case SHORT -> "short";
                 case INT -> "int";
@@ -295,6 +307,7 @@ public sealed abstract class Register {
                 case CLASS -> "class";
                 case METHOD_TYPE -> "method type";
                 case METHOD_HANDLE -> "method handle";
+                case REFERENCE -> "reference";
                 case NULL -> "null";
             };
         }
@@ -311,9 +324,11 @@ public sealed abstract class Register {
             return POSITIVE_SHORT;
         } else if (value >= 0x8000 && value <= 0xffff) {
             return CHAR;
-        } else if (value >= -0x80 && value <= -1) {
+        } else if (value >= 0x10000) {
+            return POSITIVE_INT;
+        } else if (value >= -0x80) {
             return BYTE;
-        } else if (value >= -0x8000 && value <= -0x81) {
+        } else if (value >= -0x8000) {
             return SHORT;
         }
         return INT;
@@ -557,6 +572,7 @@ public sealed abstract class Register {
         if (ak.isPositiveByte() && bk.isPositiveByte()) return POSITIVE_BYTE;
         if (ak.isPositiveShort() && bk.isPositiveShort()) return POSITIVE_SHORT;
         if (ak.isChar() && bk.isChar()) return CHAR;
+        if (ak.isPositiveInt() && bk.isPositiveInt()) return POSITIVE_SHORT;
         if (ak.isByte() && bk.isByte()) return BYTE;
         if (ak.isShort() && bk.isShort()) return SHORT;
         return INT;
@@ -569,12 +585,14 @@ public sealed abstract class Register {
             static final TypeInfo CLASS = TypeInfo.of(Ids.CLASS);
             static final TypeInfo METHOD_TYPE = TypeInfo.of(Ids.METHOD_TYPE);
             static final TypeInfo METHOD_HANDLE = TypeInfo.of(Ids.METHOD_HANDLE);
+            static final TypeInfo REFERENCE = TypeInfo.of(OBJECT);
         }
         return switch (kind) {
             case STRING -> Helper.STRING;
             case CLASS -> Helper.CLASS;
             case METHOD_TYPE -> Helper.METHOD_TYPE;
             case METHOD_HANDLE -> Helper.METHOD_HANDLE;
+            case REFERENCE -> Helper.REFERENCE;
             default -> throw shouldNotReachHere();
         };
     }
@@ -622,7 +640,8 @@ public sealed abstract class Register {
             }
             if (ak.isNonZeroOrNullRef() || bk.isNonZeroOrNullRef()) {
                 if (ak.isNonZeroOrNullRef() == bk.isNonZeroOrNullRef()) {
-                    return Reference.of(ident, OBJECT, true);
+                    // ref constants with different types
+                    return Constant.of(ident, REFERENCE);
                 }
                 // Merge ref constant with a primitive type
                 return Conflict.of(ident);

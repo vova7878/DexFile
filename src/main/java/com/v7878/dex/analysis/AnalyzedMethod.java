@@ -7,6 +7,10 @@ import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY;
 import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY_RANGE;
 import static com.v7878.dex.Opcode.IF_EQ;
 import static com.v7878.dex.Opcode.IF_EQZ;
+import static com.v7878.dex.Opcode.IF_GEZ;
+import static com.v7878.dex.Opcode.IF_GTZ;
+import static com.v7878.dex.Opcode.IF_LEZ;
+import static com.v7878.dex.Opcode.IF_LTZ;
 import static com.v7878.dex.Opcode.IF_NE;
 import static com.v7878.dex.Opcode.IF_NEZ;
 import static com.v7878.dex.Opcode.INVOKE_STATIC;
@@ -1141,7 +1145,7 @@ public final class AnalyzedMethod {
         }
     }
 
-    private static void markNonNull(int address, RegisterLine line, int ireg, Register reg) {
+    private static void markNonNull(RegisterLine line, int address, int ireg, Register reg) {
         if (reg.isRuntimeNonNullRef()) {
             return;
         }
@@ -1157,7 +1161,7 @@ public final class AnalyzedMethod {
     }
 
     private static void markNonNull(Position current, int ireg, Register reg) {
-        markNonNull(current.address(), current.after(), ireg, reg);
+        markNonNull(current.after(), current.address(), ireg, reg);
     }
 
     private static void outputPrim(RegisterLine line, int address, int slot, TypeId type) {
@@ -1712,15 +1716,30 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
+                boolean true_pass = (opcode != IF_LTZ && opcode != IF_GTZ) || !reg.isZero();
+                if (true_pass && opcode == IF_LTZ) {
+                    var kind = reg.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        true_pass = false;
+                    }
+                }
+                boolean false_pass = (opcode != IF_LEZ && opcode != IF_GEZ) || !reg.isZero();
+                if (false_pass && opcode == IF_GEZ) {
+                    var kind = reg.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        false_pass = false;
+                    }
+                }
+
                 var work_line = current.after();
 
-                // TODO: reachability test
-
+                // true branch
                 var target = position(address + tmp.getBranchOffset());
-                merge(resolver, touched, todo, current, target, work_line, true);
+                merge(resolver, touched, todo, current, target, work_line, true_pass);
 
+                // false branch
                 target = positionAt(index + 1);
-                merge(resolver, touched, todo, current, target, work_line, true);
+                merge(resolver, touched, todo, current, target, work_line, false_pass);
             }
             case IF_EQZ, IF_NEZ -> {
                 var tmp = (Instruction21t) insn;
@@ -1758,17 +1777,17 @@ public final class AnalyzedMethod {
                     var target = position(address + tmp.getBranchOffset());
                     if (opcode == IF_NEZ) {
                         work_line = work_line.duplicate();
-                        markNonNull(address, work_line, ireg, reg);
+                        markNonNull(work_line, address, ireg, reg);
                     }
                     merge(resolver, touched, todo, current, target, work_line, eqz_pass);
                 }
                 // false branch
                 {
-                    var work_line = current.after().duplicate();
+                    var work_line = current.after();
                     var target = positionAt(index + 1);
                     if (opcode == IF_EQZ) {
                         work_line = work_line.duplicate();
-                        markNonNull(address, work_line, ireg, reg);
+                        markNonNull(work_line, address, ireg, reg);
                     }
                     merge(resolver, touched, todo, current, target, work_line, nez_pass);
                 }
@@ -1854,7 +1873,7 @@ public final class AnalyzedMethod {
                     var target = position(address + tmp.getBranchOffset());
                     if (opcode == IF_NE && argt == 0b10 && (reg1t == 0 || reg2t == 0)) {
                         work_line = work_line.duplicate();
-                        markNonNull(address, work_line,
+                        markNonNull(work_line, address,
                                 reg1t == 0 ? ireg2 : ireg1,
                                 reg1t == 0 ? reg2 : reg1);
                     }
@@ -1866,7 +1885,7 @@ public final class AnalyzedMethod {
                     var target = positionAt(index + 1);
                     if (opcode == IF_EQ && argt == 0b10 && (reg1t == 0 || reg2t == 0)) {
                         work_line = work_line.duplicate();
-                        markNonNull(address, work_line,
+                        markNonNull(work_line, address,
                                 reg1t == 0 ? ireg2 : ireg1,
                                 reg1t == 0 ? reg2 : reg1);
                     }
