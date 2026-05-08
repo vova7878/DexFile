@@ -1731,7 +1731,6 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
-                // TODO: reachability test
                 // TODO?:
                 //  Check for peep-hole pattern of:
                 //     ...;
@@ -1740,7 +1739,18 @@ public final class AnalyzedMethod {
                 //     ...;
                 //  label:
                 //     ...;
-                //  and sharpen the type of vY to be type T
+                //  and sharpen the type of vY to be type T.
+                //  Also, mark vY as non-null for equality branch
+
+                boolean eqz_pass = !reg.isRuntimeNonNullRef();
+                boolean nez_pass = !reg.isZeroOrNull();
+
+                // Swap eq and non-eq branches
+                if (opcode != IF_EQZ) {
+                    var tmp_bool = eqz_pass;
+                    eqz_pass = nez_pass;
+                    nez_pass = tmp_bool;
+                }
 
                 // true branch
                 {
@@ -1750,7 +1760,7 @@ public final class AnalyzedMethod {
                         work_line = work_line.duplicate();
                         markNonNull(address, work_line, ireg, reg);
                     }
-                    merge(resolver, touched, todo, current, target, work_line, true);
+                    merge(resolver, touched, todo, current, target, work_line, eqz_pass);
                 }
                 // false branch
                 {
@@ -1760,7 +1770,7 @@ public final class AnalyzedMethod {
                         work_line = work_line.duplicate();
                         markNonNull(address, work_line, ireg, reg);
                     }
-                    merge(resolver, touched, todo, current, target, work_line, true);
+                    merge(resolver, touched, todo, current, target, work_line, nez_pass);
                 }
             }
             case IF_LT, IF_GE, IF_GT, IF_LE -> {
@@ -1816,15 +1826,26 @@ public final class AnalyzedMethod {
                     );
                 }
 
-                boolean true_pass = argt < 0b11; // always true
-                boolean false_pass = (argt != 0b00) && (ireg1 != ireg2)
+                // One of arguments is null, and another is non-null ref
+                boolean eq_pass = !(argt == 0b10 && (reg1t == 0 || reg2t == 0) &&
+                        (reg1t == 0 ? reg2 : reg1).isRuntimeNonNullRef());
+                if (eq_pass && argt == 0b10) {
+                    var k1 = reg1.getConstantKind();
+                    var k2 = reg2.getConstantKind();
+                    if (k1 != null && k2 != null && k1 != k2) {
+                        // Both registers are ref constants of different types
+                        eq_pass = false;
+                    }
+                }
+                // Both arguments are the same
+                boolean ne_pass = (argt != 0b00) && (ireg1 != ireg2)
                         && !Objects.equals(reg1, reg2);
 
                 // Swap eq and non-eq branches
                 if (opcode != IF_EQ) {
-                    var tmp_bool = true_pass;
-                    true_pass = false_pass;
-                    false_pass = tmp_bool;
+                    var tmp_bool = eq_pass;
+                    eq_pass = ne_pass;
+                    ne_pass = tmp_bool;
                 }
 
                 // true branch
@@ -1837,7 +1858,7 @@ public final class AnalyzedMethod {
                                 reg1t == 0 ? ireg2 : ireg1,
                                 reg1t == 0 ? reg2 : reg1);
                     }
-                    merge(resolver, touched, todo, current, target, work_line, true_pass);
+                    merge(resolver, touched, todo, current, target, work_line, eq_pass);
                 }
                 // false branch
                 {
@@ -1849,7 +1870,7 @@ public final class AnalyzedMethod {
                                 reg1t == 0 ? ireg2 : ireg1,
                                 reg1t == 0 ? reg2 : reg1);
                     }
-                    merge(resolver, touched, todo, current, target, work_line, false_pass);
+                    merge(resolver, touched, todo, current, target, work_line, ne_pass);
                 }
             }
             case AGET, AGET_BOOLEAN, AGET_BYTE, AGET_CHAR,
@@ -1980,9 +2001,6 @@ public final class AnalyzedMethod {
                         }
                     }
                 }
-                if (obj.isZeroOrNull()) {
-                    next_reachable = false;
-                }
 
                 var type = ref.getType();
                 if (type.isReference()) {
@@ -1991,6 +2009,7 @@ public final class AnalyzedMethod {
                     outputPrim(current, ival, type);
                 }
 
+                if (obj.isZeroOrNull()) next_reachable = false;
                 markNonNull(current, iobj, obj);
             }
             case IPUT, IPUT_BOOLEAN, IPUT_BYTE, IPUT_CHAR,
@@ -2013,13 +2032,11 @@ public final class AnalyzedMethod {
                             throw unexpectedReg(current, iobj, obj);
                         }
                     }
-                }
-                if (obj.isZeroOrNull()) {
-                    next_reachable = false;
+
+                    verifyReg(resolver, current, ival, ref.getType());
                 }
 
-                if (verify) verifyReg(resolver, current, ival, ref.getType());
-
+                if (obj.isZeroOrNull()) next_reachable = false;
                 markNonNull(current, iobj, obj);
             }
             case SGET, SGET_BOOLEAN, SGET_BYTE, SGET_CHAR,
@@ -2063,7 +2080,6 @@ public final class AnalyzedMethod {
                 if (verify) verify_35c_45cc_args(resolver, current, true, check_this);
 
                 if (this_reg.isZeroOrNull()) next_reachable = false;
-
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_DIRECT_RANGE -> {
@@ -2086,7 +2102,6 @@ public final class AnalyzedMethod {
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, check_this);
 
                 if (this_reg.isZeroOrNull()) next_reachable = false;
-
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_INTERFACE, INVOKE_POLYMORPHIC -> {
@@ -2099,7 +2114,6 @@ public final class AnalyzedMethod {
                 if (verify) verify_35c_45cc_args(resolver, current, true, true);
 
                 if (this_reg.isZeroOrNull()) next_reachable = false;
-
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
@@ -2113,7 +2127,6 @@ public final class AnalyzedMethod {
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
 
                 if (this_reg.isZeroOrNull()) next_reachable = false;
-
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_STATIC, INVOKE_CUSTOM -> {
@@ -2124,6 +2137,7 @@ public final class AnalyzedMethod {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getRegister1();
                         var obj_reg = current.before().at(iobj_reg);
+                        if (obj_reg.isZeroOrNull()) next_reachable = false;
                         markNonNull(current, iobj_reg, obj_reg);
                     }
                 }
@@ -2136,6 +2150,7 @@ public final class AnalyzedMethod {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getStartRegister();
                         var obj_reg = current.before().at(iobj_reg);
+                        if (obj_reg.isZeroOrNull()) next_reachable = false;
                         markNonNull(current, iobj_reg, obj_reg);
                     }
                 }
