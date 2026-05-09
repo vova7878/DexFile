@@ -80,6 +80,13 @@ public abstract class TypeResolver {
     /* package */
     @SuppressWarnings("SameParameterValue")
     static boolean _instanceOf(TypeResolver resolver, TypeId a,
+                               TypeInfo b, boolean default_value) {
+        return _instanceOf(resolver, TypeInfo.of(a), b, default_value);
+    }
+
+    /* package */
+    @SuppressWarnings("SameParameterValue")
+    static boolean _instanceOf(TypeResolver resolver, TypeId a,
                                TypeId b, boolean default_value) {
         return _instanceOf(resolver, TypeInfo.of(a), b, default_value);
     }

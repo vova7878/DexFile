@@ -1295,7 +1295,7 @@ public final class CodeBuilder {
         if (uwidth(src_reg, 4) && uwidth(dst_reg, 4)) {
             return raw_move(dst_reg, src_reg);
         }
-        if (uwidth(src_reg, 8)) {
+        if (uwidth(dst_reg, 8)) {
             return raw_move_from16(dst_reg, src_reg);
         }
         return raw_move_16(dst_reg, src_reg);
@@ -1337,7 +1337,7 @@ public final class CodeBuilder {
         if (uwidth(src_reg_pair, 4) && uwidth(dst_reg_pair, 4)) {
             return raw_move_wide(dst_reg_pair, src_reg_pair);
         }
-        if (uwidth(src_reg_pair, 8)) {
+        if (uwidth(dst_reg_pair, 8)) {
             return raw_move_wide_from16(dst_reg_pair, src_reg_pair);
         }
         return raw_move_wide_16(dst_reg_pair, src_reg_pair);
@@ -1379,7 +1379,7 @@ public final class CodeBuilder {
         if (uwidth(src_reg, 4) && uwidth(dst_reg, 4)) {
             return raw_move_object(dst_reg, src_reg);
         }
-        if (uwidth(src_reg, 8)) {
+        if (uwidth(dst_reg, 8)) {
             return raw_move_object_from16(dst_reg, src_reg);
         }
         return raw_move_object_16(dst_reg, src_reg);

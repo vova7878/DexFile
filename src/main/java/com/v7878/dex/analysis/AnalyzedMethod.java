@@ -3,7 +3,20 @@ package com.v7878.dex.analysis;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 import static com.v7878.dex.Opcode.APUT_WIDE;
 import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
+import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY;
+import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY_RANGE;
 import static com.v7878.dex.Opcode.IF_EQ;
+import static com.v7878.dex.Opcode.IF_EQZ;
+import static com.v7878.dex.Opcode.IF_GE;
+import static com.v7878.dex.Opcode.IF_GEZ;
+import static com.v7878.dex.Opcode.IF_GT;
+import static com.v7878.dex.Opcode.IF_GTZ;
+import static com.v7878.dex.Opcode.IF_LE;
+import static com.v7878.dex.Opcode.IF_LEZ;
+import static com.v7878.dex.Opcode.IF_LT;
+import static com.v7878.dex.Opcode.IF_LTZ;
+import static com.v7878.dex.Opcode.IF_NE;
+import static com.v7878.dex.Opcode.IF_NEZ;
 import static com.v7878.dex.Opcode.INVOKE_STATIC;
 import static com.v7878.dex.Opcode.INVOKE_STATIC_RANGE;
 import static com.v7878.dex.Opcode.PACKED_SWITCH;
@@ -12,9 +25,19 @@ import static com.v7878.dex.Opcode.SPARSE_SWITCH_PAYLOAD;
 import static com.v7878.dex.Opcode.THROW;
 import static com.v7878.dex.analysis.Position.EXCEPTION_REGISTER;
 import static com.v7878.dex.analysis.Position.RESULT_REGISTER;
+import static com.v7878.dex.analysis.Register.ConstantKind.REFERENCE;
+import static com.v7878.dex.immutable.TypeId.B;
+import static com.v7878.dex.immutable.TypeId.C;
+import static com.v7878.dex.immutable.TypeId.D;
+import static com.v7878.dex.immutable.TypeId.F;
+import static com.v7878.dex.immutable.TypeId.I;
+import static com.v7878.dex.immutable.TypeId.J;
 import static com.v7878.dex.immutable.TypeId.OBJECT;
+import static com.v7878.dex.immutable.TypeId.S;
+import static com.v7878.dex.immutable.TypeId.Z;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.Ids.METHOD_HANDLE;
+import static com.v7878.dex.util.Ids.OBJECTS;
 import static com.v7878.dex.util.Ids.THROWABLE;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
@@ -53,6 +76,7 @@ import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
 import com.v7878.dex.immutable.bytecode.iface.LiteralInstruction;
 import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
+import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
 import com.v7878.dex.immutable.bytecode.iface.ThreeRegisterInstruction;
 import com.v7878.dex.immutable.bytecode.iface.TwoRegisterInstruction;
@@ -62,6 +86,7 @@ import com.v7878.dex.util.Formatter;
 
 import java.util.BitSet;
 import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.function.ToIntFunction;
 
 public final class AnalyzedMethod {
@@ -108,6 +133,16 @@ public final class AnalyzedMethod {
 
     public int getRegisterCount() {
         return register_count;
+    }
+
+    public String describe() {
+        var j = new StringJoiner("\n\n", "\n\n", "");
+        var size = positions.size();
+        for (int i = 0; i < size; i++) {
+            var pos = positions.valueAt(i);
+            j.add(pos.describe());
+        }
+        return method.getName() + method.getProto() + j;
     }
 
     private Position position(int address) {
@@ -188,7 +223,11 @@ public final class AnalyzedMethod {
         for (int i = count - 1; i >= 0; i--) {
             var type = params.get(i);
             pos -= type.getRegisterCount();
-            output(line, address, pos, type);
+            if (type.isReference()) {
+                outputRef(line, address, pos, type, false);
+            } else {
+                outputPrim(line, address, pos, type);
+            }
         }
         if ((method.getAccessFlags() & ACC_STATIC) == 0) {
             pos -= 1;
@@ -197,7 +236,7 @@ public final class AnalyzedMethod {
             if (method.isInstanceInitializer()) {
                 value = UninitializedRef.of(ident, declaring_class, true);
             } else {
-                value = Reference.of(ident, declaring_class);
+                value = Reference.of(ident, declaring_class, true);
                 line.markThisInitialized();
             }
             line.copy(address, pos, value);
@@ -1034,7 +1073,7 @@ public final class AnalyzedMethod {
         }
     }
 
-    private TypeId getResultType(Position current) {
+    private Position getResultPredecessor(Position current) {
         var predecessors = current.predecessors;
         if (predecessors.size() != 1) {
             throw invalidBranchTarget(current);
@@ -1047,12 +1086,42 @@ public final class AnalyzedMethod {
         if (!transition.isFallThrough()) {
             throw invalidBranchTarget(current);
         }
-        var proto = position(transition.address()).accessProto();
+        var predecessor = position(transition.address());
+        var proto = predecessor.accessProto();
         if (proto == null) {
-            // TODO: msg
-            throw new AnalysisException();
+            throw new AnalysisException("Instruction " + describe(predecessor) +
+                    " has no result for " + describe(current));
         }
-        return proto.getReturnType();
+        return predecessor;
+    }
+
+    private TypeId getResultType(Position current) {
+        var predecessor = getResultPredecessor(current);
+        return predecessor.accessProto().getReturnType();
+    }
+
+    private static boolean hasNonNullResult(Position target) {
+        var i = target.instruction();
+        var op = i.getOpcode();
+        var non_null = op == FILLED_NEW_ARRAY || op == FILLED_NEW_ARRAY_RANGE;
+        if (!non_null && (op == INVOKE_STATIC || op == INVOKE_STATIC_RANGE)) {
+            var mid = (MethodId) ((SingleReferenceInstruction) i).getReference1();
+            if (OBJECTS.equals(mid.getDeclaringClass())
+                    && ("requireNonNull".equals(mid.getName())
+                    || "requireNonNullElse".equals(mid.getName())
+                    || "requireNonNullElseGet".equals(mid.getName()))) {
+                non_null = true;
+            }
+        }
+        return non_null;
+    }
+
+    private static boolean isRequireNonNull(MethodId mid) {
+        return OBJECTS.equals(mid.getDeclaringClass())
+                && "requireNonNull".equals(mid.getName())
+                // Methods without parameters don't exist,
+                // but no one stops bad code from existing
+                && !mid.getParameterTypes().isEmpty();
     }
 
     private TypeInfo getExceptionType(TypeResolver resolver, Position current) {
@@ -1088,11 +1157,11 @@ public final class AnalyzedMethod {
         assert type_info.base() != null;
         var type = type_info.base();
         var ident = new Identifier(current.address(), ithis_reg);
-        var value = Reference.of(ident, type);
+        var new_value = Reference.of(ident, type, true);
         var line = current.after();
         for (int i = 0; i < line.registerCount(); i++) {
             if (Objects.equals(line.at(i), this_reg)) {
-                line.replace(i, value);
+                line.replace(i, new_value);
             }
         }
         if (this_reg.isUninitializedThis()) {
@@ -1100,25 +1169,54 @@ public final class AnalyzedMethod {
         }
     }
 
-    private static void output(RegisterLine line, int address, int slot, TypeId type) {
+    private static void markNonNull(RegisterLine line, int address, int ireg, Register reg) {
+        if (reg.isRuntimeNonNullRef()) {
+            return;
+        }
+        if (reg instanceof Reference ref) {
+            var ident = new Identifier(address, ireg);
+            var new_value = Reference.of(ident, ref.typeInfo(), true);
+            for (int i = 0; i < line.registerCount(); i++) {
+                if (Objects.equals(line.at(i), reg)) {
+                    line.replace(i, new_value);
+                }
+            }
+        }
+    }
+
+    private static void markNonNull(Position current, int ireg, Register reg) {
+        markNonNull(current.after(), current.address(), ireg, reg);
+    }
+
+    private static void outputPrim(RegisterLine line, int address, int slot, TypeId type) {
         if (type != null && type.isWidePrimitive()) {
             var value_lo = WidePrimitive.of(new Identifier(address, slot), type, true);
             var value_hi = WidePrimitive.of(new Identifier(address, slot + 1), type, false);
             line.copyWide(address, slot, value_lo, value_hi);
         } else {
+            assert !(type == null || type.isReference());
             var ident = new Identifier(address, slot);
-            var value = (type == null || type.isReference()) ?
-                    Reference.of(ident, type) :
-                    Primitive.of(ident, type);
+            var value = Primitive.of(ident, type);
             line.copy(address, slot, value);
         }
     }
 
-    private static void output(Position current, int slot, TypeId type) {
-        output(current.after(), current.address(), slot, type);
+    private static void outputPrim(Position current, int slot, TypeId type) {
+        outputPrim(current.after(), current.address(), slot, type);
     }
 
-    private static void output(Position current, int slot, TypeInfo type) {
+    private static void outputRef(RegisterLine line, int address, int slot, TypeId type, boolean non_null) {
+        assert type == null || type.isReference();
+        var ident = new Identifier(address, slot);
+        var value = Reference.of(ident, type, non_null);
+        line.copy(address, slot, value);
+    }
+
+    private static void outputRef(Position current, int slot, TypeId type, boolean non_null) {
+        outputRef(current.after(), current.address(), slot, type, non_null);
+    }
+
+    private static void outputPrim(Position current, int slot, TypeInfo type) {
         var shorty = type.getShorty();
         int address = current.address();
         if (shorty == 'J' || shorty == 'D') {
@@ -1127,12 +1225,19 @@ public final class AnalyzedMethod {
             var value_hi = WidePrimitive.of(new Identifier(address, slot + 1), base, false);
             current.after().copyWide(address, slot, value_lo, value_hi);
         } else {
+            assert shorty != 'L';
             var ident = new Identifier(address, slot);
-            var value = type.isReference() ?
-                    Reference.of(ident, type) :
-                    Primitive.of(ident, type.base());
+            var value = Primitive.of(ident, type.base());
             current.after().copy(address, slot, value);
         }
+    }
+
+    private static void outputRef(Position current, int slot, TypeInfo type, boolean non_null) {
+        assert type.isReference();
+        int address = current.address();
+        var ident = new Identifier(address, slot);
+        var value = Reference.of(ident, type, non_null);
+        current.after().copy(address, slot, value);
     }
 
     private static void wideConstant(Position current, int slot_lo) {
@@ -1151,7 +1256,7 @@ public final class AnalyzedMethod {
         current.after().copy(address, slot, value);
     }
 
-    private static void constant(Position current, int slot, int value) {
+    private static void constantInt(Position current, int slot, int value) {
         constant(current, slot, Register.intKind(value));
     }
 
@@ -1185,7 +1290,7 @@ public final class AnalyzedMethod {
         var idst = insn.getRegister1();
         var isrc = insn.getRegister2();
         if (verify) verifyReg(null, current, isrc, tsrc);
-        output(current, idst, tdst);
+        outputPrim(current, idst, tdst);
     }
 
     private static void binop(Position current, TypeId tdst, TypeId tsrc1,
@@ -1194,15 +1299,15 @@ public final class AnalyzedMethod {
         ThreeRegisterInstruction insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc1 = insn.getRegister2();
-        if (verify) verifyReg(null, current, isrc1, tsrc1);
         var isrc2 = insn.getRegister3();
+        if (verify) verifyReg(null, current, isrc1, tsrc1);
         if (verify) verifyReg(null, current, isrc2, tsrc2);
         if (check_bool_op
                 && current.before().at(isrc1).isBool()
                 && current.before().at(isrc2).isBool()) {
-            tdst = TypeId.Z;
+            tdst = Z;
         }
-        output(current, idst, tdst);
+        outputPrim(current, idst, tdst);
     }
 
     private static void binop_2addr(Position current, TypeId tdst_src1,
@@ -1210,30 +1315,30 @@ public final class AnalyzedMethod {
         assert tdst_src1.isPrimitive() && tsrc2.isPrimitive();
         TwoRegisterInstruction insn = current.instruction();
         var idst_src1 = insn.getRegister1();
-        if (verify) verifyReg(null, current, idst_src1, tdst_src1);
         var isrc2 = insn.getRegister2();
+        if (verify) verifyReg(null, current, idst_src1, tdst_src1);
         if (verify) verifyReg(null, current, isrc2, tsrc2);
         if (check_bool_op
                 && current.before().at(idst_src1).isBool()
                 && current.before().at(isrc2).isBool()) {
-            tdst_src1 = TypeId.Z;
+            tdst_src1 = Z;
         }
-        output(current, idst_src1, tdst_src1);
+        outputPrim(current, idst_src1, tdst_src1);
     }
 
     private static void binop_lit_int(Position current, boolean check_bool_op, boolean verify) {
         TwoRegisterInstruction insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc = insn.getRegister2();
-        if (verify) verifyReg(null, current, isrc, TypeId.I);
-        var type = TypeId.I;
+        if (verify) verifyReg(null, current, isrc, I);
+        var type = I;
         if (check_bool_op && current.before().at(isrc).isBool()) {
             LiteralInstruction lit = current.instruction();
             if ((lit.getLiteral() & ~1) == 0) {
-                type = TypeId.Z;
+                type = Z;
             }
         }
-        output(current, idst, type);
+        outputPrim(current, idst, type);
     }
 
     private static void verify_35c_45cc_args(TypeResolver resolver, Position current, boolean thiz, boolean check_this) {
@@ -1319,7 +1424,7 @@ public final class AnalyzedMethod {
         }
         boolean next_reachable = true;
         boolean is_nop = current.isNopExact();
-        boolean is_nnop = current.isNarrowingNop();
+        boolean is_narrowing_nop = current.isNarrowingNop();
         switch (opcode) {
             case NOP, GOTO, GOTO_16, GOTO_32 -> {
                 // No effect on or use of registers
@@ -1376,7 +1481,7 @@ public final class AnalyzedMethod {
                     throw unexpectedType(current, type);
                 }
 
-                output(current, idst, type);
+                outputPrim(current, idst, type);
             }
             case MOVE_RESULT_WIDE -> {
                 var tmp = (OneRegisterInstruction) insn;
@@ -1387,18 +1492,20 @@ public final class AnalyzedMethod {
                     throw unexpectedType(current, type);
                 }
 
-                output(current, idst, type);
+                outputPrim(current, idst, type);
             }
             case MOVE_RESULT_OBJECT -> {
                 var tmp = (OneRegisterInstruction) insn;
                 var idst = tmp.getRegister1();
 
-                var type = getResultType(current);
+                var predecessor = getResultPredecessor(current);
+                var type = predecessor.accessProto().getReturnType();
                 if (verify) if (!type.isReference()) {
                     throw unexpectedType(current, type);
                 }
 
-                output(current, idst, type);
+                var non_null = hasNonNullResult(predecessor);
+                outputRef(current, idst, type, non_null);
             }
             case MOVE_EXCEPTION -> {
                 if (address == 0) {
@@ -1410,7 +1517,8 @@ public final class AnalyzedMethod {
                 var type = getExceptionType(resolver, current);
                 assert type.isReference();
 
-                output(current, idst, type);
+                // Note: move-exception never returns null
+                outputRef(current, idst, type, true);
             }
             case RETURN_VOID -> {
                 if (verify) {
@@ -1430,7 +1538,7 @@ public final class AnalyzedMethod {
                 var ireg = ((OneRegisterInstruction) insn).getRegister1();
                 var reg = current.before().at(ireg);
                 var lit = ((LiteralInstruction) insn).getLiteral();
-                constant(current, ireg, lit);
+                constantInt(current, ireg, lit);
                 is_nop = lit == 0 && reg.isZero();
             }
             // Could be long or double
@@ -1462,6 +1570,9 @@ public final class AnalyzedMethod {
                 if (verify) if (!reg.isRef()) {
                     throw unexpectedReg(current, ireg, reg);
                 }
+
+                if (reg.isZeroOrNull()) next_reachable = false;
+                markNonNull(current, ireg, reg);
             }
             case CHECK_CAST -> {
                 var tmp = (Instruction21c) insn;
@@ -1474,28 +1585,32 @@ public final class AnalyzedMethod {
                 }
 
                 if (reg.isZeroOrNull()) {
-                    is_nnop = true;
+                    is_narrowing_nop = true;
                     is_nop = false;
                 } else {
                     var type = reg.getTypeInfo();
                     assert type != null;
                     if (Objects.equals(type.exactType(), ref)) {
-                        is_nnop = false;
+                        is_narrowing_nop = false;
                         is_nop = true;
-                    } else if (!TypeResolver._instanceOf(resolver, type, ref, true)) {
-                        is_nnop = false;
+                    } else if (reg.isRuntimeNonNullRef() &&
+                            !TypeResolver._instanceOf(resolver, type, ref, true) &&
+                            !TypeResolver._instanceOf(resolver, ref, type, true)) {
+                        // Mutually incompatible types.
+                        // i.e. Integer and String or Object[] and int[] etc.
+                        is_narrowing_nop = false;
                         is_nop = false;
                         next_reachable = false;
                     } else if (TypeResolver._instanceOf(resolver, type, ref, false)) {
-                        is_nnop = true;
+                        is_narrowing_nop = true;
                         is_nop = false;
                     } else {
-                        is_nnop = false;
+                        is_narrowing_nop = false;
                         is_nop = false;
                     }
                 }
 
-                output(current, ireg, ref);
+                outputRef(current, ireg, ref, reg.isRuntimeNonNullRef());
             }
             case INSTANCE_OF -> {
                 var tmp = (TwoRegisterInstruction) insn;
@@ -1507,7 +1622,7 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, isrc, src);
                 }
 
-                output(current, idst, TypeId.Z);
+                outputPrim(current, idst, Z);
             }
             case ARRAY_LENGTH -> {
                 var tmp = (TwoRegisterInstruction) insn;
@@ -1519,7 +1634,11 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, iarr, arr);
                 }
 
-                output(current, idst, TypeId.I);
+                if (arr.isZeroOrNull()) next_reachable = false;
+
+                outputPrim(current, idst, I);
+
+                markNonNull(current, iarr, arr);
             }
             case NEW_INSTANCE -> {
                 var tmp = (Instruction21c) insn;
@@ -1541,7 +1660,7 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, isz, sz);
                 }
 
-                output(current, idst, ref);
+                outputRef(current, idst, ref, true);
             }
             case FILLED_NEW_ARRAY -> {
                 if (verify) verify_35c_45cc_args(resolver, current, false, false);
@@ -1556,6 +1675,7 @@ public final class AnalyzedMethod {
                 var reg = current.before().at(ireg);
                 if (reg.isZeroOrNull()) {
                     // Runtime exception
+                    next_reachable = false;
                 } else {
                     var info = reg.getTypeInfo();
                     if (info == null || !info.isComponentPrimitive()) {
@@ -1577,6 +1697,7 @@ public final class AnalyzedMethod {
                                 elem_width_reg + " in " + describe(current));
                     }
                 }
+                markNonNull(current, ireg, reg);
             }
             case THROW -> {
                 var tmp = (OneRegisterInstruction) insn;
@@ -1605,11 +1726,9 @@ public final class AnalyzedMethod {
                 var target = positionAt(index + 1);
                 merge(resolver, touched, todo, current, target, work_line, true);
             }
-            case CMPL_FLOAT, CMPG_FLOAT ->
-                    binop(current, TypeId.I, TypeId.F, TypeId.F, false, verify);
-            case CMPL_DOUBLE, CMPG_DOUBLE ->
-                    binop(current, TypeId.I, TypeId.D, TypeId.D, false, verify);
-            case CMP_LONG -> binop(current, TypeId.I, TypeId.J, TypeId.J, false, verify);
+            case CMPL_FLOAT, CMPG_FLOAT -> binop(current, I, F, F, false, verify);
+            case CMPL_DOUBLE, CMPG_DOUBLE -> binop(current, I, D, D, false, verify);
+            case CMP_LONG -> binop(current, I, J, J, false, verify);
             case IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> {
                 var tmp = (Instruction21t) insn;
                 int ireg = tmp.getRegister1();
@@ -1619,15 +1738,34 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
+                // 0 < 0 or 0 > 0
+                boolean true_pass = (opcode != IF_LTZ && opcode != IF_GTZ) || !reg.isZero();
+                // positive < 0
+                if (true_pass && opcode == IF_LTZ) {
+                    var kind = reg.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        true_pass = false;
+                    }
+                }
+                // 0 <= 0 or 0 >= 0
+                boolean false_pass = (opcode != IF_LEZ && opcode != IF_GEZ) || !reg.isZero();
+                // positive >= 0
+                if (false_pass && opcode == IF_GEZ) {
+                    var kind = reg.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        false_pass = false;
+                    }
+                }
+
                 var work_line = current.after();
 
-                // TODO: reachability test
-
+                // true branch
                 var target = position(address + tmp.getBranchOffset());
-                merge(resolver, touched, todo, current, target, work_line, true);
+                merge(resolver, touched, todo, current, target, work_line, true_pass);
 
+                // false branch
                 target = positionAt(index + 1);
-                merge(resolver, touched, todo, current, target, work_line, true);
+                merge(resolver, touched, todo, current, target, work_line, false_pass);
             }
             case IF_EQZ, IF_NEZ -> {
                 var tmp = (Instruction21t) insn;
@@ -1638,7 +1776,6 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
-                // TODO: reachability test
                 // TODO?:
                 //  Check for peep-hole pattern of:
                 //     ...;
@@ -1647,14 +1784,39 @@ public final class AnalyzedMethod {
                 //     ...;
                 //  label:
                 //     ...;
-                //  and sharpen the type of vY to be type T
+                //  and sharpen the type of vY to be type T.
+                //  Also, mark vY as non-null for equality branch
 
-                var work_line = current.after();
-                var target = position(address + tmp.getBranchOffset());
-                merge(resolver, touched, todo, current, target, work_line, true);
+                boolean eqz_pass = !reg.isRuntimeNonNullRef();
+                boolean nez_pass = !reg.isZeroOrNull();
 
-                target = positionAt(index + 1);
-                merge(resolver, touched, todo, current, target, work_line, true);
+                // Swap eq and non-eq branches
+                if (opcode != IF_EQZ) {
+                    var tmp_bool = eqz_pass;
+                    eqz_pass = nez_pass;
+                    nez_pass = tmp_bool;
+                }
+
+                // true branch
+                {
+                    var work_line = current.after();
+                    var target = position(address + tmp.getBranchOffset());
+                    if (opcode == IF_NEZ) {
+                        work_line = work_line.duplicate();
+                        markNonNull(work_line, address, ireg, reg);
+                    }
+                    merge(resolver, touched, todo, current, target, work_line, eqz_pass);
+                }
+                // false branch
+                {
+                    var work_line = current.after();
+                    var target = positionAt(index + 1);
+                    if (opcode == IF_EQZ) {
+                        work_line = work_line.duplicate();
+                        markNonNull(work_line, address, ireg, reg);
+                    }
+                    merge(resolver, touched, todo, current, target, work_line, nez_pass);
+                }
             }
             case IF_LT, IF_GE, IF_GT, IF_LE -> {
                 var tmp = (Instruction22t) insn;
@@ -1670,15 +1832,52 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg2, reg2);
                 }
 
+                var z1 = reg1.isZero();
+                var z2 = reg2.isZero();
+                var same = (z1 && z2) || ireg1 == ireg2 || Objects.equals(reg1, reg2);
+
+                // x < x or x > x
+                boolean true_pass = (opcode != IF_LT && opcode != IF_GT) || !same;
+                // 0 > positive
+                if (true_pass && (opcode == IF_GT) && z1) {
+                    var kind = reg2.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        true_pass = false;
+                    }
+                }
+                // positive < 0
+                if (true_pass && (opcode == IF_LT) && z2) {
+                    var kind = reg1.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        true_pass = false;
+                    }
+                }
+                // x >= x or x <= x
+                boolean false_pass = (opcode != IF_LE && opcode != IF_GE) || !same;
+                // 0 <= positive
+                if (false_pass && (opcode == IF_LE) && z1) {
+                    var kind = reg2.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        false_pass = false;
+                    }
+                }
+                // positive >= 0
+                if (false_pass && (opcode == IF_GE) && z2) {
+                    var kind = reg1.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        false_pass = false;
+                    }
+                }
+
                 var work_line = current.after();
 
-                // TODO: reachability test
-
+                // true branch
                 var target = position(address + tmp.getBranchOffset());
-                merge(resolver, touched, todo, current, target, work_line, true);
+                merge(resolver, touched, todo, current, target, work_line, true_pass);
 
+                // false branch
                 target = positionAt(index + 1);
-                merge(resolver, touched, todo, current, target, work_line, true);
+                merge(resolver, touched, todo, current, target, work_line, false_pass);
             }
             case IF_EQ, IF_NE -> {
                 var tmp = (Instruction22t) insn;
@@ -1709,23 +1908,54 @@ public final class AnalyzedMethod {
                     );
                 }
 
-                boolean true_pass = argt < 0b11; // always true
-                boolean false_pass = (argt != 0b00) && (ireg1 != ireg2)
+                // One of arguments is null, and another is non-null ref
+                boolean eq_pass = !(argt == 0b10 && (reg1t == 0 || reg2t == 0) &&
+                        (reg1t == 0 ? reg2 : reg1).isRuntimeNonNullRef());
+                if (eq_pass && argt == 0b10) {
+                    var k1 = reg1.getConstantKind();
+                    var k2 = reg2.getConstantKind();
+                    if (k1 != null && k2 != null && k1 != k2) {
+                        if (k1 != REFERENCE && k2 != REFERENCE) {
+                            // Both registers are ref constants of different types
+                            eq_pass = false;
+                        }
+                    }
+                }
+                // Both arguments are the same
+                boolean ne_pass = (argt != 0b00) && (ireg1 != ireg2)
                         && !Objects.equals(reg1, reg2);
 
                 // Swap eq and non-eq branches
                 if (opcode != IF_EQ) {
-                    var tmp_bool = true_pass;
-                    true_pass = false_pass;
-                    false_pass = tmp_bool;
+                    var tmp_bool = eq_pass;
+                    eq_pass = ne_pass;
+                    ne_pass = tmp_bool;
                 }
 
-                var work_line = current.after();
-                var target = position(address + tmp.getBranchOffset());
-                merge(resolver, touched, todo, current, target, work_line, true_pass);
-
-                target = positionAt(index + 1);
-                merge(resolver, touched, todo, current, target, work_line, false_pass);
+                // true branch
+                {
+                    var work_line = current.after();
+                    var target = position(address + tmp.getBranchOffset());
+                    if (opcode == IF_NE && argt == 0b10 && (reg1t == 0 || reg2t == 0)) {
+                        work_line = work_line.duplicate();
+                        markNonNull(work_line, address,
+                                reg1t == 0 ? ireg2 : ireg1,
+                                reg1t == 0 ? reg2 : reg1);
+                    }
+                    merge(resolver, touched, todo, current, target, work_line, eq_pass);
+                }
+                // false branch
+                {
+                    var work_line = current.after();
+                    var target = positionAt(index + 1);
+                    if (opcode == IF_EQ && argt == 0b10 && (reg1t == 0 || reg2t == 0)) {
+                        work_line = work_line.duplicate();
+                        markNonNull(work_line, address,
+                                reg1t == 0 ? ireg2 : ireg1,
+                                reg1t == 0 ? reg2 : reg1);
+                    }
+                    merge(resolver, touched, todo, current, target, work_line, ne_pass);
+                }
             }
             case AGET, AGET_BOOLEAN, AGET_BYTE, AGET_CHAR,
                  AGET_SHORT, AGET_WIDE, AGET_OBJECT -> {
@@ -1744,7 +1974,7 @@ public final class AnalyzedMethod {
                     switch (opcode) {
                         // Pick a non-zero constant (to distinguish with null) that can fit in any primitive
                         case AGET, AGET_BOOLEAN, AGET_BYTE, AGET_CHAR,
-                             AGET_SHORT -> constant(current, ival, 1);
+                             AGET_SHORT -> constantInt(current, ival, 1);
                         case AGET_WIDE -> wideConstant(current, ival);
                         case AGET_OBJECT -> constant(current, ival, ConstantKind.NULL);
                         default -> throw shouldNotReachHere();
@@ -1769,8 +1999,13 @@ public final class AnalyzedMethod {
                     }) {
                         throw unexpectedReg(current, iarr, arr);
                     }
-                    output(current, ival, component);
+                    if (shorty == 'L') {
+                        outputRef(current, ival, component, false);
+                    } else {
+                        outputPrim(current, ival, component);
+                    }
                 }
+                markNonNull(current, iarr, arr);
             }
             case APUT, APUT_BOOLEAN, APUT_BYTE, APUT_CHAR,
                  APUT_SHORT, APUT_WIDE, APUT_OBJECT -> {
@@ -1828,6 +2063,7 @@ public final class AnalyzedMethod {
                     var type = shorty == 'L' ? OBJECT : info.base();
                     if (verify) verifyReg(resolver, current, ival, type);
                 }
+                markNonNull(current, iarr, arr);
             }
             case IGET, IGET_BOOLEAN, IGET_BYTE, IGET_CHAR,
                  IGET_SHORT, IGET_OBJECT, IGET_WIDE -> {
@@ -1849,11 +2085,16 @@ public final class AnalyzedMethod {
                         }
                     }
                 }
-                if (obj.isZeroOrNull()) {
-                    next_reachable = false;
+
+                var type = ref.getType();
+                if (type.isReference()) {
+                    outputRef(current, ival, type, false);
+                } else {
+                    outputPrim(current, ival, type);
                 }
 
-                output(current, ival, ref.getType());
+                if (obj.isZeroOrNull()) next_reachable = false;
+                markNonNull(current, iobj, obj);
             }
             case IPUT, IPUT_BOOLEAN, IPUT_BYTE, IPUT_CHAR,
                  IPUT_SHORT, IPUT_OBJECT, IPUT_WIDE -> {
@@ -1875,20 +2116,25 @@ public final class AnalyzedMethod {
                             throw unexpectedReg(current, iobj, obj);
                         }
                     }
-                }
-                if (obj.isZeroOrNull()) {
-                    next_reachable = false;
+
+                    verifyReg(resolver, current, ival, ref.getType());
                 }
 
-                if (verify) verifyReg(resolver, current, ival, ref.getType());
+                if (obj.isZeroOrNull()) next_reachable = false;
+                markNonNull(current, iobj, obj);
             }
             case SGET, SGET_BOOLEAN, SGET_BYTE, SGET_CHAR,
                  SGET_SHORT, SGET_OBJECT, SGET_WIDE -> {
                 var tmp = (Instruction21c) insn;
                 var ireg = tmp.getRegister1();
                 var ref = (FieldId) tmp.getReference1();
+                var type = ref.getType();
 
-                output(current, ireg, ref.getType());
+                if (type.isReference()) {
+                    outputRef(current, ireg, type, false);
+                } else {
+                    outputPrim(current, ireg, type);
+                }
             }
             case SPUT, SPUT_BOOLEAN, SPUT_BYTE, SPUT_CHAR,
                  SPUT_SHORT, SPUT_OBJECT, SPUT_WIDE -> {
@@ -1902,11 +2148,12 @@ public final class AnalyzedMethod {
                 var tmp = (Instruction35c) insn;
                 var ref = (MethodId) tmp.getReference1();
 
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getRegister1();
+                var this_reg = current.before().at(ithis_reg);
+
                 var check_this = true;
                 if (ref.isInstanceInitializer()) {
-                    assert tmp.getRegisterCount() > 0;
-                    int ithis_reg = tmp.getRegister1();
-                    var this_reg = current.before().at(ithis_reg);
                     if (!this_reg.isUninitializedRef()) {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
@@ -1915,16 +2162,20 @@ public final class AnalyzedMethod {
                 }
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, check_this);
+
+                if (this_reg.isZeroOrNull()) next_reachable = false;
+                markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_DIRECT_RANGE -> {
                 var tmp = (Instruction3rc) insn;
                 var ref = (MethodId) tmp.getReference1();
 
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getStartRegister();
+                var this_reg = current.before().at(ithis_reg);
+
                 var check_this = true;
                 if (ref.isInstanceInitializer()) {
-                    assert tmp.getRegisterCount() > 0;
-                    int ithis_reg = tmp.getStartRegister();
-                    var this_reg = current.before().at(ithis_reg);
                     if (!this_reg.isUninitializedRef()) {
                         throw unexpectedReg(current, ithis_reg, this_reg);
                     }
@@ -1933,75 +2184,106 @@ public final class AnalyzedMethod {
                 }
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, check_this);
+
+                if (this_reg.isZeroOrNull()) next_reachable = false;
+                markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_INTERFACE, INVOKE_POLYMORPHIC -> {
+                var tmp = (Instruction35c) insn;
+
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getRegister1();
+                var this_reg = current.before().at(ithis_reg);
+
                 if (verify) verify_35c_45cc_args(resolver, current, true, true);
+
+                if (this_reg.isZeroOrNull()) next_reachable = false;
+                markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
                  INVOKE_INTERFACE_RANGE, INVOKE_POLYMORPHIC_RANGE -> {
+                var tmp = (Instruction3rc) insn;
+
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getStartRegister();
+                var this_reg = current.before().at(ithis_reg);
+
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
+
+                if (this_reg.isZeroOrNull()) next_reachable = false;
+                markNonNull(current, ithis_reg, this_reg);
             }
-            case INVOKE_STATIC, INVOKE_CUSTOM ->
-            //noinspection DuplicateBranchesInSwitch
-            {
+            case INVOKE_STATIC, INVOKE_CUSTOM -> {
                 if (verify) verify_35c_45cc_args(resolver, current, false, false);
+                if (opcode == INVOKE_STATIC) {
+                    var tmp = (Instruction35c) insn;
+                    if (isRequireNonNull((MethodId) tmp.getReference1())) {
+                        assert tmp.getRegisterCount() > 0;
+                        int iobj_reg = tmp.getRegister1();
+                        var obj_reg = current.before().at(iobj_reg);
+                        if (obj_reg.isZeroOrNull()) next_reachable = false;
+                        markNonNull(current, iobj_reg, obj_reg);
+                    }
+                }
             }
-            case INVOKE_STATIC_RANGE, INVOKE_CUSTOM_RANGE ->
-            //noinspection DuplicateBranchesInSwitch
-            {
+            case INVOKE_STATIC_RANGE, INVOKE_CUSTOM_RANGE -> {
                 if (verify) verify_3rc_4rcc_args(resolver, current, false, false);
+                if (opcode == INVOKE_STATIC_RANGE) {
+                    var tmp = (Instruction3rc) insn;
+                    if (isRequireNonNull((MethodId) tmp.getReference1())) {
+                        assert tmp.getRegisterCount() > 0;
+                        int iobj_reg = tmp.getStartRegister();
+                        var obj_reg = current.before().at(iobj_reg);
+                        if (obj_reg.isZeroOrNull()) next_reachable = false;
+                        markNonNull(current, iobj_reg, obj_reg);
+                    }
+                }
             }
-            case NEG_INT, NOT_INT -> unop(current, TypeId.I, TypeId.I, verify);
-            case NEG_LONG, NOT_LONG -> unop(current, TypeId.J, TypeId.J, verify);
-            case NEG_FLOAT -> unop(current, TypeId.F, TypeId.F, verify);
-            case NEG_DOUBLE -> unop(current, TypeId.D, TypeId.D, verify);
-            case INT_TO_LONG -> unop(current, TypeId.J, TypeId.I, verify);
-            case INT_TO_FLOAT -> unop(current, TypeId.F, TypeId.I, verify);
-            case INT_TO_DOUBLE -> unop(current, TypeId.D, TypeId.I, verify);
-            case LONG_TO_INT -> unop(current, TypeId.I, TypeId.J, verify);
-            case LONG_TO_FLOAT -> unop(current, TypeId.F, TypeId.J, verify);
-            case LONG_TO_DOUBLE -> unop(current, TypeId.D, TypeId.J, verify);
-            case FLOAT_TO_INT -> unop(current, TypeId.I, TypeId.F, verify);
-            case FLOAT_TO_LONG -> unop(current, TypeId.J, TypeId.F, verify);
-            case FLOAT_TO_DOUBLE -> unop(current, TypeId.D, TypeId.F, verify);
-            case DOUBLE_TO_INT -> unop(current, TypeId.I, TypeId.D, verify);
-            case DOUBLE_TO_LONG -> unop(current, TypeId.J, TypeId.D, verify);
-            case DOUBLE_TO_FLOAT -> unop(current, TypeId.F, TypeId.D, verify);
+            case NEG_INT, NOT_INT -> unop(current, I, I, verify);
+            case NEG_LONG, NOT_LONG -> unop(current, J, J, verify);
+            case NEG_FLOAT -> unop(current, F, F, verify);
+            case NEG_DOUBLE -> unop(current, D, D, verify);
+            case INT_TO_LONG -> unop(current, J, I, verify);
+            case INT_TO_FLOAT -> unop(current, F, I, verify);
+            case INT_TO_DOUBLE -> unop(current, D, I, verify);
+            case LONG_TO_INT -> unop(current, I, J, verify);
+            case LONG_TO_FLOAT -> unop(current, F, J, verify);
+            case LONG_TO_DOUBLE -> unop(current, D, J, verify);
+            case FLOAT_TO_INT -> unop(current, I, F, verify);
+            case FLOAT_TO_LONG -> unop(current, J, F, verify);
+            case FLOAT_TO_DOUBLE -> unop(current, D, F, verify);
+            case DOUBLE_TO_INT -> unop(current, I, D, verify);
+            case DOUBLE_TO_LONG -> unop(current, J, D, verify);
+            case DOUBLE_TO_FLOAT -> unop(current, F, D, verify);
             // TODO: Mark as nop if the required type is already in the register
-            case INT_TO_BYTE -> unop(current, TypeId.B, TypeId.I, verify);
-            case INT_TO_CHAR -> unop(current, TypeId.C, TypeId.I, verify);
-            case INT_TO_SHORT -> unop(current, TypeId.S, TypeId.I, verify);
+            case INT_TO_BYTE -> unop(current, B, I, verify);
+            case INT_TO_CHAR -> unop(current, C, I, verify);
+            case INT_TO_SHORT -> unop(current, S, I, verify);
             // TODO: Mark division by zero as unreachable
             case ADD_INT, SUB_INT, MUL_INT, DIV_INT,
-                 REM_INT, SHL_INT, SHR_INT, USHR_INT ->
-                    binop(current, TypeId.I, TypeId.I, TypeId.I, false, verify);
-            case AND_INT, OR_INT, XOR_INT ->
-                    binop(current, TypeId.I, TypeId.I, TypeId.I, true, verify);
+                 REM_INT, SHL_INT, SHR_INT, USHR_INT -> binop(current, I, I, I, false, verify);
+            case AND_INT, OR_INT, XOR_INT -> binop(current, I, I, I, true, verify);
             case ADD_LONG, SUB_LONG, MUL_LONG, DIV_LONG,
-                 REM_LONG, AND_LONG, OR_LONG, XOR_LONG ->
-                    binop(current, TypeId.J, TypeId.J, TypeId.J, false, verify);
-            case SHL_LONG, SHR_LONG, USHR_LONG ->
-                    binop(current, TypeId.J, TypeId.J, TypeId.I, false, verify);
+                 REM_LONG, AND_LONG, OR_LONG, XOR_LONG -> binop(current, J, J, J, false, verify);
+            case SHL_LONG, SHR_LONG, USHR_LONG -> binop(current, J, J, I, false, verify);
             case ADD_FLOAT, SUB_FLOAT, MUL_FLOAT, DIV_FLOAT, REM_FLOAT ->
-                    binop(current, TypeId.F, TypeId.F, TypeId.F, false, verify);
+                    binop(current, F, F, F, false, verify);
             case ADD_DOUBLE, SUB_DOUBLE, MUL_DOUBLE, DIV_DOUBLE, REM_DOUBLE ->
-                    binop(current, TypeId.D, TypeId.D, TypeId.D, false, verify);
+                    binop(current, D, D, D, false, verify);
             case ADD_INT_2ADDR, SUB_INT_2ADDR, MUL_INT_2ADDR, DIV_INT_2ADDR,
                  REM_INT_2ADDR, SHL_INT_2ADDR, SHR_INT_2ADDR, USHR_INT_2ADDR ->
-                    binop_2addr(current, TypeId.I, TypeId.I, false, verify);
+                    binop_2addr(current, I, I, false, verify);
             case AND_INT_2ADDR, OR_INT_2ADDR, XOR_INT_2ADDR ->
-                    binop_2addr(current, TypeId.I, TypeId.I, true, verify);
+                    binop_2addr(current, I, I, true, verify);
             case ADD_LONG_2ADDR, SUB_LONG_2ADDR, MUL_LONG_2ADDR, DIV_LONG_2ADDR,
                  REM_LONG_2ADDR, AND_LONG_2ADDR, OR_LONG_2ADDR, XOR_LONG_2ADDR ->
-                    binop_2addr(current, TypeId.J, TypeId.J, false, verify);
+                    binop_2addr(current, J, J, false, verify);
             case SHL_LONG_2ADDR, SHR_LONG_2ADDR, USHR_LONG_2ADDR ->
-                    binop_2addr(current, TypeId.J, TypeId.I, false, verify);
+                    binop_2addr(current, J, I, false, verify);
             case ADD_FLOAT_2ADDR, SUB_FLOAT_2ADDR, MUL_FLOAT_2ADDR,
-                 DIV_FLOAT_2ADDR, REM_FLOAT_2ADDR ->
-                    binop_2addr(current, TypeId.F, TypeId.F, false, verify);
+                 DIV_FLOAT_2ADDR, REM_FLOAT_2ADDR -> binop_2addr(current, F, F, false, verify);
             case ADD_DOUBLE_2ADDR, SUB_DOUBLE_2ADDR, MUL_DOUBLE_2ADDR,
-                 DIV_DOUBLE_2ADDR, REM_DOUBLE_2ADDR ->
-                    binop_2addr(current, TypeId.D, TypeId.D, false, verify);
+                 DIV_DOUBLE_2ADDR, REM_DOUBLE_2ADDR -> binop_2addr(current, D, D, false, verify);
             case ADD_INT_LIT16, RSUB_INT, MUL_INT_LIT16, DIV_INT_LIT16, REM_INT_LIT16,
                  ADD_INT_LIT8, RSUB_INT_LIT8, MUL_INT_LIT8, DIV_INT_LIT8, REM_INT_LIT8,
                  SHL_INT_LIT8, SHR_INT_LIT8, USHR_INT_LIT8 -> binop_lit_int(current, false, verify);
@@ -2010,7 +2292,7 @@ public final class AnalyzedMethod {
             default -> throw shouldNotReachHere();
         }
         current.setNopExact(is_nop);
-        current.setNarrowingNop(is_nnop);
+        current.setNarrowingNop(is_narrowing_nop);
         if (opcode.isConditionalBranch() || opcode.isSwitch()) {
             // 'if' and 'switch' instructions have special handling because they
             // provide information about the state of the register in different branches

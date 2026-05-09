@@ -14,6 +14,11 @@ public final class RegisterLine {
     private final Register[] registers;
     private boolean this_initialized;
 
+    private RegisterLine(Register[] registers, boolean this_initialized) {
+        this.registers = registers;
+        this.this_initialized = this_initialized;
+    }
+
     /* package */ RegisterLine(int count) {
         var array = new Register[count];
         Arrays.fill(array, Undefined.INSTANCE);
@@ -139,5 +144,9 @@ public final class RegisterLine {
     public String describe() {
         return Arrays.stream(registers).map(Objects::toString)
                 .collect(Collectors.joining(" | ", "[", "]"));
+    }
+
+    /* package */ RegisterLine duplicate() {
+        return new RegisterLine(registers.clone(), this_initialized);
     }
 }
