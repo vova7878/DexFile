@@ -7,9 +7,13 @@ import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY;
 import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY_RANGE;
 import static com.v7878.dex.Opcode.IF_EQ;
 import static com.v7878.dex.Opcode.IF_EQZ;
+import static com.v7878.dex.Opcode.IF_GE;
 import static com.v7878.dex.Opcode.IF_GEZ;
+import static com.v7878.dex.Opcode.IF_GT;
 import static com.v7878.dex.Opcode.IF_GTZ;
+import static com.v7878.dex.Opcode.IF_LE;
 import static com.v7878.dex.Opcode.IF_LEZ;
+import static com.v7878.dex.Opcode.IF_LT;
 import static com.v7878.dex.Opcode.IF_LTZ;
 import static com.v7878.dex.Opcode.IF_NE;
 import static com.v7878.dex.Opcode.IF_NEZ;
@@ -21,6 +25,7 @@ import static com.v7878.dex.Opcode.SPARSE_SWITCH_PAYLOAD;
 import static com.v7878.dex.Opcode.THROW;
 import static com.v7878.dex.analysis.Position.EXCEPTION_REGISTER;
 import static com.v7878.dex.analysis.Position.RESULT_REGISTER;
+import static com.v7878.dex.analysis.Register.ConstantKind.REFERENCE;
 import static com.v7878.dex.immutable.TypeId.B;
 import static com.v7878.dex.immutable.TypeId.C;
 import static com.v7878.dex.immutable.TypeId.D;
@@ -1733,14 +1738,18 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
+                // 0 < 0 or 0 > 0
                 boolean true_pass = (opcode != IF_LTZ && opcode != IF_GTZ) || !reg.isZero();
+                // positive < 0
                 if (true_pass && opcode == IF_LTZ) {
                     var kind = reg.getConstantKind();
                     if (kind != null && kind.isPositiveInt()) {
                         true_pass = false;
                     }
                 }
+                // 0 <= 0 or 0 >= 0
                 boolean false_pass = (opcode != IF_LEZ && opcode != IF_GEZ) || !reg.isZero();
+                // positive >= 0
                 if (false_pass && opcode == IF_GEZ) {
                     var kind = reg.getConstantKind();
                     if (kind != null && kind.isPositiveInt()) {
@@ -1823,15 +1832,52 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg2, reg2);
                 }
 
+                var z1 = reg1.isZero();
+                var z2 = reg2.isZero();
+                var same = (z1 && z2) || ireg1 == ireg2 || Objects.equals(reg1, reg2);
+
+                // x < x or x > x
+                boolean true_pass = (opcode != IF_LT && opcode != IF_GT) || !same;
+                // 0 > positive
+                if (true_pass && (opcode == IF_GT) && z1) {
+                    var kind = reg2.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        true_pass = false;
+                    }
+                }
+                // positive < 0
+                if (true_pass && (opcode == IF_LT) && z2) {
+                    var kind = reg1.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        true_pass = false;
+                    }
+                }
+                // x >= x or x <= x
+                boolean false_pass = (opcode != IF_LE && opcode != IF_GE) || !same;
+                // 0 <= positive
+                if (false_pass && (opcode == IF_LE) && z1) {
+                    var kind = reg2.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        false_pass = false;
+                    }
+                }
+                // positive >= 0
+                if (false_pass && (opcode == IF_GE) && z2) {
+                    var kind = reg1.getConstantKind();
+                    if (kind != null && kind.isPositiveInt()) {
+                        false_pass = false;
+                    }
+                }
+
                 var work_line = current.after();
 
-                // TODO: reachability test
-
+                // true branch
                 var target = position(address + tmp.getBranchOffset());
-                merge(resolver, touched, todo, current, target, work_line, true);
+                merge(resolver, touched, todo, current, target, work_line, true_pass);
 
+                // false branch
                 target = positionAt(index + 1);
-                merge(resolver, touched, todo, current, target, work_line, true);
+                merge(resolver, touched, todo, current, target, work_line, false_pass);
             }
             case IF_EQ, IF_NE -> {
                 var tmp = (Instruction22t) insn;
@@ -1869,8 +1915,10 @@ public final class AnalyzedMethod {
                     var k1 = reg1.getConstantKind();
                     var k2 = reg2.getConstantKind();
                     if (k1 != null && k2 != null && k1 != k2) {
-                        // Both registers are ref constants of different types
-                        eq_pass = false;
+                        if (k1 != REFERENCE && k2 != REFERENCE) {
+                            // Both registers are ref constants of different types
+                            eq_pass = false;
+                        }
                     }
                 }
                 // Both arguments are the same
