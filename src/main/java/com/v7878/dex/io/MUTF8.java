@@ -8,22 +8,21 @@ class MUTF8 {
             if (a == 0) {
                 return new String(out, 0, s);
             }
-            out[s] = a;
             if (a < '\u0080') {
-                s++;
+                out[s++] = a;
             } else if ((a & 0xe0) == 0xc0) {
                 int b = in.readByte() & 0xff;
-                if ((b & 0xC0) != 0x80) {
+                if ((b & 0xc0) != 0x80) {
                     throw new IllegalStateException("Bad second byte");
                 }
-                out[s++] = (char) (((a & 0x1F) << 6) | (b & 0x3F));
+                out[s++] = (char) (((a & 0x1f) << 6) | (b & 0x3f));
             } else if ((a & 0xf0) == 0xe0) {
                 int b = in.readByte() & 0xff;
                 int c = in.readByte() & 0xff;
-                if (((b & 0xC0) != 0x80) || ((c & 0xC0) != 0x80)) {
+                if (((b & 0xc0) != 0x80) || ((c & 0xc0) != 0x80)) {
                     throw new IllegalStateException("Bad second or third byte");
                 }
-                out[s++] = (char) (((a & 0x0F) << 12) | ((b & 0x3F) << 6) | (c & 0x3F));
+                out[s++] = (char) (((a & 0x0f) << 12) | ((b & 0x3f) << 6) | (c & 0x3f));
             } else {
                 throw new IllegalStateException("Bad byte");
             }
@@ -48,7 +47,7 @@ class MUTF8 {
         final int length = s.length();
         for (int i = 0; i < length; i++) {
             char ch = s.charAt(i);
-            if (ch != 0 && ch <= 127) { // U+0000 uses two bytes.
+            if (ch != 0 && ch <= 127) { // U+0000 uses two bytes
                 out.writeByte(ch);
             } else if (ch <= 2047) {
                 out.writeByte(0xc0 | (0x1f & (ch >> 6)));
