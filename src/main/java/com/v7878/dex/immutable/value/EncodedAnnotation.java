@@ -8,6 +8,7 @@ import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
 
+import java.util.Arrays;
 import java.util.NavigableSet;
 import java.util.Objects;
 
@@ -27,6 +28,10 @@ public final class EncodedAnnotation extends EncodedValue implements CommonAnnot
 
     public static EncodedAnnotation of(TypeId type, Iterable<AnnotationElement> elements) {
         return new EncodedAnnotation(type, Converter.toNavigableSet(elements));
+    }
+
+    public static EncodedAnnotation of(TypeId type, AnnotationElement... elements) {
+        return of(type, Arrays.asList(elements));
     }
 
     public static EncodedAnnotation of(CommonAnnotation other) {
