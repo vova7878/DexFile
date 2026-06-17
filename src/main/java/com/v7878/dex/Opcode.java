@@ -705,7 +705,7 @@ public enum Opcode {
     }
 
     public final boolean isRaw() {
-        return this == RAW;
+        return this == RAW || this == RAW_REF || this == RAW_REF_JUMBO;
     }
 
     Integer getValue(DexVersion dex, int api, boolean art, boolean odex) {

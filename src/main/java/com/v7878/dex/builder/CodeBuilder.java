@@ -648,29 +648,6 @@ public final class CodeBuilder {
         }, unit_count);
     }
 
-    private void odd_spacer() {
-        add(new BuilderNode() {
-            BuilderPosition current;
-
-            public void attach(BuilderPosition current) {
-                this.current = current;
-            }
-
-            @Override
-            public int units() {
-                return current.position() & 0x1;
-            }
-
-            @Override
-            public List<Instruction> generate() {
-                if (units() != 0) {
-                    return List.of(Instruction10x.of(NOP));
-                }
-                return List.of();
-            }
-        }, 0);
-    }
-
     private BuilderPosition positionOrNull(Object label) {
         var pos = label instanceof BuilderPosition bp ? bp : labels.get(label);
         if (pos == null) {
@@ -1264,6 +1241,30 @@ public final class CodeBuilder {
      */
     public CodeBuilder raw_ref_jumbo(ReferenceType type, Object reference) {
         return raw(InstructionRawRef.of(type, reference, true));
+    }
+
+    public CodeBuilder odd_spacer() {
+        add(new BuilderNode() {
+            BuilderPosition current;
+
+            public void attach(BuilderPosition current) {
+                this.current = current;
+            }
+
+            @Override
+            public int units() {
+                return current.position() & 0x1;
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                if (units() != 0) {
+                    return List.of(Instruction10x.of(NOP));
+                }
+                return List.of();
+            }
+        }, 0);
+        return this;
     }
 
     public CodeBuilder raw_nop() {

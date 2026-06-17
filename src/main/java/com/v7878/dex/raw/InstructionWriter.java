@@ -1,7 +1,6 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexOffsets.PAYLOAD_INSTRUCTION_ALIGNMENT;
-import static com.v7878.dex.Opcode.RAW;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.MathUtils.hwidth32;
 import static com.v7878.dex.util.MathUtils.hwidth64;
@@ -60,7 +59,7 @@ import java.util.Objects;
 public class InstructionWriter {
     public static void writeInstruction(Instruction instruction, DexWriter writer, RandomOutput out) {
         var opcode = instruction.getOpcode();
-        int op = opcode == RAW ? -1 : writer.opcodes().getOpcodeValue(opcode);
+        int op = opcode.isRaw() ? -1 : writer.opcodes().getOpcodeValue(opcode);
         switch (opcode.format()) {
             case Format10t -> write_10t(((Instruction10t) instruction), out, op);
             case Format10x -> write_10x(((Instruction10x) instruction), out, op);
