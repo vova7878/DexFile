@@ -48,6 +48,7 @@ import com.v7878.dex.immutable.bytecode.Instruction51l;
 import com.v7878.dex.immutable.bytecode.Instruction52c;
 import com.v7878.dex.immutable.bytecode.Instruction5rc;
 import com.v7878.dex.immutable.bytecode.InstructionRaw;
+import com.v7878.dex.immutable.bytecode.InstructionRawRef;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -115,6 +116,8 @@ public class InstructionWriter {
             case MSparseSwitchPayload -> //noinspection DuplicateBranchesInSwitch
                     throw new UnsupportedOperationException("Unimplemented yet!");
             case FormatRaw -> write_raw(((InstructionRaw) instruction), out);
+            case FormatRawRef16 -> write_raw_ref16(((InstructionRawRef) instruction), writer, out);
+            case FormatRawRef32 -> write_raw_ref32(((InstructionRawRef) instruction), writer, out);
             default -> throw shouldNotReachHere();
         }
     }
@@ -640,5 +643,17 @@ public class InstructionWriter {
 
     private static void write_raw(InstructionRaw value, RandomOutput out) {
         out.writeShort(value.getValue());
+    }
+
+    private static void write_raw_ref16(InstructionRawRef value, DexWriter indexer, RandomOutput out) {
+        int AAAA = refToIndex(value.getReferenceType1(), indexer, value.getReference1());
+        AAAA = unsigned(AAAA, 16);
+        out.writeShort(AAAA);
+    }
+
+    private static void write_raw_ref32(InstructionRawRef value, DexWriter indexer, RandomOutput out) {
+        int AAAAAAAA = refToIndex(value.getReferenceType1(), indexer, value.getReference1());
+        out.writeShort(AAAAAAAA & 0xffff);
+        out.writeShort(AAAAAAAA >>> 16);
     }
 }

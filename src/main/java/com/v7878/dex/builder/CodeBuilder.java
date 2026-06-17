@@ -21,6 +21,7 @@ import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 import com.v7878.collections.IntMap;
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
+import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MethodHandleId;
@@ -59,6 +60,7 @@ import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
 import com.v7878.dex.immutable.bytecode.InstructionRaw;
+import com.v7878.dex.immutable.bytecode.InstructionRawRef;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -1248,6 +1250,20 @@ public final class CodeBuilder {
 
     public CodeBuilder raw(short instruction) {
         return raw(InstructionRaw.of(instruction));
+    }
+
+    /**
+     * @param reference u16 ref
+     */
+    public CodeBuilder raw_ref(ReferenceType type, Object reference) {
+        return raw(InstructionRawRef.of(type, reference, false));
+    }
+
+    /**
+     * @param reference u32 ref
+     */
+    public CodeBuilder raw_ref_jumbo(ReferenceType type, Object reference) {
+        return raw(InstructionRawRef.of(type, reference, true));
     }
 
     public CodeBuilder raw_nop() {

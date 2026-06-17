@@ -41,8 +41,10 @@ public enum Format {
     SparseSwitchPayload(),
     MPackedSwitchPayload(),
     MSparseSwitchPayload(),
-    // special format
-    FormatRaw(1);
+    // Special formats
+    FormatRaw(1),
+    FormatRawRef16(1, true, false),
+    FormatRawRef32(2, true, false);
 
     private final int units;
     private final boolean payload;

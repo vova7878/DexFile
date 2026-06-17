@@ -40,6 +40,8 @@ import static com.v7878.dex.Format.Format51l;
 import static com.v7878.dex.Format.Format52c;
 import static com.v7878.dex.Format.Format5rc;
 import static com.v7878.dex.Format.FormatRaw;
+import static com.v7878.dex.Format.FormatRawRef16;
+import static com.v7878.dex.Format.FormatRawRef32;
 import static com.v7878.dex.Format.MPackedSwitchPayload;
 import static com.v7878.dex.Format.MSparseSwitchPayload;
 import static com.v7878.dex.Format.PackedSwitchPayload;
@@ -489,7 +491,9 @@ public enum Opcode {
     THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40cs, regs(), ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
     // special single 16-bit opcode
-    RAW(raw(), "raw", FormatRaw, regs(), 0);
+    RAW(raw(), "raw", FormatRaw, regs(), 0),
+    RAW_REF(raw(), "raw-ref", FormatRawRef16, regs(), 0),
+    RAW_REF_JUMBO(raw(), "raw-ref/jumbo", FormatRawRef32, regs(), 0);
 
     protected static class Constants {
         // a flavor of invoke
