@@ -440,67 +440,23 @@ public class DexWriter implements StringIndexer {
         data_buffer.alignPosition(DATA_SECTION_ALIGNMENT);
         int data_end = data_buffer.position();
 
-        // Note: for compact dex, data section is placed
-        // after the entire 'file' and isn't included in its size
-        if (isCompact()) {
-            map.file_size = shared_data.content_off;
-            map.data_size = data_end;
+        if (isDexContainer()) {
+            map.file_size = primary ? data_end - map.header_off : map.header_size;
+        } else if (isCompact()) {
+            // Note: for compact dex, data section is placed
+            // after the entire 'file' and isn't included in its size
+            assert primary && map.header_off == 0;
+            map.file_size = data_offset; // main without data
+            map.data_size = data_end - data_offset;
             map.compact_owned_data_begin = 0;
             map.compact_owned_data_end = map.data_size;
         } else {
-            map.file_size = primary ? data_end : map.header_size;
-            if (!isDexContainer()) {
-                map.data_size = map.file_size - map.data_off;
-            }
+            assert primary && map.header_off == 0;
+            map.file_size = data_end; // main + data
+            map.data_size = data_end - data_offset;
         }
-        map.file_size -= map.header_off;
+
         shared_data.content_off += data_end - data_offset;
-    }
-
-    private void writeMain() {
-        writeStringSection();
-        writeTypeSection();
-        writeFieldSection();
-        writeProtoSection();
-        writeMethodSection();
-        writeCallSiteSection();
-        writeMethodHandleSection();
-        writeClassDefSection();
-    }
-
-    public void finish() {
-        if (isDexContainer()) {
-            map.container_size = shared_data.content_off;
-        }
-
-        writeMain();
-        writeMap(true);
-        writeHeader();
-        writeChecksums();
-    }
-
-    public void writeChecksums() {
-        // TODO: How are the checksum and signature fields calculated for compact dex?
-
-        main_buffer.position(map.header_off + SIGNATURE_OFFSET);
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance("SHA-1");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
-        }
-        byte[] signature = md.digest(main_buffer
-                .duplicateAt(map.header_off + SIGNATURE_DATA_START_OFFSET)
-                .readByteArray(map.file_size - SIGNATURE_DATA_START_OFFSET));
-        main_buffer.writeByteArray(signature);
-
-        main_buffer.position(map.header_off + CHECKSUM_OFFSET);
-        Adler32 adler = new Adler32();
-        int adler_length = map.file_size - CHECKSUM_DATA_START_OFFSET;
-        adler.update(main_buffer
-                .duplicateAt(map.header_off + CHECKSUM_DATA_START_OFFSET)
-                .readByteArray(adler_length), 0, adler_length);
-        main_buffer.writeInt((int) adler.getValue());
     }
 
     private void initMap() {
@@ -547,6 +503,52 @@ public class DexWriter implements StringIndexer {
         if (!isDexContainer()) {
             map.data_off = offset;
         }
+    }
+
+    private void writeMain() {
+        writeStringSection();
+        writeTypeSection();
+        writeFieldSection();
+        writeProtoSection();
+        writeMethodSection();
+        writeCallSiteSection();
+        writeMethodHandleSection();
+        writeClassDefSection();
+    }
+
+    public void finish() {
+        if (isDexContainer()) {
+            map.container_size = shared_data.content_off;
+        }
+
+        writeMain();
+        writeMap(true);
+        writeHeader();
+        writeChecksums();
+    }
+
+    public void writeChecksums() {
+        // TODO: How are the checksum and signature fields calculated for compact dex?
+
+        main_buffer.position(map.header_off + SIGNATURE_OFFSET);
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
+        }
+        byte[] signature = md.digest(main_buffer
+                .duplicateAt(map.header_off + SIGNATURE_DATA_START_OFFSET)
+                .readByteArray(map.file_size - SIGNATURE_DATA_START_OFFSET));
+        main_buffer.writeByteArray(signature);
+
+        main_buffer.position(map.header_off + CHECKSUM_OFFSET);
+        Adler32 adler = new Adler32();
+        int adler_length = map.file_size - CHECKSUM_DATA_START_OFFSET;
+        adler.update(main_buffer
+                .duplicateAt(map.header_off + CHECKSUM_DATA_START_OFFSET)
+                .readByteArray(adler_length), 0, adler_length);
+        main_buffer.writeInt((int) adler.getValue());
     }
 
     @Override
