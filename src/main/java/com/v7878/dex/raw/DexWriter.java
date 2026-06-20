@@ -403,22 +403,36 @@ public class DexWriter implements StringIndexer {
         compact_debug_info = isCompact() ? new CompactData(new int[methods.length]) : null;
     }
 
+    public void writePreContent() {
+        if (isDexContainer()) {
+            int start_pos = shared_data.content_off;
+            data_buffer.position(start_pos);
+
+            writeCodeItemSection();
+
+            int end_pos = data_buffer.position();
+            shared_data.content_off += end_pos - start_pos;
+        }
+    }
+
     public void writeContent() {
         initMap();
 
-        int data_offset = shared_data.content_off;
-        data_buffer.position(data_offset);
+        int start_pos = shared_data.content_off;
+        data_buffer.position(start_pos);
 
         if (isCompact()) {
             // Note: for compact dex, offsets are calculated from the data section, not the header
             data_buffer.markAsStart();
-            data_offset = 0;
+            start_pos = 0;
             // We want offset 0 to be reserved
             data_buffer.addPosition(DATA_SECTION_ALIGNMENT);
         }
 
         // Write code item first to minimize the space required for encoded methods
-        writeCodeItemSection();
+        if (!isDexContainer()) {
+            writeCodeItemSection();
+        }
         writeDebugInfoSection();
         if (primary) {
             writeStringDataSection();
@@ -438,25 +452,25 @@ public class DexWriter implements StringIndexer {
         }
 
         data_buffer.alignPosition(DATA_SECTION_ALIGNMENT);
-        int data_end = data_buffer.position();
+
+        int end_pos = data_buffer.position();
+        shared_data.content_off += end_pos - start_pos;
 
         if (isDexContainer()) {
-            map.file_size = primary ? data_end - map.header_off : map.header_size;
+            map.file_size = primary ? end_pos - map.header_off : map.header_size;
         } else if (isCompact()) {
             // Note: for compact dex, data section is placed
             // after the entire 'file' and isn't included in its size
             assert primary && map.header_off == 0;
-            map.file_size = data_offset; // main without data
-            map.data_size = data_end - data_offset;
+            map.file_size = start_pos; // main without data
+            map.data_size = end_pos - start_pos;
             map.compact_owned_data_begin = 0;
             map.compact_owned_data_end = map.data_size;
         } else {
             assert primary && map.header_off == 0;
-            map.file_size = data_end; // main + data
-            map.data_size = data_end - data_offset;
+            map.file_size = end_pos; // main + data
+            map.data_size = end_pos - start_pos;
         }
-
-        shared_data.content_off += data_end - data_offset;
     }
 
     private void initMap() {

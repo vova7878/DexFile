@@ -244,6 +244,7 @@ public final class DexIO {
         var shared_data = new SharedData();
         DexWriter writer = new DexWriter(options,
                 shared_data, io, data, true);
+        writer.writePreContent();
         writer.writeContent();
         writer.finish();
         return io.toByteArray();
@@ -267,6 +268,9 @@ public final class DexIO {
         for (int i = 0; i < data.length; i++) {
             writers[i] = new DexWriter(options, shared_data,
                     io, data[i], i == data.length - 1);
+        }
+        for (var writer : writers) {
+            writer.writePreContent();
         }
         for (var writer : writers) {
             writer.writeContent();
