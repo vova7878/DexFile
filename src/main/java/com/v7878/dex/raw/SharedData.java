@@ -33,10 +33,12 @@ public class SharedData {
 
     public final NavigableMap<String, StringPosition> strings;
 
+    public int content_off;
     public int string_data_items_off;
 
     public SharedData() {
         strings = new TreeMap<>();
+        content_off = 0;
     }
 
     public StringPosition addString(String value) {
