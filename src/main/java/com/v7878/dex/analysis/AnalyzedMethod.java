@@ -2261,12 +2261,19 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);
 
-                is_nop = switch (opcode) {
+                var check = switch (opcode) {
                     case INT_TO_BYTE -> src.isByte();
                     case INT_TO_CHAR -> src.isChar();
                     case INT_TO_SHORT -> src.isShort();
                     default -> throw shouldNotReachHere();
                 };
+
+                if (src.isConstant()) {
+                    // This instruction converts a constant register into a regular value
+                    is_narrowing_nop = check;
+                } else {
+                    is_nop = check;
+                }
 
                 var type = switch (opcode) {
                     case INT_TO_BYTE -> B;
