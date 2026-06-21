@@ -1,7 +1,6 @@
 package com.v7878.dex.raw;
 
 import static com.v7878.dex.DexOffsets.PAYLOAD_INSTRUCTION_ALIGNMENT;
-import static com.v7878.dex.Opcode.RAW;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.MathUtils.hwidth32;
 import static com.v7878.dex.util.MathUtils.hwidth64;
@@ -48,6 +47,7 @@ import com.v7878.dex.immutable.bytecode.Instruction51l;
 import com.v7878.dex.immutable.bytecode.Instruction52c;
 import com.v7878.dex.immutable.bytecode.Instruction5rc;
 import com.v7878.dex.immutable.bytecode.InstructionRaw;
+import com.v7878.dex.immutable.bytecode.InstructionRawRef;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -59,7 +59,7 @@ import java.util.Objects;
 public class InstructionWriter {
     public static void writeInstruction(Instruction instruction, DexWriter writer, RandomOutput out) {
         var opcode = instruction.getOpcode();
-        int op = opcode == RAW ? -1 : writer.opcodes().getOpcodeValue(opcode);
+        int op = opcode.isRaw() ? -1 : writer.opcodes().getOpcodeValue(opcode);
         switch (opcode.format()) {
             case Format10t -> write_10t(((Instruction10t) instruction), out, op);
             case Format10x -> write_10x(((Instruction10x) instruction), out, op);
@@ -115,6 +115,8 @@ public class InstructionWriter {
             case MSparseSwitchPayload -> //noinspection DuplicateBranchesInSwitch
                     throw new UnsupportedOperationException("Unimplemented yet!");
             case FormatRaw -> write_raw(((InstructionRaw) instruction), out);
+            case FormatRawRef16 -> write_raw_ref16(((InstructionRawRef) instruction), writer, out);
+            case FormatRawRef32 -> write_raw_ref32(((InstructionRawRef) instruction), writer, out);
             default -> throw shouldNotReachHere();
         }
     }
@@ -640,5 +642,17 @@ public class InstructionWriter {
 
     private static void write_raw(InstructionRaw value, RandomOutput out) {
         out.writeShort(value.getValue());
+    }
+
+    private static void write_raw_ref16(InstructionRawRef value, DexWriter indexer, RandomOutput out) {
+        int AAAA = refToIndex(value.getReferenceType1(), indexer, value.getReference1());
+        AAAA = unsigned(AAAA, 16);
+        out.writeShort(AAAA);
+    }
+
+    private static void write_raw_ref32(InstructionRawRef value, DexWriter indexer, RandomOutput out) {
+        int AAAAAAAA = refToIndex(value.getReferenceType1(), indexer, value.getReference1());
+        out.writeShort(AAAAAAAA & 0xffff);
+        out.writeShort(AAAAAAAA >>> 16);
     }
 }

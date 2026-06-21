@@ -2255,10 +2255,34 @@ public final class AnalyzedMethod {
             case DOUBLE_TO_INT -> unop(current, I, D, verify);
             case DOUBLE_TO_LONG -> unop(current, J, D, verify);
             case DOUBLE_TO_FLOAT -> unop(current, F, D, verify);
-            // TODO: Mark as nop if the required type is already in the register
-            case INT_TO_BYTE -> unop(current, B, I, verify);
-            case INT_TO_CHAR -> unop(current, C, I, verify);
-            case INT_TO_SHORT -> unop(current, S, I, verify);
+            case INT_TO_BYTE, INT_TO_CHAR, INT_TO_SHORT -> {
+                var tmp = (Instruction12x) insn;
+
+                var isrc = tmp.getRegister2();
+                var src = current.before().at(isrc);
+
+                var check = switch (opcode) {
+                    case INT_TO_BYTE -> src.isByte();
+                    case INT_TO_CHAR -> src.isChar();
+                    case INT_TO_SHORT -> src.isShort();
+                    default -> throw shouldNotReachHere();
+                };
+
+                if (src.isConstant()) {
+                    // This instruction converts a constant register into a regular value
+                    is_narrowing_nop = check;
+                } else {
+                    is_nop = check;
+                }
+
+                var type = switch (opcode) {
+                    case INT_TO_BYTE -> B;
+                    case INT_TO_CHAR -> C;
+                    case INT_TO_SHORT -> S;
+                    default -> throw shouldNotReachHere();
+                };
+                unop(current, type, I, verify);
+            }
             // TODO: Mark division by zero as unreachable
             case ADD_INT, SUB_INT, MUL_INT, DIV_INT,
                  REM_INT, SHL_INT, SHR_INT, USHR_INT -> binop(current, I, I, I, false, verify);

@@ -179,6 +179,14 @@ public final class MethodBuilder {
         return withProto(ProtoId.of(descriptor));
     }
 
+    public MethodBuilder withProto(TypeId return_type, Iterable<TypeId> parameters) {
+        return withProto(ProtoId.of(return_type, parameters));
+    }
+
+    public MethodBuilder withProto(TypeId return_type, TypeId... parameters) {
+        return withProto(ProtoId.of(return_type, parameters));
+    }
+
     public MethodBuilder withFlags(int flags) {
         this.access_flags = Preconditions.checkMethodAccessFlags(flags);
         return this;

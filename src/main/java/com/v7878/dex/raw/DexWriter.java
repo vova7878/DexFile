@@ -51,6 +51,7 @@ import static com.v7878.dex.DexOffsets.COMPACT_OFFSET_TABLE_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.DATA_SECTION_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.HIDDENAPI_ALIGNMENT;
+import static com.v7878.dex.DexOffsets.MAIN_SECTION_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.MAP_ALIGNMENT;
 import static com.v7878.dex.DexOffsets.METHOD_HANDLE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.METHOD_ID_SIZE;
@@ -176,8 +177,6 @@ public class DexWriter implements StringIndexer {
         public int method_handles_size;
         public int method_handles_off;
 
-        public int main_end;
-
         public int data_size;
         public int data_off;
 
@@ -223,6 +222,7 @@ public class DexWriter implements StringIndexer {
 
     private final WriteOptions options;
     private final Opcodes opcodes;
+    private final boolean primary;
 
     private final FileMap map;
 
@@ -307,9 +307,10 @@ public class DexWriter implements StringIndexer {
     }
 
     public DexWriter(WriteOptions options, SharedData shared_data,
-                     RandomIO io, Dex dexfile, int header_offset) {
+                     RandomIO io, Dex dexfile, boolean primary) {
         assert io.position() == 0;
         options.validate();
+        this.primary = primary;
         this.options = options;
         this.shared_data = shared_data;
 
@@ -327,10 +328,13 @@ public class DexWriter implements StringIndexer {
 
         map = new FileMap();
 
-        if (!isDexContainer() && header_offset != 0) {
+        int header_offset = shared_data.content_off;
+        if (!isDexContainer() && (header_offset != 0 || !primary)) {
             throw new IllegalArgumentException("Unexpected header offset");
         }
         map.header_off = header_offset;
+        map.header_size = headerSize(version);
+        shared_data.content_off += map.header_size;
 
         if (isCompact()) {
             final int defaultFlags = 0x1;
@@ -368,7 +372,7 @@ public class DexWriter implements StringIndexer {
         // (but const-method-handle\jumbo still doesn't exist)
         //
         // If each methodhandle refers to either a field or a method
-        // (and they're limited to 16 bits), how do you create more methodhandles?
+        // (and they're limited to 16 bits), how do you create more method handles?
         // Actually... it's quite simple. Duplicates are allowed. I understand why
         // this is necessary for callsites - they can have state. But why this is
         // necessary for methodhandles? I don't know. But that's what the documentation says
@@ -397,29 +401,38 @@ public class DexWriter implements StringIndexer {
         }
 
         compact_debug_info = isCompact() ? new CompactData(new int[methods.length]) : null;
-
-        initMap();
     }
 
-    public void writeData(int data_offset, boolean primary) {
+    public void writePreContent() {
         if (isDexContainer()) {
-            assert data_offset >= map.main_end;
-        } else {
-            assert data_offset == map.main_end;
-            map.data_off = data_offset;
-        }
+            int start_pos = shared_data.content_off;
+            data_buffer.position(start_pos);
 
-        data_buffer.position(data_offset);
+            writeCodeItemSection();
+
+            int end_pos = data_buffer.position();
+            shared_data.content_off += end_pos - start_pos;
+        }
+    }
+
+    public void writeContent() {
+        initMap();
+
+        int start_pos = shared_data.content_off;
+        data_buffer.position(start_pos);
 
         if (isCompact()) {
             // Note: for compact dex, offsets are calculated from the data section, not the header
             data_buffer.markAsStart();
+            start_pos = 0;
             // We want offset 0 to be reserved
             data_buffer.addPosition(DATA_SECTION_ALIGNMENT);
         }
 
         // Write code item first to minimize the space required for encoded methods
-        writeCodeItemSection();
+        if (!isDexContainer()) {
+            writeCodeItemSection();
+        }
         writeDebugInfoSection();
         if (primary) {
             writeStringDataSection();
@@ -440,75 +453,30 @@ public class DexWriter implements StringIndexer {
 
         data_buffer.alignPosition(DATA_SECTION_ALIGNMENT);
 
-        // Note: for compact dex, data section is placed
-        // after the entire file and isn't included in its size
-        if (isCompact()) {
-            map.file_size = map.main_end;
-            map.data_size = data_buffer.position();
+        int end_pos = data_buffer.position();
+        shared_data.content_off += end_pos - start_pos;
+
+        if (isDexContainer()) {
+            map.file_size = primary ? end_pos - map.header_off : map.header_size;
+        } else if (isCompact()) {
+            // Note: for compact dex, data section is placed
+            // after the entire 'file' and isn't included in its size
+            assert primary && map.header_off == 0;
+            map.file_size = start_pos; // main without data
+            map.data_size = end_pos - start_pos;
             map.compact_owned_data_begin = 0;
             map.compact_owned_data_end = map.data_size;
         } else {
-            map.file_size = data_buffer.position();
-            if (!isDexContainer()) {
-                map.data_size = map.file_size - map.data_off;
-            }
-        }
-        map.file_size -= map.header_off;
-    }
-
-    public void writeMain(int container_size) {
-        writeMap(true);
-
-        writeStringSection();
-        writeTypeSection();
-        writeFieldSection();
-        writeProtoSection();
-        writeMethodSection();
-        writeCallSiteSection();
-        writeMethodHandleSection();
-        writeClassDefSection();
-
-        finalizeHeader(container_size);
-    }
-
-    public void finalizeHeader(int container_size) {
-        if (isDexContainer()) {
-            assert container_size >= map.file_size;
-            map.container_size = container_size;
-        } else {
-            assert container_size == map.file_size;
-        }
-        writeHeader();
-        if (isCompact()) {
-            // TODO: How are the checksum and signature fields calculated for compact dex?
-        } else {
-            main_buffer.position(map.header_off + SIGNATURE_OFFSET);
-            MessageDigest md;
-            try {
-                md = MessageDigest.getInstance("SHA-1");
-            } catch (NoSuchAlgorithmException e) {
-                throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
-            }
-            byte[] signature = md.digest(main_buffer
-                    .duplicateAt(map.header_off + SIGNATURE_DATA_START_OFFSET)
-                    .readByteArray(map.file_size - SIGNATURE_DATA_START_OFFSET));
-            main_buffer.writeByteArray(signature);
-
-            main_buffer.position(map.header_off + CHECKSUM_OFFSET);
-            Adler32 adler = new Adler32();
-            int adler_length = map.file_size - CHECKSUM_DATA_START_OFFSET;
-            adler.update(main_buffer
-                    .duplicateAt(map.header_off + CHECKSUM_DATA_START_OFFSET)
-                    .readByteArray(adler_length), 0, adler_length);
-            main_buffer.writeInt((int) adler.getValue());
+            assert primary && map.header_off == 0;
+            map.file_size = end_pos; // main + data
+            map.data_size = end_pos - start_pos;
         }
     }
 
     private void initMap() {
-        int offset = map.header_off;
+        int offset = shared_data.content_off;
 
-        map.header_size = headerSize(version());
-        offset += map.header_size;
+        offset = roundUp(offset, MAIN_SECTION_ALIGNMENT);
 
         map.string_ids_off = offset;
         map.string_ids_size = strings.length;
@@ -542,7 +510,59 @@ public class DexWriter implements StringIndexer {
         map.method_handles_size = method_handles.length;
         offset += map.method_handles_size * METHOD_HANDLE_ID_SIZE;
 
-        map.main_end = roundUp(offset, DATA_SECTION_ALIGNMENT);
+        offset = roundUp(offset, DATA_SECTION_ALIGNMENT);
+
+        shared_data.content_off = offset;
+
+        if (!isDexContainer()) {
+            map.data_off = offset;
+        }
+    }
+
+    private void writeMain() {
+        writeStringSection();
+        writeTypeSection();
+        writeFieldSection();
+        writeProtoSection();
+        writeMethodSection();
+        writeCallSiteSection();
+        writeMethodHandleSection();
+        writeClassDefSection();
+    }
+
+    public void finish() {
+        if (isDexContainer()) {
+            map.container_size = shared_data.content_off;
+        }
+
+        writeMain();
+        writeMap(true);
+        writeHeader();
+        writeChecksums();
+    }
+
+    public void writeChecksums() {
+        // TODO: How are the checksum and signature fields calculated for compact dex?
+
+        main_buffer.position(map.header_off + SIGNATURE_OFFSET);
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
+        }
+        byte[] signature = md.digest(main_buffer
+                .duplicateAt(map.header_off + SIGNATURE_DATA_START_OFFSET)
+                .readByteArray(map.file_size - SIGNATURE_DATA_START_OFFSET));
+        main_buffer.writeByteArray(signature);
+
+        main_buffer.position(map.header_off + CHECKSUM_OFFSET);
+        Adler32 adler = new Adler32();
+        int adler_length = map.file_size - CHECKSUM_DATA_START_OFFSET;
+        adler.update(main_buffer
+                .duplicateAt(map.header_off + CHECKSUM_DATA_START_OFFSET)
+                .readByteArray(adler_length), 0, adler_length);
+        main_buffer.writeInt((int) adler.getValue());
     }
 
     @Override
@@ -698,10 +718,6 @@ public class DexWriter implements StringIndexer {
 
     public int getFileSize() {
         return map.file_size;
-    }
-
-    public int getMainEnd() {
-        return map.main_end;
     }
 
     public Opcodes opcodes() {

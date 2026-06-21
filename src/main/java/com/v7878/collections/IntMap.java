@@ -3,10 +3,12 @@ package com.v7878.collections;
 import com.v7878.dex.util.EmptyArrays;
 
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.function.IntFunction;
 
-public final class IntMap<E> {
+public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
     private static final Object DELETED = new Object();
 
     private boolean garbage;
@@ -444,5 +446,37 @@ public final class IntMap<E> {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public Iterator<Entry<E>> iterator() {
+        return new Iterator<>() {
+            int cursor;       // Index of next element to return
+            int lastRet = -1; // Index of last element returned; -1 if no such
+
+            public boolean hasNext() {
+                return cursor < size();
+            }
+
+            @SuppressWarnings("unchecked")
+            public Entry<E> next() {
+                int i = cursor;
+                if (i >= size())
+                    throw new NoSuchElementException();
+                cursor = i + 1;
+                lastRet = i;
+                // size() calls above took care about gc() compaction
+                return new Entry<>(keys[i], (E) values[i]);
+            }
+
+            public void remove() {
+                int i = lastRet;
+                if (i < 0)
+                    throw new IllegalStateException();
+                removeAt(i);
+                cursor = i;
+                lastRet = -1;
+            }
+        };
     }
 }

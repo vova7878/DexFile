@@ -298,8 +298,7 @@ public class DexCollector {
             var out = Converter.minimize(Arrays.asList(fields),
                     FieldDefContainer::value, field -> {
                         var value = field.getInitialValue();
-                        return value != null ? value : EncodedValue
-                                .defaultValue(field.getType());
+                        return value != null ? value : EncodedValue.defaultValue(field.getType());
                     }, field -> {
                         var value = field.getInitialValue();
                         return value == null || value.isDefault();

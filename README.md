@@ -3,7 +3,7 @@
 
 # About
 
-This library is designed for reading, generating, modifying, and writing dex files. It was primarily inspired by the [Class-File API](https://openjdk.org/jeps/484), which was introduced in JDK 22
+This library is designed for reading, generating, modifying, and writing dex files. It was primarily inspired by the [Class-File API](https://openjdk.org/jeps/484), which was introduced in JDK 22.
 
 ### Installation
 
@@ -13,9 +13,38 @@ dependencies {
 }
 ```
 
+### Supported DEX Versions
+
+| Version        | Supported API |      Read      |      Write      | Instruction Set                                       |
+|:---------------|:-------------:|:--------------:|:---------------:|:------------------------------------------------------|
+| **041**        |      35+      | ✅ <sup>1</sup> | ✅ <sup>1</sup>  | Standard <sup>2</sup>                                 |
+| **040**        |      30+      |       ✅        |        ✅        | Standard + ODEX                                       |
+| **039**        |      28+      |       ✅        |        ✅        | Standard + ODEX                                       |
+| **038**        |      26+      |       ✅        |        ✅        | Standard + ODEX                                       |
+| **037**        |      26+      |       ✅        |        ✅        | Standard + ODEX                                       |
+| **037**        |    24 - 25    |       ✅        |        ✅        | Standard + ODEX + ⏳lambda opcodes <sup>3</sup>        |
+| **036**        |    16 - 20    |       ✅        |        ✅        | Standard + ODEX <sup>4</sup>                          |
+| **036**        |    14 - 15    |       ✅        |        ✅        | Standard + ODEX + expanded jumbo opcodes <sup>5</sup> |
+| **035**        |      1+       |       ✅        |        ✅        | Standard + ODEX                                       |
+| **013**        |      M5       |       ✅        |        ⏳        | Early Dalvik + ODEX <sup>6</sup>                      |
+| **009**        |      M3       |       ✅        |        ⏳        | Early Dalvik + ODEX <sup>6</sup>                      |
+| **cdex (001)** |    28 - 35    | ✅ <sup>7</sup> | ⚠️ <sup>8</sup> | Standard + ODEX                                       |
+
+* <sup>1</sup> Supports reading and writing as a **container** that can combine multiple logical DEX files into a single physical file to save space and share data (e.g., strings).
+* <sup>2</sup> Unlike all other DEX versions, version 041 does not contain any special `odex` instructions. This is because `odex` instructions were completely removed from the Android runtime starting in API 32, while the `dex041` container format was only introduced later in API 35.
+* <sup>3</sup> An early experimental feature for Android 7.x that never made it to a stable release. However, samples exist and the opcodes are present in the ART source code. Support for these instructions is planned for a future release.
+* <sup>4</sup> This format was rolled back to the `dex035` state in these Android versions, thus it has full read and write support in the library.
+* <sup>5</sup> The format was never officially finalized by Google and was abandoned before a stable release. However, it fully existed, and this library provides complete read and write support for it, including all unusual instruction families (like expanded jumbo opcodes), based on full documentation and real samples.
+* <sup>6</sup> Historical pre-release versions (Milestone 3 and 5). Reading is fully supported, including `odex` instructions. Writing is planned for a future release.
+* <sup>7</sup> Full support. The peculiarity is that `cdex` is normally always packaged inside a `vdex` container.
+* <sup>8</sup> Writing is only supported as a single file outside of `vdex`. Such a written file can be loaded using special techniques via native code in API 28–35, or the standard way via `InMemoryClassLoader` in API 34 and 35 (but **not** via `PathClassLoader`).
+
 ### Example
 
-This is a simple compiler for the [BrainFuck](https://brainfuck.org/brainfuck.html) language to dex format
+<details>
+<summary><b>BrainFuck to DEX Compiler</b></summary>
+
+This is a simple compiler for the [BrainFuck](https://en.wikipedia.org/wiki/Brainfuck) language to dex format.
 
 ```java
 public static byte[] compile(int tape_length, String bf) {
@@ -139,3 +168,5 @@ public static byte[] compile(int tape_length, String bf) {
     return DexIO.write(Dex.of(impl_def));
 }
 ```
+
+</details>

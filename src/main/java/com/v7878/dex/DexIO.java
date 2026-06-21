@@ -241,10 +241,12 @@ public final class DexIO {
         Objects.requireNonNull(options);
         Objects.requireNonNull(data);
         var io = new ByteArrayIO();
-        var strings = new SharedData();
-        DexWriter writer = new DexWriter(options, strings, io, data, 0);
-        writer.writeData(writer.getMainEnd(), true);
-        writer.writeMain(writer.getFileSize());
+        var shared_data = new SharedData();
+        DexWriter writer = new DexWriter(options,
+                shared_data, io, data, true);
+        writer.writePreContent();
+        writer.writeContent();
+        writer.finish();
         return io.toByteArray();
     }
 
@@ -261,16 +263,20 @@ public final class DexIO {
         }
         for (var dex : data) Objects.requireNonNull(dex);
         var io = new ByteArrayIO();
-        var strings = new SharedData();
+        var shared_data = new SharedData();
         var writers = new DexWriter[data.length];
-        int header_offset = 0;
         for (int i = 0; i < data.length; i++) {
-            var writer = writers[i] = new DexWriter(options, strings, io, data[i], header_offset);
-            writer.writeData(writer.getMainEnd(), i == data.length - 1);
-            header_offset += writer.getFileSize();
+            writers[i] = new DexWriter(options, shared_data,
+                    io, data[i], i == data.length - 1);
         }
         for (var writer : writers) {
-            writer.writeMain(header_offset);
+            writer.writePreContent();
+        }
+        for (var writer : writers) {
+            writer.writeContent();
+        }
+        for (var writer : writers) {
+            writer.finish();
         }
         return io.toByteArray();
     }

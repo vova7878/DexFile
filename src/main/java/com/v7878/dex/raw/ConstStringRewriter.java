@@ -1,7 +1,9 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
 import static com.v7878.dex.Opcode.CONST_STRING;
 import static com.v7878.dex.Opcode.CONST_STRING_JUMBO;
+import static com.v7878.dex.Opcode.FILL_ARRAY_DATA;
 import static com.v7878.dex.WriteOptions.StringFix.FIX_ALL;
 import static com.v7878.dex.WriteOptions.StringFix.FIX_JUMBO;
 import static com.v7878.dex.WriteOptions.StringFix.NONE;
@@ -21,7 +23,6 @@ import com.v7878.dex.WriteOptions.StringFix;
 import com.v7878.dex.builder.CodeBuilder;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.TryBlock;
-import com.v7878.dex.immutable.bytecode.ArrayPayload;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.Instruction21c;
 import com.v7878.dex.immutable.bytecode.Instruction21t;
@@ -162,8 +163,7 @@ public class ConstStringRewriter {
             }
             case FILL_ARRAY_DATA -> {
                 var tmp = ((Instruction31t) insn);
-                var payload = (ArrayPayload) code_map.apply(offset + tmp.getBranchOffset());
-                ib.fill_array_data(tmp.getRegister1(), payload.getElementWidth(), payload.getArrayElements());
+                ib.f31t(FILL_ARRAY_DATA, tmp.getRegister1(), label(offset + tmp.getBranchOffset()));
             }
             case IF_EQ, IF_NE, IF_LT, IF_GE, IF_GT, IF_LE -> {
                 var tmp = ((Instruction22t) insn);
@@ -191,7 +191,12 @@ public class ConstStringRewriter {
                 };
                 ib.if_testz(test, tmp.getRegister1(), label(offset + tmp.getBranchOffset()));
             }
-            case NOP, PACKED_SWITCH_PAYLOAD, SPARSE_SWITCH_PAYLOAD, ARRAY_PAYLOAD -> {
+            case ARRAY_PAYLOAD -> {
+                ib.odd_spacer();
+                ib.label(label(offset));
+                ib.raw(insn);
+            }
+            case NOP, PACKED_SWITCH_PAYLOAD, SPARSE_SWITCH_PAYLOAD -> {
                 // nop
             }
             default -> ib.raw(insn);
@@ -236,9 +241,9 @@ public class ConstStringRewriter {
 
             for (int i = 0; i < size; i++) {
                 int position = code_map.keyAt(i);
-                ib.label(label(position));
-                copyInstruction(ib, strings, rewrite, position,
-                        code_map.valueAt(i), code_map::get);
+                var insn = code_map.valueAt(i);
+                if (insn.getOpcode() != ARRAY_PAYLOAD) ib.label(label(position));
+                copyInstruction(ib, strings, rewrite, position, insn, code_map::get);
             }
             ib.label(label(offset));
 

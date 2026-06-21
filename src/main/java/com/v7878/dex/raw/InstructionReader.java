@@ -113,7 +113,7 @@ public class InstructionReader {
             case SparseSwitchPayload -> read_sparse_switch_payload(opcode, in);
             case MPackedSwitchPayload -> read_m_packed_switch_payload(opcode, in);
             case MSparseSwitchPayload -> read_m_sparse_switch_payload(opcode, in);
-            case FormatRaw -> throw shouldNotReachHere();
+            case FormatRaw, FormatRawRef16, FormatRawRef32 -> throw shouldNotReachHere();
         };
     }
 

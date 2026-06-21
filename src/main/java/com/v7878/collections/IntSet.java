@@ -3,10 +3,12 @@ package com.v7878.collections;
 import com.v7878.dex.util.EmptyArrays;
 
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
-public final class IntSet {
+public final class IntSet implements Iterable<Integer> {
     private boolean ro;
     private int[] array;
     private int size;
@@ -278,5 +280,34 @@ public final class IntSet {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public Iterator<Integer> iterator() {
+        return new Iterator<>() {
+            int cursor;       // Index of next element to return
+            int lastRet = -1; // Index of last element returned; -1 if no such
+
+            public boolean hasNext() {
+                return cursor < size;
+            }
+
+            public Integer next() {
+                int i = cursor;
+                if (i >= size)
+                    throw new NoSuchElementException();
+                cursor = i + 1;
+                return array[lastRet = i];
+            }
+
+            public void remove() {
+                int i = lastRet;
+                if (i < 0)
+                    throw new IllegalStateException();
+                removeAt(i);
+                cursor = i;
+                lastRet = -1;
+            }
+        };
     }
 }

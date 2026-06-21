@@ -21,6 +21,7 @@ import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 import com.v7878.collections.IntMap;
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
+import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MethodHandleId;
@@ -59,6 +60,7 @@ import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
 import com.v7878.dex.immutable.bytecode.InstructionRaw;
+import com.v7878.dex.immutable.bytecode.InstructionRawRef;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -216,17 +218,13 @@ public final class CodeBuilder {
         default void attach(BuilderPosition position) {
         }
 
-        default int label_offset() {
-            return 0;
-        }
-
         int units();
 
         List<Instruction> generate();
     }
 
     private static class BuilderPosition {
-        private int units, position, label_offset;
+        private int units, position;
         private BuilderPosition head, prev, next;
         private BuilderNode node;
 
@@ -276,13 +274,8 @@ public final class CodeBuilder {
             return units;
         }
 
-        public void update(int units, int label_offset) {
+        public void update(int units) {
             this.units = units;
-            this.label_offset = label_offset;
-        }
-
-        public int label_position() {
-            return position + label_offset;
         }
 
         public int position() {
@@ -386,7 +379,7 @@ public final class CodeBuilder {
                     // In the second case, the acquisition of a non-zero
                     // size by the instruction is irreversible
                     int diff = node_units - pos_units;
-                    tmp.update(node_units, node.label_offset());
+                    tmp.update(node_units);
 
                     // We correct positions for all nodes, including the last one
                     // (despite the fact that it does not contain any instructions)
@@ -632,7 +625,7 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                var instruction = factory.apply(current.label_position());
+                var instruction = factory.apply(current.position());
                 assert instruction.getOpcode().format() == format;
                 return List.of(instruction);
             }
@@ -641,29 +634,15 @@ public final class CodeBuilder {
 
     private void addPayload(int unit_count, Supplier<Instruction> factory) {
         add(new BuilderNode() {
-            BuilderPosition current;
-
-            public void attach(BuilderPosition current) {
-                this.current = current;
-            }
-
-            @Override
-            public int label_offset() {
-                return current.position() & 0x1;
-            }
-
             @Override
             public int units() {
-                return unit_count + label_offset();
+                return unit_count;
             }
 
             @Override
             public List<Instruction> generate() {
                 var value = factory.get();
                 assert value.getOpcode().isPayload();
-                if (label_offset() != 0) {
-                    return List.of(Instruction10x.of(NOP), value);
-                }
                 return List.of(value);
             }
         }, unit_count);
@@ -686,7 +665,7 @@ public final class CodeBuilder {
     }
 
     private int unit(Object label) {
-        return position(label).label_position();
+        return position(label).position();
     }
 
     private int branchOffset(int from, Object to, boolean allow_zero) {
@@ -1250,6 +1229,44 @@ public final class CodeBuilder {
         return raw(InstructionRaw.of(instruction));
     }
 
+    /**
+     * @param reference u16 ref
+     */
+    public CodeBuilder raw_ref(ReferenceType type, Object reference) {
+        return raw(InstructionRawRef.of(type, reference, false));
+    }
+
+    /**
+     * @param reference u32 ref
+     */
+    public CodeBuilder raw_ref_jumbo(ReferenceType type, Object reference) {
+        return raw(InstructionRawRef.of(type, reference, true));
+    }
+
+    public CodeBuilder odd_spacer() {
+        add(new BuilderNode() {
+            BuilderPosition current;
+
+            public void attach(BuilderPosition current) {
+                this.current = current;
+            }
+
+            @Override
+            public int units() {
+                return current.position() & 0x1;
+            }
+
+            @Override
+            public List<Instruction> generate() {
+                if (units() != 0) {
+                    return List.of(Instruction10x.of(NOP));
+                }
+                return List.of();
+            }
+        }, 0);
+        return this;
+    }
+
     public CodeBuilder raw_nop() {
         return f10x(NOP);
     }
@@ -1756,7 +1773,7 @@ public final class CodeBuilder {
 
         append_position(payloads);
 
-        nop();
+        odd_spacer();
         label(payload);
         array_data_payload(element_width, data);
 
@@ -1914,7 +1931,7 @@ public final class CodeBuilder {
             }
 
             private int diff() {
-                return target.label_position() - current.label_position();
+                return target.position() - current.position();
             }
 
             @Override
@@ -1978,7 +1995,7 @@ public final class CodeBuilder {
 
         append_position(payloads);
 
-        nop();
+        odd_spacer();
         label(payload);
         packed_switch_payload(first_key, current, labels);
 
@@ -1996,7 +2013,7 @@ public final class CodeBuilder {
 
         append_position(payloads);
 
-        nop();
+        odd_spacer();
         label(payload);
         sparse_switch_payload(keys, current, labels);
 
@@ -2202,7 +2219,7 @@ public final class CodeBuilder {
             }
 
             private int diff() {
-                return target.label_position() - current.label_position();
+                return target.position() - current.position();
             }
 
             @Override
@@ -2305,7 +2322,7 @@ public final class CodeBuilder {
             }
 
             private int diff() {
-                return target.label_position() - current.label_position();
+                return target.position() - current.position();
             }
 
             @Override

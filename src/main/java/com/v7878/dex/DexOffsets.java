@@ -31,8 +31,9 @@ public final class DexOffsets {
     public static final int TRY_ITEM_SIZE = 8;
 
     // dex element alignments
-    public static final int MAP_ALIGNMENT = 4;
+    public static final int MAIN_SECTION_ALIGNMENT = 4;
     public static final int DATA_SECTION_ALIGNMENT = 8;
+    public static final int MAP_ALIGNMENT = 4;
     public static final int TYPE_LIST_ALIGNMENT = 4;
     public static final int TRY_ITEM_ALIGNMENT = 4;
     public static final int CODE_ITEM_ALIGNMENT = 4;
