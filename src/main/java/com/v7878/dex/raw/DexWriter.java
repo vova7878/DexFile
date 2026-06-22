@@ -418,7 +418,8 @@ public class DexWriter implements StringIndexer {
     public void writeContent() {
         initMap();
 
-        int start_pos = shared_data.content_off;
+        int main_end = shared_data.content_off;
+        int start_pos = main_end;
         data_buffer.position(start_pos);
 
         if (isCompact()) {
@@ -462,7 +463,7 @@ public class DexWriter implements StringIndexer {
             // Note: for compact dex, data section is placed
             // after the entire 'file' and isn't included in its size
             assert primary && map.header_off == 0;
-            map.file_size = start_pos; // main without data
+            map.file_size = main_end; // main without data
             map.data_size = end_pos - start_pos;
             map.compact_owned_data_begin = 0;
             map.compact_owned_data_end = map.data_size;

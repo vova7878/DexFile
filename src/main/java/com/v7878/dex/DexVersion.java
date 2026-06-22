@@ -75,7 +75,7 @@ public enum DexVersion {
         }
         if (api > maxApi) {
             throw new IllegalArgumentException(String.format(
-                    "Target api(%d) is greater than maximum(%d) for %s", api, minApi, this));
+                    "Target api(%d) is greater than maximum(%d) for %s", api, maxApi, this));
         }
     }
 
