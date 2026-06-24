@@ -299,7 +299,7 @@ public final class CodeBuilder {
         return pos;
     }
 
-    private static BuilderPosition exact(BuilderPosition pos) {
+    private static BuilderPosition exact_forwards(BuilderPosition pos) {
         while (pos != null && pos.node() == BuilderNode.PLACEHOLDER) {
             // Not a real position
             pos = pos.next();
@@ -570,7 +570,7 @@ public final class CodeBuilder {
         return b_tail;
     }
 
-    private void add(BuilderNode node, int initial_units) {
+    private void add(int initial_units, BuilderNode node) {
         assert node != null && node != BuilderNode.PLACEHOLDER;
 
         if (generate_lines) {
@@ -592,7 +592,7 @@ public final class CodeBuilder {
 
     private void add(Instruction instruction) {
         int units = instruction.getUnitCount();
-        add(new BuilderNode() {
+        add(units, new BuilderNode() {
             @Override
             public int units() {
                 return units;
@@ -602,7 +602,7 @@ public final class CodeBuilder {
             public List<Instruction> generate() {
                 return List.of(instruction);
             }
-        }, units);
+        });
     }
 
     private void add(Format format, IntFunction<Instruction> factory) {
@@ -611,7 +611,7 @@ public final class CodeBuilder {
         }
 
         int units = format.getUnitCount();
-        add(new BuilderNode() {
+        add(units, new BuilderNode() {
             BuilderPosition current;
 
             public void attach(BuilderPosition current) {
@@ -629,11 +629,11 @@ public final class CodeBuilder {
                 assert instruction.getOpcode().format() == format;
                 return List.of(instruction);
             }
-        }, units);
+        });
     }
 
     private void addPayload(int unit_count, Supplier<Instruction> factory) {
-        add(new BuilderNode() {
+        add(unit_count, new BuilderNode() {
             @Override
             public int units() {
                 return unit_count;
@@ -645,7 +645,7 @@ public final class CodeBuilder {
                 assert value.getOpcode().isPayload();
                 return List.of(value);
             }
-        }, unit_count);
+        });
     }
 
     private BuilderPosition positionOrNull(Object label) {
@@ -653,7 +653,7 @@ public final class CodeBuilder {
         if (pos == null) {
             return null;
         }
-        return exact(pos);
+        return exact_forwards(pos);
     }
 
     private BuilderPosition position(Object label) {
@@ -713,7 +713,7 @@ public final class CodeBuilder {
         }
         var target = attach(cur, pos);
         if (move_to_head) target = pos;
-        current = exact(target);
+        current = exact_forwards(target);
     }
 
     /**
@@ -749,7 +749,7 @@ public final class CodeBuilder {
                     "The next node doesn`t exist");
         }
         cur.erase();
-        current = exact(cur);
+        current = exact_forwards(cur);
         return this;
     }
 
@@ -764,7 +764,7 @@ public final class CodeBuilder {
     }
 
     public Object head_of_block(Object label) {
-        return exact(position(label).head());
+        return exact_forwards(position(label).head());
     }
 
     public Object tail_of_block(Object label) {
@@ -772,7 +772,7 @@ public final class CodeBuilder {
     }
 
     public Object next_position(Object label) {
-        var pos = exact(position(label).next());
+        var pos = exact_forwards(position(label).next());
         if (pos == null) {
             throw new IllegalArgumentException(
                     "The next position doesn`t exist");
@@ -951,7 +951,7 @@ public final class CodeBuilder {
 
     public CodeBuilder put_metadata(Object value) {
         Objects.requireNonNull(value);
-        add(new BuilderNode.Metadata(value), 0);
+        add(0, new BuilderNode.Metadata(value));
         return this;
     }
 
@@ -1244,7 +1244,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder odd_spacer() {
-        add(new BuilderNode() {
+        add(0, new BuilderNode() {
             BuilderPosition current;
 
             public void attach(BuilderPosition current) {
@@ -1258,12 +1258,9 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                if (units() != 0) {
-                    return List.of(Instruction10x.of(NOP));
-                }
-                return List.of();
+                return units() == 0 ? List.of() : List.of(Instruction10x.of(NOP));
             }
-        }, 0);
+        });
         return this;
     }
 
@@ -1272,7 +1269,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder nop() {
-        add(BuilderNode.EMPTY, 0);
+        add(0, BuilderNode.EMPTY);
         return this;
     }
 
@@ -1921,7 +1918,7 @@ public final class CodeBuilder {
      * @param label s32 label
      */
     public CodeBuilder goto_(Object label) {
-        add(new BuilderNode() {
+        add(0, new BuilderNode() {
             BuilderPosition current;
             BuilderPosition target;
 
@@ -1963,7 +1960,7 @@ public final class CodeBuilder {
                 }
                 return List.of(Instruction10t.of(GOTO, diff));
             }
-        }, 0);
+        });
         return this;
     }
 
@@ -2209,7 +2206,7 @@ public final class CodeBuilder {
                 case NE, LT, GT -> nop();
             };
         }
-        add(new BuilderNode() {
+        add(0, new BuilderNode() {
             BuilderPosition current;
             BuilderPosition target;
 
@@ -2261,7 +2258,7 @@ public final class CodeBuilder {
                 return List.of(Instruction22t.of(test.test(),
                         first_reg_to_test, second_reg_to_test, diff));
             }
-        }, 0);
+        });
         return this;
     }
 
@@ -2312,7 +2309,7 @@ public final class CodeBuilder {
     public CodeBuilder if_testz(Test test, int reg_to_test, Object label) {
         Objects.requireNonNull(test);
         check_reg_or_pair(reg_to_test, false);
-        add(new BuilderNode() {
+        add(0, new BuilderNode() {
             BuilderPosition current;
             BuilderPosition target;
 
@@ -2363,7 +2360,7 @@ public final class CodeBuilder {
                 }
                 return List.of(Instruction21t.of(test.testz(), reg_to_test, diff));
             }
-        }, 0);
+        });
         return this;
     }
 

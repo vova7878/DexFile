@@ -701,7 +701,8 @@ public enum Opcode {
                 || format == Format35c
                 || format == Format3rc
                 || format == Format45cc
-                || format == Format4rcc;
+                || format == Format4rcc
+                || format == Format5rc;
     }
 
     public final boolean isRaw() {
