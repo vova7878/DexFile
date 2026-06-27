@@ -970,7 +970,7 @@ public final class CodeBuilder {
         if (arg_count != args.length) {
             throw new IllegalArgumentException("arg_count != args.length");
         }
-        checkRange(arg_count, 0, 4);
+        checkRange(arg_count, 0, 5);
         if (arg_count >= 4) check_reg(args[3]);
         if (arg_count >= 3) check_reg(args[2]);
         if (arg_count >= 2) check_reg(args[1]);
