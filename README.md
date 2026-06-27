@@ -31,7 +31,7 @@ dependencies {
 | **cdex (001)** |    28 - 35    | ✅ <sup>7</sup> | ⚠️ <sup>8</sup> | Standard + ODEX                                       |
 
 * <sup>1</sup> Supports reading and writing as a **container** that can combine multiple logical DEX files into a single physical file to save space and share data (e.g., strings).
-* <sup>2</sup> Unlike all other DEX versions, version 041 does not contain any special `odex` instructions. This is because `odex` instructions were completely removed from the Android runtime starting in API 32, while the `dex041` container format was only introduced later in API 35.
+* <sup>2</sup> Unlike all other DEX versions, version 041 does not contain any special `odex` instructions. This is because `odex` instructions were completely removed from the Android runtime starting in API 31, while the `dex041` container format was only introduced later in API 35.
 * <sup>3</sup> An early experimental feature for Android 7.x that never made it to a stable release. However, samples exist and the opcodes are present in the ART source code. Support for these instructions is planned for a future release.
 * <sup>4</sup> This format was rolled back to the `dex035` state in these Android versions, thus it has full read and write support in the library.
 * <sup>5</sup> The format was never officially finalized by Google and was abandoned before a stable release. However, it fully existed, and this library provides complete read and write support for it, including all unusual instruction families (like expanded jumbo opcodes), based on full documentation and real samples.

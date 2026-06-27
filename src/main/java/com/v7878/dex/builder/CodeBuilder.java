@@ -35,9 +35,11 @@ import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.Instruction10t;
 import com.v7878.dex.immutable.bytecode.Instruction10x;
 import com.v7878.dex.immutable.bytecode.Instruction11n;
+import com.v7878.dex.immutable.bytecode.Instruction11p;
 import com.v7878.dex.immutable.bytecode.Instruction11x;
 import com.v7878.dex.immutable.bytecode.Instruction12x;
 import com.v7878.dex.immutable.bytecode.Instruction20t;
+import com.v7878.dex.immutable.bytecode.Instruction20t_24;
 import com.v7878.dex.immutable.bytecode.Instruction21c;
 import com.v7878.dex.immutable.bytecode.Instruction21ih;
 import com.v7878.dex.immutable.bytecode.Instruction21lh;
@@ -54,11 +56,15 @@ import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction31i;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
 import com.v7878.dex.immutable.bytecode.Instruction32x;
+import com.v7878.dex.immutable.bytecode.Instruction34c;
 import com.v7878.dex.immutable.bytecode.Instruction35c;
 import com.v7878.dex.immutable.bytecode.Instruction3rc;
+import com.v7878.dex.immutable.bytecode.Instruction41c;
 import com.v7878.dex.immutable.bytecode.Instruction45cc;
 import com.v7878.dex.immutable.bytecode.Instruction4rcc;
 import com.v7878.dex.immutable.bytecode.Instruction51l;
+import com.v7878.dex.immutable.bytecode.Instruction52c;
+import com.v7878.dex.immutable.bytecode.Instruction5rc;
 import com.v7878.dex.immutable.bytecode.InstructionRaw;
 import com.v7878.dex.immutable.bytecode.InstructionRawRef;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
@@ -960,6 +966,17 @@ public final class CodeBuilder {
         return node == null ? null : node.metadata();
     }
 
+    private void format_34c_checks(int arg_count, int... args) {
+        if (arg_count != args.length) {
+            throw new IllegalArgumentException("arg_count != args.length");
+        }
+        checkRange(arg_count, 0, 4);
+        if (arg_count >= 4) check_reg(args[3]);
+        if (arg_count >= 3) check_reg(args[2]);
+        if (arg_count >= 2) check_reg(args[1]);
+        if (arg_count >= 1) check_reg(args[0]);
+    }
+
     private void format_35c_checks(int arg_count, int... args) {
         if (arg_count != args.length) {
             throw new IllegalArgumentException("arg_count != args.length");
@@ -994,6 +1011,14 @@ public final class CodeBuilder {
         return this;
     }
 
+    // <B|A|op> op vA, {#+B}
+    public CodeBuilder f11p(Opcode op, int reg_or_pair, int value) {
+        add(Instruction11p.of(op,
+                check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
+                value));
+        return this;
+    }
+
     // <AA|op> op vAA
     public CodeBuilder f11x(Opcode op, int reg_or_pair) {
         add(Instruction11x.of(op, check_reg_or_pair(reg_or_pair, op.isRegPair(0))));
@@ -1009,6 +1034,12 @@ public final class CodeBuilder {
     // <ØØ|op AAAA> op +AAAA
     public CodeBuilder f20t(Opcode op, Object target) {
         add(op.format(), position -> Instruction20t.of(op, branchOffset(position, target)));
+        return this;
+    }
+
+    // <AAhi|op AAAAlo> op +AAAAAA
+    public CodeBuilder f20t_24(Opcode op, Object target) {
+        add(op.format(), position -> Instruction20t_24.of(op, branchOffset(position, target)));
         return this;
     }
 
@@ -1140,6 +1171,19 @@ public final class CodeBuilder {
         return this;
     }
 
+    // <Ø|A|op BBBB F|E|D|C> [A] op {vC, vD, vE, vF}, @BBBB
+    public CodeBuilder f34c(Opcode op, Object constant, int... args) {
+        int arg_count = args.length;
+        format_34c_checks(arg_count, args);
+        add(Instruction34c.of(op, arg_count,
+                arg_count > 0 ? args[0] : 0,
+                arg_count > 1 ? args[1] : 0,
+                arg_count > 2 ? args[2] : 0,
+                arg_count > 3 ? args[3] : 0,
+                constant));
+        return this;
+    }
+
     // <A|G|op BBBB F|E|D|C> [A] op {vC, vD, vE, vF, vG}, @BBBB
     public CodeBuilder f35c(Opcode op, Object constant, int... args) {
         int arg_count = args.length;
@@ -1158,6 +1202,14 @@ public final class CodeBuilder {
     public CodeBuilder f3rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, arg_count);
         add(Instruction3rc.of(op, arg_count, first_arg_reg, constant));
+        return this;
+    }
+
+    // <exop BBBBlo BBBBhi> exop vAAAA, @BBBBBBBB
+    public CodeBuilder f41c(Opcode op, int reg_or_pair, Object constant) {
+        add(Instruction41c.of(op,
+                check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
+                constant));
         return this;
     }
 
@@ -1186,6 +1238,22 @@ public final class CodeBuilder {
     // <AA|op BBBBlolo BBBBlohi BBBBhilo BBBBhihi> op vAA, #+BBBBBBBBBBBBBBBB
     public CodeBuilder f51l(Opcode op, int reg_pair, long value) {
         add(Instruction51l.of(op, check_reg_pair(reg_pair), value));
+        return this;
+    }
+
+    // <exop CCCClo CCCChi AAAA BBBB> exop vAAAA, vBBBB, @CCCCCCCC
+    public CodeBuilder f52c(Opcode op, int reg_or_pair1, int reg_or_pair2, Object constant) {
+        add(Instruction52c.of(op,
+                check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
+                check_reg_or_pair(reg_or_pair2, op.isRegPair(1)),
+                constant));
+        return this;
+    }
+
+    // <exop BBBBlo BBBBhi AAAA CCCC> exop {vCCCC .. vNNNN}, @BBBBBBBB (where NNNN = CCCC+AAAA-1)
+    public CodeBuilder f5rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
+        check_reg_range(first_arg_reg, arg_count);
+        add(Instruction5rc.of(op, arg_count, first_arg_reg, constant));
         return this;
     }
 
