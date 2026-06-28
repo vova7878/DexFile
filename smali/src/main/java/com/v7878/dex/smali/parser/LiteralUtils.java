@@ -174,4 +174,22 @@ public class LiteralUtils {
     public static String unquote(String s) {
         return s.substring(1, s.length() - 1);
     }
+
+    public static int parseInlineIndex(String value) {
+        // inline@0xHHHHHHHH
+        value = value.substring(9);
+        return Integer.parseUnsignedInt(value, 16);
+    }
+
+    public static int parseVTableIndex(String value) {
+        // vtable@0xHHHHHHHH
+        value = value.substring(9);
+        return Integer.parseUnsignedInt(value, 16);
+    }
+
+    public static int parseFieldOffset(String value) {
+        // field@0xHHHHHHHH
+        value = value.substring(8);
+        return Integer.parseUnsignedInt(value, 16);
+    }
 }

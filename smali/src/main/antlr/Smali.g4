@@ -138,7 +138,6 @@ DOUBLE_LITERAL
     : Float [dD]?
     ;
 
-// TODO: move to parser rules
 INLINE_INDEX
     : 'inline' AT '0' [xX] HexDigit+
     ;
@@ -200,15 +199,22 @@ CLASS_NAME
     : 'L' (SimpleName '/')* SimpleName ';'
     ;
 
+fragment PrimitiveChar: [ZBSCIFJD];
+
+fragment PrimitiveCharOrVoid
+    : 'V'
+    | PrimitiveChar
+    ;
+
 ARRAY_DESCRIPTOR
-    : '['+ ([ZBSCIFJD] | CLASS_NAME)
+    : '['+ (PrimitiveChar | CLASS_NAME)
     ;
 
 // Note: multiple primitive types can be parsed as
 // a single token. A full analysis will occur later
 UNCHECKED_METHOD_PROTO
-    : LPAREN ([ZBSCIFJD] | CLASS_NAME | ARRAY_DESCRIPTOR)* RPAREN
-    ([ZBSCIFJDV] | CLASS_NAME | ARRAY_DESCRIPTOR)
+    : LPAREN (PrimitiveChar | CLASS_NAME | ARRAY_DESCRIPTOR)* RPAREN
+    (PrimitiveCharOrVoid | CLASS_NAME | ARRAY_DESCRIPTOR)
     ;
 
 // For some reason, antlr thinks the first parser rule is the entry point,
@@ -657,11 +663,11 @@ local_directive
     }
     : LOCAL_DIRECTIVE register { reg = $register.value; }
     (COMMA (null_literal | (name=string_literal { name=$name.value; }))
-    // TODO: V as 'no type'
-    COLON (type=type_descriptor { type = $type.value; })
-    (COMMA signature=string_literal { signature = $signature.value; })?)?
+    COLON (t=type_descriptor { type = $t.value.isVoid() ? null : $t.value; })
+    (COMMA s=string_literal { signature = $s.value; })?)?
     { $method_body::ib.local(reg, name, type, signature); }
     ;
+
 end_local_directive
     : END_LOCAL_DIRECTIVE register
     { $method_body::ib.end_local($register.value); }
@@ -804,21 +810,15 @@ reference[int index] returns[Object value] locals[ReferenceType type]
     ;
 
 inline_index returns[int value]
-    : INLINE_INDEX
-    // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    : i=INLINE_INDEX { $value = LiteralUtils.parseInlineIndex($i.text); }
     ;
 
 vtable_index returns[int value]
-    : VTABLE_INDEX
-    // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    : i=VTABLE_INDEX { $value = LiteralUtils.parseVTableIndex($i.text); }
     ;
 
 field_offset returns[int value]
-    : FIELD_OFFSET
-    // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    : i=FIELD_OFFSET { $value = LiteralUtils.parseFieldOffset($i.text); }
     ;
 
 register_list returns[int[] value]
