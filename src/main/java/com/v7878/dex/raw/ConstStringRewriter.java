@@ -4,23 +4,18 @@ import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
 import static com.v7878.dex.Opcode.CONST_STRING;
 import static com.v7878.dex.Opcode.CONST_STRING_JUMBO;
 import static com.v7878.dex.Opcode.FILL_ARRAY_DATA;
+import static com.v7878.dex.Opcode.RAW;
 import static com.v7878.dex.WriteOptions.StringFix.FIX_ALL;
 import static com.v7878.dex.WriteOptions.StringFix.FIX_JUMBO;
 import static com.v7878.dex.WriteOptions.StringFix.NONE;
-import static com.v7878.dex.builder.CodeBuilder.Test.EQ;
-import static com.v7878.dex.builder.CodeBuilder.Test.GE;
-import static com.v7878.dex.builder.CodeBuilder.Test.GT;
-import static com.v7878.dex.builder.CodeBuilder.Test.LE;
-import static com.v7878.dex.builder.CodeBuilder.Test.LT;
-import static com.v7878.dex.builder.CodeBuilder.Test.NE;
 import static com.v7878.dex.raw.DexCollector.StringIndexer;
-import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import static com.v7878.dex.util.MathUtils.uwidth;
 
 import com.v7878.collections.IntMap;
 import com.v7878.collections.IntSet;
 import com.v7878.dex.WriteOptions.StringFix;
 import com.v7878.dex.builder.CodeBuilder;
+import com.v7878.dex.builder.CodeBuilder.Test;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.bytecode.Instruction;
@@ -29,6 +24,7 @@ import com.v7878.dex.immutable.bytecode.Instruction21t;
 import com.v7878.dex.immutable.bytecode.Instruction22t;
 import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
+import com.v7878.dex.immutable.bytecode.InstructionRaw;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
@@ -167,32 +163,22 @@ public class ConstStringRewriter {
             }
             case IF_EQ, IF_NE, IF_LT, IF_GE, IF_GT, IF_LE -> {
                 var tmp = ((Instruction22t) insn);
-                var test = switch (opcode) {
-                    case IF_EQ -> EQ;
-                    case IF_NE -> NE;
-                    case IF_LT -> LT;
-                    case IF_GE -> GE;
-                    case IF_GT -> GT;
-                    case IF_LE -> LE;
-                    default -> throw shouldNotReachHere();
-                };
+                var test = Test.of(opcode);
                 ib.if_test(test, tmp.getRegister1(), tmp.getRegister2(), label(offset + tmp.getBranchOffset()));
             }
             case IF_EQZ, IF_NEZ, IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> {
                 var tmp = ((Instruction21t) insn);
-                var test = switch (opcode) {
-                    case IF_EQZ -> EQ;
-                    case IF_NEZ -> NE;
-                    case IF_LTZ -> LT;
-                    case IF_GEZ -> GE;
-                    case IF_GTZ -> GT;
-                    case IF_LEZ -> LE;
-                    default -> throw shouldNotReachHere();
-                };
+                var test = Test.of(opcode);
                 ib.if_testz(test, tmp.getRegister1(), label(offset + tmp.getBranchOffset()));
             }
             case ARRAY_PAYLOAD -> {
                 ib.odd_spacer();
+                ib.label(label(offset));
+                ib.raw(insn);
+            }
+            case RAW -> {
+                var tmp = ((InstructionRaw) insn);
+                if (tmp.isAligned()) ib.odd_spacer();
                 ib.label(label(offset));
                 ib.raw(insn);
             }
@@ -242,7 +228,9 @@ public class ConstStringRewriter {
             for (int i = 0; i < size; i++) {
                 int position = code_map.keyAt(i);
                 var insn = code_map.valueAt(i);
-                if (insn.getOpcode() != ARRAY_PAYLOAD) ib.label(label(position));
+                if (!(insn.getOpcode() == ARRAY_PAYLOAD || insn.getOpcode() == RAW)) {
+                    ib.label(label(position));
+                }
                 copyInstruction(ib, strings, rewrite, position, insn, code_map::get);
             }
             ib.label(label(offset));

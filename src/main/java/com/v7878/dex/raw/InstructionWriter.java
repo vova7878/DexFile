@@ -641,6 +641,9 @@ public class InstructionWriter {
     }
 
     private static void write_raw(InstructionRaw value, RandomOutput out) {
+        if (value.isAligned()) {
+            out.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
+        }
         out.writeShort(value.getValue());
     }
 

@@ -1304,6 +1304,10 @@ public final class CodeBuilder {
         return this;
     }
 
+    public CodeBuilder raw(short instruction, boolean aligned) {
+        return raw(InstructionRaw.of(instruction, aligned));
+    }
+
     public CodeBuilder raw(short instruction) {
         return raw(InstructionRaw.of(instruction));
     }
