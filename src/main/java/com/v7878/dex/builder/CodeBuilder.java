@@ -118,10 +118,9 @@ public final class CodeBuilder {
         }
 
         private void initLabels() {
-            if (start < 0 || end < 0 || handler < 0) {
+            if (start < 0 || end < 0 || (handlerLabel != null && handler < 0)) {
                 int l1 = unit(label1);
                 int l2 = unit(label2);
-                int hl = unit(handlerLabel);
                 if (l1 < l2) {
                     start = l1;
                     end = l2;
@@ -129,7 +128,7 @@ public final class CodeBuilder {
                     start = l2;
                     end = l1;
                 }
-                handler = hl;
+                handler = handlerLabel == null ? -1 : unit(handlerLabel);
             }
         }
 
@@ -838,12 +837,12 @@ public final class CodeBuilder {
     private void addTryBlock(Object label1, Object label2, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(label1);
         Objects.requireNonNull(label2);
-        Objects.requireNonNull(handler);
         try_items.add(new BuilderTryItem(label1, label2, exceptionType, handler));
     }
 
     public CodeBuilder try_catch(Object label1, Object label2, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(exceptionType);
+        Objects.requireNonNull(handler);
         addTryBlock(label1, label2, exceptionType, handler);
         return this;
     }
@@ -853,6 +852,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder try_catch_all(Object label1, Object label2, Object handler) {
+        Objects.requireNonNull(handler);
         addTryBlock(label1, label2, null, handler);
         return this;
     }
@@ -873,6 +873,17 @@ public final class CodeBuilder {
                                  Map<TypeId, ?> table) {
         return try_catch_all(label1, label2, catch_all_handler)
                 .try_catch(label1, label2, table);
+    }
+
+    public CodeBuilder remove_try_catch(Object label1, Object label2, TypeId exceptionType) {
+        addTryBlock(label1, label2, exceptionType, null);
+        return this;
+    }
+
+    /// Removes all try-catch blocks in the specified range, not just one try-catch-all block
+    public CodeBuilder remove_all_try_catch(Object label1, Object label2) {
+        addTryBlock(label1, label2, null, null);
+        return this;
     }
 
     private CodeBuilder addDebugItem(Object label, DebugItem item) {

@@ -9,10 +9,10 @@ import com.v7878.dex.immutable.TypeId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Set;
 import java.util.TreeSet;
 
 public class TryBlocksMerger {
@@ -49,8 +49,7 @@ public class TryBlocksMerger {
     // <========><***><+++><--->
     public static NavigableSet<TryBlock> mergeTryItems(List<? extends TryItem> try_items) {
         class TryContainer {
-            final Set<TypeId> exceptions = new HashSet<>();
-            final List<ExceptionHandler> handlers = new ArrayList<>();
+            final Map<TypeId, Integer> handlers = new LinkedHashMap<>();
             Integer catch_all_address = null;
         }
 
@@ -61,6 +60,7 @@ public class TryBlocksMerger {
             for (int i = 0; i < count; ) {
                 var block = try_items.get(i);
                 int start = block.start(), end = block.end();
+                // Empty block
                 if (end <= start) {
                     assert start == end;
                     try_items.remove(i);
@@ -84,8 +84,7 @@ public class TryBlocksMerger {
         for (var item : try_items) {
             var exception = item.exception();
             var handler_address = item.handler();
-            var handler = exception == null ? null :
-                    ExceptionHandler.of(exception, handler_address);
+            var is_exclusion = handler_address < 0;
 
             int start_index = Arrays.binarySearch(borders, item.start());
             int end_index = Arrays.binarySearch(borders, item.end());
@@ -96,19 +95,26 @@ public class TryBlocksMerger {
                 var container = elements.get(position);
                 assert container != null;
                 if (exception == null) {
-                    if (container.catch_all_address != null) {
-                        throw new IllegalArgumentException(String.format(
-                                "More than one catch-all handler for code position %d", position));
+                    if (is_exclusion) {
+                        container.handlers.clear();
+                        container.catch_all_address = null;
+                    } else {
+                        if (container.catch_all_address != null) {
+                            throw new IllegalArgumentException(String.format(
+                                    "More than one catch-all handler for code position %d", position));
+                        }
+                        container.catch_all_address = handler_address;
                     }
-                    container.catch_all_address = handler_address;
                 } else {
-                    if (container.exceptions.contains(exception)) {
-                        throw new IllegalArgumentException(String.format(
-                                "More than one catch handler of type %s for code position %d",
-                                exception.getDescriptor(), position));
+                    if (is_exclusion) {
+                        container.handlers.remove(exception);
+                    } else {
+                        if (container.handlers.putIfAbsent(exception, handler_address) != null) {
+                            throw new IllegalArgumentException(String.format(
+                                    "More than one catch handler of type %s for code position %d",
+                                    exception.getDescriptor(), position));
+                        }
                     }
-                    container.exceptions.add(exception);
-                    container.handlers.add(handler);
                 }
             }
         }
@@ -117,8 +123,12 @@ public class TryBlocksMerger {
         for (int i = 0; i < elements_size; i++) {
             var container = elements.valueAt(i);
             if (container.catch_all_address != null || !container.handlers.isEmpty()) {
-                out.add(TryBlock.of(borders[i], borders[i + 1] - borders[i],
-                        container.catch_all_address, container.handlers));
+                var handlers = new ArrayList<ExceptionHandler>(container.handlers.size());
+                for (var e : container.handlers.entrySet()) {
+                    handlers.add(ExceptionHandler.of(e.getKey(), e.getValue()));
+                }
+                out.add(TryBlock.raw(borders[i], borders[i + 1] - borders[i],
+                        container.catch_all_address, Collections.unmodifiableList(handlers)));
             }
         }
         return Collections.unmodifiableNavigableSet(out);
