@@ -219,7 +219,7 @@ public class DexReader implements DexIO.DexReaderCache {
     // Not null only for compact dex files
     private final CompactData compact_debug_info;
 
-    public DexReader(ReadOptions options, RandomInput input, int header_offset) {
+    public DexReader(ReadOptions options, RandomInput input, int header_offset, int content_offset) {
         assert input.position() == 0;
         options.validate();
         if (header_offset < 0) {
@@ -271,9 +271,9 @@ public class DexReader implements DexIO.DexReaderCache {
         opcodes = Opcodes.of(version, options.getTargetApi(),
                 options.isTargetForArt(), options.hasOdexInstructions());
 
-        int data_off = 0;
+        int data_off = content_offset;
         if (version.isCompact()) {
-            data_off = mainAt(header_offset + DATA_START_OFFSET).readSmallUInt();
+            data_off += mainAt(header_offset + DATA_START_OFFSET).readSmallUInt();
         }
         data_buffer = main_buffer.duplicateAt(data_off).markAsStart();
 
@@ -546,6 +546,7 @@ public class DexReader implements DexIO.DexReaderCache {
         int size = in.readSmallULeb128();
         NavigableSet<AnnotationElement> elements = new TreeSet<>();
         for (int i = 0; i < size; i++) {
+            // TODO: check for duplicates
             elements.add(readAnnotationElement(in));
         }
         elements = Collections.unmodifiableNavigableSet(elements);
@@ -604,6 +605,7 @@ public class DexReader implements DexIO.DexReaderCache {
         int size = in.readSmallUInt();
         var out = new TreeSet<Annotation>();
         for (int i = 0; i < size; i++) {
+            // TODO: check for duplicates
             out.add(getAnnotation(in.readSmallUInt()));
         }
         return Collections.unmodifiableNavigableSet(out);

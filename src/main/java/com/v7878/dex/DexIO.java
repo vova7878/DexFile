@@ -162,11 +162,18 @@ public final class DexIO {
         }
     }
 
-    public static DexReaderCache readCache(ReadOptions options, byte[] data,
-                                           int data_offset, int header_offset) {
+    // The content_offset parameter should always be 0.
+    // Other values can be used to read obfuscated dex files
+    public static DexReaderCache readCache(ReadOptions options, byte[] data, int data_offset,
+                                           int header_offset, int content_offset) {
         Objects.requireNonNull(options);
         var input = new ByteArrayInput(data).duplicateAt(data_offset).markAsStart();
-        return new DexReader(options, input, header_offset);
+        return new DexReader(options, input, header_offset, content_offset);
+    }
+
+    public static DexReaderCache readCache(ReadOptions options, byte[] data,
+                                           int data_offset, int header_offset) {
+        return readCache(options, data, data_offset, header_offset, 0);
     }
 
     public static DexReaderCache readCache(byte[] data) {
@@ -202,7 +209,7 @@ public final class DexIO {
         var readers = new ArrayList<DexReader>();
         int header_offset = 0;
         while (header_offset != input.size()) {
-            var reader = new DexReader(options, input, header_offset);
+            var reader = new DexReader(options, input, header_offset, 0);
             readers.add(reader);
             header_offset += reader.getFileSize();
         }
