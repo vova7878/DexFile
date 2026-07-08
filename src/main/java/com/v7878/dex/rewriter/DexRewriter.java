@@ -201,6 +201,10 @@ public class DexRewriter {
         );
     }
 
+    public TypeId rewriteClassDefReference(TypeId value) {
+        return rewriteTypeId(value);
+    }
+
     public Object rewriteReference(ReferenceType type, Object value) {
         Objects.requireNonNull(value);
         return switch (type) {
@@ -208,6 +212,7 @@ public class DexRewriter {
             case FIELD -> rewriteFieldId((FieldId) value);
             case METHOD -> rewriteMethodId((MethodId) value);
             case PROTO -> rewriteProtoId((ProtoId) value);
+            case CLASS_DEF -> rewriteClassDefReference((TypeId) value);
             case CALLSITE -> rewriteCallSiteId((CallSiteId) value);
             case METHOD_HANDLE -> rewriteMethodHandleId((MethodHandleId) value);
             case STRING, RAW_INDEX -> value;

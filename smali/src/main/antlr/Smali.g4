@@ -800,6 +800,7 @@ reference[int index] returns[Object value] locals[ReferenceType type]
     | {$type == FIELD}? field_reference { $value = $field_reference.value; }
     | {$type == METHOD}? method_reference { $value = $method_reference.value; }
     | {$type == PROTO}? method_prototype { $value = $method_prototype.value; }
+    | {$type == CLASS_DEF}? /* TODO */ { if(true) throw new UnsupportedOperationException(); }
     | {$type == CALLSITE}? call_site_reference { $value = $call_site_reference.value; }
     | {$type == METHOD_HANDLE}? method_handle_reference { $value = $method_handle_reference.value; }
     | {$type == RAW_INDEX}?

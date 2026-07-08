@@ -15,6 +15,7 @@ public enum ReferenceType {
     FIELD,
     METHOD,
     PROTO,
+    CLASS_DEF,
     CALLSITE,
     METHOD_HANDLE,
     RAW_INDEX;
@@ -27,6 +28,7 @@ public enum ReferenceType {
             case FIELD -> (FieldId) value;
             case METHOD -> (MethodId) value;
             case PROTO -> (ProtoId) value;
+            case CLASS_DEF -> (TypeId) value;
             case CALLSITE -> (CallSiteId) value;
             case METHOD_HANDLE -> (MethodHandleId) value;
             case RAW_INDEX -> (Integer) value;
@@ -37,6 +39,7 @@ public enum ReferenceType {
         value = validate(type, value);
         return switch (type) {
             case STRING -> "\"" + value + "\"";
+            case CLASS_DEF -> "def@" + value;
             case TYPE, FIELD, METHOD, PROTO, CALLSITE,
                  METHOD_HANDLE -> value.toString();
             case RAW_INDEX -> "@" + value;

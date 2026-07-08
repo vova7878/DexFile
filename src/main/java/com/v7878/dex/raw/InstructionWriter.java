@@ -129,6 +129,7 @@ public class InstructionWriter {
             case FIELD -> context.getFieldIndex((FieldId) value);
             case METHOD -> context.getMethodIndex((MethodId) value);
             case PROTO -> context.getProtoIndex((ProtoId) value);
+            case CLASS_DEF -> context.getClassDefIndex((TypeId) value);
             case CALLSITE -> context.getCallSiteIndex((CallSiteId) value);
             case METHOD_HANDLE -> context.getMethodHandleIndex((MethodHandleId) value);
             case RAW_INDEX -> (Integer) value;

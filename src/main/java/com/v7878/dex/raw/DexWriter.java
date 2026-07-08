@@ -147,6 +147,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -616,6 +617,19 @@ public class DexWriter implements StringIndexer {
                     "Unable to find method \"" + value + "\"");
         }
         return out;
+    }
+
+    public int getClassDefIndex(TypeId value) {
+        Objects.requireNonNull(value);
+        var defs = class_defs;
+        for (int i = 0; i < defs.length; i++) {
+            var type = defs[i].value.getType();
+            if (value.equals(type)) {
+                return i;
+            }
+        }
+        throw new IllegalArgumentException(
+                "Unable to find class def \"" + value + "\"");
     }
 
     public int getCallSiteIndex(CallSiteId value) {
