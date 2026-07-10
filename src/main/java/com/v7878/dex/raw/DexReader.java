@@ -390,7 +390,7 @@ public class DexReader implements DexIO.DexReaderCache {
                 var class_offset = mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt();
                 class_header_section = makeSection(
                         class_count, class_offset,
-                        CLASS_DEF_SIZE, this::readPreClassDef
+                        CLASS_DEF_SIZE, this::reaClassDefHeader
                 );
                 class_section = makeSection(
                         class_count, class_offset,
@@ -1220,7 +1220,7 @@ public class DexReader implements DexIO.DexReaderCache {
         return out;
     }
 
-    private ClassDefHeader readPreClassDef(int index, int offset) {
+    private ClassDefHeader reaClassDefHeader(int index, int offset) {
         var in = mainAt(offset);
 
         TypeId clazz = getType(in.readSmallUInt());
