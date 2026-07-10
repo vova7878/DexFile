@@ -24,11 +24,10 @@ public enum ReferenceType {
         Objects.requireNonNull(value);
         return switch (type) {
             case STRING -> (String) value;
-            case TYPE -> (TypeId) value;
+            case TYPE, CLASS_DEF -> (TypeId) value;
             case FIELD -> (FieldId) value;
             case METHOD -> (MethodId) value;
             case PROTO -> (ProtoId) value;
-            case CLASS_DEF -> (TypeId) value;
             case CALLSITE -> (CallSiteId) value;
             case METHOD_HANDLE -> (MethodHandleId) value;
             case RAW_INDEX -> (Integer) value;

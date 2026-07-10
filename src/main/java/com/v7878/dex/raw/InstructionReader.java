@@ -149,8 +149,7 @@ public class InstructionReader {
             case FIELD -> context.getField(index);
             case METHOD -> context.getMethod(index);
             case PROTO -> context.getProto(index);
-            case CLASS_DEF -> throw new UnsupportedOperationException(
-                    "CLASS_DEF ref type is supported for writing only");
+            case CLASS_DEF -> context.getClassDefHeader(index).type();
             case CALLSITE -> context.getCallSite(index);
             case METHOD_HANDLE -> context.getMethodHandle(index);
             case RAW_INDEX -> index;

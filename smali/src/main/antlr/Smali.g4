@@ -356,6 +356,7 @@ annotation_data
     @init { $elements = new TreeSet<>(); }
     @after { $elements = Collections.unmodifiableNavigableSet($elements); }
     : class_descriptor { $type = $class_descriptor.value; }
+    // TODO: check for duplicates
     (annotation_element { $elements.add($annotation_element.value); })*
     ;
 

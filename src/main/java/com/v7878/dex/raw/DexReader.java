@@ -180,6 +180,14 @@ public class DexReader implements DexIO.DexReaderCache {
                            List<Instruction> instructions, NavigableSet<TryBlock> tries) {
     }
 
+    public record ClassDefHeader(
+            TypeId type, int access_flags,
+            TypeId superclass, List<TypeId> interfaces,
+            String source_file, AnnotationDirectory annotations,
+            int class_data_off, List<EncodedValue> static_values
+    ) {
+    }
+
     private record CompactData(int offsets_pos,
                                int offsets_table_offset,
                                int base) {
@@ -208,6 +216,7 @@ public class DexReader implements DexIO.DexReaderCache {
     private final List<MethodId> method_section;
     private final List<MethodHandleId> method_handle_section;
     private final List<CallSiteId> callsite_section;
+    private final List<ClassDefHeader> class_header_section;
     private final List<ClassDef> class_section;
 
     private final List<MapItem> map_items;
@@ -313,6 +322,7 @@ public class DexReader implements DexIO.DexReaderCache {
                         mainAt(header_offset + M3_METHOD_START_OFFSET).readSmallUInt(),
                         M3_METHOD_ID_SIZE, this::readMethodId
                 );
+                class_header_section = null;
                 class_section = makeSection(
                         mainAt(header_offset + M3_CLASS_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M3_CLASS_START_OFFSET).readSmallUInt(),
@@ -342,6 +352,7 @@ public class DexReader implements DexIO.DexReaderCache {
                         mainAt(header_offset + M5_METHOD_START_OFFSET).readSmallUInt(),
                         M5_METHOD_ID_SIZE, this::readMethodId
                 );
+                class_header_section = null;
                 class_section = makeSection(
                         mainAt(header_offset + M5_CLASS_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M5_CLASS_START_OFFSET).readSmallUInt(),
@@ -375,9 +386,14 @@ public class DexReader implements DexIO.DexReaderCache {
                         mainAt(header_offset + METHOD_START_OFFSET).readSmallUInt(),
                         METHOD_ID_SIZE, this::readMethodId
                 );
+                var class_count = mainAt(header_offset + CLASS_COUNT_OFFSET).readSmallUInt();
+                var class_offset = mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt();
+                class_header_section = makeSection(
+                        class_count, class_offset,
+                        CLASS_DEF_SIZE, this::readPreClassDef
+                );
                 class_section = makeSection(
-                        mainAt(header_offset + CLASS_COUNT_OFFSET).readSmallUInt(),
-                        mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt(),
+                        class_count, class_offset,
                         CLASS_DEF_SIZE, this::readClassDef
                 );
             }
@@ -1204,13 +1220,7 @@ public class DexReader implements DexIO.DexReaderCache {
         return out;
     }
 
-    private ClassDef readClassDef(int index, int offset) {
-        if (version == DEX013) {
-            return Dex013.readClassDef(this, index, offset);
-        }
-        if (version == DEX009) {
-            return Dex009.readClassDef(this, index, offset);
-        }
+    private ClassDefHeader readPreClassDef(int index, int offset) {
         var in = mainAt(offset);
 
         TypeId clazz = getType(in.readSmallUInt());
@@ -1231,6 +1241,39 @@ public class DexReader implements DexIO.DexReaderCache {
         int static_values_off = in.readSmallUInt();
         List<EncodedValue> static_values = static_values_off == NO_OFFSET ?
                 null : getEncodedArray(static_values_off).getValue();
+
+        return new ClassDefHeader(clazz, access_flags, superclass, interfaces,
+                source_file, annotations, class_data_off, static_values);
+    }
+
+    // TODO?: Add to DexReaderCache
+    public List<ClassDefHeader> getClassDefHeaders() {
+        return class_header_section;
+    }
+
+    // TODO?: Add to DexReaderCache
+    public ClassDefHeader getClassDefHeader(int index) {
+        return getClassDefHeaders().get(index);
+    }
+
+    private ClassDef readClassDef(int index, int offset) {
+        if (version == DEX013) {
+            return Dex013.readClassDef(this, index, offset);
+        }
+        if (version == DEX009) {
+            return Dex009.readClassDef(this, index, offset);
+        }
+
+        var pre_def = getClassDefHeader(index);
+
+        var clazz = pre_def.type();
+        var access_flags = pre_def.access_flags();
+        var superclass = pre_def.superclass();
+        var interfaces = pre_def.interfaces();
+        var source_file = pre_def.source_file();
+        var annotations = pre_def.annotations();
+        var class_data_off = pre_def.class_data_off();
+        var static_values = pre_def.static_values();
 
         List<FieldDef> static_fields = null;
         List<FieldDef> instance_fields = null;
