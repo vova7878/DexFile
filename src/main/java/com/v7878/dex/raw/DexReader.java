@@ -277,8 +277,7 @@ public class DexReader implements DexIO.DexReaderCache {
             throw new InvalidDexFile("Truncated dex file");
         }
 
-        opcodes = Opcodes.of(version, options.getTargetApi(),
-                options.isTargetForArt(), options.hasOdexInstructions());
+        opcodes = Opcodes.of(version, options);
 
         int data_off = content_offset;
         if (version.isCompact()) {

@@ -1,6 +1,8 @@
 package com.v7878.dex.immutable.bytecode;
 
-import com.v7878.dex.Format;
+import static com.v7878.dex.Format.MPackedSwitchPayload;
+import static com.v7878.dex.Format.PackedSwitchPayload;
+
 import com.v7878.dex.Internal;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
@@ -16,7 +18,7 @@ public final class PackedSwitchPayload extends Instruction implements SwitchPayl
 
     private PackedSwitchPayload(Opcode opcode, NavigableSet<SwitchElement> elements) {
         super(Preconditions.checkFormat(opcode,
-                Format.PackedSwitchPayload, Format.MPackedSwitchPayload));
+                PackedSwitchPayload, MPackedSwitchPayload));
         this.elements = Objects.requireNonNull(elements);
     }
 
@@ -37,7 +39,7 @@ public final class PackedSwitchPayload extends Instruction implements SwitchPayl
 
     @Override
     public int getUnitCount() {
-        if (getOpcode().format() == Format.MPackedSwitchPayload) {
+        if (getOpcode().format() == MPackedSwitchPayload) {
             return Preconditions.getLegacyPackedSwitchPayloadUnitCount(getSwitchElements().size());
         }
         return Preconditions.getPackedSwitchPayloadUnitCount(getSwitchElements().size());

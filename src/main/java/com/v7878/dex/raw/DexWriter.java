@@ -324,8 +324,7 @@ public class DexWriter implements StringIndexer {
         main_buffer = io.duplicate();
         data_buffer = io.duplicate();
 
-        opcodes = Opcodes.of(options.getDexVersion(), options.getTargetApi(),
-                options.isTargetForArt(), options.hasOdexInstructions());
+        opcodes = Opcodes.of(options.getDexVersion(), options);
 
         map = new FileMap();
 

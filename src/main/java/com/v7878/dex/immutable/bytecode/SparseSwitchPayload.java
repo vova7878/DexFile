@@ -1,6 +1,8 @@
 package com.v7878.dex.immutable.bytecode;
 
-import com.v7878.dex.Format;
+import static com.v7878.dex.Format.MSparseSwitchPayload;
+import static com.v7878.dex.Format.SparseSwitchPayload;
+
 import com.v7878.dex.Internal;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
@@ -16,7 +18,7 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
 
     private SparseSwitchPayload(Opcode opcode, NavigableSet<SwitchElement> elements) {
         super(Preconditions.checkFormat(opcode,
-                Format.SparseSwitchPayload, Format.MSparseSwitchPayload));
+                SparseSwitchPayload, MSparseSwitchPayload));
         this.elements = Objects.requireNonNull(elements);
     }
 
@@ -36,7 +38,7 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
 
     @Override
     public int getUnitCount() {
-        if (getOpcode().format() == Format.MSparseSwitchPayload) {
+        if (getOpcode().format() == MSparseSwitchPayload) {
             return Preconditions.getLegacySparseSwitchPayloadUnitCount(getSwitchElements().size());
         }
         return Preconditions.getSparseSwitchPayloadUnitCount(getSwitchElements().size());
