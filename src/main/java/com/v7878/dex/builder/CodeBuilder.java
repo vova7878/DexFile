@@ -1022,7 +1022,7 @@ public final class CodeBuilder {
         return this;
     }
 
-    // <B|A|op> op vA, {#+B}
+    // <B|A|op> op vA, {#uB}
     public CodeBuilder f11p(Opcode op, int reg_or_pair, int value) {
         add(Instruction11p.of(op,
                 check_reg_or_pair(reg_or_pair, op.isRegPair(0)),

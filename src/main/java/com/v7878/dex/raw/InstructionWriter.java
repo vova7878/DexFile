@@ -19,9 +19,11 @@ import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.bytecode.Instruction10t;
 import com.v7878.dex.immutable.bytecode.Instruction10x;
 import com.v7878.dex.immutable.bytecode.Instruction11n;
+import com.v7878.dex.immutable.bytecode.Instruction11p;
 import com.v7878.dex.immutable.bytecode.Instruction11x;
 import com.v7878.dex.immutable.bytecode.Instruction12x;
 import com.v7878.dex.immutable.bytecode.Instruction20t;
+import com.v7878.dex.immutable.bytecode.Instruction20t_24;
 import com.v7878.dex.immutable.bytecode.Instruction21c;
 import com.v7878.dex.immutable.bytecode.Instruction21ih;
 import com.v7878.dex.immutable.bytecode.Instruction21lh;
@@ -38,6 +40,7 @@ import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction31i;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
 import com.v7878.dex.immutable.bytecode.Instruction32x;
+import com.v7878.dex.immutable.bytecode.Instruction34c;
 import com.v7878.dex.immutable.bytecode.Instruction35c;
 import com.v7878.dex.immutable.bytecode.Instruction3rc;
 import com.v7878.dex.immutable.bytecode.Instruction41c;
@@ -64,17 +67,13 @@ public class InstructionWriter {
             case Format10t -> write_10t(((Instruction10t) instruction), out, op);
             case Format10x -> write_10x(((Instruction10x) instruction), out, op);
             case Format11n -> write_11n(((Instruction11n) instruction), out, op);
-            // TODO?
-            case Format11p -> throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format11p -> write_11p(((Instruction11p) instruction), out, op);
             case Format11x -> write_11x(((Instruction11x) instruction), out, op);
             case Format12x -> write_12x(((Instruction12x) instruction), out, op);
             // TODO
-            case Format20bc -> //noinspection DuplicateBranchesInSwitch
-                    throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format20bc -> throw new UnsupportedOperationException("Unimplemented yet!");
             case Format20t -> write_20t_16(((Instruction20t) instruction), out, op);
-            // TODO?
-            case Format20t_24 -> //noinspection DuplicateBranchesInSwitch
-                    throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format20t_24 -> write_20t_24(((Instruction20t_24) instruction), out, op);
             case Format21c -> write_21c(((Instruction21c) instruction), writer, out, op);
             case Format21ih -> write_21ih(((Instruction21ih) instruction), out, op);
             case Format21lh -> write_21lh(((Instruction21lh) instruction), out, op);
@@ -91,8 +90,7 @@ public class InstructionWriter {
             case Format31i -> write_31i(((Instruction31i) instruction), out, op);
             case Format31t -> write_31t(((Instruction31t) instruction), out, op);
             case Format32x -> write_32x(((Instruction32x) instruction), out, op);
-            case Format34c -> //noinspection DuplicateBranchesInSwitch
-                    throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format34c -> write_34c(((Instruction34c) instruction), writer, out, op);
             case Format35c -> write_35c(((Instruction35c) instruction), writer, out, op);
             case Format3rc -> write_3rc(((Instruction3rc) instruction), writer, out, op);
             // TODO
@@ -103,20 +101,19 @@ public class InstructionWriter {
             case Format4rcc -> write_4rcc(((Instruction4rcc) instruction), writer, out, op);
             case Format51l -> write_51l(((Instruction51l) instruction), out, op);
             case Format52c -> write_52c(((Instruction52c) instruction), writer, out, op);
-            case Format5rc -> throw new UnsupportedOperationException("TODO");
+            case Format5rc -> write_5rc(((Instruction5rc) instruction), writer, out, op);
             case ArrayPayload -> write_array_payload(((ArrayPayload) instruction), out, op);
             case PackedSwitchPayload ->
                     write_packed_switch_payload(((PackedSwitchPayload) instruction), out, op);
             case SparseSwitchPayload ->
                     write_sparse_switch_payload(((SparseSwitchPayload) instruction), out, op);
-            // TODO?
-            case MPackedSwitchPayload -> //noinspection DuplicateBranchesInSwitch
-                    throw new UnsupportedOperationException("Unimplemented yet!");
-            case MSparseSwitchPayload -> //noinspection DuplicateBranchesInSwitch
-                    throw new UnsupportedOperationException("Unimplemented yet!");
-            case FormatRaw -> write_raw(((InstructionRaw) instruction), out);
-            case FormatRawRef16 -> write_raw_ref16(((InstructionRawRef) instruction), writer, out);
-            case FormatRawRef32 -> write_raw_ref32(((InstructionRawRef) instruction), writer, out);
+            case MPackedSwitchPayload ->
+                    write_m_packed_switch_payload(((PackedSwitchPayload) instruction), out, op);
+            case MSparseSwitchPayload ->
+                    write_m_sparse_switch_payload(((SparseSwitchPayload) instruction), out, op);
+            case FormatRaw10x -> write_raw_10x(((InstructionRaw) instruction), out);
+            case FormatRaw10c -> write_raw_10c(((InstructionRawRef) instruction), writer, out);
+            case FormatRaw20c -> write_raw_20c(((InstructionRawRef) instruction), writer, out);
             default -> throw shouldNotReachHere();
         }
     }
@@ -216,6 +213,16 @@ public class InstructionWriter {
         write_11n(out, opcode, value.getRegister1(), value.getLiteral());
     }
 
+    public static void write_11p(RandomOutput out, int opcode, int A, int B) {
+        A = unsigned(A, 4);
+        B = unsigned(B, 4);
+        write_base(out, opcode, (B << 4) | A);
+    }
+
+    public static void write_11p(Instruction11p value, RandomOutput out, int opcode) {
+        write_11p(out, opcode, value.getRegister1(), value.getIndex());
+    }
+
     public static void write_11x(RandomOutput out, int opcode, int AA) {
         AA = unsigned(AA, 8);
         write_base(out, opcode, AA);
@@ -242,6 +249,16 @@ public class InstructionWriter {
 
     public static void write_20t_16(Instruction20t value, RandomOutput out, int opcode) {
         write_20t_16(out, opcode, value.getBranchOffset());
+    }
+
+    public static void write_20t_24(RandomOutput out, int opcode, int sAAAAAA) {
+        sAAAAAA = signed(sAAAAAA, 24);
+        write_base(out, opcode, sAAAAAA >>> 16);
+        out.writeShort(sAAAAAA & 0xffff);
+    }
+
+    public static void write_20t_24(Instruction20t_24 value, RandomOutput out, int opcode) {
+        write_20t_24(out, opcode, value.getBranchOffset());
     }
 
     public static void write_22x_21c(RandomOutput out, int opcode, int AA, int BBBB) {
@@ -394,6 +411,26 @@ public class InstructionWriter {
                 .getReferenceType1(), indexer, value.getReference1()));
     }
 
+    public static void write_34c(RandomOutput out, int opcode, int A,
+                                 int BBBB, int C, int D, int E, int F) {
+        A = unsigned(A, 4);
+        BBBB = unsigned(BBBB, 16);
+        C = unsigned(C, 4);
+        D = unsigned(D, 4);
+        E = unsigned(E, 4);
+        F = unsigned(F, 4);
+        write_base(out, opcode, A);
+        out.writeShort(BBBB);
+        out.writeShort((F << 12) | (E << 8) | (D << 4) | C);
+    }
+
+    public static void write_34c(Instruction34c value, DexWriter indexer, RandomOutput out, int opcode) {
+        write_34c(out, opcode, value.getRegisterCount(), refToIndex(value
+                        .getReferenceType1(), indexer, value.getReference1()),
+                value.getRegister1(), value.getRegister2(),
+                value.getRegister3(), value.getRegister4());
+    }
+
     public static void write_35c(RandomOutput out, int opcode, int A,
                                  int BBBB, int C, int D, int E, int F, int G) {
         A = unsigned(A, 4);
@@ -534,10 +571,7 @@ public class InstructionWriter {
     public static void write_packed_switch_payload(RandomOutput out, int opcode,
                                                    int first_key, int[] targets) {
         Objects.requireNonNull(targets);
-        int size = targets.length;
-        if (!uwidth(size, 16)) {
-            throw new IllegalStateException("size is too big: " + size);
-        }
+        int size = unsigned(targets.length, 16);
         out.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         write_base(out, opcode);
         out.writeShort(size);
@@ -554,10 +588,7 @@ public class InstructionWriter {
     public static void write_sparse_switch_payload(RandomOutput out, int opcode,
                                                    NavigableSet<SwitchElement> elements) {
         Objects.requireNonNull(elements);
-        int size = elements.size();
-        if (!uwidth(size, 16)) {
-            throw new IllegalStateException("size is too big: " + size);
-        }
+        int size = unsigned(elements.size(), 16);
         int[] keys = elements.stream().mapToInt(SwitchElement::getKey).toArray();
         int[] targets = elements.stream().mapToInt(SwitchElement::getOffset).toArray();
         out.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
@@ -641,20 +672,30 @@ public class InstructionWriter {
         write_array_payload(out, opcode, element_width, data);
     }
 
-    private static void write_raw(InstructionRaw value, RandomOutput out) {
+    public static void write_m_packed_switch_payload(PackedSwitchPayload value, RandomOutput out, int opcode) {
+        // TODO
+        throw new UnsupportedOperationException("Unimplemented yet!");
+    }
+
+    public static void write_m_sparse_switch_payload(SparseSwitchPayload value, RandomOutput out, int opcode) {
+        // TODO
+        throw new UnsupportedOperationException("Unimplemented yet!");
+    }
+
+    private static void write_raw_10x(InstructionRaw value, RandomOutput out) {
         if (value.isAligned()) {
             out.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
         }
         out.writeShort(value.getValue());
     }
 
-    private static void write_raw_ref16(InstructionRawRef value, DexWriter indexer, RandomOutput out) {
+    private static void write_raw_10c(InstructionRawRef value, DexWriter indexer, RandomOutput out) {
         int AAAA = refToIndex(value.getReferenceType1(), indexer, value.getReference1());
         AAAA = unsigned(AAAA, 16);
         out.writeShort(AAAA);
     }
 
-    private static void write_raw_ref32(InstructionRawRef value, DexWriter indexer, RandomOutput out) {
+    private static void write_raw_20c(InstructionRawRef value, DexWriter indexer, RandomOutput out) {
         int AAAAAAAA = refToIndex(value.getReferenceType1(), indexer, value.getReference1());
         out.writeShort(AAAAAAAA & 0xffff);
         out.writeShort(AAAAAAAA >>> 16);

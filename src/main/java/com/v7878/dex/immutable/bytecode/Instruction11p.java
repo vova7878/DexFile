@@ -101,6 +101,6 @@ public final class Instruction11p extends Instruction implements OneRegisterInst
     @Override
     public String toString() {
         return getName() + " " + Formatter.register(register1)
-                + ", " + Formatter.unsignedHex(index);
+                + ", {" + Formatter.unsignedHex(index) + "}";
     }
 }
