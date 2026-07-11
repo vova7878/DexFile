@@ -59,9 +59,7 @@ public class InstructionReader {
             raw_opcode = unit;
             arg = 0;
         } else if (raw_opcode == 0xff) {
-            // extended opcodes
-            var api = reader.options().getTargetApi();
-            if (api == 14 || api == 15) {
+            if (reader.options().hasExpandedInstructions()) {
                 raw_opcode = unit;
                 arg = 0;
             }
