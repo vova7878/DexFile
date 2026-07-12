@@ -4,7 +4,7 @@ import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
 import static com.v7878.dex.Opcode.CONST_STRING;
 import static com.v7878.dex.Opcode.CONST_STRING_JUMBO;
 import static com.v7878.dex.Opcode.FILL_ARRAY_DATA;
-import static com.v7878.dex.Opcode.RAW;
+import static com.v7878.dex.Opcode.RAW_ALIGNED;
 import static com.v7878.dex.WriteOptions.StringFix.FIX_ALL;
 import static com.v7878.dex.WriteOptions.StringFix.FIX_JUMBO;
 import static com.v7878.dex.WriteOptions.StringFix.NONE;
@@ -24,7 +24,6 @@ import com.v7878.dex.immutable.bytecode.Instruction21t;
 import com.v7878.dex.immutable.bytecode.Instruction22t;
 import com.v7878.dex.immutable.bytecode.Instruction31c;
 import com.v7878.dex.immutable.bytecode.Instruction31t;
-import com.v7878.dex.immutable.bytecode.InstructionRaw;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
@@ -171,17 +170,6 @@ public class ConstStringRewriter {
                 var test = Test.of(opcode);
                 ib.if_testz(test, tmp.getRegister1(), label(offset + tmp.getBranchOffset()));
             }
-            case ARRAY_PAYLOAD -> {
-                ib.odd_spacer();
-                ib.label(label(offset));
-                ib.raw(insn);
-            }
-            case RAW -> {
-                var tmp = ((InstructionRaw) insn);
-                if (tmp.isAligned()) ib.odd_spacer();
-                ib.label(label(offset));
-                ib.raw(insn);
-            }
             case NOP, PACKED_SWITCH_PAYLOAD, SPARSE_SWITCH_PAYLOAD -> {
                 // nop
             }
@@ -228,9 +216,10 @@ public class ConstStringRewriter {
             for (int i = 0; i < size; i++) {
                 int position = code_map.keyAt(i);
                 var insn = code_map.valueAt(i);
-                if (!(insn.getOpcode() == ARRAY_PAYLOAD || insn.getOpcode() == RAW)) {
-                    ib.label(label(position));
+                if (insn.getOpcode() == ARRAY_PAYLOAD || insn.getOpcode() == RAW_ALIGNED) {
+                    ib.odd_spacer();
                 }
+                ib.label(label(position));
                 copyInstruction(ib, strings, rewrite, position, insn, code_map::get);
             }
             ib.label(label(offset));

@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable.bytecode;
 
 import static com.v7878.dex.Opcode.RAW;
+import static com.v7878.dex.Opcode.RAW_ALIGNED;
 
 import com.v7878.dex.util.Formatter;
 
@@ -8,12 +9,10 @@ import java.util.Objects;
 
 public final class InstructionRaw extends Instruction {
     private final short value;
-    private final boolean aligned;
 
     private InstructionRaw(short value, boolean aligned) {
-        super(RAW);
+        super(aligned ? RAW_ALIGNED : RAW);
         this.value = value;
-        this.aligned = aligned;
     }
 
     public static InstructionRaw of(short value, boolean aligned) {
@@ -29,12 +28,12 @@ public final class InstructionRaw extends Instruction {
     }
 
     public boolean isAligned() {
-        return aligned;
+        return getOpcode().isAligned();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), value, aligned);
+        return Objects.hash(getOpcode(), value);
     }
 
     @Override
@@ -42,12 +41,11 @@ public final class InstructionRaw extends Instruction {
         if (obj == this) return true;
         return obj instanceof InstructionRaw other
                 && Objects.equals(getOpcode(), other.getOpcode())
-                && getValue() == other.getValue()
-                && isAligned() == other.isAligned();
+                && getValue() == other.getValue();
     }
 
     @Override
     public String toString() {
-        return (aligned ? "&" : "") + getName() + " " + Formatter.unsignedHex(value & 0xffff);
+        return getName() + " " + Formatter.unsignedHex(value & 0xffff);
     }
 }

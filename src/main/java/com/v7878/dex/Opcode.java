@@ -46,6 +46,7 @@ import static com.v7878.dex.Format.MPackedSwitchPayload;
 import static com.v7878.dex.Format.MSparseSwitchPayload;
 import static com.v7878.dex.Format.PackedSwitchPayload;
 import static com.v7878.dex.Format.SparseSwitchPayload;
+import static com.v7878.dex.Opcode.Constants.ALIGNED;
 import static com.v7878.dex.Opcode.Constants.CAN_INITIALIZE_REFERENCE;
 import static com.v7878.dex.Opcode.Constants.CAN_THROW;
 import static com.v7878.dex.Opcode.Constants.ENDS_FLOW;
@@ -315,9 +316,9 @@ public enum Opcode {
     CONST_METHOD_HANDLE(firstApi(0xfe, 28), "const-method-handle", Format21c, regs(true), METHOD_HANDLE, CAN_THROW),
     CONST_METHOD_TYPE(firstApi(0xff, 28), "const-method-type", Format21c, regs(true), PROTO, CAN_THROW),
 
-    PACKED_SWITCH_PAYLOAD(modern(0x100), "packed-switch-payload", PackedSwitchPayload, regs(), 0),
-    SPARSE_SWITCH_PAYLOAD(modern(0x200), "sparse-switch-payload", SparseSwitchPayload, regs(), 0),
-    ARRAY_PAYLOAD(common(0x300), "array-payload", ArrayPayload, regs(), 0),
+    PACKED_SWITCH_PAYLOAD(modern(0x100), "packed-switch-payload", PackedSwitchPayload, regs(), ALIGNED),
+    SPARSE_SWITCH_PAYLOAD(modern(0x200), "sparse-switch-payload", SparseSwitchPayload, regs(), ALIGNED),
+    ARRAY_PAYLOAD(common(0x300), "array-payload", ArrayPayload, regs(), ALIGNED),
 
     // legacy dex009 / dex013 opcodes
 
@@ -347,8 +348,8 @@ public enum Opcode {
     M_INVOKE_STATIC(legacy(0x70, 0x71), "m-invoke-static", Format34c, regs4(), METHOD, CAN_THROW | TYPE_INVOKE),
     M_INVOKE_INTERFACE(legacy(0x71, 0x72), "m-invoke-interface", Format34c, regs4(), METHOD, CAN_THROW | TYPE_INVOKE),
 
-    M_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "m-packed-switch-payload", MPackedSwitchPayload, regs(), 0),
-    M_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "m-sparse-switch-payload", MSparseSwitchPayload, regs(), 0),
+    M_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "m-packed-switch-payload", MPackedSwitchPayload, regs(), ALIGNED),
+    M_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "m-sparse-switch-payload", MSparseSwitchPayload, regs(), ALIGNED),
 
     // legacy dex009 / dex013 odex opcodes
 
@@ -494,6 +495,7 @@ public enum Opcode {
 
     // Special opcodes
     RAW(raw(), "raw", FormatRaw10x, regs(), 0),
+    RAW_ALIGNED(raw(), "raw-aligned", FormatRaw10x, regs(), ALIGNED),
     RAW_REF(raw(), "raw-ref", FormatRaw10c, regs(), 0),
     RAW_REF_JUMBO(raw(), "raw-ref/jumbo", FormatRaw20c, regs(), 0);
 
@@ -521,6 +523,7 @@ public enum Opcode {
         // legacy expanded opcodes
         static final int EXPANDED = 0x400;
         static final int SETS_RESULT = 0x800;
+        static final int ALIGNED = 0x1000;
     }
 
     record DexInfo(DexVersion dex, int api, boolean art, boolean odex, boolean expanded) {
@@ -715,7 +718,11 @@ public enum Opcode {
     }
 
     public final boolean isRaw() {
-        return this == RAW || this == RAW_REF || this == RAW_REF_JUMBO;
+        return this == RAW || this == RAW_ALIGNED || this == RAW_REF || this == RAW_REF_JUMBO;
+    }
+
+    public final boolean isAligned() {
+        return (flags & ALIGNED) != 0;
     }
 
     Integer getValue(DexVersion dex, DexOptions<?> options) {
