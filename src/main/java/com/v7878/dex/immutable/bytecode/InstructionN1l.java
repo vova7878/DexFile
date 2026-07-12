@@ -1,6 +1,8 @@
 package com.v7878.dex.immutable.bytecode;
 
+import static com.v7878.dex.Format.Format21lh;
 import static com.v7878.dex.Format.Format51l;
+import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
@@ -16,9 +18,13 @@ public final class InstructionN1l extends Instruction
     private final long literal;
 
     private InstructionN1l(Opcode opcode, int register1, long literal) {
-        super(Preconditions.checkFormat(opcode, "N1l", Format51l));
+        super(Preconditions.checkFormat(opcode, "N1l", Format21lh, Format51l));
         this.register1 = Preconditions.checkByteRegister(register1);
-        this.literal = literal;
+        this.literal = switch (opcode.format()) {
+            case Format21lh -> Preconditions.checkLongHatLiteral(literal);
+            case Format31i -> literal;
+            default -> throw shouldNotReachHere();
+        };
     }
 
     public static InstructionN1l of(Opcode opcode, int register1, long literal) {

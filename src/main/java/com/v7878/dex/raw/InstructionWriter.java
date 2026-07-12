@@ -20,9 +20,7 @@ import com.v7878.dex.immutable.bytecode.InstructionN0t;
 import com.v7878.dex.immutable.bytecode.InstructionN0x;
 import com.v7878.dex.immutable.bytecode.InstructionN1c;
 import com.v7878.dex.immutable.bytecode.InstructionN1i;
-import com.v7878.dex.immutable.bytecode.InstructionN1ih;
 import com.v7878.dex.immutable.bytecode.InstructionN1l;
-import com.v7878.dex.immutable.bytecode.InstructionN1lh;
 import com.v7878.dex.immutable.bytecode.InstructionN1p;
 import com.v7878.dex.immutable.bytecode.InstructionN1t;
 import com.v7878.dex.immutable.bytecode.InstructionN1x;
@@ -38,9 +36,8 @@ import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0c;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0x;
-import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
-import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
+import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.io.RandomOutput;
 
 import java.util.NavigableSet;
@@ -62,8 +59,8 @@ public class InstructionWriter {
             case Format20t -> write_20t_16(((InstructionN0t) instruction), out, op);
             case Format20t_24 -> write_20t_24(((InstructionN0t) instruction), out, op);
             case Format21c -> write_21c(((InstructionN1c) instruction), writer, out, op);
-            case Format21ih -> write_21ih(((InstructionN1ih) instruction), out, op);
-            case Format21lh -> write_21lh(((InstructionN1lh) instruction), out, op);
+            case Format21ih -> write_21ih(((InstructionN1i) instruction), out, op);
+            case Format21lh -> write_21lh(((InstructionN1l) instruction), out, op);
             case Format21s -> write_21s(((InstructionN1i) instruction), out, op);
             case Format21t -> write_21t(((InstructionN1t) instruction), out, op);
             case Format22b -> write_22b(((InstructionN2i) instruction), out, op);
@@ -91,13 +88,13 @@ public class InstructionWriter {
             case Format5rc -> write_5rc(((InstructionNrc) instruction), writer, out, op);
             case ArrayPayload -> write_array_payload(((ArrayPayload) instruction), out, op);
             case PackedSwitchPayload ->
-                    write_packed_switch_payload(((PackedSwitchPayload) instruction), out, op);
+                    write_packed_switch_payload(((SwitchPayload) instruction), out, op);
             case SparseSwitchPayload ->
-                    write_sparse_switch_payload(((SparseSwitchPayload) instruction), out, op);
+                    write_sparse_switch_payload(((SwitchPayload) instruction), out, op);
             case MPackedSwitchPayload ->
-                    write_m_packed_switch_payload(((PackedSwitchPayload) instruction), out, op);
+                    write_m_packed_switch_payload(((SwitchPayload) instruction), out, op);
             case MSparseSwitchPayload ->
-                    write_m_sparse_switch_payload(((SparseSwitchPayload) instruction), out, op);
+                    write_m_sparse_switch_payload(((SwitchPayload) instruction), out, op);
             case FormatRaw10x -> write_raw_10x(((InstructionRaw0x) instruction), out);
             case FormatRaw10c -> write_raw_10c(((InstructionRaw0c) instruction), writer, out);
             case FormatRaw20c -> write_raw_20c(((InstructionRaw0c) instruction), writer, out);
@@ -286,7 +283,7 @@ public class InstructionWriter {
         out.writeShort(BBBB);
     }
 
-    public static void write_21ih(InstructionN1ih value, RandomOutput out, int opcode) {
+    public static void write_21ih(InstructionN1i value, RandomOutput out, int opcode) {
         write_21ih(out, opcode, value.getRegister1(), value.getLiteral());
     }
 
@@ -297,7 +294,7 @@ public class InstructionWriter {
         out.writeShort(BBBB);
     }
 
-    public static void write_21lh(InstructionN1lh value, RandomOutput out, int opcode) {
+    public static void write_21lh(InstructionN1l value, RandomOutput out, int opcode) {
         write_21lh(out, opcode, value.getRegister1(), value.getWideLiteral());
     }
 
@@ -566,7 +563,7 @@ public class InstructionWriter {
         out.writeIntArray(targets);
     }
 
-    public static void write_packed_switch_payload(PackedSwitchPayload value, RandomOutput out, int opcode) {
+    public static void write_packed_switch_payload(SwitchPayload value, RandomOutput out, int opcode) {
         var elements = value.getSwitchElements();
         int[] targets = elements.stream().mapToInt(SwitchElement::getOffset).toArray();
         write_packed_switch_payload(out, opcode, targets.length == 0 ? 0 : elements.first().getKey(), targets);
@@ -585,7 +582,7 @@ public class InstructionWriter {
         out.writeIntArray(targets);
     }
 
-    public static void write_sparse_switch_payload(SparseSwitchPayload value, RandomOutput out, int opcode) {
+    public static void write_sparse_switch_payload(SwitchPayload value, RandomOutput out, int opcode) {
         write_sparse_switch_payload(out, opcode, value.getSwitchElements());
     }
 
@@ -659,12 +656,12 @@ public class InstructionWriter {
         write_array_payload(out, opcode, element_width, data);
     }
 
-    public static void write_m_packed_switch_payload(PackedSwitchPayload value, RandomOutput out, int opcode) {
+    public static void write_m_packed_switch_payload(SwitchPayload value, RandomOutput out, int opcode) {
         // TODO
         throw new UnsupportedOperationException("Unimplemented yet!");
     }
 
-    public static void write_m_sparse_switch_payload(SparseSwitchPayload value, RandomOutput out, int opcode) {
+    public static void write_m_sparse_switch_payload(SwitchPayload value, RandomOutput out, int opcode) {
         // TODO
         throw new UnsupportedOperationException("Unimplemented yet!");
     }

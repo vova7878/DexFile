@@ -23,8 +23,7 @@ import com.v7878.dex.immutable.bytecode.InstructionN0t;
 import com.v7878.dex.immutable.bytecode.InstructionN1c;
 import com.v7878.dex.immutable.bytecode.InstructionN1t;
 import com.v7878.dex.immutable.bytecode.InstructionN2t;
-import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
-import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
+import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.immutable.debug.AdvancePC;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.EndLocal;
@@ -136,18 +135,9 @@ public class ConstStringRewriter {
                 var tmp = ((InstructionN0t) insn);
                 ib.goto_(label(offset + tmp.getBranchOffset()));
             }
-            case PACKED_SWITCH -> {
+            case PACKED_SWITCH, SPARSE_SWITCH -> {
                 var tmp = ((InstructionN1t) insn);
-                var payload = (PackedSwitchPayload) code_map.apply(offset + tmp.getBranchOffset());
-                var branches = new TreeMap<Integer, Integer>();
-                for (var entry : payload.getSwitchElements()) {
-                    branches.put(entry.getKey(), label(offset + entry.getOffset()));
-                }
-                ib.switch_(tmp.getRegister1(), branches);
-            }
-            case SPARSE_SWITCH -> {
-                var tmp = ((InstructionN1t) insn);
-                var payload = (SparseSwitchPayload) code_map.apply(offset + tmp.getBranchOffset());
+                var payload = (SwitchPayload) code_map.apply(offset + tmp.getBranchOffset());
                 var branches = new TreeMap<Integer, Integer>();
                 for (var entry : payload.getSwitchElements()) {
                     branches.put(entry.getKey(), label(offset + entry.getOffset()));

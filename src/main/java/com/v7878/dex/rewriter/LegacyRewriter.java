@@ -27,8 +27,7 @@ import com.v7878.dex.immutable.bytecode.InstructionN2t;
 import com.v7878.dex.immutable.bytecode.InstructionN2x;
 import com.v7878.dex.immutable.bytecode.InstructionNv4c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
-import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
-import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
+import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
 import com.v7878.dex.immutable.debug.AdvancePC;
 import com.v7878.dex.immutable.debug.DebugItem;
@@ -213,7 +212,7 @@ public class LegacyRewriter extends DexRewriter {
             }
             case M_PACKED_SWITCH -> {
                 var tmp = ((InstructionN1t) insn);
-                var payload = (PackedSwitchPayload) code_map
+                var payload = (SwitchPayload) code_map
                         .apply(offset + tmp.getBranchOffset());
                 var branches = new TreeMap<Integer, Integer>();
                 for (var entry : payload.getSwitchElements()) {
@@ -224,7 +223,7 @@ public class LegacyRewriter extends DexRewriter {
             }
             case M_SPARSE_SWITCH -> {
                 var tmp = ((InstructionN1t) insn);
-                var payload = (SparseSwitchPayload) code_map
+                var payload = (SwitchPayload) code_map
                         .apply(offset + tmp.getBranchOffset());
                 var branches = new TreeMap<Integer, Integer>();
                 for (var entry : payload.getSwitchElements()) {

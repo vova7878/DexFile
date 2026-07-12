@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable.bytecode;
 
 import static com.v7878.dex.Format.Format11n;
+import static com.v7878.dex.Format.Format21ih;
 import static com.v7878.dex.Format.Format21s;
 import static com.v7878.dex.Format.Format31i;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
@@ -19,14 +20,16 @@ public final class InstructionN1i extends Instruction
     private final int literal;
 
     private InstructionN1i(Opcode opcode, int register1, int literal) {
-        super(Preconditions.checkFormat(opcode, "N1i", Format11n, Format21s, Format31i));
+        super(Preconditions.checkFormat(opcode, "N1i",
+                Format11n, Format21ih, Format21s, Format31i));
         this.register1 = switch (opcode.format()) {
             case Format11n -> Preconditions.checkNibbleRegister(register1);
-            case Format21s, Format31i -> Preconditions.checkByteRegister(register1);
+            case Format21ih, Format21s, Format31i -> Preconditions.checkByteRegister(register1);
             default -> throw shouldNotReachHere();
         };
         this.literal = switch (opcode.format()) {
             case Format11n -> Preconditions.checkNibbleLiteral(literal);
+            case Format21ih -> Preconditions.checkIntegerHatLiteral(literal);
             case Format21s -> Preconditions.checkShortLiteral(literal);
             case Format31i -> literal;
             default -> throw shouldNotReachHere();

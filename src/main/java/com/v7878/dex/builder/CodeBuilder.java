@@ -36,9 +36,7 @@ import com.v7878.dex.immutable.bytecode.InstructionN0t;
 import com.v7878.dex.immutable.bytecode.InstructionN0x;
 import com.v7878.dex.immutable.bytecode.InstructionN1c;
 import com.v7878.dex.immutable.bytecode.InstructionN1i;
-import com.v7878.dex.immutable.bytecode.InstructionN1ih;
 import com.v7878.dex.immutable.bytecode.InstructionN1l;
-import com.v7878.dex.immutable.bytecode.InstructionN1lh;
 import com.v7878.dex.immutable.bytecode.InstructionN1p;
 import com.v7878.dex.immutable.bytecode.InstructionN1t;
 import com.v7878.dex.immutable.bytecode.InstructionN1x;
@@ -54,9 +52,8 @@ import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0c;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0x;
-import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
-import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
+import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.EndLocal;
 import com.v7878.dex.immutable.debug.LineNumber;
@@ -1067,13 +1064,13 @@ public final class CodeBuilder {
 
     // <AA|op BBBB> op vAA, #+BBBB0000
     public CodeBuilder f21ih(Opcode op, int reg, int value) {
-        add(InstructionN1ih.of(op, check_reg(reg), value));
+        add(InstructionN1i.of(op, check_reg(reg), value));
         return this;
     }
 
     // <AA|op BBBB> op vAA, #+BBBB000000000000
     public CodeBuilder f21lh(Opcode op, int reg_pair, long value) {
-        add(InstructionN1lh.of(op, check_reg_pair(reg_pair), value));
+        add(InstructionN1l.of(op, check_reg_pair(reg_pair), value));
         return this;
     }
 
@@ -1264,7 +1261,7 @@ public final class CodeBuilder {
                         branchOffset(target, labels[i], true)));
             }
             elements = Collections.unmodifiableNavigableSet(elements);
-            return PackedSwitchPayload.raw(PACKED_SWITCH_PAYLOAD, elements);
+            return SwitchPayload.raw(PACKED_SWITCH_PAYLOAD, elements);
         });
     }
 
@@ -1277,7 +1274,7 @@ public final class CodeBuilder {
                         branchOffset(target, labels[i], true)));
             }
             elements = Collections.unmodifiableNavigableSet(elements);
-            return SparseSwitchPayload.raw(SPARSE_SWITCH_PAYLOAD, elements);
+            return SwitchPayload.raw(SPARSE_SWITCH_PAYLOAD, elements);
         });
     }
 

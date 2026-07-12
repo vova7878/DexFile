@@ -11,9 +11,7 @@ import com.v7878.dex.immutable.bytecode.InstructionN0t;
 import com.v7878.dex.immutable.bytecode.InstructionN0x;
 import com.v7878.dex.immutable.bytecode.InstructionN1c;
 import com.v7878.dex.immutable.bytecode.InstructionN1i;
-import com.v7878.dex.immutable.bytecode.InstructionN1ih;
 import com.v7878.dex.immutable.bytecode.InstructionN1l;
-import com.v7878.dex.immutable.bytecode.InstructionN1lh;
 import com.v7878.dex.immutable.bytecode.InstructionN1p;
 import com.v7878.dex.immutable.bytecode.InstructionN1t;
 import com.v7878.dex.immutable.bytecode.InstructionN1x;
@@ -27,9 +25,8 @@ import com.v7878.dex.immutable.bytecode.InstructionNrcc;
 import com.v7878.dex.immutable.bytecode.InstructionNv4c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
-import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
-import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
+import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.io.RandomInput;
 
 import java.util.ArrayList;
@@ -201,14 +198,14 @@ public class InstructionReader {
         return InstructionN1i.of(opcode, AA, extend_sign32(BBBB, 16));
     }
 
-    public static InstructionN1ih read_21ih(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN1i read_21ih(Opcode opcode, RandomInput in, int AA) {
         int BBBB = in.readUShort();
-        return InstructionN1ih.of(opcode, AA, BBBB << 16);
+        return InstructionN1i.of(opcode, AA, BBBB << 16);
     }
 
-    public static InstructionN1lh read_21lh(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN1l read_21lh(Opcode opcode, RandomInput in, int AA) {
         long BBBB = in.readUShort();
-        return InstructionN1lh.of(opcode, AA, BBBB << 48);
+        return InstructionN1l.of(opcode, AA, BBBB << 48);
     }
 
     public static InstructionN1c read_21c(
@@ -381,7 +378,7 @@ public class InstructionReader {
                 indexToRef(opcode.getReferenceType1(), context, BBBBBBBB));
     }
 
-    public static PackedSwitchPayload read_packed_switch_payload(
+    public static SwitchPayload read_packed_switch_payload(
             Opcode opcode, RandomInput in) {
         int size = in.readUShort();
         int first_key = in.readInt();
@@ -390,10 +387,10 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(first_key + i, targets[i]));
         }
-        return PackedSwitchPayload.of(opcode, elements);
+        return SwitchPayload.of(opcode, elements);
     }
 
-    public static SparseSwitchPayload read_sparse_switch_payload(
+    public static SwitchPayload read_sparse_switch_payload(
             Opcode opcode, RandomInput in) {
         int size = in.readUShort();
         int[] keys = in.readIntArray(size);
@@ -402,7 +399,7 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(keys[i], targets[i]));
         }
-        return SparseSwitchPayload.of(opcode, elements);
+        return SwitchPayload.of(opcode, elements);
     }
 
     public static ArrayPayload read_array_payload(
@@ -438,7 +435,7 @@ public class InstructionReader {
         return ArrayPayload.of(element_width, data);
     }
 
-    public static PackedSwitchPayload read_m_packed_switch_payload(
+    public static SwitchPayload read_m_packed_switch_payload(
             Opcode opcode, RandomInput in) {
         int size = in.readUShort();
         int first_key = in.readInt();
@@ -447,10 +444,10 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(first_key + i, targets[i]));
         }
-        return PackedSwitchPayload.of(opcode, elements);
+        return SwitchPayload.of(opcode, elements);
     }
 
-    public static SparseSwitchPayload read_m_sparse_switch_payload(
+    public static SwitchPayload read_m_sparse_switch_payload(
             Opcode opcode, RandomInput in) {
         int size = in.readUShort();
         int[] keys = in.readIntArray(size);
@@ -459,6 +456,6 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(keys[i], targets[i]));
         }
-        return SparseSwitchPayload.of(opcode, elements);
+        return SwitchPayload.of(opcode, elements);
     }
 }
