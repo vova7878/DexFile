@@ -19,14 +19,12 @@ import com.v7878.dex.builder.CodeBuilder.Test;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.bytecode.Instruction;
-import com.v7878.dex.immutable.bytecode.Instruction21c;
-import com.v7878.dex.immutable.bytecode.Instruction21t;
-import com.v7878.dex.immutable.bytecode.Instruction22t;
-import com.v7878.dex.immutable.bytecode.Instruction31c;
-import com.v7878.dex.immutable.bytecode.Instruction31t;
+import com.v7878.dex.immutable.bytecode.InstructionN0t;
+import com.v7878.dex.immutable.bytecode.InstructionN1c;
+import com.v7878.dex.immutable.bytecode.InstructionN1t;
+import com.v7878.dex.immutable.bytecode.InstructionN2t;
 import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
 import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
-import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
 import com.v7878.dex.immutable.debug.AdvancePC;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.EndLocal;
@@ -109,7 +107,7 @@ public class ConstStringRewriter {
         var opcode = insn.getOpcode();
         switch (opcode) {
             case CONST_STRING -> {
-                var tmp = (Instruction21c) insn;
+                var tmp = (InstructionN1c) insn;
                 var str = (String) tmp.getReference1();
                 var reg = tmp.getRegister1();
                 var index = strings.getStringIndex(str);
@@ -124,7 +122,7 @@ public class ConstStringRewriter {
                     ib.raw(insn);
                     break;
                 }
-                var tmp = (Instruction31c) insn;
+                var tmp = (InstructionN1c) insn;
                 var str = (String) tmp.getReference1();
                 var reg = tmp.getRegister1();
                 var index = strings.getStringIndex(str);
@@ -135,11 +133,11 @@ public class ConstStringRewriter {
                 }
             }
             case GOTO, GOTO_16, GOTO_32 -> {
-                var tmp = ((BranchOffsetInstruction) insn);
+                var tmp = ((InstructionN0t) insn);
                 ib.goto_(label(offset + tmp.getBranchOffset()));
             }
             case PACKED_SWITCH -> {
-                var tmp = ((Instruction31t) insn);
+                var tmp = ((InstructionN1t) insn);
                 var payload = (PackedSwitchPayload) code_map.apply(offset + tmp.getBranchOffset());
                 var branches = new TreeMap<Integer, Integer>();
                 for (var entry : payload.getSwitchElements()) {
@@ -148,7 +146,7 @@ public class ConstStringRewriter {
                 ib.switch_(tmp.getRegister1(), branches);
             }
             case SPARSE_SWITCH -> {
-                var tmp = ((Instruction31t) insn);
+                var tmp = ((InstructionN1t) insn);
                 var payload = (SparseSwitchPayload) code_map.apply(offset + tmp.getBranchOffset());
                 var branches = new TreeMap<Integer, Integer>();
                 for (var entry : payload.getSwitchElements()) {
@@ -157,16 +155,16 @@ public class ConstStringRewriter {
                 ib.switch_(tmp.getRegister1(), branches);
             }
             case FILL_ARRAY_DATA -> {
-                var tmp = ((Instruction31t) insn);
+                var tmp = ((InstructionN1t) insn);
                 ib.f31t(FILL_ARRAY_DATA, tmp.getRegister1(), label(offset + tmp.getBranchOffset()));
             }
             case IF_EQ, IF_NE, IF_LT, IF_GE, IF_GT, IF_LE -> {
-                var tmp = ((Instruction22t) insn);
+                var tmp = ((InstructionN2t) insn);
                 var test = Test.of(opcode);
                 ib.if_test(test, tmp.getRegister1(), tmp.getRegister2(), label(offset + tmp.getBranchOffset()));
             }
             case IF_EQZ, IF_NEZ, IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> {
-                var tmp = ((Instruction21t) insn);
+                var tmp = ((InstructionN1t) insn);
                 var test = Test.of(opcode);
                 ib.if_testz(test, tmp.getRegister1(), label(offset + tmp.getBranchOffset()));
             }
@@ -187,14 +185,14 @@ public class ConstStringRewriter {
         for (var i : impl.getInstructions()) {
             var opcode = i.getOpcode();
             if (opcode == CONST_STRING) {
-                var tmp = (Instruction21c) i;
+                var tmp = (InstructionN1c) i;
                 var str = (String) tmp.getReference1();
                 if (!uwidth(strings.getStringIndex(str), 16)) {
                     needs_fix = true;
                     break;
                 }
             } else if (rewrite == FIX_ALL && opcode == CONST_STRING_JUMBO) {
-                var tmp = (Instruction31c) i;
+                var tmp = (InstructionN1c) i;
                 var str = (String) tmp.getReference1();
                 if (uwidth(strings.getStringIndex(str), 16)) {
                     needs_fix = true;

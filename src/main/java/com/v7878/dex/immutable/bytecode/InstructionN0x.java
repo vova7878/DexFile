@@ -7,13 +7,13 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction10x extends Instruction {
-    private Instruction10x(Opcode opcode) {
-        super(Preconditions.checkFormat(opcode, Format10x));
+public final class InstructionN0x extends Instruction {
+    private InstructionN0x(Opcode opcode) {
+        super(Preconditions.checkFormat(opcode, "N0x", Format10x));
     }
 
-    public static Instruction10x of(Opcode opcode) {
-        return new Instruction10x(opcode);
+    public static InstructionN0x of(Opcode opcode) {
+        return new InstructionN0x(opcode);
     }
 
     @Override
@@ -24,7 +24,7 @@ public final class Instruction10x extends Instruction {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction10x other
+        return obj instanceof InstructionN0x other
                 && Objects.equals(getOpcode(), other.getOpcode());
     }
 

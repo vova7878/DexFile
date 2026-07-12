@@ -11,16 +11,16 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction4rcc extends Instruction
+public final class InstructionNrcc extends Instruction
         implements RegisterRangeInstruction, DualReferenceInstruction {
     private final int register_count;
     private final int start_register;
     private final Object reference1;
     private final Object reference2;
 
-    private Instruction4rcc(Opcode opcode, int register_count, int start_register,
+    private InstructionNrcc(Opcode opcode, int register_count, int start_register,
                             Object reference1, Object reference2) {
-        super(Preconditions.checkFormat(opcode, Format4rcc));
+        super(Preconditions.checkFormat(opcode, "Nrcc", Format4rcc));
         this.register_count = Preconditions.checkByteRegisterRangeCount(register_count);
         this.start_register = Preconditions.checkShortRegister(start_register);
         Preconditions.checkShortRegister(start_register + register_count);
@@ -28,9 +28,9 @@ public final class Instruction4rcc extends Instruction
         this.reference2 = ReferenceType.validate(getReferenceType2(), reference2);
     }
 
-    public static Instruction4rcc of(Opcode opcode, int register_count, int start_register,
+    public static InstructionNrcc of(Opcode opcode, int register_count, int start_register,
                                      Object reference1, Object reference2) {
-        return new Instruction4rcc(opcode,
+        return new InstructionNrcc(opcode,
                 register_count, start_register, reference1, reference2);
     }
 
@@ -63,7 +63,7 @@ public final class Instruction4rcc extends Instruction
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction4rcc other
+        return obj instanceof InstructionNrcc other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegisterCount() == other.getRegisterCount()
                 && getStartRegister() == other.getStartRegister()

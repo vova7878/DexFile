@@ -1,15 +1,12 @@
 package com.v7878.dex.immutable.bytecode.iface;
 
-import com.v7878.dex.immutable.bytecode.Instruction12x;
-import com.v7878.dex.immutable.bytecode.Instruction22b;
-import com.v7878.dex.immutable.bytecode.Instruction22c;
-import com.v7878.dex.immutable.bytecode.Instruction22s;
-import com.v7878.dex.immutable.bytecode.Instruction22t;
-import com.v7878.dex.immutable.bytecode.Instruction22x;
-import com.v7878.dex.immutable.bytecode.Instruction32x;
-import com.v7878.dex.immutable.bytecode.Instruction52c;
+import com.v7878.dex.immutable.bytecode.InstructionN2c;
+import com.v7878.dex.immutable.bytecode.InstructionN2i;
+import com.v7878.dex.immutable.bytecode.InstructionN2t;
+import com.v7878.dex.immutable.bytecode.InstructionN2x;
 
 public sealed interface TwoRegisterInstruction extends OneRegisterInstruction
-        permits Instruction12x, Instruction22b, Instruction22c, Instruction22s, Instruction22t, Instruction22x, Instruction32x, Instruction52c, ThreeRegisterInstruction {
+        permits InstructionN2x, InstructionN2i, InstructionN2c,
+        InstructionN2t, ThreeRegisterInstruction {
     int getRegister2();
 }

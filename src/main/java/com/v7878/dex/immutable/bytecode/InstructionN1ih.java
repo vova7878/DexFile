@@ -10,19 +10,19 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction21ih extends Instruction
+public final class InstructionN1ih extends Instruction
         implements OneRegisterInstruction, LiteralInstruction {
     private final int register1;
     private final int literal;
 
-    private Instruction21ih(Opcode opcode, int register1, int literal) {
-        super(Preconditions.checkFormat(opcode, Format21ih));
+    private InstructionN1ih(Opcode opcode, int register1, int literal) {
+        super(Preconditions.checkFormat(opcode, "N1ih", Format21ih));
         this.register1 = Preconditions.checkByteRegister(register1);
         this.literal = Preconditions.checkIntegerHatLiteral(literal);
     }
 
-    public static Instruction21ih of(Opcode opcode, int register1, int literal) {
-        return new Instruction21ih(opcode, register1, literal);
+    public static InstructionN1ih of(Opcode opcode, int register1, int literal) {
+        return new InstructionN1ih(opcode, register1, literal);
     }
 
     @Override
@@ -43,7 +43,7 @@ public final class Instruction21ih extends Instruction
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction21ih other
+        return obj instanceof InstructionN1ih other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
                 && getLiteral() == other.getLiteral();

@@ -9,22 +9,22 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction23x extends Instruction implements ThreeRegisterInstruction {
+public final class InstructionN3x extends Instruction implements ThreeRegisterInstruction {
     private final int register1;
     private final int register2;
     private final int register3;
 
-    private Instruction23x(
+    private InstructionN3x(
             Opcode opcode, int register1, int register2, int register3) {
-        super(Preconditions.checkFormat(opcode, Format23x));
+        super(Preconditions.checkFormat(opcode, "N3x", Format23x));
         this.register1 = Preconditions.checkByteRegister(register1);
         this.register2 = Preconditions.checkByteRegister(register2);
         this.register3 = Preconditions.checkByteRegister(register3);
     }
 
-    public static Instruction23x of(
+    public static InstructionN3x of(
             Opcode opcode, int register1, int register2, int register3) {
-        return new Instruction23x(opcode, register1, register2, register3);
+        return new InstructionN3x(opcode, register1, register2, register3);
     }
 
     @Override
@@ -50,7 +50,7 @@ public final class Instruction23x extends Instruction implements ThreeRegisterIn
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction23x other
+        return obj instanceof InstructionN3x other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
                 && getRegister2() == other.getRegister2()

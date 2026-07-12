@@ -1,28 +1,28 @@
 package com.v7878.dex.immutable.bytecode;
 
-import static com.v7878.dex.Format.Format21s;
+import static com.v7878.dex.Format.Format21lh;
 
 import com.v7878.dex.Opcode;
-import com.v7878.dex.immutable.bytecode.iface.LiteralInstruction;
 import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
+import com.v7878.dex.immutable.bytecode.iface.WideLiteralInstruction;
 import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction21s extends Instruction
-        implements OneRegisterInstruction, LiteralInstruction {
+public final class InstructionN1lh extends Instruction
+        implements OneRegisterInstruction, WideLiteralInstruction {
     private final int register1;
-    private final int literal;
+    private final long literal;
 
-    private Instruction21s(Opcode opcode, int register1, int literal) {
-        super(Preconditions.checkFormat(opcode, Format21s));
+    private InstructionN1lh(Opcode opcode, int register1, long literal) {
+        super(Preconditions.checkFormat(opcode, "N1lh", Format21lh));
         this.register1 = Preconditions.checkByteRegister(register1);
-        this.literal = Preconditions.checkShortLiteral(literal);
+        this.literal = Preconditions.checkLongHatLiteral(literal);
     }
 
-    public static Instruction21s of(Opcode opcode, int register1, int literal) {
-        return new Instruction21s(opcode, register1, literal);
+    public static InstructionN1lh of(Opcode opcode, int register1, long literal) {
+        return new InstructionN1lh(opcode, register1, literal);
     }
 
     @Override
@@ -31,22 +31,22 @@ public final class Instruction21s extends Instruction
     }
 
     @Override
-    public int getLiteral() {
+    public long getWideLiteral() {
         return literal;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegister1(), getLiteral());
+        return Objects.hash(getOpcode(), getRegister1(), getWideLiteral());
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction21s other
+        return obj instanceof InstructionN1lh other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
-                && getLiteral() == other.getLiteral();
+                && getWideLiteral() == other.getWideLiteral();
     }
 
     @Override

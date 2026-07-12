@@ -117,18 +117,17 @@ public class Preconditions {
         return registerCount;
     }
 
-    public static Opcode checkFormat(Opcode opcode, Format expected) {
-        if (opcode.format() != expected) {
-            throw new IllegalArgumentException(
-                    String.format("Invalid opcode %s for %s", opcode, expected));
+    public static Opcode checkFormat(Opcode opcode, String name, Format... expected) {
+        boolean found = false;
+        for (var tmp : expected) {
+            if (opcode.format() == tmp) {
+                found = true;
+                break;
+            }
         }
-        return opcode;
-    }
-
-    public static Opcode checkFormat(Opcode opcode, Format expected, Format expected2) {
-        if (opcode.format() != expected && opcode.format() != expected2) {
+        if (!found) {
             throw new IllegalArgumentException(
-                    String.format("Invalid opcode %s for %s", opcode, expected));
+                    String.format("Invalid opcode %s for %s format", opcode, name));
         }
         return opcode;
     }

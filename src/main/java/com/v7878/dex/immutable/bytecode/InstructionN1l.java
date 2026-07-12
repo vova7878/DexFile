@@ -1,6 +1,6 @@
 package com.v7878.dex.immutable.bytecode;
 
-import static com.v7878.dex.Format.Format21lh;
+import static com.v7878.dex.Format.Format51l;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
@@ -10,19 +10,19 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction21lh extends Instruction
+public final class InstructionN1l extends Instruction
         implements OneRegisterInstruction, WideLiteralInstruction {
     private final int register1;
     private final long literal;
 
-    private Instruction21lh(Opcode opcode, int register1, long literal) {
-        super(Preconditions.checkFormat(opcode, Format21lh));
+    private InstructionN1l(Opcode opcode, int register1, long literal) {
+        super(Preconditions.checkFormat(opcode, "N1l", Format51l));
         this.register1 = Preconditions.checkByteRegister(register1);
-        this.literal = Preconditions.checkLongHatLiteral(literal);
+        this.literal = literal;
     }
 
-    public static Instruction21lh of(Opcode opcode, int register1, long literal) {
-        return new Instruction21lh(opcode, register1, literal);
+    public static InstructionN1l of(Opcode opcode, int register1, long literal) {
+        return new InstructionN1l(opcode, register1, literal);
     }
 
     @Override
@@ -43,7 +43,7 @@ public final class Instruction21lh extends Instruction
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction21lh other
+        return obj instanceof InstructionN1l other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
                 && getWideLiteral() == other.getWideLiteral();

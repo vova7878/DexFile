@@ -9,18 +9,18 @@ import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 
 import java.util.Objects;
 
-public final class InstructionRawRef extends Instruction implements SingleReferenceInstruction {
+public final class InstructionRaw0c extends Instruction implements SingleReferenceInstruction {
     private final ReferenceType type;
     private final Object reference;
 
-    private InstructionRawRef(Opcode opcode, ReferenceType type, Object reference) {
+    private InstructionRaw0c(Opcode opcode, ReferenceType type, Object reference) {
         super(opcode);
         this.type = Objects.requireNonNull(type);
         this.reference = ReferenceType.validate(type, reference);
     }
 
-    public static InstructionRawRef of(ReferenceType type, Object reference, boolean jumbo) {
-        return new InstructionRawRef(jumbo ? RAW_REF_JUMBO : RAW_REF, type, reference);
+    public static InstructionRaw0c of(ReferenceType type, Object reference, boolean jumbo) {
+        return new InstructionRaw0c(jumbo ? RAW_REF_JUMBO : RAW_REF, type, reference);
     }
 
     @Override
@@ -41,7 +41,7 @@ public final class InstructionRawRef extends Instruction implements SingleRefere
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof InstructionRawRef other
+        return obj instanceof InstructionRaw0c other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getReferenceType1() == other.getReferenceType1()
                 && Objects.equals(getReference1(), other.getReference1());

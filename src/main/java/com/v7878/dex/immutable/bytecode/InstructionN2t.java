@@ -1,33 +1,32 @@
 package com.v7878.dex.immutable.bytecode;
 
-import static com.v7878.dex.Format.Format22c;
+import static com.v7878.dex.Format.Format22t;
 
 import com.v7878.dex.Opcode;
-import com.v7878.dex.ReferenceType;
-import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
+import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
 import com.v7878.dex.immutable.bytecode.iface.TwoRegisterInstruction;
 import com.v7878.dex.util.Formatter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction22c extends Instruction
-        implements TwoRegisterInstruction, SingleReferenceInstruction {
+public final class InstructionN2t extends Instruction
+        implements TwoRegisterInstruction, BranchOffsetInstruction {
     private final int register1;
     private final int register2;
-    private final Object reference1;
+    private final int branch_offset;
 
-    private Instruction22c(
-            Opcode opcode, int register1, int register2, Object reference1) {
-        super(Preconditions.checkFormat(opcode, Format22c));
+    private InstructionN2t(
+            Opcode opcode, int register1, int register2, int branch_offset) {
+        super(Preconditions.checkFormat(opcode, "N2t", Format22t));
         this.register1 = Preconditions.checkNibbleRegister(register1);
         this.register2 = Preconditions.checkNibbleRegister(register2);
-        this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
+        this.branch_offset = Preconditions.checkShortCodeOffset(branch_offset);
     }
 
-    public static Instruction22c of(
-            Opcode opcode, int register1, int register2, Object reference1) {
-        return new Instruction22c(opcode, register1, register2, reference1);
+    public static InstructionN2t of(
+            Opcode opcode, int register1, int register2, int branch_offset) {
+        return new InstructionN2t(opcode, register1, register2, branch_offset);
     }
 
     @Override
@@ -41,29 +40,29 @@ public final class Instruction22c extends Instruction
     }
 
     @Override
-    public Object getReference1() {
-        return reference1;
+    public int getBranchOffset() {
+        return branch_offset;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegister1(), getRegister2(), getReference1());
+        return Objects.hash(getOpcode(), getRegister1(), getRegister2(), getBranchOffset());
     }
 
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction22c other
+        return obj instanceof InstructionN2t other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
                 && getRegister2() == other.getRegister2()
-                && Objects.equals(getReference1(), other.getReference1());
+                && getBranchOffset() == other.getBranchOffset();
     }
 
     @Override
     public String toString() {
         return getName() + " " + Formatter.register(register1)
                 + ", " + Formatter.register(register2)
-                + ", " + ReferenceType.describe(getReferenceType1(), reference1);
+                + ", " + Formatter.signedHex(branch_offset);
     }
 }

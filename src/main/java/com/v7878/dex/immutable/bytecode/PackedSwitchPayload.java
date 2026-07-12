@@ -17,7 +17,7 @@ public final class PackedSwitchPayload extends Instruction implements SwitchPayl
     private final NavigableSet<SwitchElement> elements;
 
     private PackedSwitchPayload(Opcode opcode, NavigableSet<SwitchElement> elements) {
-        super(Preconditions.checkFormat(opcode,
+        super(Preconditions.checkFormat(opcode, "PackedSwitchPayload",
                 PackedSwitchPayload, MPackedSwitchPayload));
         this.elements = Objects.requireNonNull(elements);
     }

@@ -1,7 +1,9 @@
 package com.v7878.dex.immutable.bytecode;
 
 import static com.v7878.dex.Format.Format3rc;
+import static com.v7878.dex.Format.Format5rc;
 import static com.v7878.dex.Opcode.EXECUTE_INLINE_RANGE;
+import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
@@ -12,26 +14,31 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction3rc extends Instruction
+public final class InstructionNrc extends Instruction
         implements RegisterRangeInstruction, SingleReferenceInstruction {
     private final int register_count;
     private final int start_register;
     private final Object reference1;
 
-    private Instruction3rc(Opcode opcode, int register_count,
+    private InstructionNrc(Opcode opcode, int register_count,
                            int start_register, Object reference1) {
-        super(Preconditions.checkFormat(opcode, Format3rc));
-        this.register_count = opcode == EXECUTE_INLINE_RANGE ?
-                Preconditions.check34cOrExecuteInlineRegisterCount(register_count) :
-                Preconditions.checkByteRegisterRangeCount(register_count);
+        super(Preconditions.checkFormat(opcode, "Nrc", Format3rc, Format5rc));
+        this.register_count = switch (opcode.format()) {
+            case Format3rc -> opcode == EXECUTE_INLINE_RANGE ?
+                    Preconditions.check34cOrExecuteInlineRegisterCount(register_count) :
+                    Preconditions.checkByteRegisterRangeCount(register_count);
+            case Format5rc -> Preconditions.checkShortRegisterRangeCount(register_count);
+            default -> throw shouldNotReachHere();
+        };
+        // TODO: single range check
         this.start_register = Preconditions.checkShortRegister(start_register);
         Preconditions.checkShortRegister(start_register + register_count);
         this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
     }
 
-    public static Instruction3rc of(Opcode opcode, int register_count,
+    public static InstructionNrc of(Opcode opcode, int register_count,
                                     int start_register, Object reference1) {
-        return new Instruction3rc(opcode,
+        return new InstructionNrc(opcode,
                 register_count, start_register, reference1);
     }
 
@@ -58,7 +65,7 @@ public final class Instruction3rc extends Instruction
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction3rc other
+        return obj instanceof InstructionNrc other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegisterCount() == other.getRegisterCount()
                 && getStartRegister() == other.getStartRegister()

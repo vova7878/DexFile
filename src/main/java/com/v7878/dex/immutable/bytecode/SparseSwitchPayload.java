@@ -17,7 +17,7 @@ public final class SparseSwitchPayload extends Instruction implements SwitchPayl
     private final NavigableSet<SwitchElement> elements;
 
     private SparseSwitchPayload(Opcode opcode, NavigableSet<SwitchElement> elements) {
-        super(Preconditions.checkFormat(opcode,
+        super(Preconditions.checkFormat(opcode, "SparseSwitchPayload",
                 SparseSwitchPayload, MSparseSwitchPayload));
         this.elements = Objects.requireNonNull(elements);
     }

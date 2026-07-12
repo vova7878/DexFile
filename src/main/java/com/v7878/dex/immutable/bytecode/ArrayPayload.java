@@ -1,8 +1,8 @@
 package com.v7878.dex.immutable.bytecode;
 
+import static com.v7878.dex.Format.ArrayPayload;
 import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
 
-import com.v7878.dex.Format;
 import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.bytecode.iface.ArrayPayloadInstruction;
 import com.v7878.dex.util.Converter;
@@ -17,7 +17,7 @@ public final class ArrayPayload extends Instruction implements ArrayPayloadInstr
     private final List<? extends Number> elements;
 
     private ArrayPayload(int element_width, List<? extends Number> elements) {
-        super(Preconditions.checkFormat(ARRAY_PAYLOAD, Format.ArrayPayload));
+        super(Preconditions.checkFormat(ARRAY_PAYLOAD, "ArrayPayload", ArrayPayload));
         this.elements = Objects.requireNonNull(elements);
         assert element_width == 1 || element_width == 2 || element_width == 4 || element_width == 8;
         this.element_width = element_width;

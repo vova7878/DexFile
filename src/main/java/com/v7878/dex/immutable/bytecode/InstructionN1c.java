@@ -1,6 +1,9 @@
 package com.v7878.dex.immutable.bytecode;
 
 import static com.v7878.dex.Format.Format21c;
+import static com.v7878.dex.Format.Format31c;
+import static com.v7878.dex.Format.Format41c;
+import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
@@ -11,19 +14,24 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction21c extends Instruction
+public final class InstructionN1c extends Instruction
         implements OneRegisterInstruction, SingleReferenceInstruction {
     private final int register1;
     private final Object reference1;
 
-    private Instruction21c(Opcode opcode, int register1, Object reference1) {
-        super(Preconditions.checkFormat(opcode, Format21c));
-        this.register1 = Preconditions.checkByteRegister(register1);
+    private InstructionN1c(Opcode opcode, int register1, Object reference1) {
+        super(Preconditions.checkFormat(opcode, "N1c",
+                Format21c, Format31c, Format41c));
+        this.register1 = switch (opcode.format()) {
+            case Format21c, Format31c -> Preconditions.checkByteRegister(register1);
+            case Format41c -> Preconditions.checkShortRegister(register1);
+            default -> throw shouldNotReachHere();
+        };
         this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
     }
 
-    public static Instruction21c of(Opcode opcode, int register1, Object reference1) {
-        return new Instruction21c(opcode, register1, reference1);
+    public static InstructionN1c of(Opcode opcode, int register1, Object reference1) {
+        return new InstructionN1c(opcode, register1, reference1);
     }
 
     @Override
@@ -44,7 +52,7 @@ public final class Instruction21c extends Instruction
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction21c other
+        return obj instanceof InstructionN1c other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
                 && Objects.equals(getReference1(), other.getReference1());

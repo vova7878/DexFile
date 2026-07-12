@@ -7,20 +7,20 @@ import com.v7878.dex.util.Formatter;
 
 import java.util.Objects;
 
-public final class InstructionRaw extends Instruction {
+public final class InstructionRaw0x extends Instruction {
     private final short value;
 
-    private InstructionRaw(short value, boolean aligned) {
+    private InstructionRaw0x(short value, boolean aligned) {
         super(aligned ? RAW_ALIGNED : RAW);
         this.value = value;
     }
 
-    public static InstructionRaw of(short value, boolean aligned) {
-        return new InstructionRaw(value, aligned);
+    public static InstructionRaw0x of(short value, boolean aligned) {
+        return new InstructionRaw0x(value, aligned);
     }
 
-    public static InstructionRaw of(short value) {
-        return new InstructionRaw(value, false);
+    public static InstructionRaw0x of(short value) {
+        return new InstructionRaw0x(value, false);
     }
 
     public short getValue() {
@@ -39,7 +39,7 @@ public final class InstructionRaw extends Instruction {
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof InstructionRaw other
+        return obj instanceof InstructionRaw0x other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getValue() == other.getValue();
     }
