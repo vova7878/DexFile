@@ -438,7 +438,13 @@ public final class AnalyzedMethod {
 
                 current.output(ireg);
             }
-            case CONST_WIDE_16, CONST_WIDE_32, CONST_WIDE, CONST_WIDE_HIGH16 -> {
+            case CONST_WIDE_16, CONST_WIDE_32 -> {
+                var tmp = (InstructionN1i) insn;
+                var ireg = tmp.getRegister1();
+
+                current.wideOutput(ireg);
+            }
+            case CONST_WIDE, CONST_WIDE_HIGH16 -> {
                 var tmp = (InstructionN1l) insn;
                 var ireg = tmp.getRegister1();
 
@@ -1548,7 +1554,11 @@ public final class AnalyzedMethod {
                 is_nop = lit == 0 && reg.isZero();
             }
             // Could be long or double
-            case CONST_WIDE_16, CONST_WIDE_32, CONST_WIDE, CONST_WIDE_HIGH16 -> {
+            case CONST_WIDE_16, CONST_WIDE_32 -> {
+                var ireg = ((InstructionN1i) insn).getRegister1();
+                wideConstant(current, ireg);
+            }
+            case CONST_WIDE, CONST_WIDE_HIGH16 -> {
                 var ireg = ((InstructionN1l) insn).getRegister1();
                 wideConstant(current, ireg);
             }

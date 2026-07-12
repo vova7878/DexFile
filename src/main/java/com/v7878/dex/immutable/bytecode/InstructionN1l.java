@@ -22,7 +22,7 @@ public final class InstructionN1l extends Instruction
         this.register1 = Preconditions.checkByteRegister(register1);
         this.literal = switch (opcode.format()) {
             case Format21lh -> Preconditions.checkLongHatLiteral(literal);
-            case Format31i -> literal;
+            case Format51l -> literal;
             default -> throw shouldNotReachHere();
         };
     }
