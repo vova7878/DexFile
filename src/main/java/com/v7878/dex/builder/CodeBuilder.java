@@ -818,6 +818,18 @@ public final class CodeBuilder {
         return this;
     }
 
+    public CodeBuilder replace_label(Object label) {
+        Objects.requireNonNull(label);
+
+        if (label instanceof BuilderPosition) {
+            throw new IllegalArgumentException(
+                    "Label " + label + " can`t be replaced");
+        }
+        labels.put(label, current);
+
+        return this;
+    }
+
     private void addTryBlock(Object label1, Object label2, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(label1);
         Objects.requireNonNull(label2);
@@ -1288,26 +1300,56 @@ public final class CodeBuilder {
         return this;
     }
 
-    public CodeBuilder raw(short instruction, boolean aligned) {
-        return raw(InstructionRaw0x.of(instruction, aligned));
+    public CodeBuilder raw(Opcode opcode, short instruction) {
+        return raw(InstructionRaw0x.of(opcode, instruction));
     }
 
     public CodeBuilder raw(short instruction) {
-        return raw(InstructionRaw0x.of(instruction));
+        return raw(RAW, instruction);
+    }
+
+    public CodeBuilder raw_aligned(short instruction) {
+        return raw(RAW_ALIGNED, instruction);
+    }
+
+    public CodeBuilder wrapper_raw(short instruction) {
+        return raw(WRAPPER_RAW, instruction);
+    }
+
+    public CodeBuilder wrapper_raw_aligned(short instruction) {
+        return raw(WRAPPER_RAW_ALIGNED, instruction);
+    }
+
+    public CodeBuilder raw_ref(Opcode opcode, ReferenceType type, Object reference) {
+        return raw(InstructionRaw0c.of(opcode, type, reference));
     }
 
     /**
      * @param reference u16 ref
      */
     public CodeBuilder raw_ref(ReferenceType type, Object reference) {
-        return raw(InstructionRaw0c.of(type, reference, false));
+        return raw_ref(RAW_REF, type, reference);
     }
 
     /**
      * @param reference u32 ref
      */
     public CodeBuilder raw_ref_jumbo(ReferenceType type, Object reference) {
-        return raw(InstructionRaw0c.of(type, reference, true));
+        return raw_ref(RAW_REF_JUMBO, type, reference);
+    }
+
+    /**
+     * @param reference u16 ref
+     */
+    public CodeBuilder wrapper_raw_ref(ReferenceType type, Object reference) {
+        return raw_ref(WRAPPER_RAW_REF, type, reference);
+    }
+
+    /**
+     * @param reference u32 ref
+     */
+    public CodeBuilder wrapper_raw_ref_jumbo(ReferenceType type, Object reference) {
+        return raw_ref(WRAPPER_RAW_REF_JUMBO, type, reference);
     }
 
     public CodeBuilder odd_spacer() {
