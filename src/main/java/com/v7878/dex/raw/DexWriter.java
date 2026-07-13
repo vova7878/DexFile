@@ -349,7 +349,7 @@ public class DexWriter implements StringIndexer {
         strings = scollector.strings.toArray(EmptyArrays.STRING);
 
         var collector = new DexCollector(this, options.getStringFix(),
-                isCompact(), options.hasDebugInfo());
+                options.getRawFix(), isCompact(), options.hasDebugInfo());
         collector.fillDex(dexfile);
 
         types = collector.types.toArray(EmptyArrays.TYPE_ID);

@@ -3,6 +3,7 @@ package com.v7878.dex.raw;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 
 import com.v7878.dex.ReferenceType;
+import com.v7878.dex.WriteOptions.RawFix;
 import com.v7878.dex.WriteOptions.StringFix;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
@@ -212,12 +213,12 @@ public class DexCollector {
             return new DebugInfo(names, items);
         }
 
-        public static MethodDefContainer of(StringIndexer strings, StringFix rewrite,
-                                            boolean compact, boolean debug,
+        public static MethodDefContainer of(StringIndexer strings, StringFix string_fix,
+                                            RawFix raw_fix, boolean compact, boolean debug,
                                             TypeId declaring_class, MethodDef value) {
             var impl = value.getImplementation();
             if (impl != null) {
-                impl = ConstStringRewriter.process(impl, strings, rewrite, debug);
+                impl = FixupRewriter.process(impl, strings, string_fix, raw_fix, debug);
             }
             var parameters = value.getParameters();
             var debug_info = (impl == null || !debug) ? null :
@@ -286,11 +287,11 @@ public class DexCollector {
         }
 
         private static MethodDefContainer[] toMethodsArray(
-                StringIndexer strings, StringFix rewrite, boolean compact,
+                StringIndexer strings, StringFix string_fix, RawFix raw_fix, boolean compact,
                 boolean debug, TypeId declaring_class, NavigableSet<MethodDef> methods) {
             return Converter.transform(methods,
-                    value -> MethodDefContainer.of(strings, rewrite,
-                            compact, debug, declaring_class, value),
+                    value -> MethodDefContainer.of(strings, string_fix,
+                            raw_fix, compact, debug, declaring_class, value),
                     MethodDefContainer[]::new);
         }
 
@@ -306,15 +307,15 @@ public class DexCollector {
             return out.isEmpty() ? null : EncodedArray.raw(out);
         }
 
-        public static ClassDefContainer of(StringIndexer strings, StringFix rewrite,
+        public static ClassDefContainer of(StringIndexer strings, StringFix string_fix, RawFix raw_fix,
                                            boolean compact, boolean debug, ClassDef value) {
             var type = value.getType();
             var interfaces = value.getInterfaces();
             var static_fields = toFieldsArray(type, value.getStaticFields());
             var instance_fields = toFieldsArray(type, value.getInstanceFields());
-            var direct_methods = toMethodsArray(strings, rewrite,
+            var direct_methods = toMethodsArray(strings, string_fix, raw_fix,
                     compact, debug, type, value.getDirectMethods());
-            var virtual_methods = toMethodsArray(strings, rewrite,
+            var virtual_methods = toMethodsArray(strings, string_fix, raw_fix,
                     compact, debug, type, value.getVirtualMethods());
             var annotations = AnnotationDirectory.of(value, static_fields,
                     instance_fields, direct_methods, virtual_methods);
@@ -436,11 +437,14 @@ public class DexCollector {
     private final boolean debug;
 
     private final StringIndexer strings;
-    private final StringFix rewrite;
+    private final StringFix string_fix;
+    private final RawFix raw_fix;
 
-    public DexCollector(StringIndexer strings, StringFix rewrite, boolean compact, boolean debug) {
+    public DexCollector(StringIndexer strings, StringFix string_fix,
+                        RawFix raw_fix, boolean compact, boolean debug) {
         this.strings = strings;
-        this.rewrite = rewrite;
+        this.string_fix = string_fix;
+        this.raw_fix = raw_fix;
         this.compact = compact;
         this.debug = debug;
 
@@ -508,7 +512,7 @@ public class DexCollector {
     }
 
     public void addClassDef(ClassDef value) {
-        var container = ClassDefContainer.of(strings, rewrite, compact, debug, value);
+        var container = ClassDefContainer.of(strings, string_fix, raw_fix, compact, debug, value);
         class_defs.add(container);
         addType(value.getType());
         var superclass = value.getSuperclass();

@@ -1,26 +1,28 @@
 package com.v7878.dex.immutable.bytecode;
 
-import static com.v7878.dex.Opcode.RAW;
-import static com.v7878.dex.Opcode.RAW_ALIGNED;
+import static com.v7878.dex.Format.FormatRaw10x;
+import static com.v7878.dex.Format.FormatWrapper20x;
+import static com.v7878.dex.Opcode.choose_raw_opcode;
 
+import com.v7878.dex.Opcode;
+import com.v7878.dex.immutable.bytecode.iface.RawInstruction;
 import com.v7878.dex.util.Formatter;
+import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class InstructionRaw0x extends Instruction {
+public final class InstructionRaw0x extends Instruction
+        implements RawInstruction<InstructionRaw0x> {
     private final short value;
 
-    private InstructionRaw0x(short value, boolean aligned) {
-        super(aligned ? RAW_ALIGNED : RAW);
+    private InstructionRaw0x(Opcode opcode, short value) {
+        super(Preconditions.checkFormat(opcode, "raw0x",
+                FormatRaw10x, FormatWrapper20x));
         this.value = value;
     }
 
-    public static InstructionRaw0x of(short value, boolean aligned) {
-        return new InstructionRaw0x(value, aligned);
-    }
-
-    public static InstructionRaw0x of(short value) {
-        return new InstructionRaw0x(value, false);
+    public static InstructionRaw0x of(Opcode opcode, short value) {
+        return new InstructionRaw0x(opcode, value);
     }
 
     public short getValue() {
@@ -47,5 +49,15 @@ public final class InstructionRaw0x extends Instruction {
     @Override
     public String toString() {
         return getName() + " " + Formatter.unsignedHex(value & 0xffff);
+    }
+
+    @Override
+    public InstructionRaw0x wrapper() {
+        return InstructionRaw0x.of(choose_raw_opcode(getOpcode(), true), value);
+    }
+
+    @Override
+    public InstructionRaw0x raw() {
+        return InstructionRaw0x.of(choose_raw_opcode(getOpcode(), false), value);
     }
 }

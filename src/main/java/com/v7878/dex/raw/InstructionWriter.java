@@ -46,7 +46,8 @@ import java.util.Objects;
 public class InstructionWriter {
     public static void writeInstruction(Instruction instruction, DexWriter writer, RandomOutput out) {
         var opcode = instruction.getOpcode();
-        int op = opcode.isRaw() ? -1 : writer.opcodes().getOpcodeValue(opcode);
+        int op = (opcode.isRaw() && !opcode.isRawWrapper()) ?
+                -1 : writer.opcodes().getOpcodeValue(opcode);
         switch (opcode.format()) {
             case Format10t -> write_10t(((InstructionN0t) instruction), out, op);
             case Format10x -> write_10x(((InstructionN0x) instruction), out, op);
@@ -98,6 +99,9 @@ public class InstructionWriter {
             case FormatRaw10x -> write_raw_10x(((InstructionRaw0x) instruction), out);
             case FormatRaw10c -> write_raw_10c(((InstructionRaw0c) instruction), writer, out);
             case FormatRaw20c -> write_raw_20c(((InstructionRaw0c) instruction), writer, out);
+            case FormatWrapper20x -> write_wrapper_20x(((InstructionRaw0x) instruction), out, op);
+            case FormatWrapper40ci ->
+                    write_wrapper_40ci(((InstructionRaw0c) instruction), writer, out, op);
             default -> throw shouldNotReachHere();
         }
     }
@@ -451,7 +455,7 @@ public class InstructionWriter {
                 .getReferenceType1(), indexer, value.getReference1()), value.getStartRegister());
     }
 
-    public static void write_41c(RandomOutput out, int opcode, int AAAA, int BBBBBBBB) {
+    public static void write_41c_40ci(RandomOutput out, int opcode, int AAAA, int BBBBBBBB) {
         AAAA = unsigned(AAAA, 16);
         // no need to check BBBBBBBB
         write_base(out, opcode);
@@ -461,7 +465,7 @@ public class InstructionWriter {
     }
 
     public static void write_41c(InstructionN1c value, DexWriter indexer, RandomOutput out, int opcode) {
-        write_41c(out, opcode, value.getRegister1(), refToIndex(value
+        write_41c_40ci(out, opcode, value.getRegister1(), refToIndex(value
                 .getReferenceType1(), indexer, value.getReference1()));
     }
 
@@ -683,5 +687,15 @@ public class InstructionWriter {
         int AAAAAAAA = refToIndex(value.getReferenceType1(), indexer, value.getReference1());
         out.writeShort(AAAAAAAA & 0xffff);
         out.writeShort(AAAAAAAA >>> 16);
+    }
+
+    public static void write_wrapper_20x(InstructionRaw0x value, RandomOutput out, int opcode) {
+        write_base(out, opcode);
+        out.writeShort(value.getValue());
+    }
+
+    public static void write_wrapper_40ci(InstructionRaw0c value, DexWriter indexer, RandomOutput out, int opcode) {
+        var rtype = value.getReferenceType1();
+        write_41c_40ci(out, opcode, rtype.ordinal(), refToIndex(rtype, indexer, value.getReference1()));
     }
 }

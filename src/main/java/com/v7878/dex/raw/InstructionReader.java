@@ -25,6 +25,8 @@ import com.v7878.dex.immutable.bytecode.InstructionNrcc;
 import com.v7878.dex.immutable.bytecode.InstructionNv4c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
+import com.v7878.dex.immutable.bytecode.InstructionRaw0c;
+import com.v7878.dex.immutable.bytecode.InstructionRaw0x;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
 import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.io.RandomInput;
@@ -97,6 +99,8 @@ public class InstructionReader {
             case MPackedSwitchPayload -> read_m_packed_switch_payload(opcode, in);
             case MSparseSwitchPayload -> read_m_sparse_switch_payload(opcode, in);
             case FormatRaw10x, FormatRaw10c, FormatRaw20c -> throw shouldNotReachHere();
+            case FormatWrapper20x -> read_wrapper_20x(opcode, in);
+            case FormatWrapper40ci -> read_wrapper_40ci(opcode, in, reader);
         };
     }
 
@@ -457,5 +461,21 @@ public class InstructionReader {
             elements.add(i, SwitchElement.of(keys[i], targets[i]));
         }
         return SwitchPayload.of(opcode, elements);
+    }
+
+    public static InstructionRaw0x read_wrapper_20x(
+            Opcode opcode, RandomInput in) {
+        int AAAA = in.readUShort();
+        return InstructionRaw0x.of(opcode, (short) AAAA);
+    }
+
+    public static InstructionRaw0c read_wrapper_40ci(
+            Opcode opcode, RandomInput in, DexReader context) {
+        int BBBBlo = in.readUShort();
+        int BBBBhi = in.readUShort();
+        int BBBBBBBB = BBBBlo | (BBBBhi << 16);
+        int AAAA = in.readUShort();
+        var ref_type = ReferenceType.values()[AAAA];
+        return InstructionRaw0c.of(opcode, ref_type, indexToRef(ref_type, context, BBBBBBBB));
     }
 }

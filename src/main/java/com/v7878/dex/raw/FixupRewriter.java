@@ -1,18 +1,18 @@
 package com.v7878.dex.raw;
 
-import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
-import static com.v7878.dex.Opcode.CONST_STRING;
 import static com.v7878.dex.Opcode.CONST_STRING_JUMBO;
 import static com.v7878.dex.Opcode.FILL_ARRAY_DATA;
-import static com.v7878.dex.Opcode.RAW_ALIGNED;
+import static com.v7878.dex.WriteOptions.RawFix.DO_NOT_TOUCH;
+import static com.v7878.dex.WriteOptions.RawFix.USE_RAW;
+import static com.v7878.dex.WriteOptions.RawFix.USE_WRAPPER;
 import static com.v7878.dex.WriteOptions.StringFix.FIX_ALL;
 import static com.v7878.dex.WriteOptions.StringFix.FIX_JUMBO;
-import static com.v7878.dex.WriteOptions.StringFix.NONE;
 import static com.v7878.dex.raw.DexCollector.StringIndexer;
 import static com.v7878.dex.util.MathUtils.uwidth;
 
 import com.v7878.collections.IntMap;
 import com.v7878.collections.IntSet;
+import com.v7878.dex.WriteOptions.RawFix;
 import com.v7878.dex.WriteOptions.StringFix;
 import com.v7878.dex.builder.CodeBuilder;
 import com.v7878.dex.builder.CodeBuilder.Test;
@@ -24,6 +24,7 @@ import com.v7878.dex.immutable.bytecode.InstructionN1c;
 import com.v7878.dex.immutable.bytecode.InstructionN1t;
 import com.v7878.dex.immutable.bytecode.InstructionN2t;
 import com.v7878.dex.immutable.bytecode.SwitchPayload;
+import com.v7878.dex.immutable.bytecode.iface.RawInstruction;
 import com.v7878.dex.immutable.debug.AdvancePC;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.EndLocal;
@@ -37,7 +38,7 @@ import com.v7878.dex.immutable.debug.StartLocal;
 import java.util.TreeMap;
 import java.util.function.IntFunction;
 
-public class ConstStringRewriter {
+public class FixupRewriter {
     private static Integer label(int offset) {
         return offset;
     }
@@ -101,23 +102,13 @@ public class ConstStringRewriter {
         }
     }
 
-    private static void copyInstruction(CodeBuilder ib, StringIndexer strings, StringFix rewrite,
-                                        int offset, Instruction insn, IntFunction<Instruction> code_map) {
+    private static void copyInstruction(CodeBuilder ib, StringIndexer strings,
+                                        StringFix string_fix, RawFix raw_fix, int offset,
+                                        Instruction insn, IntFunction<Instruction> code_map) {
         var opcode = insn.getOpcode();
         switch (opcode) {
-            case CONST_STRING -> {
-                var tmp = (InstructionN1c) insn;
-                var str = (String) tmp.getReference1();
-                var reg = tmp.getRegister1();
-                var index = strings.getStringIndex(str);
-                if (uwidth(index, 16)) {
-                    ib.raw_const_string(reg, str);
-                } else {
-                    ib.raw_const_string_jumbo(reg, str);
-                }
-            }
-            case CONST_STRING_JUMBO -> {
-                if (rewrite != FIX_ALL) {
+            case CONST_STRING, CONST_STRING_JUMBO -> {
+                if (opcode == CONST_STRING_JUMBO && string_fix != FIX_ALL) {
                     ib.raw(insn);
                     break;
                 }
@@ -158,6 +149,37 @@ public class ConstStringRewriter {
                 var test = Test.of(opcode);
                 ib.if_testz(test, tmp.getRegister1(), label(offset + tmp.getBranchOffset()));
             }
+            case ARRAY_PAYLOAD -> {
+                ib.odd_spacer();
+                ib.replace_label(label(offset));
+                ib.raw(insn);
+            }
+            case RAW, RAW_ALIGNED, RAW_REF, RAW_REF_JUMBO -> {
+                var tmp = ((RawInstruction<?>) insn);
+                if (raw_fix == USE_WRAPPER) {
+                    ib.raw(tmp.wrapper());
+                    break;
+                }
+                if (opcode.isAligned()) {
+                    ib.odd_spacer();
+                    ib.replace_label(label(offset));
+                }
+                ib.raw(insn);
+            }
+            case WRAPPER_RAW, WRAPPER_RAW_ALIGNED,
+                 WRAPPER_RAW_REF, WRAPPER_RAW_REF_JUMBO -> {
+                var tmp = ((RawInstruction<?>) insn);
+                if (raw_fix == USE_RAW) {
+                    insn = tmp.raw();
+                    if (insn.getOpcode().isAligned()) {
+                        ib.odd_spacer();
+                        ib.replace_label(label(offset));
+                    }
+                    ib.raw(insn);
+                    break;
+                }
+                ib.raw(insn);
+            }
             case NOP, PACKED_SWITCH_PAYLOAD, SPARSE_SWITCH_PAYLOAD -> {
                 // nop
             }
@@ -166,27 +188,47 @@ public class ConstStringRewriter {
     }
 
     public static MethodImplementation process(MethodImplementation impl, StringIndexer strings,
-                                               StringFix rewrite, boolean debug) {
-        if (rewrite == NONE || (rewrite == FIX_JUMBO && strings.getStringCount() < 65535)) {
+                                               StringFix string_fix, RawFix raw_fix, boolean debug) {
+        if (raw_fix == DO_NOT_TOUCH && string_fix != FIX_ALL &&
+                !(string_fix == FIX_JUMBO && strings.getStringCount() >= 65535)) {
             return impl;
         }
 
         boolean needs_fix = false;
+        loop:
         for (var i : impl.getInstructions()) {
             var opcode = i.getOpcode();
-            if (opcode == CONST_STRING) {
-                var tmp = (InstructionN1c) i;
-                var str = (String) tmp.getReference1();
-                if (!uwidth(strings.getStringIndex(str), 16)) {
-                    needs_fix = true;
-                    break;
+            switch (opcode) {
+                case CONST_STRING -> {
+                    var tmp = (InstructionN1c) i;
+                    var str = (String) tmp.getReference1();
+                    if (!uwidth(strings.getStringIndex(str), 16)) {
+                        needs_fix = true;
+                        break loop;
+                    }
                 }
-            } else if (rewrite == FIX_ALL && opcode == CONST_STRING_JUMBO) {
-                var tmp = (InstructionN1c) i;
-                var str = (String) tmp.getReference1();
-                if (uwidth(strings.getStringIndex(str), 16)) {
-                    needs_fix = true;
-                    break;
+                case CONST_STRING_JUMBO -> {
+                    if (string_fix == FIX_ALL) {
+                        var tmp = (InstructionN1c) i;
+                        var str = (String) tmp.getReference1();
+                        if (uwidth(strings.getStringIndex(str), 16)) {
+                            needs_fix = true;
+                            break loop;
+                        }
+                    }
+                }
+                case RAW, RAW_ALIGNED, RAW_REF, RAW_REF_JUMBO -> {
+                    if (raw_fix == USE_WRAPPER) {
+                        needs_fix = true;
+                        break loop;
+                    }
+                }
+                case WRAPPER_RAW, WRAPPER_RAW_ALIGNED,
+                     WRAPPER_RAW_REF, WRAPPER_RAW_REF_JUMBO -> {
+                    if (raw_fix == USE_RAW) {
+                        needs_fix = true;
+                        break loop;
+                    }
                 }
             }
         }
@@ -204,11 +246,8 @@ public class ConstStringRewriter {
             for (int i = 0; i < size; i++) {
                 int position = code_map.keyAt(i);
                 var insn = code_map.valueAt(i);
-                if (insn.getOpcode() == ARRAY_PAYLOAD || insn.getOpcode() == RAW_ALIGNED) {
-                    ib.odd_spacer();
-                }
                 ib.label(label(position));
-                copyInstruction(ib, strings, rewrite, position, insn, code_map::get);
+                copyInstruction(ib, strings, string_fix, raw_fix, position, insn, code_map::get);
             }
             ib.label(label(offset));
 

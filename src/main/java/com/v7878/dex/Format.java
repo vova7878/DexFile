@@ -44,7 +44,9 @@ public enum Format {
     // Special formats
     FormatRaw10x(1),
     FormatRaw10c(1, true, false),
-    FormatRaw20c(2, true, false);
+    FormatRaw20c(2, true, false),
+    FormatWrapper20x(2),
+    FormatWrapper40ci(4, true, false);
 
     private final int units;
     private final boolean payload;

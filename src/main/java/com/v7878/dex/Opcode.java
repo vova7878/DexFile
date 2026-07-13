@@ -42,6 +42,8 @@ import static com.v7878.dex.Format.Format5rc;
 import static com.v7878.dex.Format.FormatRaw10c;
 import static com.v7878.dex.Format.FormatRaw10x;
 import static com.v7878.dex.Format.FormatRaw20c;
+import static com.v7878.dex.Format.FormatWrapper20x;
+import static com.v7878.dex.Format.FormatWrapper40ci;
 import static com.v7878.dex.Format.MPackedSwitchPayload;
 import static com.v7878.dex.Format.MSparseSwitchPayload;
 import static com.v7878.dex.Format.PackedSwitchPayload;
@@ -53,12 +55,14 @@ import static com.v7878.dex.Opcode.Constants.ENDS_FLOW;
 import static com.v7878.dex.Opcode.Constants.EXPANDED;
 import static com.v7878.dex.Opcode.Constants.HAS_PAYLOAD;
 import static com.v7878.dex.Opcode.Constants.ODEX_ONLY;
+import static com.v7878.dex.Opcode.Constants.RAW_OP;
 import static com.v7878.dex.Opcode.Constants.SETS_RESULT;
 import static com.v7878.dex.Opcode.Constants.TYPE_BRANCH;
 import static com.v7878.dex.Opcode.Constants.TYPE_INVOKE;
 import static com.v7878.dex.Opcode.Constants.TYPE_RETURN;
 import static com.v7878.dex.Opcode.Constants.TYPE_SWITCH;
 import static com.v7878.dex.Opcode.Constants.UNCONDITIONAL;
+import static com.v7878.dex.Opcode.Constants.WRAPPER;
 import static com.v7878.dex.ReferenceType.CALLSITE;
 import static com.v7878.dex.ReferenceType.FIELD;
 import static com.v7878.dex.ReferenceType.METHOD;
@@ -67,6 +71,7 @@ import static com.v7878.dex.ReferenceType.PROTO;
 import static com.v7878.dex.ReferenceType.RAW_INDEX;
 import static com.v7878.dex.ReferenceType.STRING;
 import static com.v7878.dex.ReferenceType.TYPE;
+import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
 public enum Opcode {
     NOP(common(0x00), "nop", Format10x, regs(), 0),
@@ -494,10 +499,31 @@ public enum Opcode {
     THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40cs, regs(), EXPANDED | ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
     // Special opcodes
-    RAW(raw(), "raw", FormatRaw10x, regs(), 0),
-    RAW_ALIGNED(raw(), "raw-aligned", FormatRaw10x, regs(), ALIGNED),
-    RAW_REF(raw(), "raw-ref", FormatRaw10c, regs(), 0),
-    RAW_REF_JUMBO(raw(), "raw-ref/jumbo", FormatRaw20c, regs(), 0);
+    RAW(raw(), "raw", FormatRaw10x, regs(), RAW_OP),
+    RAW_ALIGNED(raw(), "raw-aligned", FormatRaw10x, regs(), RAW_OP | ALIGNED),
+    RAW_REF(raw(), "raw-ref", FormatRaw10c, regs(), RAW_OP),
+    RAW_REF_JUMBO(raw(), "raw-ref/jumbo", FormatRaw20c, regs(), RAW_OP),
+
+    // Wrappers for special opcodes (needed to serialize code unchanged)
+    WRAPPER_RAW(common(0xfc00), "wrapper-raw", FormatWrapper20x, regs(), RAW_OP | WRAPPER),
+    // The wrapper itself does not need to be aligned
+    WRAPPER_RAW_ALIGNED(common(0xfd00), "wrapper-raw-aligned", FormatWrapper20x, regs(), RAW_OP | WRAPPER),
+    WRAPPER_RAW_REF(common(0xfe00), "wrapper-raw-ref", FormatWrapper40ci, regs(), RAW_OP | WRAPPER),
+    WRAPPER_RAW_REF_JUMBO(common(0xff00), "wrapper-raw-ref/jumbo", FormatWrapper40ci, regs(), RAW_OP | WRAPPER);
+
+    public static Opcode choose_raw_opcode(Opcode opcode, boolean wrapper) {
+        return switch (opcode) {
+            case RAW, WRAPPER_RAW -> //
+                    wrapper ? WRAPPER_RAW : RAW;
+            case RAW_ALIGNED, WRAPPER_RAW_ALIGNED -> //
+                    wrapper ? WRAPPER_RAW_ALIGNED : RAW_ALIGNED;
+            case RAW_REF, WRAPPER_RAW_REF -> //
+                    wrapper ? WRAPPER_RAW_REF : RAW_REF;
+            case RAW_REF_JUMBO, WRAPPER_RAW_REF_JUMBO ->
+                    wrapper ? WRAPPER_RAW_REF_JUMBO : RAW_REF_JUMBO;
+            default -> throw shouldNotReachHere();
+        };
+    }
 
     protected static class Constants {
         // a flavor of invoke
@@ -524,6 +550,8 @@ public enum Opcode {
         static final int EXPANDED = 0x400;
         static final int SETS_RESULT = 0x800;
         static final int ALIGNED = 0x1000;
+        static final int RAW_OP = 0x2000;
+        static final int WRAPPER = 0x4000;
     }
 
     record DexInfo(DexVersion dex, int api, boolean art, boolean odex, boolean expanded) {
@@ -718,7 +746,11 @@ public enum Opcode {
     }
 
     public final boolean isRaw() {
-        return this == RAW || this == RAW_ALIGNED || this == RAW_REF || this == RAW_REF_JUMBO;
+        return (flags & RAW_OP) != 0;
+    }
+
+    public final boolean isRawWrapper() {
+        return (flags & WRAPPER) != 0;
     }
 
     public final boolean isAligned() {
