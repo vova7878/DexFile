@@ -12,9 +12,9 @@ import java.util.Objects;
 public enum ReferenceType {
     STRING,
     TYPE,
+    PROTO,
     FIELD,
     METHOD,
-    PROTO,
     CLASS_DEF,
     CALLSITE,
     METHOD_HANDLE,
