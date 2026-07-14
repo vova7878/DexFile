@@ -12,7 +12,7 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction35c extends Instruction
+public final class InstructionNv5c extends Instruction
         implements VariableFiveRegisterInstruction, SingleReferenceInstruction {
     private final int register_count;
     private final int register1;
@@ -22,10 +22,10 @@ public final class Instruction35c extends Instruction
     private final int register5;
     private final Object reference1;
 
-    private Instruction35c(Opcode opcode, int register_count, int register1,
-                           int register2, int register3, int register4,
-                           int register5, Object reference1) {
-        super(Preconditions.checkFormat(opcode, Format35c));
+    private InstructionNv5c(Opcode opcode, int register_count, int register1,
+                            int register2, int register3, int register4,
+                            int register5, Object reference1) {
+        super(Preconditions.checkFormat(opcode, "Nv5c", Format35c));
         this.register_count = opcode == EXECUTE_INLINE ?
                 Preconditions.check34cOrExecuteInlineRegisterCount(register_count) :
                 Preconditions.check35cAnd45ccRegisterCount(register_count);
@@ -37,10 +37,10 @@ public final class Instruction35c extends Instruction
         this.reference1 = ReferenceType.validate(getReferenceType1(), reference1);
     }
 
-    public static Instruction35c of(Opcode opcode, int register_count, int register1,
-                                    int register2, int register3, int register4,
-                                    int register5, Object reference1) {
-        return new Instruction35c(opcode, register_count,
+    public static InstructionNv5c of(Opcode opcode, int register_count, int register1,
+                                     int register2, int register3, int register4,
+                                     int register5, Object reference1) {
+        return new InstructionNv5c(opcode, register_count,
                 register1, register2, register3, register4, register5, reference1);
     }
 
@@ -89,7 +89,7 @@ public final class Instruction35c extends Instruction
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction35c other
+        return obj instanceof InstructionNv5c other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegisterCount() == other.getRegisterCount()
                 && getRegister1() == other.getRegister1()

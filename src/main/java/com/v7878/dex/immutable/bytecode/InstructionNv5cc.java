@@ -11,7 +11,7 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction45cc extends Instruction
+public final class InstructionNv5cc extends Instruction
         implements VariableFiveRegisterInstruction, DualReferenceInstruction {
     private final int register_count;
     private final int register1;
@@ -22,10 +22,10 @@ public final class Instruction45cc extends Instruction
     private final Object reference1;
     private final Object reference2;
 
-    private Instruction45cc(Opcode opcode, int register_count, int register1,
-                            int register2, int register3, int register4, int register5,
-                            Object reference1, Object reference2) {
-        super(Preconditions.checkFormat(opcode, Format45cc));
+    private InstructionNv5cc(Opcode opcode, int register_count, int register1,
+                             int register2, int register3, int register4, int register5,
+                             Object reference1, Object reference2) {
+        super(Preconditions.checkFormat(opcode, "Nv5cc", Format45cc));
         this.register_count = Preconditions.check35cAnd45ccRegisterCount(register_count);
         this.register1 = (register_count > 0) ? Preconditions.checkNibbleRegister(register1) : 0;
         this.register2 = (register_count > 1) ? Preconditions.checkNibbleRegister(register2) : 0;
@@ -36,10 +36,10 @@ public final class Instruction45cc extends Instruction
         this.reference2 = ReferenceType.validate(getReferenceType2(), reference2);
     }
 
-    public static Instruction45cc of(Opcode opcode, int register_count, int register1,
-                                     int register2, int register3, int register4, int register5,
-                                     Object reference1, Object reference2) {
-        return new Instruction45cc(opcode, register_count, register1,
+    public static InstructionNv5cc of(Opcode opcode, int register_count, int register1,
+                                      int register2, int register3, int register4, int register5,
+                                      Object reference1, Object reference2) {
+        return new InstructionNv5cc(opcode, register_count, register1,
                 register2, register3, register4, register5, reference1, reference2);
     }
 
@@ -92,7 +92,7 @@ public final class Instruction45cc extends Instruction
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction45cc other
+        return obj instanceof InstructionNv5cc other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegisterCount() == other.getRegisterCount()
                 && getRegister1() == other.getRegister1()

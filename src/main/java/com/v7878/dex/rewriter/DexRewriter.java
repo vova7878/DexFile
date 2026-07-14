@@ -18,16 +18,13 @@ import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
-import com.v7878.dex.immutable.bytecode.Instruction21c;
-import com.v7878.dex.immutable.bytecode.Instruction22c;
-import com.v7878.dex.immutable.bytecode.Instruction31c;
-import com.v7878.dex.immutable.bytecode.Instruction34c;
-import com.v7878.dex.immutable.bytecode.Instruction35c;
-import com.v7878.dex.immutable.bytecode.Instruction3rc;
-import com.v7878.dex.immutable.bytecode.Instruction41c;
-import com.v7878.dex.immutable.bytecode.Instruction45cc;
-import com.v7878.dex.immutable.bytecode.Instruction4rcc;
-import com.v7878.dex.immutable.bytecode.Instruction52c;
+import com.v7878.dex.immutable.bytecode.InstructionN1c;
+import com.v7878.dex.immutable.bytecode.InstructionN2c;
+import com.v7878.dex.immutable.bytecode.InstructionNrc;
+import com.v7878.dex.immutable.bytecode.InstructionNrcc;
+import com.v7878.dex.immutable.bytecode.InstructionNv4c;
+import com.v7878.dex.immutable.bytecode.InstructionNv5c;
+import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.StartLocal;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
@@ -201,6 +198,10 @@ public class DexRewriter {
         );
     }
 
+    public TypeId rewriteClassDefReference(TypeId value) {
+        return rewriteTypeId(value);
+    }
+
     public Object rewriteReference(ReferenceType type, Object value) {
         Objects.requireNonNull(value);
         return switch (type) {
@@ -208,6 +209,7 @@ public class DexRewriter {
             case FIELD -> rewriteFieldId((FieldId) value);
             case METHOD -> rewriteMethodId((MethodId) value);
             case PROTO -> rewriteProtoId((ProtoId) value);
+            case CLASS_DEF -> rewriteClassDefReference((TypeId) value);
             case CALLSITE -> rewriteCallSiteId((CallSiteId) value);
             case METHOD_HANDLE -> rewriteMethodHandleId((MethodHandleId) value);
             case STRING, RAW_INDEX -> value;
@@ -215,30 +217,23 @@ public class DexRewriter {
     }
 
     public Instruction rewriteInstruction(Instruction value) {
-        if (value instanceof Instruction21c i) {
-            return Instruction21c.of(
+        if (value instanceof InstructionN1c i) {
+            return InstructionN1c.of(
                     i.getOpcode(),
                     i.getRegister1(),
                     rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
-        if (value instanceof Instruction22c i) {
-            return Instruction22c.of(
+        if (value instanceof InstructionN2c i) {
+            return InstructionN2c.of(
                     i.getOpcode(),
                     i.getRegister1(),
                     i.getRegister2(),
                     rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
-        if (value instanceof Instruction31c i) {
-            return Instruction31c.of(
-                    i.getOpcode(),
-                    i.getRegister1(),
-                    rewriteReference(i.getReferenceType1(), i.getReference1())
-            );
-        }
-        if (value instanceof Instruction34c i) {
-            return Instruction34c.of(
+        if (value instanceof InstructionNv4c i) {
+            return InstructionNv4c.of(
                     i.getOpcode(),
                     i.getRegisterCount(),
                     i.getRegister1(),
@@ -248,8 +243,8 @@ public class DexRewriter {
                     rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
-        if (value instanceof Instruction35c i) {
-            return Instruction35c.of(
+        if (value instanceof InstructionNv5c i) {
+            return InstructionNv5c.of(
                     i.getOpcode(),
                     i.getRegisterCount(),
                     i.getRegister1(),
@@ -260,23 +255,16 @@ public class DexRewriter {
                     rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
-        if (value instanceof Instruction3rc i) {
-            return Instruction3rc.of(
+        if (value instanceof InstructionNrc i) {
+            return InstructionNrc.of(
                     i.getOpcode(),
                     i.getRegisterCount(),
                     i.getStartRegister(),
                     rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
-        if (value instanceof Instruction41c i) {
-            return Instruction41c.of(
-                    i.getOpcode(),
-                    i.getRegister1(),
-                    rewriteReference(i.getReferenceType1(), i.getReference1())
-            );
-        }
-        if (value instanceof Instruction45cc i) {
-            return Instruction45cc.of(
+        if (value instanceof InstructionNv5cc i) {
+            return InstructionNv5cc.of(
                     i.getOpcode(),
                     i.getRegisterCount(),
                     i.getRegister1(),
@@ -288,21 +276,13 @@ public class DexRewriter {
                     rewriteReference(i.getReferenceType2(), i.getReference2())
             );
         }
-        if (value instanceof Instruction4rcc i) {
-            return Instruction4rcc.of(
+        if (value instanceof InstructionNrcc i) {
+            return InstructionNrcc.of(
                     i.getOpcode(),
                     i.getRegisterCount(),
                     i.getStartRegister(),
                     rewriteReference(i.getReferenceType1(), i.getReference1()),
                     rewriteReference(i.getReferenceType2(), i.getReference2())
-            );
-        }
-        if (value instanceof Instruction52c i) {
-            return Instruction52c.of(
-                    i.getOpcode(),
-                    i.getRegister1(),
-                    i.getRegister2(),
-                    rewriteReference(i.getReferenceType1(), i.getReference1())
             );
         }
         return value;

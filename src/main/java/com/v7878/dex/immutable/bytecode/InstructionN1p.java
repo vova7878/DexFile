@@ -12,7 +12,7 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction11p extends Instruction implements OneRegisterInstruction,
+public final class InstructionN1p extends Instruction implements OneRegisterInstruction,
         IndexInstruction, LiteralInstruction, WideLiteralInstruction {
     private static final int[] CONSTANTS_32 = {
             0xc0000000,
@@ -54,14 +54,14 @@ public final class Instruction11p extends Instruction implements OneRegisterInst
     private final int register1;
     private final int index;
 
-    private Instruction11p(Opcode opcode, int register1, int index) {
-        super(Preconditions.checkFormat(opcode, Format11p));
+    private InstructionN1p(Opcode opcode, int register1, int index) {
+        super(Preconditions.checkFormat(opcode, "N1p", Format11p));
         this.register1 = Preconditions.checkNibbleRegister(register1);
         this.index = Preconditions.checkNibbleIndex(index);
     }
 
-    public static Instruction11p of(Opcode opcode, int register1, int literal) {
-        return new Instruction11p(opcode, register1, literal);
+    public static InstructionN1p of(Opcode opcode, int register1, int literal) {
+        return new InstructionN1p(opcode, register1, literal);
     }
 
     @Override
@@ -92,7 +92,7 @@ public final class Instruction11p extends Instruction implements OneRegisterInst
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction11p other
+        return obj instanceof InstructionN1p other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1()
                 && getIndex() == other.getIndex();
@@ -101,6 +101,6 @@ public final class Instruction11p extends Instruction implements OneRegisterInst
     @Override
     public String toString() {
         return getName() + " " + Formatter.register(register1)
-                + ", " + Formatter.unsignedHex(index);
+                + ", {" + Formatter.unsignedHex(index) + "}";
     }
 }

@@ -7,41 +7,28 @@ import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
 import com.v7878.dex.immutable.bytecode.ArrayPayload;
 import com.v7878.dex.immutable.bytecode.Instruction;
-import com.v7878.dex.immutable.bytecode.Instruction10t;
-import com.v7878.dex.immutable.bytecode.Instruction10x;
-import com.v7878.dex.immutable.bytecode.Instruction11n;
-import com.v7878.dex.immutable.bytecode.Instruction11p;
-import com.v7878.dex.immutable.bytecode.Instruction11x;
-import com.v7878.dex.immutable.bytecode.Instruction12x;
-import com.v7878.dex.immutable.bytecode.Instruction20t;
-import com.v7878.dex.immutable.bytecode.Instruction20t_24;
-import com.v7878.dex.immutable.bytecode.Instruction21c;
-import com.v7878.dex.immutable.bytecode.Instruction21ih;
-import com.v7878.dex.immutable.bytecode.Instruction21lh;
-import com.v7878.dex.immutable.bytecode.Instruction21s;
-import com.v7878.dex.immutable.bytecode.Instruction21t;
-import com.v7878.dex.immutable.bytecode.Instruction22b;
-import com.v7878.dex.immutable.bytecode.Instruction22c;
-import com.v7878.dex.immutable.bytecode.Instruction22s;
-import com.v7878.dex.immutable.bytecode.Instruction22t;
-import com.v7878.dex.immutable.bytecode.Instruction22x;
-import com.v7878.dex.immutable.bytecode.Instruction23x;
-import com.v7878.dex.immutable.bytecode.Instruction30t;
-import com.v7878.dex.immutable.bytecode.Instruction31c;
-import com.v7878.dex.immutable.bytecode.Instruction31i;
-import com.v7878.dex.immutable.bytecode.Instruction31t;
-import com.v7878.dex.immutable.bytecode.Instruction32x;
-import com.v7878.dex.immutable.bytecode.Instruction34c;
-import com.v7878.dex.immutable.bytecode.Instruction35c;
-import com.v7878.dex.immutable.bytecode.Instruction3rc;
-import com.v7878.dex.immutable.bytecode.Instruction41c;
-import com.v7878.dex.immutable.bytecode.Instruction45cc;
-import com.v7878.dex.immutable.bytecode.Instruction4rcc;
-import com.v7878.dex.immutable.bytecode.Instruction51l;
-import com.v7878.dex.immutable.bytecode.Instruction52c;
-import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
-import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
+import com.v7878.dex.immutable.bytecode.InstructionN0t;
+import com.v7878.dex.immutable.bytecode.InstructionN0x;
+import com.v7878.dex.immutable.bytecode.InstructionN1c;
+import com.v7878.dex.immutable.bytecode.InstructionN1i;
+import com.v7878.dex.immutable.bytecode.InstructionN1l;
+import com.v7878.dex.immutable.bytecode.InstructionN1p;
+import com.v7878.dex.immutable.bytecode.InstructionN1t;
+import com.v7878.dex.immutable.bytecode.InstructionN1x;
+import com.v7878.dex.immutable.bytecode.InstructionN2c;
+import com.v7878.dex.immutable.bytecode.InstructionN2i;
+import com.v7878.dex.immutable.bytecode.InstructionN2t;
+import com.v7878.dex.immutable.bytecode.InstructionN2x;
+import com.v7878.dex.immutable.bytecode.InstructionN3x;
+import com.v7878.dex.immutable.bytecode.InstructionNrc;
+import com.v7878.dex.immutable.bytecode.InstructionNrcc;
+import com.v7878.dex.immutable.bytecode.InstructionNv4c;
+import com.v7878.dex.immutable.bytecode.InstructionNv5c;
+import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
+import com.v7878.dex.immutable.bytecode.InstructionRaw0c;
+import com.v7878.dex.immutable.bytecode.InstructionRaw0x;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
+import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.io.RandomInput;
 
 import java.util.ArrayList;
@@ -59,9 +46,7 @@ public class InstructionReader {
             raw_opcode = unit;
             arg = 0;
         } else if (raw_opcode == 0xff) {
-            // extended opcodes
-            var api = reader.options().getTargetApi();
-            if (api == 14 || api == 15) {
+            if (reader.options().hasExpandedInstructions()) {
                 raw_opcode = unit;
                 arg = 0;
             }
@@ -113,7 +98,9 @@ public class InstructionReader {
             case SparseSwitchPayload -> read_sparse_switch_payload(opcode, in);
             case MPackedSwitchPayload -> read_m_packed_switch_payload(opcode, in);
             case MSparseSwitchPayload -> read_m_sparse_switch_payload(opcode, in);
-            case FormatRaw, FormatRawRef16, FormatRawRef32 -> throw shouldNotReachHere();
+            case FormatRaw10x, FormatRaw10c, FormatRaw20c -> throw shouldNotReachHere();
+            case FormatWrapper20x -> read_wrapper_20x(opcode, in);
+            case FormatWrapper40ci -> read_wrapper_40ci(opcode, in, reader);
         };
     }
 
@@ -149,6 +136,7 @@ public class InstructionReader {
             case FIELD -> context.getField(index);
             case METHOD -> context.getMethod(index);
             case PROTO -> context.getProto(index);
+            case CLASS_DEF -> context.getClassDefHeader(index).type();
             case CALLSITE -> context.getCallSite(index);
             case METHOD_HANDLE -> context.getMethodHandle(index);
             case RAW_INDEX -> index;
@@ -161,140 +149,140 @@ public class InstructionReader {
         }
     }
 
-    public static Instruction10x read_10x(Opcode opcode, int _00) {
+    public static InstructionN0x read_10x(Opcode opcode, int _00) {
         check_zero_arg(_00);
-        return Instruction10x.of(opcode);
+        return InstructionN0x.of(opcode);
     }
 
-    public static Instruction12x read_12x(Opcode opcode, int BA) {
-        return Instruction12x.of(opcode, BA & 0xf, BA >> 4);
+    public static InstructionN2x read_12x(Opcode opcode, int BA) {
+        return InstructionN2x.of(opcode, BA & 0xf, BA >> 4);
     }
 
-    public static Instruction11n read_11n(Opcode opcode, int BA) {
-        return Instruction11n.of(opcode, BA & 0xf,
+    public static InstructionN1i read_11n(Opcode opcode, int BA) {
+        return InstructionN1i.of(opcode, BA & 0xf,
                 extend_sign32(BA >> 4, 4));
     }
 
-    public static Instruction11p read_11p(Opcode opcode, int BA) {
-        return Instruction11p.of(opcode, BA & 0xf, BA >> 4);
+    public static InstructionN1p read_11p(Opcode opcode, int BA) {
+        return InstructionN1p.of(opcode, BA & 0xf, BA >> 4);
     }
 
-    public static Instruction11x read_11x(Opcode opcode, int AA) {
-        return Instruction11x.of(opcode, AA);
+    public static InstructionN1x read_11x(Opcode opcode, int AA) {
+        return InstructionN1x.of(opcode, AA);
     }
 
-    public static Instruction10t read_10t(Opcode opcode, int AA) {
-        return Instruction10t.of(opcode, extend_sign32(AA, 8));
+    public static InstructionN0t read_10t(Opcode opcode, int AA) {
+        return InstructionN0t.of(opcode, extend_sign32(AA, 8));
     }
 
-    public static Instruction20t read_20t_16(Opcode opcode, RandomInput in, int _00) {
+    public static InstructionN0t read_20t_16(Opcode opcode, RandomInput in, int _00) {
         check_zero_arg(_00);
         int AAAA = in.readUShort();
-        return Instruction20t.of(opcode, extend_sign32(AAAA, 16));
+        return InstructionN0t.of(opcode, extend_sign32(AAAA, 16));
     }
 
-    public static Instruction20t_24 read_20t_24(Opcode opcode, RandomInput in, int AAh) {
+    public static InstructionN0t read_20t_24(Opcode opcode, RandomInput in, int AAh) {
         int AAAAl = in.readUShort();
         int AAAAAA = AAAAl | (AAh << 16);
-        return Instruction20t_24.of(opcode, extend_sign32(AAAAAA, 24));
+        return InstructionN0t.of(opcode, extend_sign32(AAAAAA, 24));
     }
 
-    public static Instruction22x read_22x(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN2x read_22x(Opcode opcode, RandomInput in, int AA) {
         int BBBB = in.readUShort();
-        return Instruction22x.of(opcode, AA, BBBB);
+        return InstructionN2x.of(opcode, AA, BBBB);
     }
 
-    public static Instruction21t read_21t(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN1t read_21t(Opcode opcode, RandomInput in, int AA) {
         int BBBB = in.readUShort();
-        return Instruction21t.of(opcode, AA, extend_sign32(BBBB, 16));
+        return InstructionN1t.of(opcode, AA, extend_sign32(BBBB, 16));
     }
 
-    public static Instruction21s read_21s(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN1i read_21s(Opcode opcode, RandomInput in, int AA) {
         int BBBB = in.readUShort();
-        return Instruction21s.of(opcode, AA, extend_sign32(BBBB, 16));
+        return InstructionN1i.of(opcode, AA, extend_sign32(BBBB, 16));
     }
 
-    public static Instruction21ih read_21ih(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN1i read_21ih(Opcode opcode, RandomInput in, int AA) {
         int BBBB = in.readUShort();
-        return Instruction21ih.of(opcode, AA, BBBB << 16);
+        return InstructionN1i.of(opcode, AA, BBBB << 16);
     }
 
-    public static Instruction21lh read_21lh(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN1l read_21lh(Opcode opcode, RandomInput in, int AA) {
         long BBBB = in.readUShort();
-        return Instruction21lh.of(opcode, AA, BBBB << 48);
+        return InstructionN1l.of(opcode, AA, BBBB << 48);
     }
 
-    public static Instruction21c read_21c(
+    public static InstructionN1c read_21c(
             Opcode opcode, RandomInput in, DexReader context, int AA) {
         int BBBB = in.readUShort();
-        return Instruction21c.of(opcode, AA, indexToRef(opcode.getReferenceType1(), context, BBBB));
+        return InstructionN1c.of(opcode, AA, indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
-    public static Instruction22c read_22c(
+    public static InstructionN2c read_22c(
             Opcode opcode, RandomInput in, DexReader context, int BA) {
         int CCCC = in.readUShort();
-        return Instruction22c.of(opcode, BA & 0xf, BA >> 4,
+        return InstructionN2c.of(opcode, BA & 0xf, BA >> 4,
                 indexToRef(opcode.getReferenceType1(), context, CCCC));
     }
 
-    public static Instruction23x read_23x(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN3x read_23x(Opcode opcode, RandomInput in, int AA) {
         int CCBB = in.readUShort();
-        return Instruction23x.of(opcode, AA, CCBB & 0xff, CCBB >> 8);
+        return InstructionN3x.of(opcode, AA, CCBB & 0xff, CCBB >> 8);
     }
 
-    public static Instruction22b read_22b(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN2i read_22b(Opcode opcode, RandomInput in, int AA) {
         int CCBB = in.readUShort();
-        return Instruction22b.of(opcode, AA, CCBB & 0xff,
+        return InstructionN2i.of(opcode, AA, CCBB & 0xff,
                 extend_sign32(CCBB >> 8, 8));
     }
 
-    public static Instruction22t read_22t(Opcode opcode, RandomInput in, int BA) {
+    public static InstructionN2t read_22t(Opcode opcode, RandomInput in, int BA) {
         int CCCC = in.readUShort();
-        return Instruction22t.of(opcode, BA & 0xf,
+        return InstructionN2t.of(opcode, BA & 0xf,
                 BA >> 4, extend_sign32(CCCC, 16));
     }
 
-    public static Instruction22s read_22s(Opcode opcode, RandomInput in, int BA) {
+    public static InstructionN2i read_22s(Opcode opcode, RandomInput in, int BA) {
         int CCCC = in.readUShort();
-        return Instruction22s.of(opcode, BA & 0xf,
+        return InstructionN2i.of(opcode, BA & 0xf,
                 BA >> 4, extend_sign32(CCCC, 16));
     }
 
-    public static Instruction30t read_30t(Opcode opcode, RandomInput in, int _00) {
+    public static InstructionN0t read_30t(Opcode opcode, RandomInput in, int _00) {
         check_zero_arg(_00);
         int AAAAlo = in.readUShort();
         int AAAAhi = in.readUShort();
-        return Instruction30t.of(opcode, AAAAlo | (AAAAhi << 16));
+        return InstructionN0t.of(opcode, AAAAlo | (AAAAhi << 16));
     }
 
-    public static Instruction32x read_32x(Opcode opcode, RandomInput in, int _00) {
+    public static InstructionN2x read_32x(Opcode opcode, RandomInput in, int _00) {
         check_zero_arg(_00);
         int AAAA = in.readUShort();
         int BBBB = in.readUShort();
-        return Instruction32x.of(opcode, AAAA, BBBB);
+        return InstructionN2x.of(opcode, AAAA, BBBB);
     }
 
-    public static Instruction31i read_31i(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN1i read_31i(Opcode opcode, RandomInput in, int AA) {
         int BBBBlo = in.readUShort();
         int BBBBhi = in.readUShort();
-        return Instruction31i.of(opcode, AA, BBBBlo | (BBBBhi << 16));
+        return InstructionN1i.of(opcode, AA, BBBBlo | (BBBBhi << 16));
     }
 
-    public static Instruction31t read_31t(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN1t read_31t(Opcode opcode, RandomInput in, int AA) {
         int BBBBlo = in.readUShort();
         int BBBBhi = in.readUShort();
-        return Instruction31t.of(opcode, AA, BBBBlo | (BBBBhi << 16));
+        return InstructionN1t.of(opcode, AA, BBBBlo | (BBBBhi << 16));
     }
 
-    public static Instruction31c read_31c(
+    public static InstructionN1c read_31c(
             Opcode opcode, RandomInput in, DexReader context, int AA) {
         int BBBBlo = in.readUShort();
         int BBBBhi = in.readUShort();
         int BBBBBBBB = BBBBlo | (BBBBhi << 16);
-        return Instruction31c.of(opcode, AA, indexToRef(opcode.getReferenceType1(), context, BBBBBBBB));
+        return InstructionN1c.of(opcode, AA, indexToRef(opcode.getReferenceType1(), context, BBBBBBBB));
     }
 
-    public static Instruction34c read_34c(
+    public static InstructionNv4c read_34c(
             Opcode opcode, RandomInput in, DexReader context, int AA) {
         int BBBB = in.readUShort();
         int FEDC = in.readUShort();
@@ -302,11 +290,11 @@ public class InstructionReader {
         int E = (FEDC >> 8) & 0xf;
         int D = (FEDC >> 4) & 0xf;
         int C = FEDC & 0xf;
-        return Instruction34c.of(opcode, AA, C, D, E, F,
+        return InstructionNv4c.of(opcode, AA, C, D, E, F,
                 indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
-    public static Instruction35c read_35c(
+    public static InstructionNv5c read_35c(
             Opcode opcode, RandomInput in, DexReader context, int AG) {
         int A = AG >> 4;
         int G = AG & 0xf;
@@ -316,28 +304,28 @@ public class InstructionReader {
         int E = (FEDC >> 8) & 0xf;
         int D = (FEDC >> 4) & 0xf;
         int C = FEDC & 0xf;
-        return Instruction35c.of(opcode, A, C, D, E, F, G,
+        return InstructionNv5c.of(opcode, A, C, D, E, F, G,
                 indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
-    public static Instruction3rc read_3rc(
+    public static InstructionNrc read_3rc(
             Opcode opcode, RandomInput in, DexReader context, int AA) {
         int BBBB = in.readUShort();
         int CCCC = in.readUShort();
-        return Instruction3rc.of(opcode, AA, CCCC,
+        return InstructionNrc.of(opcode, AA, CCCC,
                 indexToRef(opcode.getReferenceType1(), context, BBBB));
     }
 
-    public static Instruction41c read_41c(
+    public static InstructionN1c read_41c(
             Opcode opcode, RandomInput in, DexReader context) {
         int BBBBlo = in.readUShort();
         int BBBBhi = in.readUShort();
         int BBBBBBBB = BBBBlo | (BBBBhi << 16);
         int AAAA = in.readUShort();
-        return Instruction41c.of(opcode, AAAA, indexToRef(opcode.getReferenceType1(), context, BBBBBBBB));
+        return InstructionN1c.of(opcode, AAAA, indexToRef(opcode.getReferenceType1(), context, BBBBBBBB));
     }
 
-    public static Instruction45cc read_45cc(
+    public static InstructionNv5cc read_45cc(
             Opcode opcode, RandomInput in, DexReader context, int AG) {
         int A = AG >> 4;
         int G = AG & 0xf;
@@ -348,53 +336,53 @@ public class InstructionReader {
         int D = (FEDC >> 4) & 0xf;
         int C = FEDC & 0xf;
         int HHHH = in.readUShort();
-        return Instruction45cc.of(opcode, A, C, D, E, F, G,
+        return InstructionNv5cc.of(opcode, A, C, D, E, F, G,
                 indexToRef(opcode.getReferenceType1(), context, BBBB),
                 indexToRef(opcode.getReferenceType2(), context, HHHH));
     }
 
-    public static Instruction4rcc read_4rcc(
+    public static InstructionNrcc read_4rcc(
             Opcode opcode, RandomInput in, DexReader context, int AA) {
         int BBBB = in.readUShort();
         int CCCC = in.readUShort();
         int HHHH = in.readUShort();
-        return Instruction4rcc.of(opcode, AA, CCCC,
+        return InstructionNrcc.of(opcode, AA, CCCC,
                 indexToRef(opcode.getReferenceType1(), context, BBBB),
                 indexToRef(opcode.getReferenceType2(), context, HHHH));
     }
 
-    public static Instruction51l read_51l(Opcode opcode, RandomInput in, int AA) {
+    public static InstructionN1l read_51l(Opcode opcode, RandomInput in, int AA) {
         long BBBBlolo = in.readUShort();
         long BBBBhilo = in.readUShort();
         long BBBBlohi = in.readUShort();
         long BBBBhihi = in.readUShort();
-        return Instruction51l.of(opcode, AA, (BBBBhihi << 48) | (BBBBlohi << 32)
+        return InstructionN1l.of(opcode, AA, (BBBBhihi << 48) | (BBBBlohi << 32)
                 | (BBBBhilo << 16) | BBBBlolo);
     }
 
-    public static Instruction52c read_52c(
+    public static InstructionN2c read_52c(
             Opcode opcode, RandomInput in, DexReader context) {
         int CCCClo = in.readUShort();
         int CCCChi = in.readUShort();
         int CCCCCCCC = CCCClo | (CCCChi << 16);
         int AAAA = in.readUShort();
         int BBBB = in.readUShort();
-        return Instruction52c.of(opcode, AAAA, BBBB,
+        return InstructionN2c.of(opcode, AAAA, BBBB,
                 indexToRef(opcode.getReferenceType1(), context, CCCCCCCC));
     }
 
-    public static Instruction3rc read_5rc(
+    public static InstructionNrc read_5rc(
             Opcode opcode, RandomInput in, DexReader context) {
         int BBBBlo = in.readUShort();
         int BBBBhi = in.readUShort();
         int BBBBBBBB = BBBBlo | (BBBBhi << 16);
         int AAAA = in.readUShort();
         int CCCC = in.readUShort();
-        return Instruction3rc.of(opcode, AAAA, CCCC,
+        return InstructionNrc.of(opcode, AAAA, CCCC,
                 indexToRef(opcode.getReferenceType1(), context, BBBBBBBB));
     }
 
-    public static PackedSwitchPayload read_packed_switch_payload(
+    public static SwitchPayload read_packed_switch_payload(
             Opcode opcode, RandomInput in) {
         int size = in.readUShort();
         int first_key = in.readInt();
@@ -403,10 +391,10 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(first_key + i, targets[i]));
         }
-        return PackedSwitchPayload.of(opcode, elements);
+        return SwitchPayload.of(opcode, elements);
     }
 
-    public static SparseSwitchPayload read_sparse_switch_payload(
+    public static SwitchPayload read_sparse_switch_payload(
             Opcode opcode, RandomInput in) {
         int size = in.readUShort();
         int[] keys = in.readIntArray(size);
@@ -415,7 +403,7 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(keys[i], targets[i]));
         }
-        return SparseSwitchPayload.of(opcode, elements);
+        return SwitchPayload.of(opcode, elements);
     }
 
     public static ArrayPayload read_array_payload(
@@ -451,7 +439,7 @@ public class InstructionReader {
         return ArrayPayload.of(element_width, data);
     }
 
-    public static PackedSwitchPayload read_m_packed_switch_payload(
+    public static SwitchPayload read_m_packed_switch_payload(
             Opcode opcode, RandomInput in) {
         int size = in.readUShort();
         int first_key = in.readInt();
@@ -460,10 +448,10 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(first_key + i, targets[i]));
         }
-        return PackedSwitchPayload.of(opcode, elements);
+        return SwitchPayload.of(opcode, elements);
     }
 
-    public static SparseSwitchPayload read_m_sparse_switch_payload(
+    public static SwitchPayload read_m_sparse_switch_payload(
             Opcode opcode, RandomInput in) {
         int size = in.readUShort();
         int[] keys = in.readIntArray(size);
@@ -472,6 +460,22 @@ public class InstructionReader {
         for (int i = 0; i < targets.length; i++) {
             elements.add(i, SwitchElement.of(keys[i], targets[i]));
         }
-        return SparseSwitchPayload.of(opcode, elements);
+        return SwitchPayload.of(opcode, elements);
+    }
+
+    public static InstructionRaw0x read_wrapper_20x(
+            Opcode opcode, RandomInput in) {
+        int AAAA = in.readUShort();
+        return InstructionRaw0x.of(opcode, (short) AAAA);
+    }
+
+    public static InstructionRaw0c read_wrapper_40ci(
+            Opcode opcode, RandomInput in, DexReader context) {
+        int BBBBlo = in.readUShort();
+        int BBBBhi = in.readUShort();
+        int BBBBBBBB = BBBBlo | (BBBBhi << 16);
+        int AAAA = in.readUShort();
+        var ref_type = ReferenceType.values()[AAAA];
+        return InstructionRaw0c.of(opcode, ref_type, indexToRef(ref_type, context, BBBBBBBB));
     }
 }

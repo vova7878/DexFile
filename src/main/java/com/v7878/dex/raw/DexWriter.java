@@ -147,6 +147,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -323,8 +324,7 @@ public class DexWriter implements StringIndexer {
         main_buffer = io.duplicate();
         data_buffer = io.duplicate();
 
-        opcodes = Opcodes.of(options.getDexVersion(), options.getTargetApi(),
-                options.isTargetForArt(), options.hasOdexInstructions());
+        opcodes = Opcodes.of(options.getDexVersion(), options);
 
         map = new FileMap();
 
@@ -349,7 +349,7 @@ public class DexWriter implements StringIndexer {
         strings = scollector.strings.toArray(EmptyArrays.STRING);
 
         var collector = new DexCollector(this, options.getStringFix(),
-                isCompact(), options.hasDebugInfo());
+                options.getRawFix(), isCompact(), options.hasDebugInfo());
         collector.fillDex(dexfile);
 
         types = collector.types.toArray(EmptyArrays.TYPE_ID);
@@ -357,11 +357,12 @@ public class DexWriter implements StringIndexer {
         protos = collector.protos.toArray(EmptyArrays.PROTO_ID);
         checkSizeLimit(protos.length, "proto");
         fields = collector.fields.toArray(EmptyArrays.FIELD_ID);
-        // TODO: dex036
-        checkSizeLimit(fields.length, "field");
         methods = collector.methods.toArray(EmptyArrays.METHOD_ID);
-        // TODO: dex036
-        checkSizeLimit(methods.length, "method");
+        if (!options.hasExpandedInstructions()) {
+            // Only dex036 can have more than 65535 elements in these sections
+            checkSizeLimit(fields.length, "field");
+            checkSizeLimit(methods.length, "method");
+        }
         // Technically, the callsite and methodhandle sections are
         // not limited from above in the number of elements.
         // But unlike the similar case with strings, there are no jumbo
@@ -369,7 +370,7 @@ public class DexWriter implements StringIndexer {
         //
         // Perhaps the only indirect exception is the contents of the callsite itself,
         // which allows methodhandle references to be up to 32 bits
-        // (but const-method-handle\jumbo still doesn't exist)
+        // (but const-method-handle/jumbo still doesn't exist)
         //
         // If each methodhandle refers to either a field or a method
         // (and they're limited to 16 bits), how do you create more method handles?
@@ -543,8 +544,6 @@ public class DexWriter implements StringIndexer {
     }
 
     public void writeChecksums() {
-        // TODO: How are the checksum and signature fields calculated for compact dex?
-
         main_buffer.position(map.header_off + SIGNATURE_OFFSET);
         MessageDigest md;
         try {
@@ -616,6 +615,19 @@ public class DexWriter implements StringIndexer {
                     "Unable to find method \"" + value + "\"");
         }
         return out;
+    }
+
+    public int getClassDefIndex(TypeId value) {
+        Objects.requireNonNull(value);
+        var defs = class_defs;
+        for (int i = 0; i < defs.length; i++) {
+            var type = defs[i].value.getType();
+            if (value.equals(type)) {
+                return i;
+            }
+        }
+        throw new IllegalArgumentException(
+                "Unable to find class def \"" + value + "\"");
     }
 
     public int getCallSiteIndex(CallSiteId value) {

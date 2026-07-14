@@ -14,13 +14,16 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     protected final int api;
     protected final boolean art;
     protected final boolean odex;
+    protected final boolean expanded;
     protected final boolean hiddenapi;
     protected final boolean debug_info;
 
-    DexOptions(int api, boolean art, boolean odex, boolean hiddenapi, boolean debug_info) {
+    DexOptions(int api, boolean art, boolean odex, boolean expanded,
+               boolean hiddenapi, boolean debug_info) {
         this.api = api;
         this.art = art;
         this.odex = odex;
+        this.expanded = expanded;
         this.hiddenapi = hiddenapi;
         this.debug_info = debug_info;
     }
@@ -34,6 +37,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
         this.api = api;
         this.art = api > LAST_DALVIK_TARGET;
         this.odex = is_android;
+        this.expanded = 14 <= api && api <= 15;
         this.hiddenapi = false;
         this.debug_info = true;
     }
@@ -43,21 +47,26 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
             throw new IllegalArgumentException("Unsupported target api: " + api);
         }
         if ((art && api < FIRST_ART_TARGET) || (!art && api > LAST_DALVIK_TARGET)) {
-            throw new IllegalArgumentException("Unsupported " + art + " targetArt option with targetApi " + api);
+            throw new IllegalArgumentException("Unsupported " + art + " art option for api " + api);
         }
         if (hiddenapi && (api < FIRST_HIDDEN_API_TARGET)) {
-            throw new IllegalArgumentException("Unsupported " + art + " hiddenapi option with targetApi " + api);
+            throw new IllegalArgumentException("Unsupported hiddenapi option for api " + api);
+        }
+        if (expanded && !(14 <= api && api <= 15)) {
+            throw new IllegalArgumentException("Unsupported expanded opcodes option for api " + api);
         }
     }
 
-    protected abstract D dup(int api, boolean art, boolean odex, boolean hiddenapi, boolean debug_info);
+    protected abstract D dup(int api, boolean art, boolean odex,
+                             boolean expanded_opcodes,
+                             boolean hiddenapi, boolean debug_info);
 
     public int getTargetApi() {
         return api;
     }
 
     public D withTargetApi(int api) {
-        return dup(api, art, odex, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, hiddenapi, debug_info);
     }
 
     public boolean isTargetForArt() {
@@ -65,7 +74,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withTargetForArt(boolean art) {
-        return dup(api, art, odex, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, hiddenapi, debug_info);
     }
 
     public boolean isTargetForDalvik() {
@@ -77,7 +86,15 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withOdexInstructions(boolean odex) {
-        return dup(api, art, odex, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, hiddenapi, debug_info);
+    }
+
+    public boolean hasExpandedInstructions() {
+        return expanded;
+    }
+
+    public D withExpandedInstructions(boolean odex) {
+        return dup(api, art, odex, expanded, hiddenapi, debug_info);
     }
 
     public boolean hasHiddenApiFlags() {
@@ -85,7 +102,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withHiddenApiFlags(boolean hiddenapi) {
-        return dup(api, art, odex, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, hiddenapi, debug_info);
     }
 
     public boolean hasDebugInfo() {
@@ -93,6 +110,6 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withDebugInfo(boolean debug_info) {
-        return dup(api, art, odex, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, hiddenapi, debug_info);
     }
 }

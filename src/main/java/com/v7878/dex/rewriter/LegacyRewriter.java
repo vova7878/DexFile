@@ -20,15 +20,14 @@ import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
-import com.v7878.dex.immutable.bytecode.Instruction11p;
-import com.v7878.dex.immutable.bytecode.Instruction12x;
-import com.v7878.dex.immutable.bytecode.Instruction21t;
-import com.v7878.dex.immutable.bytecode.Instruction22c;
-import com.v7878.dex.immutable.bytecode.Instruction22t;
-import com.v7878.dex.immutable.bytecode.Instruction34c;
-import com.v7878.dex.immutable.bytecode.Instruction35c;
-import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
-import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
+import com.v7878.dex.immutable.bytecode.InstructionN1p;
+import com.v7878.dex.immutable.bytecode.InstructionN1t;
+import com.v7878.dex.immutable.bytecode.InstructionN2c;
+import com.v7878.dex.immutable.bytecode.InstructionN2t;
+import com.v7878.dex.immutable.bytecode.InstructionN2x;
+import com.v7878.dex.immutable.bytecode.InstructionNv4c;
+import com.v7878.dex.immutable.bytecode.InstructionNv5c;
+import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
 import com.v7878.dex.immutable.debug.AdvancePC;
 import com.v7878.dex.immutable.debug.DebugItem;
@@ -116,8 +115,8 @@ public class LegacyRewriter extends DexRewriter {
                  M_INVOKE_DIRECT, M_INVOKE_STATIC, M_INVOKE_INTERFACE,
                  M_EXECUTE_INLINE, M_INVOKE_DIRECT_EMPTY,
                  M_INVOKE_VIRTUAL_QUICK, M_INVOKE_SUPER_QUICK -> {
-                var tmp = ((Instruction34c) insn);
-                ib.raw(Instruction35c.of(
+                var tmp = ((InstructionNv4c) insn);
+                ib.raw(InstructionNv5c.of(
                         switch (opcode) {
                             case M_FILLED_NEW_ARRAY -> FILLED_NEW_ARRAY;
                             case M_INVOKE_VIRTUAL -> INVOKE_VIRTUAL;
@@ -141,68 +140,68 @@ public class LegacyRewriter extends DexRewriter {
                 ));
             }
             case M_CONST_SPECIAL -> {
-                var tmp = ((Instruction11p) insn);
+                var tmp = ((InstructionN1p) insn);
                 var reg = tmp.getRegister1();
                 var lit = tmp.getLiteral();
                 ib.const_(reg, lit);
             }
             case M_CONST_WIDE_SPECIAL -> {
-                var tmp = ((Instruction11p) insn);
+                var tmp = ((InstructionN1p) insn);
                 var reg = tmp.getRegister1();
                 var lit = tmp.getWideLiteral();
                 ib.const_wide(reg, lit);
             }
             case M_NEW_ARRAY -> {
-                var tmp = ((Instruction22c) insn);
+                var tmp = ((InstructionN2c) insn);
                 var reg1 = tmp.getRegister1();
                 var reg2 = tmp.getRegister2();
                 var ref = (TypeId) tmp.getReference1();
                 ib.new_array(reg1, reg2, ref.array());
             }
             case M_NEW_ARRAY_BOOLEAN -> {
-                var tmp = ((Instruction12x) insn);
+                var tmp = ((InstructionN2x) insn);
                 var reg1 = tmp.getRegister1();
                 var reg2 = tmp.getRegister2();
                 ib.new_array(reg1, reg2, TypeId.Z.array());
             }
             case M_NEW_ARRAY_BYTE -> {
-                var tmp = ((Instruction12x) insn);
+                var tmp = ((InstructionN2x) insn);
                 var reg1 = tmp.getRegister1();
                 var reg2 = tmp.getRegister2();
                 ib.new_array(reg1, reg2, TypeId.B.array());
             }
             case M_NEW_ARRAY_CHAR -> {
-                var tmp = ((Instruction12x) insn);
+                var tmp = ((InstructionN2x) insn);
                 var reg1 = tmp.getRegister1();
                 var reg2 = tmp.getRegister2();
                 ib.new_array(reg1, reg2, TypeId.C.array());
             }
             case M_NEW_ARRAY_SHORT -> {
-                var tmp = ((Instruction12x) insn);
+                var tmp = ((InstructionN2x) insn);
                 var reg1 = tmp.getRegister1();
                 var reg2 = tmp.getRegister2();
                 ib.new_array(reg1, reg2, TypeId.S.array());
             }
             case M_NEW_ARRAY_INT -> {
-                var tmp = ((Instruction12x) insn);
+                var tmp = ((InstructionN2x) insn);
                 var reg1 = tmp.getRegister1();
                 var reg2 = tmp.getRegister2();
                 ib.new_array(reg1, reg2, TypeId.I.array());
             }
             case M_NEW_ARRAY_LONG -> {
-                var tmp = ((Instruction12x) insn);
+                var tmp = ((InstructionN2x) insn);
                 var reg1 = tmp.getRegister1();
                 var reg2 = tmp.getRegister2();
                 ib.new_array(reg1, reg2, TypeId.J.array());
             }
             case M_NEW_ARRAY_FLOAT -> {
-                var tmp = ((Instruction12x) insn);
+                var tmp = ((InstructionN2x) insn);
                 var reg1 = tmp.getRegister1();
                 var reg2 = tmp.getRegister2();
                 ib.new_array(reg1, reg2, TypeId.F.array());
             }
             case M_NEW_ARRAY_DOUBLE -> {
-                var tmp = ((Instruction12x) insn);
+                var tmp = ((InstructionN2x) insn);
                 var reg1 = tmp.getRegister1();
                 var reg2 = tmp.getRegister2();
                 ib.new_array(reg1, reg2, TypeId.D.array());
@@ -212,8 +211,8 @@ public class LegacyRewriter extends DexRewriter {
                 ib.goto_(label(offset + tmp.getBranchOffset()));
             }
             case M_PACKED_SWITCH -> {
-                var tmp = ((Instruction21t) insn);
-                var payload = (PackedSwitchPayload) code_map
+                var tmp = ((InstructionN1t) insn);
+                var payload = (SwitchPayload) code_map
                         .apply(offset + tmp.getBranchOffset());
                 var branches = new TreeMap<Integer, Integer>();
                 for (var entry : payload.getSwitchElements()) {
@@ -223,8 +222,8 @@ public class LegacyRewriter extends DexRewriter {
                 ib.switch_(tmp.getRegister1(), branches);
             }
             case M_SPARSE_SWITCH -> {
-                var tmp = ((Instruction21t) insn);
-                var payload = (SparseSwitchPayload) code_map
+                var tmp = ((InstructionN1t) insn);
+                var payload = (SwitchPayload) code_map
                         .apply(offset + tmp.getBranchOffset());
                 var branches = new TreeMap<Integer, Integer>();
                 for (var entry : payload.getSwitchElements()) {
@@ -234,13 +233,13 @@ public class LegacyRewriter extends DexRewriter {
                 ib.switch_(tmp.getRegister1(), branches);
             }
             case IF_EQ, IF_NE, IF_LT, IF_GE, IF_GT, IF_LE -> {
-                var tmp = ((Instruction22t) insn);
+                var tmp = ((InstructionN2t) insn);
                 var test = Test.of(opcode);
                 ib.if_test(test, tmp.getRegister1(), tmp.getRegister2(),
                         label(offset + tmp.getBranchOffset()));
             }
             case IF_EQZ, IF_NEZ, IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> {
-                var tmp = ((Instruction21t) insn);
+                var tmp = ((InstructionN1t) insn);
                 var test = Test.of(opcode);
                 ib.if_testz(test, tmp.getRegister1(),
                         label(offset + tmp.getBranchOffset()));

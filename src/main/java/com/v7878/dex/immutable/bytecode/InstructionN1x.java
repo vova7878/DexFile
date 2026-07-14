@@ -9,16 +9,16 @@ import com.v7878.dex.util.Preconditions;
 
 import java.util.Objects;
 
-public final class Instruction11x extends Instruction implements OneRegisterInstruction {
+public final class InstructionN1x extends Instruction implements OneRegisterInstruction {
     private final int register1;
 
-    private Instruction11x(Opcode opcode, int register1) {
-        super(Preconditions.checkFormat(opcode, Format11x));
+    private InstructionN1x(Opcode opcode, int register1) {
+        super(Preconditions.checkFormat(opcode, "N1x", Format11x));
         this.register1 = Preconditions.checkByteRegister(register1);
     }
 
-    public static Instruction11x of(Opcode opcode, int register1) {
-        return new Instruction11x(opcode, register1);
+    public static InstructionN1x of(Opcode opcode, int register1) {
+        return new InstructionN1x(opcode, register1);
     }
 
     @Override
@@ -34,7 +34,7 @@ public final class Instruction11x extends Instruction implements OneRegisterInst
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
-        return obj instanceof Instruction11x other
+        return obj instanceof InstructionN1x other
                 && Objects.equals(getOpcode(), other.getOpcode())
                 && getRegister1() == other.getRegister1();
     }

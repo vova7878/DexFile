@@ -1,10 +1,9 @@
 package com.v7878.dex.immutable.bytecode.iface;
 
-import com.v7878.dex.immutable.bytecode.Instruction11p;
-import com.v7878.dex.immutable.bytecode.Instruction21lh;
-import com.v7878.dex.immutable.bytecode.Instruction51l;
+import com.v7878.dex.immutable.bytecode.InstructionN1l;
+import com.v7878.dex.immutable.bytecode.InstructionN1p;
 
 public sealed interface WideLiteralInstruction extends InstructionI
-        permits Instruction11p, Instruction21lh, Instruction51l {
+        permits InstructionN1p, InstructionN1l {
     long getWideLiteral();
 }

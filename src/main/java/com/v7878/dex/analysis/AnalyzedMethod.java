@@ -59,27 +59,26 @@ import com.v7878.dex.immutable.MethodId;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.immutable.bytecode.ArrayPayload;
 import com.v7878.dex.immutable.bytecode.Instruction;
-import com.v7878.dex.immutable.bytecode.Instruction12x;
-import com.v7878.dex.immutable.bytecode.Instruction21c;
-import com.v7878.dex.immutable.bytecode.Instruction21t;
-import com.v7878.dex.immutable.bytecode.Instruction22c;
-import com.v7878.dex.immutable.bytecode.Instruction22t;
-import com.v7878.dex.immutable.bytecode.Instruction23x;
-import com.v7878.dex.immutable.bytecode.Instruction31t;
-import com.v7878.dex.immutable.bytecode.Instruction35c;
-import com.v7878.dex.immutable.bytecode.Instruction3rc;
-import com.v7878.dex.immutable.bytecode.Instruction45cc;
-import com.v7878.dex.immutable.bytecode.Instruction4rcc;
-import com.v7878.dex.immutable.bytecode.iface.ArrayPayloadInstruction;
-import com.v7878.dex.immutable.bytecode.iface.BranchOffsetInstruction;
-import com.v7878.dex.immutable.bytecode.iface.LiteralInstruction;
-import com.v7878.dex.immutable.bytecode.iface.OneRegisterInstruction;
+import com.v7878.dex.immutable.bytecode.InstructionN0t;
+import com.v7878.dex.immutable.bytecode.InstructionN1c;
+import com.v7878.dex.immutable.bytecode.InstructionN1i;
+import com.v7878.dex.immutable.bytecode.InstructionN1l;
+import com.v7878.dex.immutable.bytecode.InstructionN1t;
+import com.v7878.dex.immutable.bytecode.InstructionN1x;
+import com.v7878.dex.immutable.bytecode.InstructionN2c;
+import com.v7878.dex.immutable.bytecode.InstructionN2i;
+import com.v7878.dex.immutable.bytecode.InstructionN2t;
+import com.v7878.dex.immutable.bytecode.InstructionN2x;
+import com.v7878.dex.immutable.bytecode.InstructionN3x;
+import com.v7878.dex.immutable.bytecode.InstructionNrc;
+import com.v7878.dex.immutable.bytecode.InstructionNrcc;
+import com.v7878.dex.immutable.bytecode.InstructionNv5c;
+import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
+import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
-import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
-import com.v7878.dex.immutable.bytecode.iface.ThreeRegisterInstruction;
-import com.v7878.dex.immutable.bytecode.iface.TwoRegisterInstruction;
 import com.v7878.dex.immutable.bytecode.iface.VariableFiveRegisterInstruction;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Formatter;
@@ -351,7 +350,7 @@ public final class AnalyzedMethod {
             case NOP -> current.setNopExact(true);
             case MOVE, MOVE_FROM16, MOVE_16, MOVE_OBJECT,
                  MOVE_OBJECT_FROM16, MOVE_OBJECT_16 -> {
-                var tmp = (TwoRegisterInstruction) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
 
@@ -359,7 +358,7 @@ public final class AnalyzedMethod {
                 current.output(idst);
             }
             case MOVE_WIDE, MOVE_WIDE_FROM16, MOVE_WIDE_16 -> {
-                var tmp = (TwoRegisterInstruction) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
 
@@ -367,21 +366,21 @@ public final class AnalyzedMethod {
                 current.wideOutput(idst);
             }
             case MOVE_RESULT, MOVE_RESULT_OBJECT -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
                 current.input(RESULT_REGISTER);
                 current.output(idst);
             }
             case MOVE_RESULT_WIDE -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
                 current.wideInput(RESULT_REGISTER);
                 current.wideOutput(idst);
             }
             case MOVE_EXCEPTION -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
                 current.input(EXCEPTION_REGISTER);
@@ -394,7 +393,7 @@ public final class AnalyzedMethod {
                 }
             }
             case RETURN -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var isrc = tmp.getRegister1();
 
                 var rtype = method.getReturnType();
@@ -405,7 +404,7 @@ public final class AnalyzedMethod {
                 current.input(isrc);
             }
             case RETURN_WIDE -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var isrc = tmp.getRegister1();
 
                 var rtype = method.getReturnType();
@@ -416,7 +415,7 @@ public final class AnalyzedMethod {
                 current.wideInput(isrc);
             }
             case RETURN_OBJECT -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var isrc = tmp.getRegister1();
 
                 var rtype = method.getReturnType();
@@ -426,28 +425,39 @@ public final class AnalyzedMethod {
 
                 current.input(isrc);
             }
-            case CONST_4, CONST_16, CONST, CONST_HIGH16,
-                 CONST_STRING, CONST_STRING_JUMBO, CONST_CLASS,
-                 CONST_METHOD_TYPE, CONST_METHOD_HANDLE -> {
-                var tmp = (OneRegisterInstruction) insn;
+            case CONST_4, CONST_16, CONST, CONST_HIGH16 -> {
+                var tmp = (InstructionN1i) insn;
                 var ireg = tmp.getRegister1();
 
                 current.output(ireg);
             }
-            case CONST_WIDE_16, CONST_WIDE_32, CONST_WIDE, CONST_WIDE_HIGH16 -> {
-                var tmp = (OneRegisterInstruction) insn;
+            case CONST_STRING, CONST_STRING_JUMBO, CONST_CLASS,
+                 CONST_METHOD_TYPE, CONST_METHOD_HANDLE -> {
+                var tmp = (InstructionN1c) insn;
+                var ireg = tmp.getRegister1();
+
+                current.output(ireg);
+            }
+            case CONST_WIDE_16, CONST_WIDE_32 -> {
+                var tmp = (InstructionN1i) insn;
+                var ireg = tmp.getRegister1();
+
+                current.wideOutput(ireg);
+            }
+            case CONST_WIDE, CONST_WIDE_HIGH16 -> {
+                var tmp = (InstructionN1l) insn;
                 var ireg = tmp.getRegister1();
 
                 current.wideOutput(ireg);
             }
             case MONITOR_ENTER, MONITOR_EXIT, THROW -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var isrc = tmp.getRegister1();
 
                 current.input(isrc);
             }
             case CHECK_CAST -> {
-                var tmp = (Instruction21c) insn;
+                var tmp = (InstructionN1c) insn;
                 var ireg = tmp.getRegister1();
                 var ref = (TypeId) tmp.getReference1();
 
@@ -459,7 +469,7 @@ public final class AnalyzedMethod {
                 current.output(ireg);
             }
             case INSTANCE_OF -> {
-                var tmp = (Instruction22c) insn;
+                var tmp = (InstructionN2c) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
                 var ref = (TypeId) tmp.getReference1();
@@ -474,7 +484,7 @@ public final class AnalyzedMethod {
             case ARRAY_LENGTH ->
             //noinspection DuplicateBranchesInSwitch
             {
-                var tmp = (TwoRegisterInstruction) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
 
@@ -482,7 +492,7 @@ public final class AnalyzedMethod {
                 current.output(idst);
             }
             case NEW_INSTANCE -> {
-                var tmp = (Instruction21c) insn;
+                var tmp = (InstructionN1c) insn;
                 var ireg = tmp.getRegister1();
                 var ref = (TypeId) tmp.getReference1();
 
@@ -493,7 +503,7 @@ public final class AnalyzedMethod {
                 current.output(ireg);
             }
             case NEW_ARRAY -> {
-                var tmp = (Instruction22c) insn;
+                var tmp = (InstructionN2c) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
                 var ref = (TypeId) tmp.getReference1();
@@ -506,7 +516,7 @@ public final class AnalyzedMethod {
                 current.output(idst);
             }
             case FILLED_NEW_ARRAY -> {
-                var tmp = (Instruction35c) insn;
+                var tmp = (InstructionNv5c) insn;
                 var ref = (TypeId) tmp.getReference1();
                 var reg_count = tmp.getRegisterCount();
 
@@ -521,7 +531,7 @@ public final class AnalyzedMethod {
                 init_35c_45cc_args(current, tmp, proto, verify);
             }
             case FILLED_NEW_ARRAY_RANGE -> {
-                var tmp = (Instruction3rc) insn;
+                var tmp = (InstructionNrc) insn;
                 var ref = (TypeId) tmp.getReference1();
                 var reg_count = tmp.getRegisterCount();
 
@@ -536,7 +546,7 @@ public final class AnalyzedMethod {
                 init_3rc_4rcc_args(current, tmp, proto, verify);
             }
             case FILL_ARRAY_DATA -> {
-                var tmp = (Instruction31t) insn;
+                var tmp = (InstructionN1t) insn;
                 var ireg = tmp.getRegister1();
 
                 current.payload(instruction(ARRAY_PAYLOAD,
@@ -545,7 +555,7 @@ public final class AnalyzedMethod {
                 current.input(ireg);
             }
             case GOTO, GOTO_16, GOTO_32 -> {
-                var tmp = (BranchOffsetInstruction) insn;
+                var tmp = (InstructionN0t) insn;
                 var target = position(address + tmp.getBranchOffset());
 
                 current.setNopExact(tmp.getUnitCount() == tmp.getBranchOffset());
@@ -553,13 +563,13 @@ public final class AnalyzedMethod {
                 transition(todo, current, target, null);
             }
             case PACKED_SWITCH, SPARSE_SWITCH -> {
-                var tmp = (Instruction31t) insn;
+                var tmp = (InstructionN1t) insn;
                 var unit_count = tmp.getUnitCount();
                 var ireg = tmp.getRegister1();
 
                 var expected = opcode == PACKED_SWITCH ?
                         PACKED_SWITCH_PAYLOAD : SPARSE_SWITCH_PAYLOAD;
-                SwitchPayloadInstruction payload = instruction(
+                SwitchPayload payload = instruction(
                         expected, address + tmp.getBranchOffset());
                 current.payload(payload);
 
@@ -575,7 +585,7 @@ public final class AnalyzedMethod {
                 current.input(ireg);
             }
             case CMPL_FLOAT, CMPG_FLOAT -> {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var idst = tmp.getRegister1();
                 var isrc1 = tmp.getRegister2();
                 var isrc2 = tmp.getRegister3();
@@ -585,7 +595,7 @@ public final class AnalyzedMethod {
                 current.output(idst);
             }
             case CMPL_DOUBLE, CMPG_DOUBLE, CMP_LONG -> {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var idst = tmp.getRegister1();
                 var isrc1 = tmp.getRegister2();
                 var isrc2 = tmp.getRegister3();
@@ -595,7 +605,7 @@ public final class AnalyzedMethod {
                 current.output(idst);
             }
             case IF_EQZ, IF_NEZ, IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> {
-                var tmp = (Instruction21t) insn;
+                var tmp = (InstructionN1t) insn;
                 var ireg = tmp.getRegister1();
 
                 var target = position(address + tmp.getBranchOffset());
@@ -606,7 +616,7 @@ public final class AnalyzedMethod {
                 current.input(ireg);
             }
             case IF_EQ, IF_NE, IF_LT, IF_GE, IF_GT, IF_LE -> {
-                var tmp = (Instruction22t) insn;
+                var tmp = (InstructionN2t) insn;
                 var ireg1 = tmp.getRegister1();
                 var ireg2 = tmp.getRegister2();
 
@@ -622,7 +632,7 @@ public final class AnalyzedMethod {
                  AGET_BYTE, AGET_CHAR, AGET_SHORT ->
             //noinspection DuplicateBranchesInSwitch
             {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var ival = tmp.getRegister1();
                 var iarr = tmp.getRegister2();
                 var iidx = tmp.getRegister3();
@@ -632,7 +642,7 @@ public final class AnalyzedMethod {
                 current.output(ival);
             }
             case AGET_WIDE -> {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var ival = tmp.getRegister1();
                 var iarr = tmp.getRegister2();
                 var iidx = tmp.getRegister3();
@@ -643,7 +653,7 @@ public final class AnalyzedMethod {
             }
             case APUT, APUT_OBJECT, APUT_BOOLEAN,
                  APUT_BYTE, APUT_CHAR, APUT_SHORT -> {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var ival = tmp.getRegister1();
                 var iarr = tmp.getRegister2();
                 var iidx = tmp.getRegister3();
@@ -653,7 +663,7 @@ public final class AnalyzedMethod {
                 current.input(ival);
             }
             case APUT_WIDE -> {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var ival = tmp.getRegister1();
                 var iarr = tmp.getRegister2();
                 var iidx = tmp.getRegister3();
@@ -664,7 +674,7 @@ public final class AnalyzedMethod {
             }
             case IGET, IGET_OBJECT, IGET_WIDE, IGET_BOOLEAN,
                  IGET_BYTE, IGET_CHAR, IGET_SHORT -> {
-                var tmp = (Instruction22c) insn;
+                var tmp = (InstructionN2c) insn;
                 var ival = tmp.getRegister1();
                 var iobj = tmp.getRegister2();
 
@@ -690,7 +700,7 @@ public final class AnalyzedMethod {
             }
             case IPUT, IPUT_OBJECT, IPUT_WIDE, IPUT_BOOLEAN,
                  IPUT_BYTE, IPUT_CHAR, IPUT_SHORT -> {
-                var tmp = (Instruction22c) insn;
+                var tmp = (InstructionN2c) insn;
                 var ival = tmp.getRegister1();
                 var iobj = tmp.getRegister2();
 
@@ -716,7 +726,7 @@ public final class AnalyzedMethod {
             }
             case SGET, SGET_OBJECT, SGET_WIDE, SGET_BOOLEAN,
                  SGET_BYTE, SGET_CHAR, SGET_SHORT -> {
-                var tmp = (Instruction21c) insn;
+                var tmp = (InstructionN1c) insn;
                 var ival = tmp.getRegister1();
 
                 var ref = (FieldId) tmp.getReference1();
@@ -740,7 +750,7 @@ public final class AnalyzedMethod {
             }
             case SPUT, SPUT_OBJECT, SPUT_WIDE, SPUT_BOOLEAN,
                  SPUT_BYTE, SPUT_CHAR, SPUT_SHORT -> {
-                var tmp = (Instruction21c) insn;
+                var tmp = (InstructionN1c) insn;
                 var ival = tmp.getRegister1();
 
                 var ref = (FieldId) tmp.getReference1();
@@ -764,7 +774,7 @@ public final class AnalyzedMethod {
             }
             case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_DIRECT,
                  INVOKE_STATIC, INVOKE_INTERFACE -> {
-                var tmp = (Instruction35c) insn;
+                var tmp = (InstructionNv5c) insn;
                 var ref = (MethodId) tmp.getReference1();
 
                 var proto = (opcode == INVOKE_STATIC) ?
@@ -776,7 +786,7 @@ public final class AnalyzedMethod {
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
                  INVOKE_DIRECT_RANGE, INVOKE_STATIC_RANGE,
                  INVOKE_INTERFACE_RANGE -> {
-                var tmp = (Instruction3rc) insn;
+                var tmp = (InstructionNrc) insn;
                 var ref = (MethodId) tmp.getReference1();
 
                 var proto = (opcode == INVOKE_STATIC_RANGE) ?
@@ -786,7 +796,7 @@ public final class AnalyzedMethod {
                 init_3rc_4rcc_args(current, tmp, proto, verify);
             }
             case INVOKE_POLYMORPHIC -> {
-                var tmp = (Instruction45cc) insn;
+                var tmp = (InstructionNv5cc) insn;
                 var ref = (ProtoId) tmp.getReference2();
 
                 var proto = ref.insertThis(METHOD_HANDLE);
@@ -795,7 +805,7 @@ public final class AnalyzedMethod {
                 init_35c_45cc_args(current, tmp, proto, verify);
             }
             case INVOKE_POLYMORPHIC_RANGE -> {
-                var tmp = (Instruction4rcc) insn;
+                var tmp = (InstructionNrcc) insn;
                 var ref = (ProtoId) tmp.getReference2();
 
                 var proto = ref.insertThis(METHOD_HANDLE);
@@ -804,7 +814,7 @@ public final class AnalyzedMethod {
                 init_3rc_4rcc_args(current, tmp, proto, verify);
             }
             case INVOKE_CUSTOM -> {
-                var tmp = (Instruction35c) insn;
+                var tmp = (InstructionNv5c) insn;
                 // TODO? verify callsite
                 var ref = (CallSiteId) tmp.getReference1();
 
@@ -814,7 +824,7 @@ public final class AnalyzedMethod {
                 init_35c_45cc_args(current, tmp, proto, verify);
             }
             case INVOKE_CUSTOM_RANGE -> {
-                var tmp = (Instruction3rc) insn;
+                var tmp = (InstructionNrc) insn;
                 // TODO? verify callsite
                 var ref = (CallSiteId) tmp.getReference1();
 
@@ -824,16 +834,20 @@ public final class AnalyzedMethod {
                 init_3rc_4rcc_args(current, tmp, proto, verify);
             }
             case NEG_INT, NOT_INT, NEG_FLOAT, INT_TO_FLOAT, FLOAT_TO_INT,
-                 INT_TO_BYTE, INT_TO_CHAR, INT_TO_SHORT -> {
-                var tmp = (Instruction12x) insn;
+                 INT_TO_BYTE, INT_TO_CHAR, INT_TO_SHORT ->
+            //noinspection DuplicateBranchesInSwitch
+            {
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
 
                 current.input(isrc);
                 current.output(idst);
             }
-            case NEG_LONG, NOT_LONG, NEG_DOUBLE, LONG_TO_DOUBLE, DOUBLE_TO_LONG -> {
-                var tmp = (Instruction12x) insn;
+            case NEG_LONG, NOT_LONG, NEG_DOUBLE, LONG_TO_DOUBLE, DOUBLE_TO_LONG ->
+            //noinspection DuplicateBranchesInSwitch
+            {
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
 
@@ -841,7 +855,7 @@ public final class AnalyzedMethod {
                 current.wideOutput(idst);
             }
             case INT_TO_LONG, INT_TO_DOUBLE, FLOAT_TO_LONG, FLOAT_TO_DOUBLE -> {
-                var tmp = (Instruction12x) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
 
@@ -849,7 +863,7 @@ public final class AnalyzedMethod {
                 current.wideOutput(idst);
             }
             case LONG_TO_INT, LONG_TO_FLOAT, DOUBLE_TO_INT, DOUBLE_TO_FLOAT -> {
-                var tmp = (Instruction12x) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
 
@@ -861,7 +875,7 @@ public final class AnalyzedMethod {
                  ADD_FLOAT, SUB_FLOAT, MUL_FLOAT, DIV_FLOAT, REM_FLOAT ->
             //noinspection DuplicateBranchesInSwitch
             {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var idst = tmp.getRegister1();
                 var isrc1 = tmp.getRegister2();
                 var isrc2 = tmp.getRegister3();
@@ -874,7 +888,7 @@ public final class AnalyzedMethod {
                  REM_LONG, AND_LONG, OR_LONG, XOR_LONG,
                  ADD_DOUBLE, SUB_DOUBLE, MUL_DOUBLE,
                  DIV_DOUBLE, REM_DOUBLE -> {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var idst = tmp.getRegister1();
                 var isrc1 = tmp.getRegister2();
                 var isrc2 = tmp.getRegister3();
@@ -884,7 +898,7 @@ public final class AnalyzedMethod {
                 current.wideOutput(idst);
             }
             case SHL_LONG, SHR_LONG, USHR_LONG -> {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var idst = tmp.getRegister1();
                 var isrc1 = tmp.getRegister2();
                 var isrc2 = tmp.getRegister3();
@@ -898,7 +912,7 @@ public final class AnalyzedMethod {
                  SHL_INT_2ADDR, SHR_INT_2ADDR, USHR_INT_2ADDR,
                  ADD_FLOAT_2ADDR, SUB_FLOAT_2ADDR, MUL_FLOAT_2ADDR,
                  DIV_FLOAT_2ADDR, REM_FLOAT_2ADDR -> {
-                var tmp = (Instruction12x) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst_src1 = tmp.getRegister1();
                 var isrc2 = tmp.getRegister2();
 
@@ -910,7 +924,7 @@ public final class AnalyzedMethod {
                  REM_LONG_2ADDR, AND_LONG_2ADDR, OR_LONG_2ADDR, XOR_LONG_2ADDR,
                  ADD_DOUBLE_2ADDR, SUB_DOUBLE_2ADDR, MUL_DOUBLE_2ADDR,
                  DIV_DOUBLE_2ADDR, REM_DOUBLE_2ADDR -> {
-                var tmp = (Instruction12x) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst_src1 = tmp.getRegister1();
                 var isrc2 = tmp.getRegister2();
 
@@ -919,7 +933,7 @@ public final class AnalyzedMethod {
                 current.wideOutput(idst_src1);
             }
             case SHL_LONG_2ADDR, SHR_LONG_2ADDR, USHR_LONG_2ADDR -> {
-                var tmp = (Instruction12x) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst_src1 = tmp.getRegister1();
                 var isrc2 = tmp.getRegister2();
 
@@ -931,10 +945,8 @@ public final class AnalyzedMethod {
                  REM_INT_LIT16, AND_INT_LIT16, OR_INT_LIT16, XOR_INT_LIT16,
                  ADD_INT_LIT8, RSUB_INT_LIT8, MUL_INT_LIT8, DIV_INT_LIT8,
                  REM_INT_LIT8, AND_INT_LIT8, OR_INT_LIT8, XOR_INT_LIT8,
-                 SHL_INT_LIT8, SHR_INT_LIT8, USHR_INT_LIT8 ->
-            //noinspection DuplicateBranchesInSwitch
-            {
-                var tmp = (TwoRegisterInstruction) insn;
+                 SHL_INT_LIT8, SHR_INT_LIT8, USHR_INT_LIT8 -> {
+                var tmp = (InstructionN2i) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
 
@@ -1286,7 +1298,7 @@ public final class AnalyzedMethod {
 
     private static void unop(Position current, TypeId tdst, TypeId tsrc, boolean verify) {
         assert tdst.isPrimitive() && tsrc.isPrimitive();
-        TwoRegisterInstruction insn = current.instruction();
+        InstructionN2x insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc = insn.getRegister2();
         if (verify) verifyReg(null, current, isrc, tsrc);
@@ -1296,7 +1308,7 @@ public final class AnalyzedMethod {
     private static void binop(Position current, TypeId tdst, TypeId tsrc1,
                               TypeId tsrc2, boolean check_bool_op, boolean verify) {
         assert tdst.isPrimitive() && tsrc1.isPrimitive() && tsrc2.isPrimitive();
-        ThreeRegisterInstruction insn = current.instruction();
+        InstructionN3x insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc1 = insn.getRegister2();
         var isrc2 = insn.getRegister3();
@@ -1313,7 +1325,7 @@ public final class AnalyzedMethod {
     private static void binop_2addr(Position current, TypeId tdst_src1,
                                     TypeId tsrc2, boolean check_bool_op, boolean verify) {
         assert tdst_src1.isPrimitive() && tsrc2.isPrimitive();
-        TwoRegisterInstruction insn = current.instruction();
+        InstructionN2x insn = current.instruction();
         var idst_src1 = insn.getRegister1();
         var isrc2 = insn.getRegister2();
         if (verify) verifyReg(null, current, idst_src1, tdst_src1);
@@ -1327,14 +1339,13 @@ public final class AnalyzedMethod {
     }
 
     private static void binop_lit_int(Position current, boolean check_bool_op, boolean verify) {
-        TwoRegisterInstruction insn = current.instruction();
+        InstructionN2i insn = current.instruction();
         var idst = insn.getRegister1();
         var isrc = insn.getRegister2();
         if (verify) verifyReg(null, current, isrc, I);
         var type = I;
         if (check_bool_op && current.before().at(isrc).isBool()) {
-            LiteralInstruction lit = current.instruction();
-            if ((lit.getLiteral() & ~1) == 0) {
+            if ((insn.getLiteral() & ~1) == 0) {
                 type = Z;
             }
         }
@@ -1430,7 +1441,7 @@ public final class AnalyzedMethod {
                 // No effect on or use of registers
             }
             case MOVE, MOVE_FROM16, MOVE_16 -> {
-                var tmp = (TwoRegisterInstruction) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var dst = current.before().at(idst);
                 var isrc = tmp.getRegister2();
@@ -1444,7 +1455,7 @@ public final class AnalyzedMethod {
                 current.after().copy(address, idst, src);
             }
             case MOVE_WIDE, MOVE_WIDE_FROM16, MOVE_WIDE_16 -> {
-                var tmp = (TwoRegisterInstruction) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var dst = current.before().pairAt(idst);
                 var isrc = tmp.getRegister2();
@@ -1458,7 +1469,7 @@ public final class AnalyzedMethod {
                 current.after().copyWide(address, idst, src);
             }
             case MOVE_OBJECT, MOVE_OBJECT_FROM16, MOVE_OBJECT_16 -> {
-                var tmp = (TwoRegisterInstruction) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var dst = current.before().at(idst);
                 var isrc = tmp.getRegister2();
@@ -1473,7 +1484,7 @@ public final class AnalyzedMethod {
             }
             // TODO: separate stage for move_result/exception verification
             case MOVE_RESULT -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
                 var type = getResultType(current);
@@ -1484,7 +1495,7 @@ public final class AnalyzedMethod {
                 outputPrim(current, idst, type);
             }
             case MOVE_RESULT_WIDE -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
                 var type = getResultType(current);
@@ -1495,7 +1506,7 @@ public final class AnalyzedMethod {
                 outputPrim(current, idst, type);
             }
             case MOVE_RESULT_OBJECT -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
                 var predecessor = getResultPredecessor(current);
@@ -1511,7 +1522,7 @@ public final class AnalyzedMethod {
                 if (address == 0) {
                     throw new AnalysisException("move-exception at pc 0x0");
                 }
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
                 var type = getExceptionType(resolver, current);
@@ -1530,40 +1541,45 @@ public final class AnalyzedMethod {
                 }
             }
             case RETURN, RETURN_WIDE, RETURN_OBJECT -> {
-                var ireg = ((OneRegisterInstruction) insn).getRegister1();
+                var ireg = ((InstructionN1x) insn).getRegister1();
                 if (verify) verifyReg(resolver, current, ireg, method.getReturnType());
             }
             // Could be boolean, int, float, or a null reference
             case CONST_4, CONST_16, CONST, CONST_HIGH16 -> {
-                var ireg = ((OneRegisterInstruction) insn).getRegister1();
+                var tmp = (InstructionN1i) insn;
+                var ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
-                var lit = ((LiteralInstruction) insn).getLiteral();
+                var lit = tmp.getLiteral();
                 constantInt(current, ireg, lit);
                 is_nop = lit == 0 && reg.isZero();
             }
             // Could be long or double
-            case CONST_WIDE_16, CONST_WIDE_32, CONST_WIDE, CONST_WIDE_HIGH16 -> {
-                var ireg = ((OneRegisterInstruction) insn).getRegister1();
+            case CONST_WIDE_16, CONST_WIDE_32 -> {
+                var ireg = ((InstructionN1i) insn).getRegister1();
+                wideConstant(current, ireg);
+            }
+            case CONST_WIDE, CONST_WIDE_HIGH16 -> {
+                var ireg = ((InstructionN1l) insn).getRegister1();
                 wideConstant(current, ireg);
             }
             case CONST_STRING, CONST_STRING_JUMBO -> {
-                var ireg = ((OneRegisterInstruction) insn).getRegister1();
+                var ireg = ((InstructionN1c) insn).getRegister1();
                 constant(current, ireg, ConstantKind.STRING);
             }
             case CONST_CLASS -> {
-                var ireg = ((OneRegisterInstruction) insn).getRegister1();
+                var ireg = ((InstructionN1c) insn).getRegister1();
                 constant(current, ireg, ConstantKind.CLASS);
             }
             case CONST_METHOD_TYPE -> {
-                var ireg = ((OneRegisterInstruction) insn).getRegister1();
+                var ireg = ((InstructionN1c) insn).getRegister1();
                 constant(current, ireg, ConstantKind.METHOD_TYPE);
             }
             case CONST_METHOD_HANDLE -> {
-                var ireg = ((OneRegisterInstruction) insn).getRegister1();
+                var ireg = ((InstructionN1c) insn).getRegister1();
                 constant(current, ireg, ConstantKind.METHOD_HANDLE);
             }
             case MONITOR_ENTER, MONITOR_EXIT -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
 
                 var ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
@@ -1575,7 +1591,7 @@ public final class AnalyzedMethod {
                 markNonNull(current, ireg, reg);
             }
             case CHECK_CAST -> {
-                var tmp = (Instruction21c) insn;
+                var tmp = (InstructionN1c) insn;
                 var ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
                 var ref = (TypeId) tmp.getReference1();
@@ -1613,7 +1629,7 @@ public final class AnalyzedMethod {
                 outputRef(current, ireg, ref, reg.isRuntimeNonNullRef());
             }
             case INSTANCE_OF -> {
-                var tmp = (TwoRegisterInstruction) insn;
+                var tmp = (InstructionN2c) insn;
                 var idst = tmp.getRegister1();
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);
@@ -1625,7 +1641,7 @@ public final class AnalyzedMethod {
                 outputPrim(current, idst, Z);
             }
             case ARRAY_LENGTH -> {
-                var tmp = (TwoRegisterInstruction) insn;
+                var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
                 var iarr = tmp.getRegister2();
                 var arr = current.before().at(iarr);
@@ -1641,7 +1657,7 @@ public final class AnalyzedMethod {
                 markNonNull(current, iarr, arr);
             }
             case NEW_INSTANCE -> {
-                var tmp = (Instruction21c) insn;
+                var tmp = (InstructionN1c) insn;
                 var ireg = tmp.getRegister1();
                 var ref = (TypeId) tmp.getReference1();
 
@@ -1650,7 +1666,7 @@ public final class AnalyzedMethod {
                 current.after().copy(address, ireg, value);
             }
             case NEW_ARRAY -> {
-                var tmp = (Instruction22c) insn;
+                var tmp = (InstructionN2c) insn;
                 var idst = tmp.getRegister1();
                 var isz = tmp.getRegister2();
                 var sz = current.before().at(isz);
@@ -1669,7 +1685,7 @@ public final class AnalyzedMethod {
                 if (verify) verify_3rc_4rcc_args(resolver, current, false, false);
             }
             case FILL_ARRAY_DATA -> {
-                var tmp = (Instruction31t) insn;
+                var tmp = (InstructionN1t) insn;
 
                 int ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
@@ -1682,7 +1698,7 @@ public final class AnalyzedMethod {
                         throw unexpectedReg(current, ireg, reg);
                     }
                     var shorty = info.getComponentShorty();
-                    var payload = (ArrayPayloadInstruction) current.payload();
+                    var payload = (ArrayPayload) current.payload();
                     int elem_width_data = payload.getElementWidth();
                     int elem_width_reg = switch (shorty) {
                         case 'Z', 'B' -> 1;
@@ -1700,13 +1716,13 @@ public final class AnalyzedMethod {
                 markNonNull(current, ireg, reg);
             }
             case THROW -> {
-                var tmp = (OneRegisterInstruction) insn;
+                var tmp = (InstructionN1x) insn;
                 var ireg = tmp.getRegister1();
 
                 if (verify) verifyReg(resolver, current, ireg, THROWABLE);
             }
             case PACKED_SWITCH, SPARSE_SWITCH -> {
-                var tmp = (Instruction31t) insn;
+                var tmp = (InstructionN1t) insn;
                 int ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
 
@@ -1715,7 +1731,7 @@ public final class AnalyzedMethod {
                 }
 
                 var work_line = current.after();
-                var payload = (SwitchPayloadInstruction) current.payload();
+                var payload = (SwitchPayload) current.payload();
 
                 // TODO: reachability test
                 for (var entry : payload.getSwitchElements()) {
@@ -1730,7 +1746,7 @@ public final class AnalyzedMethod {
             case CMPL_DOUBLE, CMPG_DOUBLE -> binop(current, I, D, D, false, verify);
             case CMP_LONG -> binop(current, I, J, J, false, verify);
             case IF_LTZ, IF_GEZ, IF_GTZ, IF_LEZ -> {
-                var tmp = (Instruction21t) insn;
+                var tmp = (InstructionN1t) insn;
                 int ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
 
@@ -1768,7 +1784,7 @@ public final class AnalyzedMethod {
                 merge(resolver, touched, todo, current, target, work_line, false_pass);
             }
             case IF_EQZ, IF_NEZ -> {
-                var tmp = (Instruction21t) insn;
+                var tmp = (InstructionN1t) insn;
                 int ireg = tmp.getRegister1();
                 var reg = current.before().at(ireg);
 
@@ -1819,7 +1835,7 @@ public final class AnalyzedMethod {
                 }
             }
             case IF_LT, IF_GE, IF_GT, IF_LE -> {
-                var tmp = (Instruction22t) insn;
+                var tmp = (InstructionN2t) insn;
                 int ireg1 = tmp.getRegister1();
                 var reg1 = current.before().at(ireg1);
                 int ireg2 = tmp.getRegister2();
@@ -1880,7 +1896,7 @@ public final class AnalyzedMethod {
                 merge(resolver, touched, todo, current, target, work_line, false_pass);
             }
             case IF_EQ, IF_NE -> {
-                var tmp = (Instruction22t) insn;
+                var tmp = (InstructionN2t) insn;
                 int ireg1 = tmp.getRegister1();
                 var reg1 = current.before().at(ireg1);
                 int ireg2 = tmp.getRegister2();
@@ -1959,7 +1975,7 @@ public final class AnalyzedMethod {
             }
             case AGET, AGET_BOOLEAN, AGET_BYTE, AGET_CHAR,
                  AGET_SHORT, AGET_WIDE, AGET_OBJECT -> {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var ival = tmp.getRegister1();
                 var iarr = tmp.getRegister2();
                 var arr = current.before().at(iarr);
@@ -2009,7 +2025,7 @@ public final class AnalyzedMethod {
             }
             case APUT, APUT_BOOLEAN, APUT_BYTE, APUT_CHAR,
                  APUT_SHORT, APUT_WIDE, APUT_OBJECT -> {
-                var tmp = (Instruction23x) insn;
+                var tmp = (InstructionN3x) insn;
                 var ival = tmp.getRegister1();
                 var iarr = tmp.getRegister2();
                 var arr = current.before().at(iarr);
@@ -2067,7 +2083,7 @@ public final class AnalyzedMethod {
             }
             case IGET, IGET_BOOLEAN, IGET_BYTE, IGET_CHAR,
                  IGET_SHORT, IGET_OBJECT, IGET_WIDE -> {
-                var tmp = (Instruction22c) insn;
+                var tmp = (InstructionN2c) insn;
                 var ival = tmp.getRegister1();
                 var iobj = tmp.getRegister2();
                 var obj = current.before().at(iobj);
@@ -2098,7 +2114,7 @@ public final class AnalyzedMethod {
             }
             case IPUT, IPUT_BOOLEAN, IPUT_BYTE, IPUT_CHAR,
                  IPUT_SHORT, IPUT_OBJECT, IPUT_WIDE -> {
-                var tmp = (Instruction22c) insn;
+                var tmp = (InstructionN2c) insn;
                 var ival = tmp.getRegister1();
                 var iobj = tmp.getRegister2();
                 var obj = current.before().at(iobj);
@@ -2125,7 +2141,7 @@ public final class AnalyzedMethod {
             }
             case SGET, SGET_BOOLEAN, SGET_BYTE, SGET_CHAR,
                  SGET_SHORT, SGET_OBJECT, SGET_WIDE -> {
-                var tmp = (Instruction21c) insn;
+                var tmp = (InstructionN1c) insn;
                 var ireg = tmp.getRegister1();
                 var ref = (FieldId) tmp.getReference1();
                 var type = ref.getType();
@@ -2138,14 +2154,14 @@ public final class AnalyzedMethod {
             }
             case SPUT, SPUT_BOOLEAN, SPUT_BYTE, SPUT_CHAR,
                  SPUT_SHORT, SPUT_OBJECT, SPUT_WIDE -> {
-                var tmp = (Instruction21c) insn;
+                var tmp = (InstructionN1c) insn;
                 var ireg = tmp.getRegister1();
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) verifyReg(resolver, current, ireg, ref.getType());
             }
             case INVOKE_DIRECT -> {
-                var tmp = (Instruction35c) insn;
+                var tmp = (InstructionNv5c) insn;
                 var ref = (MethodId) tmp.getReference1();
 
                 assert tmp.getRegisterCount() > 0;
@@ -2167,7 +2183,7 @@ public final class AnalyzedMethod {
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_DIRECT_RANGE -> {
-                var tmp = (Instruction3rc) insn;
+                var tmp = (InstructionNrc) insn;
                 var ref = (MethodId) tmp.getReference1();
 
                 assert tmp.getRegisterCount() > 0;
@@ -2189,7 +2205,7 @@ public final class AnalyzedMethod {
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_INTERFACE, INVOKE_POLYMORPHIC -> {
-                var tmp = (Instruction35c) insn;
+                var tmp = (InstructionNv5c) insn;
 
                 assert tmp.getRegisterCount() > 0;
                 int ithis_reg = tmp.getRegister1();
@@ -2202,7 +2218,7 @@ public final class AnalyzedMethod {
             }
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
                  INVOKE_INTERFACE_RANGE, INVOKE_POLYMORPHIC_RANGE -> {
-                var tmp = (Instruction3rc) insn;
+                var tmp = (InstructionNrc) insn;
 
                 assert tmp.getRegisterCount() > 0;
                 int ithis_reg = tmp.getStartRegister();
@@ -2216,7 +2232,7 @@ public final class AnalyzedMethod {
             case INVOKE_STATIC, INVOKE_CUSTOM -> {
                 if (verify) verify_35c_45cc_args(resolver, current, false, false);
                 if (opcode == INVOKE_STATIC) {
-                    var tmp = (Instruction35c) insn;
+                    var tmp = (InstructionNv5c) insn;
                     if (isRequireNonNull((MethodId) tmp.getReference1())) {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getRegister1();
@@ -2229,7 +2245,7 @@ public final class AnalyzedMethod {
             case INVOKE_STATIC_RANGE, INVOKE_CUSTOM_RANGE -> {
                 if (verify) verify_3rc_4rcc_args(resolver, current, false, false);
                 if (opcode == INVOKE_STATIC_RANGE) {
-                    var tmp = (Instruction3rc) insn;
+                    var tmp = (InstructionNrc) insn;
                     if (isRequireNonNull((MethodId) tmp.getReference1())) {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getStartRegister();
@@ -2256,7 +2272,7 @@ public final class AnalyzedMethod {
             case DOUBLE_TO_LONG -> unop(current, J, D, verify);
             case DOUBLE_TO_FLOAT -> unop(current, F, D, verify);
             case INT_TO_BYTE, INT_TO_CHAR, INT_TO_SHORT -> {
-                var tmp = (Instruction12x) insn;
+                var tmp = (InstructionN2x) insn;
 
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);

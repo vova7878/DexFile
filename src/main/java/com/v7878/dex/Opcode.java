@@ -39,23 +39,30 @@ import static com.v7878.dex.Format.Format4rcc;
 import static com.v7878.dex.Format.Format51l;
 import static com.v7878.dex.Format.Format52c;
 import static com.v7878.dex.Format.Format5rc;
-import static com.v7878.dex.Format.FormatRaw;
-import static com.v7878.dex.Format.FormatRawRef16;
-import static com.v7878.dex.Format.FormatRawRef32;
+import static com.v7878.dex.Format.FormatRaw10c;
+import static com.v7878.dex.Format.FormatRaw10x;
+import static com.v7878.dex.Format.FormatRaw20c;
+import static com.v7878.dex.Format.FormatWrapper20x;
+import static com.v7878.dex.Format.FormatWrapper40ci;
 import static com.v7878.dex.Format.MPackedSwitchPayload;
 import static com.v7878.dex.Format.MSparseSwitchPayload;
 import static com.v7878.dex.Format.PackedSwitchPayload;
 import static com.v7878.dex.Format.SparseSwitchPayload;
+import static com.v7878.dex.Opcode.Constants.ALIGNED;
 import static com.v7878.dex.Opcode.Constants.CAN_INITIALIZE_REFERENCE;
 import static com.v7878.dex.Opcode.Constants.CAN_THROW;
 import static com.v7878.dex.Opcode.Constants.ENDS_FLOW;
+import static com.v7878.dex.Opcode.Constants.EXPANDED;
 import static com.v7878.dex.Opcode.Constants.HAS_PAYLOAD;
 import static com.v7878.dex.Opcode.Constants.ODEX_ONLY;
+import static com.v7878.dex.Opcode.Constants.RAW_OP;
+import static com.v7878.dex.Opcode.Constants.SETS_RESULT;
 import static com.v7878.dex.Opcode.Constants.TYPE_BRANCH;
 import static com.v7878.dex.Opcode.Constants.TYPE_INVOKE;
 import static com.v7878.dex.Opcode.Constants.TYPE_RETURN;
 import static com.v7878.dex.Opcode.Constants.TYPE_SWITCH;
 import static com.v7878.dex.Opcode.Constants.UNCONDITIONAL;
+import static com.v7878.dex.Opcode.Constants.WRAPPER;
 import static com.v7878.dex.ReferenceType.CALLSITE;
 import static com.v7878.dex.ReferenceType.FIELD;
 import static com.v7878.dex.ReferenceType.METHOD;
@@ -64,6 +71,7 @@ import static com.v7878.dex.ReferenceType.PROTO;
 import static com.v7878.dex.ReferenceType.RAW_INDEX;
 import static com.v7878.dex.ReferenceType.STRING;
 import static com.v7878.dex.ReferenceType.TYPE;
+import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
 public enum Opcode {
     NOP(common(0x00), "nop", Format10x, regs(), 0),
@@ -102,8 +110,8 @@ public enum Opcode {
     ARRAY_LENGTH(common(0x20, 0x20, 0x21), "array-length", Format12x, regs(true, true), CAN_THROW),
     NEW_INSTANCE(common(0x21, 0x21, 0x22), "new-instance", Format21c, regs(true), TYPE, CAN_THROW),
     NEW_ARRAY(modern(0x23), "new-array", Format22c, regs(true, true), TYPE, CAN_THROW),
-    FILLED_NEW_ARRAY(modern(0x24), "filled-new-array", Format35c, regs5(), TYPE, CAN_THROW),
-    FILLED_NEW_ARRAY_RANGE(common(0x2c, 0x2c, 0x25), "filled-new-array/range", Format3rc, regsr(), TYPE, CAN_THROW),
+    FILLED_NEW_ARRAY(modern(0x24), "filled-new-array", Format35c, regs5(), TYPE, CAN_THROW | SETS_RESULT),
+    FILLED_NEW_ARRAY_RANGE(common(0x2c, 0x2c, 0x25), "filled-new-array/range", Format3rc, regsr(), TYPE, CAN_THROW | SETS_RESULT),
     FILL_ARRAY_DATA(modern(0x26), "fill-array-data", Format31t, regs(true), CAN_THROW | HAS_PAYLOAD),
     THROW(common(0x32, 0x33, 0x27), "throw", Format11x, regs(true), CAN_THROW | ENDS_FLOW),
     GOTO(common(0x33, 0x34, 0x28), "goto", Format10t, regs(), TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
@@ -313,9 +321,9 @@ public enum Opcode {
     CONST_METHOD_HANDLE(firstApi(0xfe, 28), "const-method-handle", Format21c, regs(true), METHOD_HANDLE, CAN_THROW),
     CONST_METHOD_TYPE(firstApi(0xff, 28), "const-method-type", Format21c, regs(true), PROTO, CAN_THROW),
 
-    PACKED_SWITCH_PAYLOAD(modern(0x100), "packed-switch-payload", PackedSwitchPayload, regs(), 0),
-    SPARSE_SWITCH_PAYLOAD(modern(0x200), "sparse-switch-payload", SparseSwitchPayload, regs(), 0),
-    ARRAY_PAYLOAD(common(0x300), "array-payload", ArrayPayload, regs(), 0),
+    PACKED_SWITCH_PAYLOAD(modern(0x100), "packed-switch-payload", PackedSwitchPayload, regs(), ALIGNED),
+    SPARSE_SWITCH_PAYLOAD(modern(0x200), "sparse-switch-payload", SparseSwitchPayload, regs(), ALIGNED),
+    ARRAY_PAYLOAD(common(0x300), "array-payload", ArrayPayload, regs(), ALIGNED),
 
     // legacy dex009 / dex013 opcodes
 
@@ -333,7 +341,7 @@ public enum Opcode {
     M_NEW_ARRAY_LONG(legacy(0x28, 0x28), "m-new-array-long", Format12x, regs(true, true), CAN_THROW),
     M_NEW_ARRAY_FLOAT(legacy(0x29, 0x29), "m-new-array-float", Format12x, regs(true, true), CAN_THROW),
     M_NEW_ARRAY_DOUBLE(legacy(0x2a, 0x2a), "m-new-array-double", Format12x, regs(true, true), CAN_THROW),
-    M_FILLED_NEW_ARRAY(legacy(0x2b, 0x2b), "m-filled-new-array", Format34c, regs(true, true), TYPE, CAN_THROW),
+    M_FILLED_NEW_ARRAY(legacy(0x2b, 0x2b), "m-filled-new-array", Format34c, regs(true, true), TYPE, CAN_THROW | SETS_RESULT),
 
     M_GOTO_24(legacy(52, 53), "m-goto/24", Format20t_24, regs(), TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
     M_PACKED_SWITCH(legacy(0x35, 0x36), "m-packed-switch", Format21t, regs(true), HAS_PAYLOAD | TYPE_SWITCH),
@@ -345,8 +353,8 @@ public enum Opcode {
     M_INVOKE_STATIC(legacy(0x70, 0x71), "m-invoke-static", Format34c, regs4(), METHOD, CAN_THROW | TYPE_INVOKE),
     M_INVOKE_INTERFACE(legacy(0x71, 0x72), "m-invoke-interface", Format34c, regs4(), METHOD, CAN_THROW | TYPE_INVOKE),
 
-    M_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "m-packed-switch-payload", MPackedSwitchPayload, regs(), 0),
-    M_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "m-sparse-switch-payload", MSparseSwitchPayload, regs(), 0),
+    M_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "m-packed-switch-payload", MPackedSwitchPayload, regs(), ALIGNED),
+    M_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "m-sparse-switch-payload", MSparseSwitchPayload, regs(), ALIGNED),
 
     // legacy dex009 / dex013 odex opcodes
 
@@ -358,12 +366,12 @@ public enum Opcode {
     // odex opcodes
 
     // Note: these two instructions can accept up to 4 registers
-    EXECUTE_INLINE(dalvikOnly(modern(0xee)), "execute-inline", Format35c, regs4(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
-    EXECUTE_INLINE_RANGE(dalvikOnly(firstApi(0xef, 8)), "execute-inline/range", Format3rc, regs4(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    EXECUTE_INLINE(dalvik(modern(0xee)), "execute-inline", Format35c, regs4(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    EXECUTE_INLINE_RANGE(dalvik(firstApi(0xef, 8)), "execute-inline/range", Format3rc, regs4(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
     // Note: these two instructions can only accept 1 register
-    INVOKE_DIRECT_EMPTY(dalvikOnly(lastApi(modern(0xf0), 13)), "invoke-direct-empty", Format35c, regs(true), METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
-    INVOKE_OBJECT_INIT_RANGE(dalvikOnly(firstApi(0xf0, 14)), "invoke-object-init/range", Format3rc, regs(true), METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    INVOKE_DIRECT_EMPTY(dalvik(lastApi(modern(0xf0), 13)), "invoke-direct-empty", Format35c, regs(true), METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    INVOKE_OBJECT_INIT_RANGE(dalvik(firstApi(0xf0, 14)), "invoke-object-init/range", Format3rc, regs(true), METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
 
     IGET_QUICK(dalvikOrArt(common(0xf2), lastApi(0xe3, 30)), "iget-quick", Format22c, regs(true, true), RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IGET_WIDE_QUICK(dalvikOrArt(common(0xf3), lastApi(0xe4, 30)), "iget-wide-quick", Format22c, regs(false, true), RAW_INDEX, ODEX_ONLY | CAN_THROW),
@@ -376,31 +384,31 @@ public enum Opcode {
     INVOKE_VIRTUAL_QUICK(dalvikOrArt(modern(0xf8), lastApi(0xe9, 30)), "invoke-virtual-quick", Format35c, regs5(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
     INVOKE_VIRTUAL_QUICK_RANGE(dalvikOrArt(common(0xf9), lastApi(0xea, 30)), "invoke-virtual-quick/range", Format3rc, regsr(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
-    INVOKE_SUPER_QUICK(dalvikOnly(modern(0xfa)), "invoke-super-quick", Format35c, regs5(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
-    INVOKE_SUPER_QUICK_RANGE(dalvikOnly(common(0xfb)), "invoke-super-quick/range", Format3rc, regsr(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    INVOKE_SUPER_QUICK(dalvik(modern(0xfa)), "invoke-super-quick", Format35c, regs5(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    INVOKE_SUPER_QUICK_RANGE(dalvik(common(0xfb)), "invoke-super-quick/range", Format3rc, regsr(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
-    THROW_VERIFICATION_ERROR(dalvikOnly(firstApi(0xed, 5)), "throw-verification-error", Format20bc, regs(), ODEX_ONLY | CAN_THROW | ENDS_FLOW),
+    THROW_VERIFICATION_ERROR(dalvik(firstApi(0xed, 5)), "throw-verification-error", Format20bc, regs(), ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
     // Note: breakpoint replaces the original opcode and restores it back when executed (it only exists at runtime)
     // BREAKPOINT(onlyDalvik(firstApi(0xec, 8)), "breakpoint", Format00x, regs(), RUNTIME_ONLY),
 
-    IGET_VOLATILE(dalvikOnly(firstApi(0xe3, 9)), "iget-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
-    IPUT_VOLATILE(dalvikOnly(firstApi(0xe4, 9)), "iput-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
+    IGET_VOLATILE(dalvik(firstApi(0xe3, 9)), "iget-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
+    IPUT_VOLATILE(dalvik(firstApi(0xe4, 9)), "iput-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
 
-    SGET_VOLATILE(dalvikOnly(firstApi(0xe5, 9)), "sget-volatile", Format21c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
-    SPUT_VOLATILE(dalvikOnly(firstApi(0xe6, 9)), "sput-volatile", Format21c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
+    SGET_VOLATILE(dalvik(firstApi(0xe5, 9)), "sget-volatile", Format21c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
+    SPUT_VOLATILE(dalvik(firstApi(0xe6, 9)), "sput-volatile", Format21c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
 
-    IGET_WIDE_VOLATILE(dalvikOnly(firstApi(0xe8, 9)), "iget-wide-volatile", Format22c, regs(false, true), FIELD, ODEX_ONLY | CAN_THROW),
-    IPUT_WIDE_VOLATILE(dalvikOnly(firstApi(0xe9, 9)), "iput-wide-volatile", Format22c, regs(false, true), FIELD, ODEX_ONLY | CAN_THROW),
+    IGET_WIDE_VOLATILE(dalvik(firstApi(0xe8, 9)), "iget-wide-volatile", Format22c, regs(false, true), FIELD, ODEX_ONLY | CAN_THROW),
+    IPUT_WIDE_VOLATILE(dalvik(firstApi(0xe9, 9)), "iput-wide-volatile", Format22c, regs(false, true), FIELD, ODEX_ONLY | CAN_THROW),
 
-    SGET_WIDE_VOLATILE(dalvikOnly(firstApi(0xea, 9)), "sget-wide-volatile", Format21c, regs(false), FIELD, ODEX_ONLY | CAN_THROW),
-    SPUT_WIDE_VOLATILE(dalvikOnly(firstApi(0xeb, 9)), "sput-wide-volatile", Format21c, regs(false), FIELD, ODEX_ONLY | CAN_THROW),
+    SGET_WIDE_VOLATILE(dalvik(firstApi(0xea, 9)), "sget-wide-volatile", Format21c, regs(false), FIELD, ODEX_ONLY | CAN_THROW),
+    SPUT_WIDE_VOLATILE(dalvik(firstApi(0xeb, 9)), "sput-wide-volatile", Format21c, regs(false), FIELD, ODEX_ONLY | CAN_THROW),
 
-    IGET_OBJECT_VOLATILE(dalvikOnly(firstApi(0xe7, 9)), "iget-object-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
-    IPUT_OBJECT_VOLATILE(dalvikOnly(firstApi(0xfc, 9)), "iput-object-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
+    IGET_OBJECT_VOLATILE(dalvik(firstApi(0xe7, 9)), "iget-object-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
+    IPUT_OBJECT_VOLATILE(dalvik(firstApi(0xfc, 9)), "iput-object-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
 
-    SGET_OBJECT_VOLATILE(dalvikOnly(firstApi(0xfd, 9)), "sget-object-volatile", Format21c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
-    SPUT_OBJECT_VOLATILE(dalvikOnly(firstApi(0xfe, 9)), "sput-object-volatile", Format21c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
+    SGET_OBJECT_VOLATILE(dalvik(firstApi(0xfd, 9)), "sget-object-volatile", Format21c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
+    SPUT_OBJECT_VOLATILE(dalvik(firstApi(0xfe, 9)), "sput-object-volatile", Format21c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
 
     RETURN_VOID_BARRIER(dalvikOrArt(firstApi(0xf1, 11), lastApi(0x73, 22)), "return-void-barrier", Format10x, regs(), ODEX_ONLY | TYPE_RETURN | ENDS_FLOW),
     RETURN_VOID_NO_BARRIER(betweenApi(0x73, 23, 30), "return-void-no-barrier", Format10x, regs(), ODEX_ONLY | TYPE_RETURN | ENDS_FLOW),
@@ -426,74 +434,96 @@ public enum Opcode {
 
     // legacy dex036 expanded opcodes
 
-    CONST_CLASS_JUMBO(betweenApi(0x00ff, 14, 15), "const-class/jumbo", Format41c, regs(true), TYPE, CAN_THROW),
-    CHECK_CAST_JUMBO(betweenApi(0x01ff, 14, 15), "check-cast/jumbo", Format41c, regs(true), TYPE, CAN_THROW),
-    INSTANCE_OF_JUMBO(betweenApi(0x02ff, 14, 15), "instance-of/jumbo", Format52c, regs(true, true), TYPE, CAN_THROW),
-    NEW_INSTANCE_JUMBO(betweenApi(0x03ff, 14, 15), "new-instance/jumbo", Format41c, regs(true), TYPE, CAN_THROW),
-    NEW_ARRAY_JUMBO(betweenApi(0x04ff, 14, 15), "new-array/jumbo", Format52c, regs(true, true), TYPE, CAN_THROW),
-    FILLED_NEW_ARRAY_JUMBO(betweenApi(0x05ff, 14, 15), "filled-new-array/jumbo", Format5rc, regsr(), TYPE, CAN_THROW),
+    CONST_CLASS_JUMBO(betweenApi(0x00ff, 14, 15), "const-class/jumbo", Format41c, regs(true), TYPE, EXPANDED | CAN_THROW),
+    CHECK_CAST_JUMBO(betweenApi(0x01ff, 14, 15), "check-cast/jumbo", Format41c, regs(true), TYPE, EXPANDED | CAN_THROW),
+    INSTANCE_OF_JUMBO(betweenApi(0x02ff, 14, 15), "instance-of/jumbo", Format52c, regs(true, true), TYPE, EXPANDED | CAN_THROW),
+    NEW_INSTANCE_JUMBO(betweenApi(0x03ff, 14, 15), "new-instance/jumbo", Format41c, regs(true), TYPE, EXPANDED | CAN_THROW),
+    NEW_ARRAY_JUMBO(betweenApi(0x04ff, 14, 15), "new-array/jumbo", Format52c, regs(true, true), TYPE, EXPANDED | CAN_THROW),
+    FILLED_NEW_ARRAY_JUMBO(betweenApi(0x05ff, 14, 15), "filled-new-array/jumbo", Format5rc, regsr(), TYPE, EXPANDED | CAN_THROW | SETS_RESULT),
 
-    IGET_JUMBO(betweenApi(0x06ff, 14, 15), "iget/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IGET_WIDE_JUMBO(betweenApi(0x07ff, 14, 15), "iget-wide/jumbo", Format52c, regs(false, true), FIELD, CAN_THROW),
-    IGET_OBJECT_JUMBO(betweenApi(0x08ff, 14, 15), "iget-object/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IGET_BOOLEAN_JUMBO(betweenApi(0x09ff, 14, 15), "iget-boolean/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IGET_BYTE_JUMBO(betweenApi(0x0aff, 14, 15), "iget-byte/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IGET_CHAR_JUMBO(betweenApi(0x0bff, 14, 15), "iget-char/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IGET_SHORT_JUMBO(betweenApi(0x0cff, 14, 15), "iget-short/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IPUT_JUMBO(betweenApi(0x0dff, 14, 15), "iput/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IPUT_WIDE_JUMBO(betweenApi(0x0eff, 14, 15), "iput-wide/jumbo", Format52c, regs(false, true), FIELD, CAN_THROW),
-    IPUT_OBJECT_JUMBO(betweenApi(0x0fff, 14, 15), "iput-object/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IPUT_BOOLEAN_JUMBO(betweenApi(0x10ff, 14, 15), "iput-boolean/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IPUT_BYTE_JUMBO(betweenApi(0x11ff, 14, 15), "iput-byte/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IPUT_CHAR_JUMBO(betweenApi(0x12ff, 14, 15), "iput-char/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
-    IPUT_SHORT_JUMBO(betweenApi(0x13ff, 14, 15), "iput-short/jumbo", Format52c, regs(true, true), FIELD, CAN_THROW),
+    IGET_JUMBO(betweenApi(0x06ff, 14, 15), "iget/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IGET_WIDE_JUMBO(betweenApi(0x07ff, 14, 15), "iget-wide/jumbo", Format52c, regs(false, true), FIELD, EXPANDED | CAN_THROW),
+    IGET_OBJECT_JUMBO(betweenApi(0x08ff, 14, 15), "iget-object/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IGET_BOOLEAN_JUMBO(betweenApi(0x09ff, 14, 15), "iget-boolean/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IGET_BYTE_JUMBO(betweenApi(0x0aff, 14, 15), "iget-byte/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IGET_CHAR_JUMBO(betweenApi(0x0bff, 14, 15), "iget-char/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IGET_SHORT_JUMBO(betweenApi(0x0cff, 14, 15), "iget-short/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IPUT_JUMBO(betweenApi(0x0dff, 14, 15), "iput/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IPUT_WIDE_JUMBO(betweenApi(0x0eff, 14, 15), "iput-wide/jumbo", Format52c, regs(false, true), FIELD, EXPANDED | CAN_THROW),
+    IPUT_OBJECT_JUMBO(betweenApi(0x0fff, 14, 15), "iput-object/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IPUT_BOOLEAN_JUMBO(betweenApi(0x10ff, 14, 15), "iput-boolean/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IPUT_BYTE_JUMBO(betweenApi(0x11ff, 14, 15), "iput-byte/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IPUT_CHAR_JUMBO(betweenApi(0x12ff, 14, 15), "iput-char/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
+    IPUT_SHORT_JUMBO(betweenApi(0x13ff, 14, 15), "iput-short/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | CAN_THROW),
 
-    SGET_JUMBO(betweenApi(0x14ff, 14, 15), "sget/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SGET_WIDE_JUMBO(betweenApi(0x15ff, 14, 15), "sget-wide/jumbo", Format41c, regs(false), FIELD, CAN_THROW),
-    SGET_OBJECT_JUMBO(betweenApi(0x16ff, 14, 15), "sget-object/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SGET_BOOLEAN_JUMBO(betweenApi(0x17ff, 14, 15), "sget-boolean/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SGET_BYTE_JUMBO(betweenApi(0x18ff, 14, 15), "sget-byte/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SGET_CHAR_JUMBO(betweenApi(0x19ff, 14, 15), "sget-char/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SGET_SHORT_JUMBO(betweenApi(0x1aff, 14, 15), "sget-short/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SPUT_JUMBO(betweenApi(0x1bff, 14, 15), "sput/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SPUT_WIDE_JUMBO(betweenApi(0x1cff, 14, 15), "sput-wide/jumbo", Format41c, regs(false), FIELD, CAN_THROW),
-    SPUT_OBJECT_JUMBO(betweenApi(0x1dff, 14, 15), "sput-object/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SPUT_BOOLEAN_JUMBO(betweenApi(0x1eff, 14, 15), "sput-boolean/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SPUT_BYTE_JUMBO(betweenApi(0x1fff, 14, 15), "sput-byte/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SPUT_CHAR_JUMBO(betweenApi(0x20ff, 14, 15), "sput-char/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
-    SPUT_SHORT_JUMBO(betweenApi(0x21ff, 14, 15), "sput-short/jumbo", Format41c, regs(true), FIELD, CAN_THROW),
+    SGET_JUMBO(betweenApi(0x14ff, 14, 15), "sget/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SGET_WIDE_JUMBO(betweenApi(0x15ff, 14, 15), "sget-wide/jumbo", Format41c, regs(false), FIELD, EXPANDED | CAN_THROW),
+    SGET_OBJECT_JUMBO(betweenApi(0x16ff, 14, 15), "sget-object/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SGET_BOOLEAN_JUMBO(betweenApi(0x17ff, 14, 15), "sget-boolean/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SGET_BYTE_JUMBO(betweenApi(0x18ff, 14, 15), "sget-byte/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SGET_CHAR_JUMBO(betweenApi(0x19ff, 14, 15), "sget-char/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SGET_SHORT_JUMBO(betweenApi(0x1aff, 14, 15), "sget-short/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SPUT_JUMBO(betweenApi(0x1bff, 14, 15), "sput/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SPUT_WIDE_JUMBO(betweenApi(0x1cff, 14, 15), "sput-wide/jumbo", Format41c, regs(false), FIELD, EXPANDED | CAN_THROW),
+    SPUT_OBJECT_JUMBO(betweenApi(0x1dff, 14, 15), "sput-object/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SPUT_BOOLEAN_JUMBO(betweenApi(0x1eff, 14, 15), "sput-boolean/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SPUT_BYTE_JUMBO(betweenApi(0x1fff, 14, 15), "sput-byte/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SPUT_CHAR_JUMBO(betweenApi(0x20ff, 14, 15), "sput-char/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
+    SPUT_SHORT_JUMBO(betweenApi(0x21ff, 14, 15), "sput-short/jumbo", Format41c, regs(true), FIELD, EXPANDED | CAN_THROW),
 
-    INVOKE_VIRTUAL_JUMBO(betweenApi(0x22ff, 14, 15), "invoke-virtual/jumbo", Format5rc, regsr(), METHOD, CAN_THROW | TYPE_INVOKE),
-    INVOKE_SUPER_JUMBO(betweenApi(0x23ff, 14, 15), "invoke-super/jumbo", Format5rc, regsr(), METHOD, CAN_THROW | TYPE_INVOKE),
-    INVOKE_DIRECT_JUMBO(betweenApi(0x24ff, 14, 15), "invoke-direct/jumbo", Format5rc, regsr(), METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
-    INVOKE_STATIC_JUMBO(betweenApi(0x25ff, 14, 15), "invoke-static/jumbo", Format5rc, regsr(), METHOD, CAN_THROW | TYPE_INVOKE),
-    INVOKE_INTERFACE_JUMBO(betweenApi(0x26ff, 14, 15), "invoke-interface/jumbo", Format5rc, regsr(), METHOD, CAN_THROW | TYPE_INVOKE),
+    INVOKE_VIRTUAL_JUMBO(betweenApi(0x22ff, 14, 15), "invoke-virtual/jumbo", Format5rc, regsr(), METHOD, EXPANDED | CAN_THROW | TYPE_INVOKE),
+    INVOKE_SUPER_JUMBO(betweenApi(0x23ff, 14, 15), "invoke-super/jumbo", Format5rc, regsr(), METHOD, EXPANDED | CAN_THROW | TYPE_INVOKE),
+    INVOKE_DIRECT_JUMBO(betweenApi(0x24ff, 14, 15), "invoke-direct/jumbo", Format5rc, regsr(), METHOD, EXPANDED | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    INVOKE_STATIC_JUMBO(betweenApi(0x25ff, 14, 15), "invoke-static/jumbo", Format5rc, regsr(), METHOD, EXPANDED | CAN_THROW | TYPE_INVOKE),
+    INVOKE_INTERFACE_JUMBO(betweenApi(0x26ff, 14, 15), "invoke-interface/jumbo", Format5rc, regsr(), METHOD, EXPANDED | CAN_THROW | TYPE_INVOKE),
 
     // legacy dex036 odex opcodes
 
     // Note: this instruction can only accept 1 register
-    INVOKE_OBJECT_INIT_JUMBO(betweenApi(0xf2ff, 14, 15), "invoke-object-init/jumbo", Format5rc, regs(true), METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    INVOKE_OBJECT_INIT_JUMBO(betweenApi(0xf2ff, 14, 15), "invoke-object-init/jumbo", Format5rc, regs(true), METHOD, EXPANDED | ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
 
-    IGET_VOLATILE_JUMBO(betweenApi(0xf3ff, 14, 15), "iget-volatile/jumbo", Format52c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
-    IGET_WIDE_VOLATILE_JUMBO(betweenApi(0xf4ff, 14, 15), "iget-wide-volatile/jumbo", Format52c, regs(false, true), FIELD, ODEX_ONLY | CAN_THROW),
-    IGET_OBJECT_VOLATILE_JUMBO(betweenApi(0xf5ff, 14, 15), "iget-object-volatile/jumbo", Format52c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
-    IPUT_VOLATILE_JUMBO(betweenApi(0xf6ff, 14, 15), "iput-volatile/jumbo", Format52c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
-    IPUT_WIDE_VOLATILE_JUMBO(betweenApi(0xf7ff, 14, 15), "iput-wide-volatile/jumbo", Format52c, regs(false, true), FIELD, ODEX_ONLY | CAN_THROW),
-    IPUT_OBJECT_VOLATILE_JUMBO(betweenApi(0xf8ff, 14, 15), "iput-object-volatile/jumbo", Format52c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
+    IGET_VOLATILE_JUMBO(betweenApi(0xf3ff, 14, 15), "iget-volatile/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    IGET_WIDE_VOLATILE_JUMBO(betweenApi(0xf4ff, 14, 15), "iget-wide-volatile/jumbo", Format52c, regs(false, true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    IGET_OBJECT_VOLATILE_JUMBO(betweenApi(0xf5ff, 14, 15), "iget-object-volatile/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    IPUT_VOLATILE_JUMBO(betweenApi(0xf6ff, 14, 15), "iput-volatile/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    IPUT_WIDE_VOLATILE_JUMBO(betweenApi(0xf7ff, 14, 15), "iput-wide-volatile/jumbo", Format52c, regs(false, true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    IPUT_OBJECT_VOLATILE_JUMBO(betweenApi(0xf8ff, 14, 15), "iput-object-volatile/jumbo", Format52c, regs(true, true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
 
-    SGET_VOLATILE_JUMBO(betweenApi(0xf9ff, 14, 15), "sget-volatile/jumbo", Format41c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
-    SGET_WIDE_VOLATILE_JUMBO(betweenApi(0xfaff, 14, 15), "sget-wide-volatile/jumbo", Format41c, regs(false), FIELD, ODEX_ONLY | CAN_THROW),
-    SGET_OBJECT_VOLATILE_JUMBO(betweenApi(0xfbff, 14, 15), "sget-object-volatile/jumbo", Format41c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
-    SPUT_VOLATILE_JUMBO(betweenApi(0xfcff, 14, 15), "sput-volatile/jumbo", Format41c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
-    SPUT_WIDE_VOLATILE_JUMBO(betweenApi(0xfdff, 14, 15), "sput-wide-volatile/jumbo", Format41c, regs(false), FIELD, ODEX_ONLY | CAN_THROW),
-    SPUT_OBJECT_VOLATILE_JUMBO(betweenApi(0xfeff, 14, 15), "sput-object-volatile/jumbo", Format41c, regs(true), FIELD, ODEX_ONLY | CAN_THROW),
+    SGET_VOLATILE_JUMBO(betweenApi(0xf9ff, 14, 15), "sget-volatile/jumbo", Format41c, regs(true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    SGET_WIDE_VOLATILE_JUMBO(betweenApi(0xfaff, 14, 15), "sget-wide-volatile/jumbo", Format41c, regs(false), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    SGET_OBJECT_VOLATILE_JUMBO(betweenApi(0xfbff, 14, 15), "sget-object-volatile/jumbo", Format41c, regs(true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    SPUT_VOLATILE_JUMBO(betweenApi(0xfcff, 14, 15), "sput-volatile/jumbo", Format41c, regs(true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    SPUT_WIDE_VOLATILE_JUMBO(betweenApi(0xfdff, 14, 15), "sput-wide-volatile/jumbo", Format41c, regs(false), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
+    SPUT_OBJECT_VOLATILE_JUMBO(betweenApi(0xfeff, 14, 15), "sput-object-volatile/jumbo", Format41c, regs(true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
 
-    THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40cs, regs(), ODEX_ONLY | CAN_THROW | ENDS_FLOW),
+    THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40cs, regs(), EXPANDED | ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
-    // special single 16-bit opcode
-    RAW(raw(), "raw", FormatRaw, regs(), 0),
-    RAW_REF(raw(), "raw-ref", FormatRawRef16, regs(), 0),
-    RAW_REF_JUMBO(raw(), "raw-ref/jumbo", FormatRawRef32, regs(), 0);
+    // Special opcodes
+    RAW(raw(), "raw", FormatRaw10x, regs(), RAW_OP),
+    RAW_ALIGNED(raw(), "raw-aligned", FormatRaw10x, regs(), RAW_OP | ALIGNED),
+    RAW_REF(raw(), "raw-ref", FormatRaw10c, regs(), RAW_OP),
+    RAW_REF_JUMBO(raw(), "raw-ref/jumbo", FormatRaw20c, regs(), RAW_OP),
+
+    // Wrappers for special opcodes (needed to serialize code unchanged)
+    WRAPPER_RAW(common(0xfc00), "wrapper-raw", FormatWrapper20x, regs(), RAW_OP | WRAPPER),
+    // The wrapper itself does not need to be aligned
+    WRAPPER_RAW_ALIGNED(common(0xfd00), "wrapper-raw-aligned", FormatWrapper20x, regs(), RAW_OP | WRAPPER),
+    WRAPPER_RAW_REF(common(0xfe00), "wrapper-raw-ref", FormatWrapper40ci, regs(), RAW_OP | WRAPPER),
+    WRAPPER_RAW_REF_JUMBO(common(0xff00), "wrapper-raw-ref/jumbo", FormatWrapper40ci, regs(), RAW_OP | WRAPPER);
+
+    public static Opcode choose_raw_opcode(Opcode opcode, boolean wrapper) {
+        return switch (opcode) {
+            case RAW, WRAPPER_RAW -> //
+                    wrapper ? WRAPPER_RAW : RAW;
+            case RAW_ALIGNED, WRAPPER_RAW_ALIGNED -> //
+                    wrapper ? WRAPPER_RAW_ALIGNED : RAW_ALIGNED;
+            case RAW_REF, WRAPPER_RAW_REF -> //
+                    wrapper ? WRAPPER_RAW_REF : RAW_REF;
+            case RAW_REF_JUMBO, WRAPPER_RAW_REF_JUMBO ->
+                    wrapper ? WRAPPER_RAW_REF_JUMBO : RAW_REF_JUMBO;
+            default -> throw shouldNotReachHere();
+        };
+    }
 
     protected static class Constants {
         // a flavor of invoke
@@ -516,11 +546,15 @@ public enum Opcode {
         static final int CAN_THROW = 0x100;
         // odex only instruction
         static final int ODEX_ONLY = 0x200;
-
-        // TODO: flag for expanded opcodes
+        // legacy expanded opcodes
+        static final int EXPANDED = 0x400;
+        static final int SETS_RESULT = 0x800;
+        static final int ALIGNED = 0x1000;
+        static final int RAW_OP = 0x2000;
+        static final int WRAPPER = 0x4000;
     }
 
-    record DexInfo(int api, boolean art, boolean odex, DexVersion dex) {
+    record DexInfo(DexVersion dex, int api, boolean art, boolean odex, boolean expanded) {
     }
 
     private record RegsInfo(
@@ -561,7 +595,9 @@ public enum Opcode {
     Opcode(Constraint constraint, String name, Format format, RegsInfo regs_info,
            ReferenceType reference1, ReferenceType reference2, int flags) {
         this.flags = flags;
-        this.constraint = odexOnly() ? onlyOdex(constraint) : constraint;
+        constraint = odexOnly() ? odex(constraint) : constraint;
+        constraint = isExpanded() ? expanded(constraint) : constraint;
+        this.constraint = constraint;
         this.name = name;
         this.format = format;
         this.regs_info = regs_info;
@@ -663,7 +699,7 @@ public enum Opcode {
     }
 
     public final boolean setsResult() {
-        return isInvoke();
+        return (flags & (TYPE_INVOKE | SETS_RESULT)) != 0;
     }
 
     public final boolean isReturn() {
@@ -701,15 +737,29 @@ public enum Opcode {
                 || format == Format35c
                 || format == Format3rc
                 || format == Format45cc
-                || format == Format4rcc;
+                || format == Format4rcc
+                || format == Format5rc;
+    }
+
+    public final boolean isExpanded() {
+        return (flags & EXPANDED) != 0;
     }
 
     public final boolean isRaw() {
-        return this == RAW || this == RAW_REF || this == RAW_REF_JUMBO;
+        return (flags & RAW_OP) != 0;
     }
 
-    Integer getValue(DexVersion dex, int api, boolean art, boolean odex) {
-        return constraint.opcode(new DexInfo(api, art, odex, dex));
+    public final boolean isRawWrapper() {
+        return (flags & WRAPPER) != 0;
+    }
+
+    public final boolean isAligned() {
+        return (flags & ALIGNED) != 0;
+    }
+
+    Integer getValue(DexVersion dex, DexOptions<?> options) {
+        return constraint.opcode(new DexInfo(dex,
+                options.api, options.art, options.odex, options.expanded));
     }
 
     Constraint getConstraint() {
@@ -890,7 +940,7 @@ public enum Opcode {
         };
     }
 
-    private static Constraint onlyOdex(Constraint constraint) {
+    private static Constraint odex(Constraint constraint) {
         return new Constraint() {
             @Override
             public boolean contains(int opcode) {
@@ -909,7 +959,26 @@ public enum Opcode {
         };
     }
 
-    private static Constraint artOnly(Constraint constraint) {
+    private static Constraint expanded(Constraint constraint) {
+        return new Constraint() {
+            @Override
+            public boolean contains(int opcode) {
+                return constraint.contains(opcode);
+            }
+
+            @Override
+            public Integer opcode(DexInfo info) {
+                return !info.expanded() ? null : constraint.opcode(info);
+            }
+
+            @Override
+            public String toString() {
+                return "expanded -> {" + constraint + "}";
+            }
+        };
+    }
+
+    private static Constraint art(Constraint constraint) {
         return new Constraint() {
             @Override
             public boolean contains(int opcode) {
@@ -928,7 +997,7 @@ public enum Opcode {
         };
     }
 
-    private static Constraint dalvikOnly(Constraint constraint) {
+    private static Constraint dalvik(Constraint constraint) {
         return new Constraint() {
             @Override
             public boolean contains(int opcode) {
@@ -948,7 +1017,7 @@ public enum Opcode {
     }
 
     private static Constraint dalvikOrArt(Constraint dalvik, Constraint art) {
-        return combine(dalvikOnly(dalvik), artOnly(art));
+        return combine(dalvik(dalvik), art(art));
     }
 
     private static Constraint combine(Constraint first, Constraint second) {

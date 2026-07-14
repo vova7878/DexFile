@@ -138,7 +138,6 @@ DOUBLE_LITERAL
     : Float [dD]?
     ;
 
-// TODO: move to parser rules
 INLINE_INDEX
     : 'inline' AT '0' [xX] HexDigit+
     ;
@@ -200,15 +199,22 @@ CLASS_NAME
     : 'L' (SimpleName '/')* SimpleName ';'
     ;
 
+fragment PrimitiveChar: [ZBSCIFJD];
+
+fragment PrimitiveCharOrVoid
+    : 'V'
+    | PrimitiveChar
+    ;
+
 ARRAY_DESCRIPTOR
-    : '['+ ([ZBSCIFJD] | CLASS_NAME)
+    : '['+ (PrimitiveChar | CLASS_NAME)
     ;
 
 // Note: multiple primitive types can be parsed as
 // a single token. A full analysis will occur later
 UNCHECKED_METHOD_PROTO
-    : LPAREN ([ZBSCIFJD] | CLASS_NAME | ARRAY_DESCRIPTOR)* RPAREN
-    ([ZBSCIFJDV] | CLASS_NAME | ARRAY_DESCRIPTOR)
+    : LPAREN (PrimitiveChar | CLASS_NAME | ARRAY_DESCRIPTOR)* RPAREN
+    (PrimitiveCharOrVoid | CLASS_NAME | ARRAY_DESCRIPTOR)
     ;
 
 // For some reason, antlr thinks the first parser rule is the entry point,
@@ -350,6 +356,7 @@ annotation_data
     @init { $elements = new TreeSet<>(); }
     @after { $elements = Collections.unmodifiableNavigableSet($elements); }
     : class_descriptor { $type = $class_descriptor.value; }
+    // TODO: check for duplicates
     (annotation_element { $elements.add($annotation_element.value); })*
     ;
 
@@ -657,11 +664,11 @@ local_directive
     }
     : LOCAL_DIRECTIVE register { reg = $register.value; }
     (COMMA (null_literal | (name=string_literal { name=$name.value; }))
-    // V as 'no type'
-    COLON (type=type_descriptor { type = $type.value; })
-    (COMMA signature=string_literal { signature = $signature.value; })?)?
+    COLON (t=type_descriptor { type = $t.value.isVoid() ? null : $t.value; })
+    (COMMA s=string_literal { signature = $s.value; })?)?
     { $method_body::ib.local(reg, name, type, signature); }
     ;
+
 end_local_directive
     : END_LOCAL_DIRECTIVE register
     { $method_body::ib.end_local($register.value); }
@@ -779,6 +786,8 @@ instruction locals[Opcode op]
     | {$op.format() == Format52c}? args_format52c
     | {$op.format() == Format5rc}? args_format5rc
     // TODO: | {$op.format() == FormatRaw}? args_format_raw
+    // TODO: | {$op.format() == FormatRawRef16}? args_format_raw_ref
+    // TODO: | {$op.format() == FormatRawRef32}? args_format_raw_ref_jumbo
     )
     | insn_array_data
     | insn_packed_switch
@@ -792,6 +801,7 @@ reference[int index] returns[Object value] locals[ReferenceType type]
     | {$type == FIELD}? field_reference { $value = $field_reference.value; }
     | {$type == METHOD}? method_reference { $value = $method_reference.value; }
     | {$type == PROTO}? method_prototype { $value = $method_prototype.value; }
+    | {$type == CLASS_DEF}? /* TODO */ { if(true) throw new UnsupportedOperationException(); }
     | {$type == CALLSITE}? call_site_reference { $value = $call_site_reference.value; }
     | {$type == METHOD_HANDLE}? method_handle_reference { $value = $method_handle_reference.value; }
     | {$type == RAW_INDEX}?
@@ -802,21 +812,15 @@ reference[int index] returns[Object value] locals[ReferenceType type]
     ;
 
 inline_index returns[int value]
-    : INLINE_INDEX
-    // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    : i=INLINE_INDEX { $value = LiteralUtils.parseInlineIndex($i.text); }
     ;
 
 vtable_index returns[int value]
-    : VTABLE_INDEX
-    // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    : i=VTABLE_INDEX { $value = LiteralUtils.parseVTableIndex($i.text); }
     ;
 
 field_offset returns[int value]
-    : FIELD_OFFSET
-    // TODO
-    { throw new UnsupportedOperationException("Unimplemented yet!"); }
+    : i=FIELD_OFFSET { $value = LiteralUtils.parseFieldOffset($i.text); }
     ;
 
 register_list returns[int[] value]
@@ -858,13 +862,13 @@ args_format11n returns[int reg, int lit]
     }
     ;
 
-args_format11p
-    // TODO: check index (must be [0, 15])
-    : register LBRACE index=int_literal RBRACE
-    // TODO
+args_format11p returns[int reg, int index]
+    // Note: index must be in range [0, 15]
+    : register { $reg = $register.value; }
+    LBRACE int_literal { $index = $int_literal.value; } RBRACE
     {
         if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            throw new UnsupportedOperationException("Unimplemented yet!");
+            $method_body::ib.f11p($instruction::op, $reg, $index);
     }
     ;
 
@@ -895,10 +899,9 @@ args_format20t returns[String target]
 
 args_format20t_24 returns[String target]
     : label { $target = $label.value; }
-    // TODO
     {
         if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            throw new UnsupportedOperationException("Unimplemented yet!");
+            $method_body::ib.f20t_24($instruction::op, $target);
     }
     ;
 
@@ -1049,10 +1052,9 @@ args_format32x returns[int reg1, int reg2]
 args_format34c returns[int[] args, Object ref]
     : LBRACE register_list { $args = $register_list.value; }
     RBRACE COMMA reference[0] { $ref = $reference.value; }
-    // TODO
     {
         if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            throw new UnsupportedOperationException("Unimplemented yet!");
+            $method_body::ib.f34c($instruction::op, $ref, $args);
     }
     ;
 
@@ -1077,10 +1079,9 @@ args_format3rc returns[int start, int count, Object ref]
 args_format41c returns[int reg, Object ref]
     : register { $reg = $register.value; }
     COMMA reference[0] { $ref = $reference.value; }
-    // TODO
     {
         if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            throw new UnsupportedOperationException("Unimplemented yet!");
+            $method_body::ib.f41c($instruction::op, $reg, $ref);
     }
     ;
 
@@ -1116,20 +1117,18 @@ args_format51l returns[int reg, long lit]
 args_format52c returns[int reg1, int reg2, Object ref]
     : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
     COMMA reference[0] { $ref = $reference.value; }
-    // TODO
     {
         if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            throw new UnsupportedOperationException("Unimplemented yet!");
+            $method_body::ib.f52c($instruction::op, $reg1, $reg2, $ref);
     }
     ;
 
 args_format5rc returns[int start, int count, Object ref]
     : LBRACE rr=register_range { $start = $rr.start; $count = $rr.count; }
     RBRACE COMMA reference[0] { $ref = $reference.value; }
-    // TODO
     {
         if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            throw new UnsupportedOperationException("Unimplemented yet!");
+            $method_body::ib.f5rc($instruction::op, $ref, $count, $start);
     }
     ;
 

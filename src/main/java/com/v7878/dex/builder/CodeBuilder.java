@@ -32,38 +32,28 @@ import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.ArrayPayload;
 import com.v7878.dex.immutable.bytecode.Instruction;
-import com.v7878.dex.immutable.bytecode.Instruction10t;
-import com.v7878.dex.immutable.bytecode.Instruction10x;
-import com.v7878.dex.immutable.bytecode.Instruction11n;
-import com.v7878.dex.immutable.bytecode.Instruction11x;
-import com.v7878.dex.immutable.bytecode.Instruction12x;
-import com.v7878.dex.immutable.bytecode.Instruction20t;
-import com.v7878.dex.immutable.bytecode.Instruction21c;
-import com.v7878.dex.immutable.bytecode.Instruction21ih;
-import com.v7878.dex.immutable.bytecode.Instruction21lh;
-import com.v7878.dex.immutable.bytecode.Instruction21s;
-import com.v7878.dex.immutable.bytecode.Instruction21t;
-import com.v7878.dex.immutable.bytecode.Instruction22b;
-import com.v7878.dex.immutable.bytecode.Instruction22c;
-import com.v7878.dex.immutable.bytecode.Instruction22s;
-import com.v7878.dex.immutable.bytecode.Instruction22t;
-import com.v7878.dex.immutable.bytecode.Instruction22x;
-import com.v7878.dex.immutable.bytecode.Instruction23x;
-import com.v7878.dex.immutable.bytecode.Instruction30t;
-import com.v7878.dex.immutable.bytecode.Instruction31c;
-import com.v7878.dex.immutable.bytecode.Instruction31i;
-import com.v7878.dex.immutable.bytecode.Instruction31t;
-import com.v7878.dex.immutable.bytecode.Instruction32x;
-import com.v7878.dex.immutable.bytecode.Instruction35c;
-import com.v7878.dex.immutable.bytecode.Instruction3rc;
-import com.v7878.dex.immutable.bytecode.Instruction45cc;
-import com.v7878.dex.immutable.bytecode.Instruction4rcc;
-import com.v7878.dex.immutable.bytecode.Instruction51l;
-import com.v7878.dex.immutable.bytecode.InstructionRaw;
-import com.v7878.dex.immutable.bytecode.InstructionRawRef;
-import com.v7878.dex.immutable.bytecode.PackedSwitchPayload;
-import com.v7878.dex.immutable.bytecode.SparseSwitchPayload;
+import com.v7878.dex.immutable.bytecode.InstructionN0t;
+import com.v7878.dex.immutable.bytecode.InstructionN0x;
+import com.v7878.dex.immutable.bytecode.InstructionN1c;
+import com.v7878.dex.immutable.bytecode.InstructionN1i;
+import com.v7878.dex.immutable.bytecode.InstructionN1l;
+import com.v7878.dex.immutable.bytecode.InstructionN1p;
+import com.v7878.dex.immutable.bytecode.InstructionN1t;
+import com.v7878.dex.immutable.bytecode.InstructionN1x;
+import com.v7878.dex.immutable.bytecode.InstructionN2c;
+import com.v7878.dex.immutable.bytecode.InstructionN2i;
+import com.v7878.dex.immutable.bytecode.InstructionN2t;
+import com.v7878.dex.immutable.bytecode.InstructionN2x;
+import com.v7878.dex.immutable.bytecode.InstructionN3x;
+import com.v7878.dex.immutable.bytecode.InstructionNrc;
+import com.v7878.dex.immutable.bytecode.InstructionNrcc;
+import com.v7878.dex.immutable.bytecode.InstructionNv4c;
+import com.v7878.dex.immutable.bytecode.InstructionNv5c;
+import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
+import com.v7878.dex.immutable.bytecode.InstructionRaw0c;
+import com.v7878.dex.immutable.bytecode.InstructionRaw0x;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
+import com.v7878.dex.immutable.bytecode.SwitchPayload;
 import com.v7878.dex.immutable.debug.DebugItem;
 import com.v7878.dex.immutable.debug.EndLocal;
 import com.v7878.dex.immutable.debug.LineNumber;
@@ -112,10 +102,9 @@ public final class CodeBuilder {
         }
 
         private void initLabels() {
-            if (start < 0 || end < 0 || handler < 0) {
+            if (start < 0 || end < 0 || (handlerLabel != null && handler < 0)) {
                 int l1 = unit(label1);
                 int l2 = unit(label2);
-                int hl = unit(handlerLabel);
                 if (l1 < l2) {
                     start = l1;
                     end = l2;
@@ -123,7 +112,7 @@ public final class CodeBuilder {
                     start = l2;
                     end = l1;
                 }
-                handler = hl;
+                handler = handlerLabel == null ? -1 : unit(handlerLabel);
             }
         }
 
@@ -299,7 +288,7 @@ public final class CodeBuilder {
         return pos;
     }
 
-    private static BuilderPosition exact(BuilderPosition pos) {
+    private static BuilderPosition exact_forwards(BuilderPosition pos) {
         while (pos != null && pos.node() == BuilderNode.PLACEHOLDER) {
             // Not a real position
             pos = pos.next();
@@ -570,7 +559,7 @@ public final class CodeBuilder {
         return b_tail;
     }
 
-    private void add(BuilderNode node, int initial_units) {
+    private void add(int initial_units, BuilderNode node) {
         assert node != null && node != BuilderNode.PLACEHOLDER;
 
         if (generate_lines) {
@@ -592,7 +581,7 @@ public final class CodeBuilder {
 
     private void add(Instruction instruction) {
         int units = instruction.getUnitCount();
-        add(new BuilderNode() {
+        add(units, new BuilderNode() {
             @Override
             public int units() {
                 return units;
@@ -602,7 +591,7 @@ public final class CodeBuilder {
             public List<Instruction> generate() {
                 return List.of(instruction);
             }
-        }, units);
+        });
     }
 
     private void add(Format format, IntFunction<Instruction> factory) {
@@ -611,7 +600,7 @@ public final class CodeBuilder {
         }
 
         int units = format.getUnitCount();
-        add(new BuilderNode() {
+        add(units, new BuilderNode() {
             BuilderPosition current;
 
             public void attach(BuilderPosition current) {
@@ -629,11 +618,11 @@ public final class CodeBuilder {
                 assert instruction.getOpcode().format() == format;
                 return List.of(instruction);
             }
-        }, units);
+        });
     }
 
     private void addPayload(int unit_count, Supplier<Instruction> factory) {
-        add(new BuilderNode() {
+        add(unit_count, new BuilderNode() {
             @Override
             public int units() {
                 return unit_count;
@@ -645,7 +634,7 @@ public final class CodeBuilder {
                 assert value.getOpcode().isPayload();
                 return List.of(value);
             }
-        }, unit_count);
+        });
     }
 
     private BuilderPosition positionOrNull(Object label) {
@@ -653,7 +642,7 @@ public final class CodeBuilder {
         if (pos == null) {
             return null;
         }
-        return exact(pos);
+        return exact_forwards(pos);
     }
 
     private BuilderPosition position(Object label) {
@@ -713,7 +702,7 @@ public final class CodeBuilder {
         }
         var target = attach(cur, pos);
         if (move_to_head) target = pos;
-        current = exact(target);
+        current = exact_forwards(target);
     }
 
     /**
@@ -749,7 +738,7 @@ public final class CodeBuilder {
                     "The next node doesn`t exist");
         }
         cur.erase();
-        current = exact(cur);
+        current = exact_forwards(cur);
         return this;
     }
 
@@ -764,7 +753,7 @@ public final class CodeBuilder {
     }
 
     public Object head_of_block(Object label) {
-        return exact(position(label).head());
+        return exact_forwards(position(label).head());
     }
 
     public Object tail_of_block(Object label) {
@@ -772,7 +761,7 @@ public final class CodeBuilder {
     }
 
     public Object next_position(Object label) {
-        var pos = exact(position(label).next());
+        var pos = exact_forwards(position(label).next());
         if (pos == null) {
             throw new IllegalArgumentException(
                     "The next position doesn`t exist");
@@ -829,15 +818,27 @@ public final class CodeBuilder {
         return this;
     }
 
+    public CodeBuilder replace_label(Object label) {
+        Objects.requireNonNull(label);
+
+        if (label instanceof BuilderPosition) {
+            throw new IllegalArgumentException(
+                    "Label " + label + " can`t be replaced");
+        }
+        labels.put(label, current);
+
+        return this;
+    }
+
     private void addTryBlock(Object label1, Object label2, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(label1);
         Objects.requireNonNull(label2);
-        Objects.requireNonNull(handler);
         try_items.add(new BuilderTryItem(label1, label2, exceptionType, handler));
     }
 
     public CodeBuilder try_catch(Object label1, Object label2, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(exceptionType);
+        Objects.requireNonNull(handler);
         addTryBlock(label1, label2, exceptionType, handler);
         return this;
     }
@@ -847,6 +848,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder try_catch_all(Object label1, Object label2, Object handler) {
+        Objects.requireNonNull(handler);
         addTryBlock(label1, label2, null, handler);
         return this;
     }
@@ -867,6 +869,17 @@ public final class CodeBuilder {
                                  Map<TypeId, ?> table) {
         return try_catch_all(label1, label2, catch_all_handler)
                 .try_catch(label1, label2, table);
+    }
+
+    public CodeBuilder remove_try_catch(Object label1, Object label2, TypeId exceptionType) {
+        addTryBlock(label1, label2, exceptionType, null);
+        return this;
+    }
+
+    /// Removes all try-catch blocks in the specified range, not just one try-catch-all block
+    public CodeBuilder remove_all_try_catch(Object label1, Object label2) {
+        addTryBlock(label1, label2, null, null);
+        return this;
     }
 
     private CodeBuilder addDebugItem(Object label, DebugItem item) {
@@ -951,13 +964,24 @@ public final class CodeBuilder {
 
     public CodeBuilder put_metadata(Object value) {
         Objects.requireNonNull(value);
-        add(new BuilderNode.Metadata(value), 0);
+        add(0, new BuilderNode.Metadata(value));
         return this;
     }
 
     public Object get_metadata(Object label) {
         var node = position(label).node;
         return node == null ? null : node.metadata();
+    }
+
+    private void format_34c_checks(int arg_count, int... args) {
+        if (arg_count != args.length) {
+            throw new IllegalArgumentException("arg_count != args.length");
+        }
+        checkRange(arg_count, 0, 5);
+        if (arg_count >= 4) check_reg(args[3]);
+        if (arg_count >= 3) check_reg(args[2]);
+        if (arg_count >= 2) check_reg(args[1]);
+        if (arg_count >= 1) check_reg(args[0]);
     }
 
     private void format_35c_checks(int arg_count, int... args) {
@@ -974,13 +998,13 @@ public final class CodeBuilder {
 
     // <ØØ|op> op
     public CodeBuilder f10x(Opcode op) {
-        add(Instruction10x.of(op));
+        add(InstructionN0x.of(op));
         return this;
     }
 
     // <B|A|op> op vA, vB
     public CodeBuilder f12x(Opcode op, int reg_or_pair1, int reg_or_pair2) {
-        add(Instruction12x.of(op,
+        add(InstructionN2x.of(op,
                 check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
                 check_reg_or_pair(reg_or_pair2, op.isRegPair(1))));
         return this;
@@ -988,7 +1012,15 @@ public final class CodeBuilder {
 
     // <B|A|op> op vA, #+B
     public CodeBuilder f11n(Opcode op, int reg_or_pair, int value) {
-        add(Instruction11n.of(op,
+        add(InstructionN1i.of(op,
+                check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
+                value));
+        return this;
+    }
+
+    // <B|A|op> op vA, {#uB}
+    public CodeBuilder f11p(Opcode op, int reg_or_pair, int value) {
+        add(InstructionN1p.of(op,
                 check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
                 value));
         return this;
@@ -996,25 +1028,31 @@ public final class CodeBuilder {
 
     // <AA|op> op vAA
     public CodeBuilder f11x(Opcode op, int reg_or_pair) {
-        add(Instruction11x.of(op, check_reg_or_pair(reg_or_pair, op.isRegPair(0))));
+        add(InstructionN1x.of(op, check_reg_or_pair(reg_or_pair, op.isRegPair(0))));
         return this;
     }
 
     // <AA|op> op +AA
     public CodeBuilder f10t(Opcode op, Object target) {
-        add(op.format(), position -> Instruction10t.of(op, branchOffset(position, target)));
+        add(op.format(), position -> InstructionN0t.of(op, branchOffset(position, target)));
         return this;
     }
 
     // <ØØ|op AAAA> op +AAAA
     public CodeBuilder f20t(Opcode op, Object target) {
-        add(op.format(), position -> Instruction20t.of(op, branchOffset(position, target)));
+        add(op.format(), position -> InstructionN0t.of(op, branchOffset(position, target)));
+        return this;
+    }
+
+    // <AAhi|op AAAAlo> op +AAAAAA
+    public CodeBuilder f20t_24(Opcode op, Object target) {
+        add(op.format(), position -> InstructionN0t.of(op, branchOffset(position, target)));
         return this;
     }
 
     // <AA|op BBBB> op vAA, vBBBB
     public CodeBuilder f22x(Opcode op, int reg_or_pair1, int reg_or_pair2) {
-        add(Instruction22x.of(op,
+        add(InstructionN2x.of(op,
                 check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
                 check_reg_or_pair(reg_or_pair2, op.isRegPair(1))));
         return this;
@@ -1023,14 +1061,14 @@ public final class CodeBuilder {
     // <AA|op BBBB> op vAA, +BBBB
     public CodeBuilder f21t(Opcode op, int reg_or_pair, Object target) {
         check_reg_or_pair(reg_or_pair, op.isRegPair(0));
-        add(op.format(), position -> Instruction21t.of(
+        add(op.format(), position -> InstructionN1t.of(
                 op, reg_or_pair, branchOffset(position, target)));
         return this;
     }
 
     // <AA|op BBBB> op vAA, #+BBBB
     public CodeBuilder f21s(Opcode op, int reg_or_pair, int value) {
-        add(Instruction21s.of(op,
+        add(InstructionN1i.of(op,
                 check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
                 value));
         return this;
@@ -1038,19 +1076,19 @@ public final class CodeBuilder {
 
     // <AA|op BBBB> op vAA, #+BBBB0000
     public CodeBuilder f21ih(Opcode op, int reg, int value) {
-        add(Instruction21ih.of(op, check_reg(reg), value));
+        add(InstructionN1i.of(op, check_reg(reg), value));
         return this;
     }
 
     // <AA|op BBBB> op vAA, #+BBBB000000000000
     public CodeBuilder f21lh(Opcode op, int reg_pair, long value) {
-        add(Instruction21lh.of(op, check_reg_pair(reg_pair), value));
+        add(InstructionN1l.of(op, check_reg_pair(reg_pair), value));
         return this;
     }
 
     // <AA|op BBBB> op vAA, @BBBB
     public CodeBuilder f21c(Opcode op, int reg_or_pair, Object constant) {
-        add(Instruction21c.of(op,
+        add(InstructionN1c.of(op,
                 check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
                 constant));
         return this;
@@ -1058,7 +1096,7 @@ public final class CodeBuilder {
 
     // <AA|op CC|BB> op vAA, vBB, vCC
     public CodeBuilder f23x(Opcode op, int reg_or_pair1, int reg_or_pair2, int reg_or_pair3) {
-        add(Instruction23x.of(op,
+        add(InstructionN3x.of(op,
                 check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
                 check_reg_or_pair(reg_or_pair2, op.isRegPair(1)),
                 check_reg_or_pair(reg_or_pair3, op.isRegPair(2))));
@@ -1067,7 +1105,7 @@ public final class CodeBuilder {
 
     // <AA|op CC|BB> op vAA, vBB, #+CC
     public CodeBuilder f22b(Opcode op, int reg_or_pair1, int reg_or_pair2, int value) {
-        add(Instruction22b.of(op,
+        add(InstructionN2i.of(op,
                 check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
                 check_reg_or_pair(reg_or_pair2, op.isRegPair(1)),
                 value));
@@ -1078,14 +1116,14 @@ public final class CodeBuilder {
     public CodeBuilder f22t(Opcode op, int reg_or_pair1, int reg_or_pair2, Object target) {
         check_reg_or_pair(reg_or_pair1, op.isRegPair(0));
         check_reg_or_pair(reg_or_pair2, op.isRegPair(1));
-        add(op.format(), position -> Instruction22t.of(
+        add(op.format(), position -> InstructionN2t.of(
                 op, reg_or_pair1, reg_or_pair2, branchOffset(position, target)));
         return this;
     }
 
     // <B|A|op CCCC> op vA, vB, #+CCCC
     public CodeBuilder f22s(Opcode op, int reg_or_pair1, int reg_or_pair2, int value) {
-        add(Instruction22s.of(op,
+        add(InstructionN2i.of(op,
                 check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
                 check_reg_or_pair(reg_or_pair2, op.isRegPair(1)),
                 value));
@@ -1094,7 +1132,7 @@ public final class CodeBuilder {
 
     // <B|A|op CCCC> op vA, vB, @CCCC
     public CodeBuilder f22c(Opcode op, int reg_or_pair1, int reg_or_pair2, Object constant) {
-        add(Instruction22c.of(op,
+        add(InstructionN2c.of(op,
                 check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
                 check_reg_or_pair(reg_or_pair2, op.isRegPair(1)),
                 constant));
@@ -1103,14 +1141,14 @@ public final class CodeBuilder {
 
     // <ØØ|op AAAAlo AAAAhi> op +AAAAAAAA
     public CodeBuilder f30t(Opcode op, Object target) {
-        add(op.format(), position -> Instruction30t.of(op,
+        add(op.format(), position -> InstructionN0t.of(op,
                 branchOffset(position, target, true)));
         return this;
     }
 
     // <ØØ|op AAAA BBBB> op vAAAA, vBBBB
     public CodeBuilder f32x(Opcode op, int reg_or_pair1, int reg_or_pair2) {
-        add(Instruction32x.of(op,
+        add(InstructionN2x.of(op,
                 check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
                 check_reg_or_pair(reg_or_pair2, op.isRegPair(1))));
         return this;
@@ -1118,7 +1156,7 @@ public final class CodeBuilder {
 
     // <AA|op BBBBlo BBBBhi> op vAA, #+BBBBBBBB
     public CodeBuilder f31i(Opcode op, int reg_or_pair, int value) {
-        add(Instruction31i.of(op,
+        add(InstructionN1i.of(op,
                 check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
                 value));
         return this;
@@ -1127,15 +1165,28 @@ public final class CodeBuilder {
     // <AA|op BBBBlo BBBBhi> op vAA, +BBBBBBBB
     public CodeBuilder f31t(Opcode op, int reg_or_pair, Object target) {
         check_reg_or_pair(reg_or_pair, op.isRegPair(0));
-        add(op.format(), position -> Instruction31t.of(
+        add(op.format(), position -> InstructionN1t.of(
                 op, reg_or_pair, branchOffset(position, target)));
         return this;
     }
 
     // <AA|op BBBBlo BBBBhi> op vAA, @BBBBBBBB
     public CodeBuilder f31c(Opcode op, int reg_or_pair, Object constant) {
-        add(Instruction31c.of(op,
+        add(InstructionN1c.of(op,
                 check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
+                constant));
+        return this;
+    }
+
+    // <Ø|A|op BBBB F|E|D|C> [A] op {vC, vD, vE, vF}, @BBBB
+    public CodeBuilder f34c(Opcode op, Object constant, int... args) {
+        int arg_count = args.length;
+        format_34c_checks(arg_count, args);
+        add(InstructionNv4c.of(op, arg_count,
+                arg_count > 0 ? args[0] : 0,
+                arg_count > 1 ? args[1] : 0,
+                arg_count > 2 ? args[2] : 0,
+                arg_count > 3 ? args[3] : 0,
                 constant));
         return this;
     }
@@ -1144,7 +1195,7 @@ public final class CodeBuilder {
     public CodeBuilder f35c(Opcode op, Object constant, int... args) {
         int arg_count = args.length;
         format_35c_checks(arg_count, args);
-        add(Instruction35c.of(op, arg_count,
+        add(InstructionNv5c.of(op, arg_count,
                 arg_count > 0 ? args[0] : 0,
                 arg_count > 1 ? args[1] : 0,
                 arg_count > 2 ? args[2] : 0,
@@ -1157,7 +1208,15 @@ public final class CodeBuilder {
     // <AA|op BBBB CCCC> op {vCCCC .. vNNNN}, @BBBB (where NNNN = CCCC+AA-1)
     public CodeBuilder f3rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, arg_count);
-        add(Instruction3rc.of(op, arg_count, first_arg_reg, constant));
+        add(InstructionNrc.of(op, arg_count, first_arg_reg, constant));
+        return this;
+    }
+
+    // <exop BBBBlo BBBBhi> exop vAAAA, @BBBBBBBB
+    public CodeBuilder f41c(Opcode op, int reg_or_pair, Object constant) {
+        add(InstructionN1c.of(op,
+                check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
+                constant));
         return this;
     }
 
@@ -1165,7 +1224,7 @@ public final class CodeBuilder {
     public CodeBuilder f45cc(Opcode op, Object constant1, Object constant2, int... args) {
         int arg_count = args.length;
         format_35c_checks(arg_count, args);
-        add(Instruction45cc.of(op, arg_count,
+        add(InstructionNv5cc.of(op, arg_count,
                 arg_count > 0 ? args[0] : 0,
                 arg_count > 1 ? args[1] : 0,
                 arg_count > 2 ? args[2] : 0,
@@ -1179,13 +1238,29 @@ public final class CodeBuilder {
     public CodeBuilder f4rcc(Opcode op, Object constant1,
                              Object constant2, int arg_count, int first_arg_reg) {
         check_reg_range(first_arg_reg, arg_count);
-        add(Instruction4rcc.of(op, arg_count, first_arg_reg, constant1, constant2));
+        add(InstructionNrcc.of(op, arg_count, first_arg_reg, constant1, constant2));
         return this;
     }
 
     // <AA|op BBBBlolo BBBBlohi BBBBhilo BBBBhihi> op vAA, #+BBBBBBBBBBBBBBBB
     public CodeBuilder f51l(Opcode op, int reg_pair, long value) {
-        add(Instruction51l.of(op, check_reg_pair(reg_pair), value));
+        add(InstructionN1l.of(op, check_reg_pair(reg_pair), value));
+        return this;
+    }
+
+    // <exop CCCClo CCCChi AAAA BBBB> exop vAAAA, vBBBB, @CCCCCCCC
+    public CodeBuilder f52c(Opcode op, int reg_or_pair1, int reg_or_pair2, Object constant) {
+        add(InstructionN2c.of(op,
+                check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
+                check_reg_or_pair(reg_or_pair2, op.isRegPair(1)),
+                constant));
+        return this;
+    }
+
+    // <exop BBBBlo BBBBhi AAAA CCCC> exop {vCCCC .. vNNNN}, @BBBBBBBB (where NNNN = CCCC+AAAA-1)
+    public CodeBuilder f5rc(Opcode op, Object constant, int arg_count, int first_arg_reg) {
+        check_reg_range(first_arg_reg, arg_count);
+        add(InstructionNrc.of(op, arg_count, first_arg_reg, constant));
         return this;
     }
 
@@ -1198,7 +1273,7 @@ public final class CodeBuilder {
                         branchOffset(target, labels[i], true)));
             }
             elements = Collections.unmodifiableNavigableSet(elements);
-            return PackedSwitchPayload.raw(PACKED_SWITCH_PAYLOAD, elements);
+            return SwitchPayload.raw(PACKED_SWITCH_PAYLOAD, elements);
         });
     }
 
@@ -1211,7 +1286,7 @@ public final class CodeBuilder {
                         branchOffset(target, labels[i], true)));
             }
             elements = Collections.unmodifiableNavigableSet(elements);
-            return SparseSwitchPayload.raw(SPARSE_SWITCH_PAYLOAD, elements);
+            return SwitchPayload.raw(SPARSE_SWITCH_PAYLOAD, elements);
         });
     }
 
@@ -1225,26 +1300,60 @@ public final class CodeBuilder {
         return this;
     }
 
+    public CodeBuilder raw(Opcode opcode, short instruction) {
+        return raw(InstructionRaw0x.of(opcode, instruction));
+    }
+
     public CodeBuilder raw(short instruction) {
-        return raw(InstructionRaw.of(instruction));
+        return raw(RAW, instruction);
+    }
+
+    public CodeBuilder raw_aligned(short instruction) {
+        return raw(RAW_ALIGNED, instruction);
+    }
+
+    public CodeBuilder wrapper_raw(short instruction) {
+        return raw(WRAPPER_RAW, instruction);
+    }
+
+    public CodeBuilder wrapper_raw_aligned(short instruction) {
+        return raw(WRAPPER_RAW_ALIGNED, instruction);
+    }
+
+    public CodeBuilder raw_ref(Opcode opcode, ReferenceType type, Object reference) {
+        return raw(InstructionRaw0c.of(opcode, type, reference));
     }
 
     /**
      * @param reference u16 ref
      */
     public CodeBuilder raw_ref(ReferenceType type, Object reference) {
-        return raw(InstructionRawRef.of(type, reference, false));
+        return raw_ref(RAW_REF, type, reference);
     }
 
     /**
      * @param reference u32 ref
      */
     public CodeBuilder raw_ref_jumbo(ReferenceType type, Object reference) {
-        return raw(InstructionRawRef.of(type, reference, true));
+        return raw_ref(RAW_REF_JUMBO, type, reference);
+    }
+
+    /**
+     * @param reference u16 ref
+     */
+    public CodeBuilder wrapper_raw_ref(ReferenceType type, Object reference) {
+        return raw_ref(WRAPPER_RAW_REF, type, reference);
+    }
+
+    /**
+     * @param reference u32 ref
+     */
+    public CodeBuilder wrapper_raw_ref_jumbo(ReferenceType type, Object reference) {
+        return raw_ref(WRAPPER_RAW_REF_JUMBO, type, reference);
     }
 
     public CodeBuilder odd_spacer() {
-        add(new BuilderNode() {
+        add(0, new BuilderNode() {
             BuilderPosition current;
 
             public void attach(BuilderPosition current) {
@@ -1258,12 +1367,9 @@ public final class CodeBuilder {
 
             @Override
             public List<Instruction> generate() {
-                if (units() != 0) {
-                    return List.of(Instruction10x.of(NOP));
-                }
-                return List.of();
+                return units() == 0 ? List.of() : List.of(InstructionN0x.of(NOP));
             }
-        }, 0);
+        });
         return this;
     }
 
@@ -1272,7 +1378,7 @@ public final class CodeBuilder {
     }
 
     public CodeBuilder nop() {
-        add(BuilderNode.EMPTY, 0);
+        add(0, BuilderNode.EMPTY);
         return this;
     }
 
@@ -1921,7 +2027,7 @@ public final class CodeBuilder {
      * @param label s32 label
      */
     public CodeBuilder goto_(Object label) {
-        add(new BuilderNode() {
+        add(0, new BuilderNode() {
             BuilderPosition current;
             BuilderPosition target;
 
@@ -1956,14 +2062,14 @@ public final class CodeBuilder {
                     return List.of();
                 }
                 if (diff == 0 || !swidth(diff, 16)) {
-                    return List.of(Instruction30t.of(GOTO_32, diff));
+                    return List.of(InstructionN0t.of(GOTO_32, diff));
                 }
                 if (!swidth(diff, 8)) {
-                    return List.of(Instruction20t.of(GOTO_16, diff));
+                    return List.of(InstructionN0t.of(GOTO_16, diff));
                 }
-                return List.of(Instruction10t.of(GOTO, diff));
+                return List.of(InstructionN0t.of(GOTO, diff));
             }
-        }, 0);
+        });
         return this;
     }
 
@@ -2209,7 +2315,7 @@ public final class CodeBuilder {
                 case NE, LT, GT -> nop();
             };
         }
-        add(new BuilderNode() {
+        add(0, new BuilderNode() {
             BuilderPosition current;
             BuilderPosition target;
 
@@ -2246,22 +2352,22 @@ public final class CodeBuilder {
                 }
                 if (diff == 0) {
                     return List.of(
-                            Instruction22t.of(test.inverse().test(), first_reg_to_test,
+                            InstructionN2t.of(test.inverse().test(), first_reg_to_test,
                                     second_reg_to_test, Format22t.getUnitCount() + GOTO.getUnitCount()),
-                            Instruction10t.of(GOTO, -Format22t.getUnitCount())
+                            InstructionN0t.of(GOTO, -Format22t.getUnitCount())
                     );
                 }
                 if (!swidth(diff, 16)) {
                     return List.of(
-                            Instruction22t.of(test.inverse().test(), first_reg_to_test,
+                            InstructionN2t.of(test.inverse().test(), first_reg_to_test,
                                     second_reg_to_test, Format22t.getUnitCount() + GOTO_32.getUnitCount()),
-                            Instruction30t.of(GOTO_32, diff - Format22t.getUnitCount())
+                            InstructionN0t.of(GOTO_32, diff - Format22t.getUnitCount())
                     );
                 }
-                return List.of(Instruction22t.of(test.test(),
+                return List.of(InstructionN2t.of(test.test(),
                         first_reg_to_test, second_reg_to_test, diff));
             }
-        }, 0);
+        });
         return this;
     }
 
@@ -2312,7 +2418,7 @@ public final class CodeBuilder {
     public CodeBuilder if_testz(Test test, int reg_to_test, Object label) {
         Objects.requireNonNull(test);
         check_reg_or_pair(reg_to_test, false);
-        add(new BuilderNode() {
+        add(0, new BuilderNode() {
             BuilderPosition current;
             BuilderPosition target;
 
@@ -2349,21 +2455,21 @@ public final class CodeBuilder {
                 }
                 if (diff == 0) {
                     return List.of(
-                            Instruction21t.of(test.inverse().testz(),
+                            InstructionN1t.of(test.inverse().testz(),
                                     reg_to_test, Format21t.getUnitCount() + GOTO.getUnitCount()),
-                            Instruction10t.of(GOTO, -Format21t.getUnitCount())
+                            InstructionN0t.of(GOTO, -Format21t.getUnitCount())
                     );
                 }
                 if (!swidth(diff, 16)) {
                     return List.of(
-                            Instruction21t.of(test.inverse().testz(),
+                            InstructionN1t.of(test.inverse().testz(),
                                     reg_to_test, Format21t.getUnitCount() + GOTO_32.getUnitCount()),
-                            Instruction30t.of(GOTO_32, diff - Format21t.getUnitCount())
+                            InstructionN0t.of(GOTO_32, diff - Format21t.getUnitCount())
                     );
                 }
-                return List.of(Instruction21t.of(test.testz(), reg_to_test, diff));
+                return List.of(InstructionN1t.of(test.testz(), reg_to_test, diff));
             }
-        }, 0);
+        });
         return this;
     }
 

@@ -12,9 +12,10 @@ import java.util.Objects;
 public enum ReferenceType {
     STRING,
     TYPE,
+    PROTO,
     FIELD,
     METHOD,
-    PROTO,
+    CLASS_DEF,
     CALLSITE,
     METHOD_HANDLE,
     RAW_INDEX;
@@ -23,7 +24,7 @@ public enum ReferenceType {
         Objects.requireNonNull(value);
         return switch (type) {
             case STRING -> (String) value;
-            case TYPE -> (TypeId) value;
+            case TYPE, CLASS_DEF -> (TypeId) value;
             case FIELD -> (FieldId) value;
             case METHOD -> (MethodId) value;
             case PROTO -> (ProtoId) value;
@@ -37,6 +38,7 @@ public enum ReferenceType {
         value = validate(type, value);
         return switch (type) {
             case STRING -> "\"" + value + "\"";
+            case CLASS_DEF -> "def@" + value;
             case TYPE, FIELD, METHOD, PROTO, CALLSITE,
                  METHOD_HANDLE -> value.toString();
             case RAW_INDEX -> "@" + value;

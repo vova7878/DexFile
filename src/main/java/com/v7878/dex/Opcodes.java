@@ -10,22 +10,18 @@ public final class Opcodes {
     private final IntMap<Opcode> opcodesByValue;
     private final EnumMap<Opcode, Integer> opcodeValues;
     private final DexVersion dex;
-    private final int api;
-    private final boolean art;
-    private final boolean odex;
+    private final DexOptions<?> options;
 
-    private Opcodes(DexVersion dex, int api, boolean art, boolean odex) {
+    private Opcodes(DexVersion dex, DexOptions<?> options) {
         this.dex = Objects.requireNonNull(dex);
-        this.api = api;
-        this.art = art;
-        this.odex = odex;
+        this.options = Objects.requireNonNull(options);
 
         var opcodes = Opcode.values();
         opcodeValues = new EnumMap<>(Opcode.class);
         opcodesByValue = new IntMap<>(opcodes.length);
 
         for (var opcode : opcodes) {
-            Integer value = opcode.getValue(dex, api, art, odex);
+            Integer value = opcode.getValue(dex, options);
             if (value != null) {
                 opcodeValues.put(opcode, value);
                 opcodesByValue.put(value, opcode);
@@ -33,9 +29,17 @@ public final class Opcodes {
         }
     }
 
-    public static Opcodes of(DexVersion dexVersion, int targetApi,
-                             boolean targetForArt, boolean allowOdexInstructions) {
-        return new Opcodes(dexVersion, targetApi, targetForArt, allowOdexInstructions);
+    public static Opcodes of(DexVersion dex, DexOptions<?> options) {
+        return new Opcodes(dex, options);
+    }
+
+    private static String print(DexOptions<?> options) {
+        return "{" +
+                "api=" + options.api +
+                ", art=" + options.art +
+                ", odex=" + options.odex +
+                ", expanded=" + options.expanded +
+                '}';
     }
 
     public Opcode getOpcodeByValue(int value) {
@@ -48,8 +52,8 @@ public final class Opcodes {
                 }
             }
             throw new IllegalArgumentException(String.format(
-                    "No opcode found with value %d for dex=%s, api=%d, art=%b, odex=%b. %s",
-                    value, dex, api, art, odex,
+                    "No opcode found with value %d for dex=%s, options=%b. %s",
+                    value, dex, print(options),
                     candidates.stream()
                             .map(op -> op + " (" + op.getConstraint() + ")")
                             .reduce((a, b) -> a + ", " + b)
@@ -66,8 +70,9 @@ public final class Opcodes {
         if (out == null) {
             var constraint = opcode.getConstraint();
             throw new IllegalArgumentException(String.format(
-                    "Constraints for opcode %s (%s) do not allow obtaining int value with dex=%s, api=%d, art=%b, odex=%b",
-                    opcode, constraint, dex, api, art, odex));
+                    "Constraints for opcode %s (%s) do not allow" +
+                            " obtaining int value with dex=%s, options=%b",
+                    opcode, constraint, dex, print(options)));
         }
         return out;
     }

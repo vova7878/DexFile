@@ -89,6 +89,10 @@ public class CodeUtils {
     public static boolean instruction(
             CodeBuilder ib, Opcode op, Object raw_args, List<Runnable> actions) {
         switch (op) {
+            case M_PACKED_SWITCH -> {
+                // TODO: m-packed-switch
+                throw new UnsupportedOperationException("Unimplemented yet!");
+            }
             case PACKED_SWITCH -> {
                 var args = (Args_format31tContext) raw_args;
                 var current = ib.current_label();
@@ -109,6 +113,10 @@ public class CodeUtils {
                     ib.append_position(backup);
                 });
                 return true;
+            }
+            case M_SPARSE_SWITCH -> {
+                // TODO: m-sparse-switch
+                throw new UnsupportedOperationException("Unimplemented yet!");
             }
             case SPARSE_SWITCH -> {
                 var args = (Args_format31tContext) raw_args;
