@@ -20,6 +20,8 @@ import static com.v7878.dex.DexConstants.REVERSE_ENDIAN_CONSTANT;
 import static com.v7878.dex.DexConstants.TYPE_CALL_SITE_ID_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_METHOD_HANDLE_ITEM;
+import static com.v7878.dex.DexIO.ClassHeader;
+import static com.v7878.dex.DexIO.DexReaderCache;
 import static com.v7878.dex.DexIO.InvalidDexFile;
 import static com.v7878.dex.DexIO.NotADexFile;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
@@ -101,7 +103,6 @@ import static com.v7878.dex.util.Checks.checkIndex;
 
 import com.v7878.collections.IntMap;
 import com.v7878.dex.AnnotationVisibility;
-import com.v7878.dex.DexIO;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.MethodHandleType;
 import com.v7878.dex.Opcodes;
@@ -167,7 +168,7 @@ import java.util.TreeSet;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
-public class DexReader implements DexIO.DexReaderCache {
+public final class DexReader implements DexReaderCache {
     private record AnnotationDirectory(NavigableSet<Annotation> class_annotations,
                                        IntMap<NavigableSet<Annotation>> field_annotations,
                                        IntMap<NavigableSet<Annotation>> method_annotations,
@@ -185,7 +186,7 @@ public class DexReader implements DexIO.DexReaderCache {
             TypeId superclass, List<TypeId> interfaces,
             String source_file, AnnotationDirectory annotations,
             int class_data_off, List<EncodedValue> static_values
-    ) {
+    ) implements ClassHeader {
     }
 
     private record CompactData(int offsets_pos,
@@ -1245,14 +1246,14 @@ public class DexReader implements DexIO.DexReaderCache {
                 source_file, annotations, class_data_off, static_values);
     }
 
-    // TODO?: Add to DexReaderCache
-    public List<ClassDefHeader> getClassDefHeaders() {
+    @Override
+    public List<ClassDefHeader> getClassHeaders() {
         return class_header_section;
     }
 
-    // TODO?: Add to DexReaderCache
-    public ClassDefHeader getClassDefHeader(int index) {
-        return getClassDefHeaders().get(index);
+    @Override
+    public ClassDefHeader getClassHeader(int index) {
+        return (ClassDefHeader) DexReaderCache.super.getClassHeader(index);
     }
 
     private ClassDef readClassDef(int index, int offset) {
@@ -1263,7 +1264,7 @@ public class DexReader implements DexIO.DexReaderCache {
             return Dex009.readClassDef(this, index, offset);
         }
 
-        var pre_def = getClassDefHeader(index);
+        var pre_def = getClassHeader(index);
 
         var clazz = pre_def.type();
         var access_flags = pre_def.access_flags();
