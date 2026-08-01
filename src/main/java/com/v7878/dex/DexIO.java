@@ -2,6 +2,7 @@ package com.v7878.dex;
 
 import static com.v7878.dex.util.Checks.checkIndex;
 
+import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.ClassDef;
 import com.v7878.dex.immutable.Dex;
@@ -23,6 +24,7 @@ import com.v7878.dex.util.EmptyArrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Objects;
 
 public final class DexIO {
@@ -46,7 +48,7 @@ public final class DexIO {
 
         List<TypeId> interfaces();
 
-        // TODO?: annotations
+        NavigableSet<Annotation> class_annotations();
     }
 
     public sealed interface DexReaderCache permits DexReader {

@@ -187,6 +187,10 @@ public final class DexReader implements DexReaderCache {
             String source_file, AnnotationDirectory annotations,
             int class_data_off, List<EncodedValue> static_values
     ) implements ClassHeader {
+        @Override
+        public NavigableSet<Annotation> class_annotations() {
+            return annotations.class_annotations();
+        }
     }
 
     private record CompactData(int offsets_pos,
