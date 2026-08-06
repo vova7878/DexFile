@@ -1145,7 +1145,7 @@ public final class AnalyzedMethod {
                 throw new AnalysisException("Can flow through to " + describe(current));
             }
             if (exception.isPrimitive() || !TypeResolver._instanceOf(
-                    resolver, exception, THROWABLE, true)) {
+                    resolver, exception, THROWABLE, true, true)) {
                 throw new AnalysisException("Unexpected non-throwable class target "
                         + exception + " for " + describe(current));
             }
@@ -1288,7 +1288,7 @@ public final class AnalyzedMethod {
             if (!switch (shorty) {
                 case 'Z', 'B', 'S', 'C', 'I' -> reg.isInt();
                 case 'F' -> reg.isFloat();
-                case 'L' -> reg.instanceOf(resolver, type, false, true);
+                case 'L' -> reg.instanceOf(resolver, type, false, true, false);
                 default -> throw invalidShorty(shorty);
             }) {
                 throw unexpectedReg(current, ireg, reg);
@@ -1610,14 +1610,14 @@ public final class AnalyzedMethod {
                         is_narrowing_nop = false;
                         is_nop = true;
                     } else if (reg.isRuntimeNonNullRef() &&
-                            !TypeResolver._instanceOf(resolver, type, ref, true) &&
-                            !TypeResolver._instanceOf(resolver, ref, type, true)) {
+                            !TypeResolver._instanceOf(resolver, type, ref, true, true) &&
+                            !TypeResolver._instanceOf(resolver, ref, type, true, true)) {
                         // Mutually incompatible types.
                         // i.e. Integer and String or Object[] and int[] etc.
                         is_narrowing_nop = false;
                         is_nop = false;
                         next_reachable = false;
-                    } else if (TypeResolver._instanceOf(resolver, type, ref, false)) {
+                    } else if (TypeResolver._instanceOf(resolver, type, ref, false, true)) {
                         is_narrowing_nop = true;
                         is_nop = false;
                     } else {
@@ -2090,7 +2090,7 @@ public final class AnalyzedMethod {
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) {
-                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true)) {
+                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true, false)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
                     if (obj.isUninitializedRef()) {
@@ -2121,7 +2121,7 @@ public final class AnalyzedMethod {
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) {
-                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true)) {
+                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true, false)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
 

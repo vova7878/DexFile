@@ -950,7 +950,7 @@ public sealed abstract class Register {
 
     // Note: only for ref types
     public final boolean instanceOf(TypeResolver resolver, TypeId type,
-                                    boolean allow_uninitialized, boolean default_value) {
+                                    boolean allow_uninitialized, boolean default_value, boolean strict) {
         Objects.requireNonNull(type);
         if (!type.isReference()) {
             return false;
@@ -963,7 +963,7 @@ public sealed abstract class Register {
             }
             if (kind.isNonZeroOrNullRef()) {
                 var info = getRefTypeInfo(kind);
-                return TypeResolver._instanceOf(resolver, info, type, default_value);
+                return TypeResolver._instanceOf(resolver, info, type, default_value, strict);
             }
             return false;
         }
@@ -971,8 +971,13 @@ public sealed abstract class Register {
             if (!allow_uninitialized && ref instanceof UninitializedRef) {
                 return false;
             }
-            return TypeResolver._instanceOf(resolver, ref.typeInfo(), type, default_value);
+            return TypeResolver._instanceOf(resolver, ref.typeInfo(), type, default_value, strict);
         }
         return false;
+    }
+
+    public final boolean instanceOf(TypeResolver resolver, TypeId type,
+                                    boolean allow_uninitialized, boolean default_value) {
+        return instanceOf(resolver, type, allow_uninitialized, default_value, true);
     }
 }

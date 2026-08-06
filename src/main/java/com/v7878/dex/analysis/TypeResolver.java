@@ -20,19 +20,27 @@ public abstract class TypeResolver {
         public Boolean instanceOf(TypeId a, TypeId b) {
             return null;
         }
+
+        @Override
+        public Boolean isInterface(TypeId type) {
+            return null;
+        }
     };
 
     public abstract TypeId join(TypeId a, TypeId b);
 
     public abstract Boolean instanceOf(TypeId a, TypeId b);
 
-    // TODO: public abstract Boolean isInterface(TypeId type);
+    public abstract Boolean isInterface(TypeId type);
 
-    /* package */
     private static boolean instanceOfFlat(TypeResolver resolver, TypeId a,
-                                          TypeId b, boolean default_value) {
+                                          TypeId b, boolean default_value, boolean strict) {
         if (OBJECT.equals(b)) {
             return true;
+        }
+        if (strict && OBJECT.equals(a)) {
+            // There is nothing above Object
+            return false;
         }
         if (a == null || b == null) {
             return default_value;
@@ -40,13 +48,22 @@ public abstract class TypeResolver {
         if (Objects.equals(a, b)) {
             return true;
         }
+        if (!strict) {
+            if (_isInterface(resolver, b, default_value)) {
+                return true;
+            }
+            if (OBJECT.equals(a)) {
+                // There is nothing above Object
+                return false;
+            }
+        }
         var out = resolver.instanceOf(a, b);
         return out == null ? default_value : out;
     }
 
     /* package */
     static boolean _instanceOf(TypeResolver resolver, TypeInfo a,
-                               TypeInfo b, boolean default_value) {
+                               TypeInfo b, boolean default_value, boolean strict) {
         if (a.isPrimitive() || b.isPrimitive()) {
             throw new IllegalArgumentException(
                     "The argument can only be a reference type");
@@ -56,39 +73,46 @@ public abstract class TypeResolver {
             assert unresolved == b.isUnresolved();
             return !unresolved || default_value;
         }
+        if (b.array_depth() > a.array_depth()) return false;
         if (b.array_depth() < a.array_depth()) {
+            if (!strict && b.base() != null) {
+                if (_isInterface(resolver, b.base(), default_value)) {
+                    return true;
+                }
+            }
             // T[][] instanceof ?[] or
             // T[][] instanceof any of Object[], Serializable[] or Cloneable[]
             return b.base() == null ? default_value : (OBJECT.equals(b.base()) ||
                     SERIALIZABLE.equals(b.base()) || CLONEABLE.equals(b.base()));
         }
-        if (b.array_depth() > a.array_depth()) return false;
         if (a.isBasePrimitive() || b.isBasePrimitive()) {
             // Different primitive bases
             // int[]...[] instanceof float[]...[]
+            // or ref[]...[] instanceof int[]...[]
+            // or int[]...[] instanceof ref[]...[]
             return false;
         }
-        return instanceOfFlat(resolver, a.base(), b.base(), default_value);
+        return instanceOfFlat(resolver, a.base(), b.base(), default_value, strict);
     }
 
     /* package */
     static boolean _instanceOf(TypeResolver resolver, TypeInfo a,
-                               TypeId b, boolean default_value) {
-        return _instanceOf(resolver, a, TypeInfo.of(b), default_value);
+                               TypeId b, boolean default_value, boolean strict) {
+        return _instanceOf(resolver, a, TypeInfo.of(b), default_value, strict);
     }
 
     /* package */
     @SuppressWarnings("SameParameterValue")
     static boolean _instanceOf(TypeResolver resolver, TypeId a,
-                               TypeInfo b, boolean default_value) {
-        return _instanceOf(resolver, TypeInfo.of(a), b, default_value);
+                               TypeInfo b, boolean default_value, boolean strict) {
+        return _instanceOf(resolver, TypeInfo.of(a), b, default_value, strict);
     }
 
     /* package */
     @SuppressWarnings("SameParameterValue")
     static boolean _instanceOf(TypeResolver resolver, TypeId a,
-                               TypeId b, boolean default_value) {
-        return _instanceOf(resolver, TypeInfo.of(a), b, default_value);
+                               TypeId b, boolean default_value, boolean strict) {
+        return _instanceOf(resolver, TypeInfo.of(a), b, default_value, strict);
     }
 
     private static TypeId joinFlat(TypeResolver resolver, TypeId a, TypeId b) {
@@ -137,5 +161,18 @@ public abstract class TypeResolver {
     /* package */
     static TypeInfo _join(TypeResolver resolver, TypeInfo a, TypeId b) {
         return _join(resolver, a, TypeInfo.of(b));
+    }
+
+    /* package */
+    static boolean _isInterface(TypeResolver resolver, TypeId type, boolean default_value) {
+        if (type.isPrimitive()) {
+            throw new IllegalArgumentException(
+                    "The argument can only be a reference type");
+        }
+        if (type.isArray()) {
+            return false;
+        }
+        var out = resolver.isInterface(type);
+        return out == null ? default_value : out;
     }
 }
