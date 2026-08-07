@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable;
 
 import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
+import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 import static com.v7878.dex.util.ShortyUtils.invalidType;
 
 import com.v7878.dex.Internal;
@@ -30,6 +31,22 @@ public final class TypeId implements Comparable<TypeId> {
     private TypeId(int array_depth, String descriptor) {
         this.array_depth = array_depth;
         this.descriptor = Objects.requireNonNull(descriptor);
+    }
+
+    public static TypeId of(char shorty) {
+        return switch (shorty) {
+            case 'V' -> V;
+            case 'Z' -> Z;
+            case 'B' -> B;
+            case 'S' -> S;
+            case 'C' -> C;
+            case 'I' -> I;
+            case 'F' -> F;
+            case 'J' -> J;
+            case 'D' -> D;
+            case 'L' -> OBJECT;
+            default -> throw invalidShorty(shorty);
+        };
     }
 
     @Internal
