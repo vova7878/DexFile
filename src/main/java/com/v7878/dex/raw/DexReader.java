@@ -179,6 +179,8 @@ public final class DexReader implements DexReaderCache {
 
     public record CodeItem(int registers, int ins, int outs, DebugInfo debug_info,
                            List<Instruction> instructions, NavigableSet<TryBlock> tries) {
+        public static final CodeItem EMPTY = new CodeItem(255, 0, 0, null,
+                Collections.emptyList(), Collections.emptyNavigableSet());
     }
 
     public record ClassDefHeader(
@@ -394,7 +396,7 @@ public final class DexReader implements DexReaderCache {
                 var class_offset = mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt();
                 class_header_section = makeSection(
                         class_count, class_offset,
-                        CLASS_DEF_SIZE, this::reaClassDefHeader
+                        CLASS_DEF_SIZE, this::readClassDefHeader
                 );
                 class_section = makeSection(
                         class_count, class_offset,
@@ -1200,7 +1202,9 @@ public final class DexReader implements DexReaderCache {
                         hiddenapi.getAsInt() : 0;
             }
             int code_off = in.readSmallULeb128();
-            var code = code_off == NO_OFFSET ? null : getCodeItem(code_off);
+            var code = code_off == NO_OFFSET ? null :
+                    (!options.hasMethodBodies() ?
+                     CodeItem.EMPTY : getCodeItem(code_off));
             DebugInfo debug_info;
             if (code == null || !options.hasDebugInfo()) {
                 debug_info = null;
@@ -1224,7 +1228,7 @@ public final class DexReader implements DexReaderCache {
         return out;
     }
 
-    private ClassDefHeader reaClassDefHeader(int index, int offset) {
+    private ClassDefHeader readClassDefHeader(int index, int offset) {
         var in = mainAt(offset);
 
         TypeId clazz = getType(in.readSmallUInt());
@@ -1239,11 +1243,11 @@ public final class DexReader implements DexReaderCache {
         String source_file = source_file_idx == NO_INDEX ?
                 null : getString(source_file_idx);
         int annotations_off = in.readSmallUInt();
-        AnnotationDirectory annotations = annotations_off == NO_OFFSET ?
+        var annotations = annotations_off == NO_OFFSET || !options.hasAnnotations() ?
                 AnnotationDirectory.EMPTY : getAnnotationDirectory(annotations_off);
         int class_data_off = in.readSmallUInt();
         int static_values_off = in.readSmallUInt();
-        List<EncodedValue> static_values = static_values_off == NO_OFFSET ?
+        var static_values = static_values_off == NO_OFFSET || !options.hasFieldValues() ?
                 null : getEncodedArray(static_values_off).getValue();
 
         return new ClassDefHeader(clazz, access_flags, superclass, interfaces,
