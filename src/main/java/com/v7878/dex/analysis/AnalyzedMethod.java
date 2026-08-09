@@ -1607,6 +1607,11 @@ public final class AnalyzedMethod {
                     var type = reg.getTypeInfo();
                     assert type != null;
                     if (Objects.equals(type.exactType(), ref)) {
+                        // We don't use a constant check here because for ref values the
+                        // difference exists only for us, but not for the Android verifier
+                        //
+                        // is_narrowing_nop = reg.isConstant();
+                        // is_nop = !reg.isConstant();
                         is_narrowing_nop = false;
                         is_nop = true;
                     } else if (reg.isRuntimeNonNullRef() &&
@@ -1796,7 +1801,7 @@ public final class AnalyzedMethod {
                 //  Check for peep-hole pattern of:
                 //     ...;
                 //     instance-of vX, vY, T;
-                //     ifXXX vX, label ;
+                //     ifXXX vX, label;
                 //     ...;
                 //  label:
                 //     ...;
@@ -2075,7 +2080,7 @@ public final class AnalyzedMethod {
                     }) {
                         throw unexpectedReg(current, iarr, arr);
                     }
-                    // Note: The instanceof check for iput-object occurs at runtime
+                    // Note: The instanceof check for aput-object occurs at runtime
                     var type = shorty == 'L' ? OBJECT : info.base();
                     if (verify) verifyReg(resolver, current, ival, type);
                 }
@@ -2284,12 +2289,9 @@ public final class AnalyzedMethod {
                     default -> throw shouldNotReachHere();
                 };
 
-                if (src.isConstant()) {
-                    // This instruction converts a constant register into a regular value
-                    is_narrowing_nop = check;
-                } else {
-                    is_nop = check;
-                }
+                // This instruction converts a constant register into a regular value
+                is_narrowing_nop = src.isConstant() && check;
+                is_nop = !src.isConstant() && check;
 
                 var type = switch (opcode) {
                     case INT_TO_BYTE -> B;

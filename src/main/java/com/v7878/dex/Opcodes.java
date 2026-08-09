@@ -70,8 +70,8 @@ public final class Opcodes {
         if (out == null) {
             var constraint = opcode.getConstraint();
             throw new IllegalArgumentException(String.format(
-                    "Constraints for opcode %s (%s) do not allow" +
-                            " obtaining int value with dex=%s, options=%b",
+                    "Constraints for opcode %s (%s) do not allow " +
+                            "obtaining int value with dex=%s, options=%b",
                     opcode, constraint, dex, print(options)));
         }
         return out;
