@@ -2,6 +2,7 @@ package com.v7878.dex;
 
 import static com.v7878.dex.util.Checks.checkIndex;
 
+import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.ClassDef;
 import com.v7878.dex.immutable.Dex;
@@ -14,20 +15,23 @@ import com.v7878.dex.io.ByteArrayIO;
 import com.v7878.dex.io.ByteArrayInput;
 import com.v7878.dex.raw.DexBalancer;
 import com.v7878.dex.raw.DexReader;
+import com.v7878.dex.raw.DexReader.ClassDefHeader;
 import com.v7878.dex.raw.DexWriter;
+import com.v7878.dex.raw.MapItem;
 import com.v7878.dex.raw.SharedData;
 import com.v7878.dex.util.EmptyArrays;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NavigableSet;
 import java.util.Objects;
 
 public final class DexIO {
     private DexIO() {
     }
 
-    public interface DexMapEntry {
+    public sealed interface DexMapEntry permits MapItem {
         int type();
 
         int size();
@@ -35,7 +39,19 @@ public final class DexIO {
         int offset();
     }
 
-    public interface DexReaderCache {
+    public sealed interface ClassHeader permits ClassDefHeader {
+        TypeId type();
+
+        int access_flags();
+
+        TypeId superclass();
+
+        List<TypeId> interfaces();
+
+        NavigableSet<Annotation> class_annotations();
+    }
+
+    public sealed interface DexReaderCache permits DexReader {
         private static <T> T getValue(List<T> section, int index, String name) {
             checkIndex(index, section.size(), name);
             return section.get(index);
@@ -52,6 +68,8 @@ public final class DexIO {
         List<ProtoId> getProtos();
 
         List<MethodId> getMethods();
+
+        List<? extends ClassHeader> getClassHeaders();
 
         List<ClassDef> getClasses();
 
@@ -79,6 +97,10 @@ public final class DexIO {
 
         default int getMethodCount() {
             return getMethods().size();
+        }
+
+        default int getClassHeaderCount() {
+            return getClassHeaders().size();
         }
 
         default int getClassCount() {
@@ -111,6 +133,10 @@ public final class DexIO {
 
         default MethodId getMethod(int index) {
             return getValue(getMethods(), index, "method");
+        }
+
+        default ClassHeader getClassHeader(int index) {
+            return DexReaderCache.getValue(getClassHeaders(), index, "class header");
         }
 
         default ClassDef getClass(int index) {

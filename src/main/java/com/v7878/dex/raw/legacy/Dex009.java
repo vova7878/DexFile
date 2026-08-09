@@ -103,30 +103,32 @@ public class Dex009 {
                 var lvalue = in.readLong();
                 var type = fid.getType();
                 var shorty = type.getShorty();
-                value = switch (shorty) {
-                    case 'Z' -> EncodedBoolean.of(lvalue != 0);
-                    case 'B' -> EncodedByte.of((byte) lvalue);
-                    case 'S' -> EncodedShort.of((short) lvalue);
-                    case 'C' -> EncodedChar.of((char) lvalue);
-                    case 'I' -> EncodedInt.of((int) lvalue);
-                    case 'F' -> EncodedFloat.of(Float.intBitsToFloat((int) lvalue));
-                    case 'J' -> EncodedLong.of(lvalue);
-                    case 'D' -> EncodedDouble.of(Double.longBitsToDouble(lvalue));
-                    case 'L' -> {
-                        if (lvalue == -1) {
-                            yield EncodedNull.INSTANCE;
+                if (reader.options().hasFieldValues()) {
+                    value = switch (shorty) {
+                        case 'Z' -> EncodedBoolean.of(lvalue != 0);
+                        case 'B' -> EncodedByte.of((byte) lvalue);
+                        case 'S' -> EncodedShort.of((short) lvalue);
+                        case 'C' -> EncodedChar.of((char) lvalue);
+                        case 'I' -> EncodedInt.of((int) lvalue);
+                        case 'F' -> EncodedFloat.of(Float.intBitsToFloat((int) lvalue));
+                        case 'J' -> EncodedLong.of(lvalue);
+                        case 'D' -> EncodedDouble.of(Double.longBitsToDouble(lvalue));
+                        case 'L' -> {
+                            if (lvalue == -1) {
+                                yield EncodedNull.INSTANCE;
+                            }
+                            if (STRING.equals(type)) {
+                                yield EncodedString.of(reader.getString((int) lvalue));
+                            }
+                            if (CLASS.equals(type)) {
+                                yield EncodedType.of(reader.getType((int) lvalue));
+                            }
+                            throw new IllegalStateException(String.format(
+                                    "Unsupported field type %s with non-null value 0x%016X", type, lvalue));
                         }
-                        if (STRING.equals(type)) {
-                            yield EncodedString.of(reader.getString((int) lvalue));
-                        }
-                        if (CLASS.equals(type)) {
-                            yield EncodedType.of(reader.getType((int) lvalue));
-                        }
-                        throw new IllegalStateException(String.format(
-                                "Unsupported field type %s with non-null value 0x%016X", type, lvalue));
-                    }
-                    default -> throw invalidShorty(shorty);
-                };
+                        default -> throw invalidShorty(shorty);
+                    };
+                }
             }
 
             list.add(FieldDef.of(fid.getName(), fid.getType(), access_flags,
@@ -278,7 +280,9 @@ public class Dex009 {
                 annotations = List.of(Annotation.Throws(throws_list));
             }
 
-            var code = code_off == NO_OFFSET ? null : readCodeItem(reader, mid, code_off);
+            var code = code_off == NO_OFFSET ? null :
+                    (!reader.options().hasMethodBodies() ?
+                     CodeItem.EMPTY : readCodeItem(reader, mid, code_off));
             DebugInfo debug_info = code == null ? null : code.debug_info();
             list.add(MethodDef.of(mid.getName(), mid.getReturnType(),
                     Parameter.listOf(mid.getParameterTypes()), access_flags, 0,

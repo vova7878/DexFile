@@ -20,6 +20,8 @@ import static com.v7878.dex.DexConstants.REVERSE_ENDIAN_CONSTANT;
 import static com.v7878.dex.DexConstants.TYPE_CALL_SITE_ID_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_METHOD_HANDLE_ITEM;
+import static com.v7878.dex.DexIO.ClassHeader;
+import static com.v7878.dex.DexIO.DexReaderCache;
 import static com.v7878.dex.DexIO.InvalidDexFile;
 import static com.v7878.dex.DexIO.NotADexFile;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
@@ -101,7 +103,6 @@ import static com.v7878.dex.util.Checks.checkIndex;
 
 import com.v7878.collections.IntMap;
 import com.v7878.dex.AnnotationVisibility;
-import com.v7878.dex.DexIO;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.MethodHandleType;
 import com.v7878.dex.Opcodes;
@@ -167,7 +168,7 @@ import java.util.TreeSet;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
-public class DexReader implements DexIO.DexReaderCache {
+public final class DexReader implements DexReaderCache {
     private record AnnotationDirectory(NavigableSet<Annotation> class_annotations,
                                        IntMap<NavigableSet<Annotation>> field_annotations,
                                        IntMap<NavigableSet<Annotation>> method_annotations,
@@ -178,6 +179,8 @@ public class DexReader implements DexIO.DexReaderCache {
 
     public record CodeItem(int registers, int ins, int outs, DebugInfo debug_info,
                            List<Instruction> instructions, NavigableSet<TryBlock> tries) {
+        public static final CodeItem EMPTY = new CodeItem(255, 0, 0, null,
+                Collections.emptyList(), Collections.emptyNavigableSet());
     }
 
     public record ClassDefHeader(
@@ -185,7 +188,11 @@ public class DexReader implements DexIO.DexReaderCache {
             TypeId superclass, List<TypeId> interfaces,
             String source_file, AnnotationDirectory annotations,
             int class_data_off, List<EncodedValue> static_values
-    ) {
+    ) implements ClassHeader {
+        @Override
+        public NavigableSet<Annotation> class_annotations() {
+            return annotations.class_annotations();
+        }
     }
 
     private record CompactData(int offsets_pos,
@@ -389,7 +396,7 @@ public class DexReader implements DexIO.DexReaderCache {
                 var class_offset = mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt();
                 class_header_section = makeSection(
                         class_count, class_offset,
-                        CLASS_DEF_SIZE, this::reaClassDefHeader
+                        CLASS_DEF_SIZE, this::readClassDefHeader
                 );
                 class_section = makeSection(
                         class_count, class_offset,
@@ -1195,7 +1202,9 @@ public class DexReader implements DexIO.DexReaderCache {
                         hiddenapi.getAsInt() : 0;
             }
             int code_off = in.readSmallULeb128();
-            var code = code_off == NO_OFFSET ? null : getCodeItem(code_off);
+            var code = code_off == NO_OFFSET ? null :
+                    (!options.hasMethodBodies() ?
+                     CodeItem.EMPTY : getCodeItem(code_off));
             DebugInfo debug_info;
             if (code == null || !options.hasDebugInfo()) {
                 debug_info = null;
@@ -1219,7 +1228,7 @@ public class DexReader implements DexIO.DexReaderCache {
         return out;
     }
 
-    private ClassDefHeader reaClassDefHeader(int index, int offset) {
+    private ClassDefHeader readClassDefHeader(int index, int offset) {
         var in = mainAt(offset);
 
         TypeId clazz = getType(in.readSmallUInt());
@@ -1234,25 +1243,25 @@ public class DexReader implements DexIO.DexReaderCache {
         String source_file = source_file_idx == NO_INDEX ?
                 null : getString(source_file_idx);
         int annotations_off = in.readSmallUInt();
-        AnnotationDirectory annotations = annotations_off == NO_OFFSET ?
+        var annotations = annotations_off == NO_OFFSET || !options.hasAnnotations() ?
                 AnnotationDirectory.EMPTY : getAnnotationDirectory(annotations_off);
         int class_data_off = in.readSmallUInt();
         int static_values_off = in.readSmallUInt();
-        List<EncodedValue> static_values = static_values_off == NO_OFFSET ?
+        var static_values = static_values_off == NO_OFFSET || !options.hasFieldValues() ?
                 null : getEncodedArray(static_values_off).getValue();
 
         return new ClassDefHeader(clazz, access_flags, superclass, interfaces,
                 source_file, annotations, class_data_off, static_values);
     }
 
-    // TODO?: Add to DexReaderCache
-    public List<ClassDefHeader> getClassDefHeaders() {
+    @Override
+    public List<ClassDefHeader> getClassHeaders() {
         return class_header_section;
     }
 
-    // TODO?: Add to DexReaderCache
-    public ClassDefHeader getClassDefHeader(int index) {
-        return getClassDefHeaders().get(index);
+    @Override
+    public ClassDefHeader getClassHeader(int index) {
+        return (ClassDefHeader) DexReaderCache.super.getClassHeader(index);
     }
 
     private ClassDef readClassDef(int index, int offset) {
@@ -1263,7 +1272,7 @@ public class DexReader implements DexIO.DexReaderCache {
             return Dex009.readClassDef(this, index, offset);
         }
 
-        var pre_def = getClassDefHeader(index);
+        var pre_def = getClassHeader(index);
 
         var clazz = pre_def.type();
         var access_flags = pre_def.access_flags();

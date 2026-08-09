@@ -1145,7 +1145,7 @@ public final class AnalyzedMethod {
                 throw new AnalysisException("Can flow through to " + describe(current));
             }
             if (exception.isPrimitive() || !TypeResolver._instanceOf(
-                    resolver, exception, THROWABLE, true)) {
+                    resolver, exception, THROWABLE, true, true)) {
                 throw new AnalysisException("Unexpected non-throwable class target "
                         + exception + " for " + describe(current));
             }
@@ -1288,7 +1288,7 @@ public final class AnalyzedMethod {
             if (!switch (shorty) {
                 case 'Z', 'B', 'S', 'C', 'I' -> reg.isInt();
                 case 'F' -> reg.isFloat();
-                case 'L' -> reg.instanceOf(resolver, type, false, true);
+                case 'L' -> reg.instanceOf(resolver, type, false, true, false);
                 default -> throw invalidShorty(shorty);
             }) {
                 throw unexpectedReg(current, ireg, reg);
@@ -1607,17 +1607,22 @@ public final class AnalyzedMethod {
                     var type = reg.getTypeInfo();
                     assert type != null;
                     if (Objects.equals(type.exactType(), ref)) {
+                        // We don't use a constant check here because for ref values the
+                        // difference exists only for us, but not for the Android verifier
+                        //
+                        // is_narrowing_nop = reg.isConstant();
+                        // is_nop = !reg.isConstant();
                         is_narrowing_nop = false;
                         is_nop = true;
                     } else if (reg.isRuntimeNonNullRef() &&
-                            !TypeResolver._instanceOf(resolver, type, ref, true) &&
-                            !TypeResolver._instanceOf(resolver, ref, type, true)) {
+                            !TypeResolver._instanceOf(resolver, type, ref, true, true) &&
+                            !TypeResolver._instanceOf(resolver, ref, type, true, true)) {
                         // Mutually incompatible types.
                         // i.e. Integer and String or Object[] and int[] etc.
                         is_narrowing_nop = false;
                         is_nop = false;
                         next_reachable = false;
-                    } else if (TypeResolver._instanceOf(resolver, type, ref, false)) {
+                    } else if (TypeResolver._instanceOf(resolver, type, ref, false, true)) {
                         is_narrowing_nop = true;
                         is_nop = false;
                     } else {
@@ -1796,7 +1801,7 @@ public final class AnalyzedMethod {
                 //  Check for peep-hole pattern of:
                 //     ...;
                 //     instance-of vX, vY, T;
-                //     ifXXX vX, label ;
+                //     ifXXX vX, label;
                 //     ...;
                 //  label:
                 //     ...;
@@ -2075,7 +2080,7 @@ public final class AnalyzedMethod {
                     }) {
                         throw unexpectedReg(current, iarr, arr);
                     }
-                    // Note: The instanceof check for iput-object occurs at runtime
+                    // Note: The instanceof check for aput-object occurs at runtime
                     var type = shorty == 'L' ? OBJECT : info.base();
                     if (verify) verifyReg(resolver, current, ival, type);
                 }
@@ -2090,7 +2095,7 @@ public final class AnalyzedMethod {
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) {
-                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true)) {
+                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true, false)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
                     if (obj.isUninitializedRef()) {
@@ -2121,7 +2126,7 @@ public final class AnalyzedMethod {
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) {
-                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true)) {
+                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true, false)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
 
@@ -2284,12 +2289,9 @@ public final class AnalyzedMethod {
                     default -> throw shouldNotReachHere();
                 };
 
-                if (src.isConstant()) {
-                    // This instruction converts a constant register into a regular value
-                    is_narrowing_nop = check;
-                } else {
-                    is_nop = check;
-                }
+                // This instruction converts a constant register into a regular value
+                is_narrowing_nop = src.isConstant() && check;
+                is_nop = !src.isConstant() && check;
 
                 var type = switch (opcode) {
                     case INT_TO_BYTE -> B;
