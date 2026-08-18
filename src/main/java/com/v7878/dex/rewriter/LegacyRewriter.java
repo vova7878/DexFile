@@ -210,18 +210,7 @@ public class LegacyRewriter extends DexRewriter {
                 var tmp = ((BranchOffsetInstruction) insn);
                 ib.goto_(label(offset + tmp.getBranchOffset()));
             }
-            case M_PACKED_SWITCH -> {
-                var tmp = ((InstructionN1t) insn);
-                var payload = (SwitchPayload) code_map
-                        .apply(offset + tmp.getBranchOffset());
-                var branches = new TreeMap<Integer, Integer>();
-                for (var entry : payload.getSwitchElements()) {
-                    branches.put(entry.getKey(),
-                            label(offset + entry.getOffset()));
-                }
-                ib.switch_(tmp.getRegister1(), branches);
-            }
-            case M_SPARSE_SWITCH -> {
+            case M_PACKED_SWITCH, M_SPARSE_SWITCH -> {
                 var tmp = ((InstructionN1t) insn);
                 var payload = (SwitchPayload) code_map
                         .apply(offset + tmp.getBranchOffset());
