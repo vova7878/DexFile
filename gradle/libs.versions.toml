@@ -1,6 +1,6 @@
 [versions]
 android-misc = "v1.0.1"
-maven-publish = "0.36.0"
+maven-publish = "0.37.0"
 antlr = "4.13.2"
 
 [libraries]
