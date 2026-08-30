@@ -11,4 +11,3 @@ antlr-runtime = { module = "org.antlr:antlr4", version.ref = "antlr" }
 antlr = { id = 'antlr' }
 java-library = { id = 'java-library' }
 maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "maven-publish" }
-
