@@ -73,6 +73,10 @@ public final class ProtoId implements Comparable<ProtoId> {
         return parameters;
     }
 
+    public int getParametersCount() {
+        return parameters.size();
+    }
+
     public String computeShorty() {
         return ShortyUtils.getShorty(return_type, parameters);
     }

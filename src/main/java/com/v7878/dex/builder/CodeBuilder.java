@@ -973,7 +973,7 @@ public final class CodeBuilder {
         return node == null ? null : node.metadata();
     }
 
-    private void format_34c_checks(int arg_count, int... args) {
+    private void format_v4_checks(int arg_count, int... args) {
         if (arg_count != args.length) {
             throw new IllegalArgumentException("arg_count != args.length");
         }
@@ -984,7 +984,7 @@ public final class CodeBuilder {
         if (arg_count >= 1) check_reg(args[0]);
     }
 
-    private void format_35c_checks(int arg_count, int... args) {
+    private void format_v5_checks(int arg_count, int... args) {
         if (arg_count != args.length) {
             throw new IllegalArgumentException("arg_count != args.length");
         }
@@ -994,6 +994,15 @@ public final class CodeBuilder {
         if (arg_count >= 3) check_reg(args[2]);
         if (arg_count >= 2) check_reg(args[1]);
         if (arg_count >= 1) check_reg(args[0]);
+    }
+
+    private boolean is_range(int first_arg, int... args) {
+        for (int i = 1; i < args.length; i++) {
+            if (args[i] != first_arg + i) {
+                return false;
+            }
+        }
+        return true;
     }
 
     // <ØØ|op> op
@@ -1181,7 +1190,7 @@ public final class CodeBuilder {
     // <Ø|A|op BBBB F|E|D|C> [A] op {vC, vD, vE, vF}, @BBBB
     public CodeBuilder f34c(Opcode op, Object constant, int... args) {
         int arg_count = args.length;
-        format_34c_checks(arg_count, args);
+        format_v4_checks(arg_count, args);
         add(InstructionNv4c.of(op, arg_count,
                 arg_count > 0 ? args[0] : 0,
                 arg_count > 1 ? args[1] : 0,
@@ -1194,7 +1203,7 @@ public final class CodeBuilder {
     // <A|G|op BBBB F|E|D|C> [A] op {vC, vD, vE, vF, vG}, @BBBB
     public CodeBuilder f35c(Opcode op, Object constant, int... args) {
         int arg_count = args.length;
-        format_35c_checks(arg_count, args);
+        format_v5_checks(arg_count, args);
         add(InstructionNv5c.of(op, arg_count,
                 arg_count > 0 ? args[0] : 0,
                 arg_count > 1 ? args[1] : 0,
@@ -1202,6 +1211,27 @@ public final class CodeBuilder {
                 arg_count > 3 ? args[3] : 0,
                 arg_count > 4 ? args[4] : 0,
                 constant));
+        return this;
+    }
+
+    public CodeBuilder f35c_or_3rc(Opcode regular, Opcode range, Object constant, int... args) {
+        int arg_count = args.length;
+        format_v5_checks(arg_count, args);
+
+        int first_arg = arg_count > 0 ? args[0] : 0;
+        boolean is_range = is_range(first_arg, args);
+
+        if (is_range) {
+            add(InstructionNrc.of(range, arg_count, first_arg, constant));
+        } else {
+            add(InstructionNv5c.of(regular, arg_count,
+                    first_arg,
+                    arg_count > 1 ? args[1] : 0,
+                    arg_count > 2 ? args[2] : 0,
+                    arg_count > 3 ? args[3] : 0,
+                    arg_count > 4 ? args[4] : 0,
+                    constant));
+        }
         return this;
     }
 
@@ -1223,7 +1253,7 @@ public final class CodeBuilder {
     // <A|G|op BBBB F|E|D|C HHHH> [A] op {vC, vD, vE, vF, vG}, @BBBB
     public CodeBuilder f45cc(Opcode op, Object constant1, Object constant2, int... args) {
         int arg_count = args.length;
-        format_35c_checks(arg_count, args);
+        format_v5_checks(arg_count, args);
         add(InstructionNv5cc.of(op, arg_count,
                 arg_count > 0 ? args[0] : 0,
                 arg_count > 1 ? args[1] : 0,
@@ -1231,6 +1261,27 @@ public final class CodeBuilder {
                 arg_count > 3 ? args[3] : 0,
                 arg_count > 4 ? args[4] : 0,
                 constant1, constant2));
+        return this;
+    }
+
+    public CodeBuilder f45cc_or_4rcc(Opcode regular, Opcode range, Object constant1, Object constant2, int... args) {
+        int arg_count = args.length;
+        format_v5_checks(arg_count, args);
+
+        int first_arg = arg_count > 0 ? args[0] : 0;
+        boolean is_range = is_range(first_arg, args);
+
+        if (is_range) {
+            add(InstructionNrcc.of(range, arg_count, first_arg, constant1, constant2));
+        } else {
+            add(InstructionNv5cc.of(regular, arg_count,
+                    first_arg,
+                    arg_count > 1 ? args[1] : 0,
+                    arg_count > 2 ? args[2] : 0,
+                    arg_count > 3 ? args[3] : 0,
+                    arg_count > 4 ? args[4] : 0,
+                    constant1, constant2));
+        }
         return this;
     }
 
@@ -1861,7 +1912,7 @@ public final class CodeBuilder {
      * @param args u4[0 .. 5]
      */
     public CodeBuilder filled_new_array(TypeId type, int... args) {
-        return f35c(FILLED_NEW_ARRAY, type, args);
+        return f35c_or_3rc(FILLED_NEW_ARRAY, FILLED_NEW_ARRAY_RANGE, type, args);
     }
 
     /**
@@ -2687,7 +2738,7 @@ public final class CodeBuilder {
      * @param args   u4[0 .. 5]
      */
     public CodeBuilder invoke(InvokeKind kind, MethodId method, int... args) {
-        return f35c(kind.regular, method, args);
+        return f35c_or_3rc(kind.regular, kind.range, method, args);
     }
 
     /**
@@ -3318,7 +3369,7 @@ public final class CodeBuilder {
      * @param args   u4[0 .. 5]
      */
     public CodeBuilder invoke_polymorphic(MethodId method, ProtoId proto, int... args) {
-        return f45cc(INVOKE_POLYMORPHIC, method, proto, args);
+        return f45cc_or_4rcc(INVOKE_POLYMORPHIC, INVOKE_POLYMORPHIC_RANGE, method, proto, args);
     }
 
     /**
@@ -3348,7 +3399,7 @@ public final class CodeBuilder {
      * @param args     u4[0 .. 5]
      */
     public CodeBuilder invoke_custom(CallSiteId callsite, int... args) {
-        return f35c(INVOKE_CUSTOM, callsite, args);
+        return f35c_or_3rc(INVOKE_CUSTOM, INVOKE_CUSTOM_RANGE, callsite, args);
     }
 
     /**
