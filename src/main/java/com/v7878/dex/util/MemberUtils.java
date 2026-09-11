@@ -1,7 +1,8 @@
 package com.v7878.dex.util;
 
-import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
+import static com.v7878.dex.DexConstants.ACC_CONSTRUCTOR;
 import static com.v7878.dex.DexConstants.ACC_NATIVE;
+import static com.v7878.dex.DexConstants.ACC_PRIVATE;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 
 import com.v7878.dex.AnnotationVisibility;
@@ -28,8 +29,15 @@ public class MemberUtils {
     }
 
     private static MethodDef searchableMethod(String name, TypeId ret, List<Parameter> parameters, boolean is_direct) {
-        return MethodDef.raw(name, ret, parameters,
-                is_direct ? ACC_DIRECT_MASK | ACC_NATIVE : ACC_NATIVE,
+        int flags = ACC_NATIVE; // implementation == null
+        if (is_direct) {
+            flags |= switch (name) {
+                case "<init>" -> ACC_CONSTRUCTOR;
+                case "<clinit>" -> ACC_STATIC | ACC_CONSTRUCTOR;
+                default -> ACC_PRIVATE;
+            };
+        }
+        return MethodDef.raw(name, ret, parameters, flags,
                 0, null, Collections.emptyNavigableSet());
     }
 
