@@ -356,8 +356,7 @@ annotation_data
     @init { $elements = new TreeSet<>(); }
     @after { $elements = Collections.unmodifiableNavigableSet($elements); }
     : class_descriptor { $type = $class_descriptor.value; }
-    // TODO: check for duplicates
-    (annotation_element { $elements.add($annotation_element.value); })*
+    (annotation_element { add($elements, $annotation_element.value); })*
     ;
 
 annotation returns[Annotation value]
@@ -565,10 +564,11 @@ method_body[ProtoId proto, int args, NavigableSet<Annotation> method_annotations
         MethodImplementation value,
         List<Parameter> parameters
     ]
-    locals[
-        IContext context, IntMap<String> pnames,
-        IntMap<NavigableSet<Annotation>> pannos
-    ]
+    locals[IContext context]
+    @init{
+        IntMap<String> parameter_names = null;
+        IntMap<NavigableSet<Annotation>> parameter_annotations = null;
+    }
     @after{
         if ($context == null) {
             $parameters = Parameter.listOf($proto.getParameterTypes());
@@ -576,13 +576,14 @@ method_body[ProtoId proto, int args, NavigableSet<Annotation> method_annotations
             $context.actions().forEach(Runnable::run);
             var ib = $context.ib();
             $value = ib.finish();
-            $parameters = mergeParameters(ib.registers(),
-                $proto, $pnames.freeze(), $pannos.freeze());
+            $parameters = mergeParameters(ib.registers(), $proto,
+                parameter_names.freeze(), parameter_annotations.freeze());
         }
     }
     : (
     ({$context == null}? regs=registers_directive[$args] {
-        $pnames = new IntMap<>(); $pannos = new IntMap<>();
+        parameter_names = new IntMap<>();
+        parameter_annotations = new IntMap<>();
         var ib = CodeBuilder.newInstance($regs.value, $args);
         $context = new IContext(ib, new ArrayList<>());
     })
@@ -592,7 +593,7 @@ method_body[ProtoId proto, int args, NavigableSet<Annotation> method_annotations
         | debug_directive[$context.ib()]
         | catch_directive[$context.ib()]
         | catchall_directive[$context.ib()]
-        | parameter_directive[$context.ib()]
+        | parameter_directive[$context.ib(), parameter_names, parameter_annotations]
         )
     )
     | annotation { add($method_annotations, $annotation.value); }
@@ -612,12 +613,15 @@ register[CodeBuilder ib] returns[int value]
     { $value = CodeUtils.parseRegister($ib, $val.text); }
     ;
 
-parameter_directive[CodeBuilder ib]
+parameter_directive[
+        CodeBuilder ib, IntMap<String> parameter_names,
+        IntMap<NavigableSet<Annotation>> parameter_annotations
+    ]
     @init{ int p; var annotations = new TreeSet<Annotation>(); }
     : PARAMETER_DIRECTIVE register[$ib] { p = $register.value; }
-    (COMMA name=string_literal { $method_body::pnames.append(p, $name.value); })?
+    (COMMA name=string_literal { $parameter_names.append(p, $name.value); })?
     ((annotation { add(annotations, $annotation.value); })* END_PARAMETER_DIRECTIVE)?
-    { $method_body::pannos.append(p, Collections.unmodifiableNavigableSet(annotations)); }
+    { $parameter_annotations.append(p, Collections.unmodifiableNavigableSet(annotations)); }
     ;
 
 label returns[String value]
@@ -783,9 +787,11 @@ instruction[IContext context] locals[Opcode op]
     | {$op.format() == Format51l}? args_format51l[$context, $op]
     | {$op.format() == Format52c}? args_format52c[$context, $op]
     | {$op.format() == Format5rc}? args_format5rc[$context, $op]
-    // TODO: | {$op.format() == FormatRaw}? args_format_raw[$context, $op]
-    // TODO: | {$op.format() == FormatRawRef16}? args_format_raw_ref[$context, $op]
-    // TODO: | {$op.format() == FormatRawRef32}? args_format_raw_ref_jumbo[$context, $op]
+    // TODO: | {$op.format() == FormatRaw10x}? args_format_raw_10x[$context, $op]
+    // TODO: | {$op.format() == FormatRaw10c}? args_format_raw_10c[$context, $op]
+    // TODO: | {$op.format() == FormatRaw20c}? args_format_raw_20c[$context, $op]
+    // TODO: | {$op.format() == FormatWrapperRaw20x}? args_format_wrapper_raw_20x[$context, $op]
+    // TODO: | {$op.format() == FormatWrapperRaw40ci}? args_format_wrapper_raw_40ci[$context, $op]
     )
     | insn_array_data[$context.ib()]
     | insn_packed_switch[$context.ib()]

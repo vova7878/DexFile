@@ -1,6 +1,5 @@
 package com.v7878.dex.smali.parser;
 
-import com.v7878.dex.Opcode;
 import com.v7878.dex.builder.CodeBuilder;
 
 import java.util.List;

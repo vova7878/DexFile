@@ -4,6 +4,7 @@ import com.v7878.collections.IntMap;
 import com.v7878.collections.IntSet;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.Annotation;
+import com.v7878.dex.immutable.AnnotationElement;
 import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.Parameter;
@@ -228,6 +229,11 @@ public abstract class SmaliParserBase extends Parser {
     public static void add(NavigableSet<FieldDef> fields, FieldDef value) {
         // TODO: check for duplicates
         fields.add(value);
+    }
+
+    public static void add(NavigableSet<AnnotationElement> elements, AnnotationElement value) {
+        // TODO: check for duplicates
+        elements.add(value);
     }
 
     public static List<Parameter> mergeParameters(
