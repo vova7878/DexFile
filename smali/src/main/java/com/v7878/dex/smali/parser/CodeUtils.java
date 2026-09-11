@@ -86,8 +86,9 @@ public class CodeUtils {
         return table.freeze();
     }
 
-    public static boolean instruction(
-            CodeBuilder ib, Opcode op, Object raw_args, List<Runnable> actions) {
+    public static boolean instruction(IContext context, Opcode op, Object raw_args) {
+        var ib = context.ib();
+        var actions = context.actions();
         switch (op) {
             case M_PACKED_SWITCH -> {
                 // TODO: m-packed-switch

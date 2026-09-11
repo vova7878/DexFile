@@ -524,23 +524,21 @@ field returns[FieldDef value]
     ;
 
 method returns[MethodDef value]
-    locals[
-        int args, ProtoId proto,
-        NavigableSet<Annotation> annotations
-    ]
     @init{
         String name;
+        ProtoId proto;
+        int args;
         int access_flags;
         int restrictions;
         MethodImplementation impl;
         List<Parameter> parameters;
-        $annotations = new TreeSet<>();
+        var annotations = new TreeSet<Annotation>();
     }
     @after{
-        $annotations = Collections.unmodifiableNavigableSet($annotations);
         $value = MethodDef.raw(
-            name, $proto.getReturnType(), parameters,
-            access_flags, restrictions, impl, $annotations
+            name, proto.getReturnType(), parameters,
+            access_flags, restrictions, impl,
+            Collections.unmodifiableNavigableSet(annotations)
         );
     }
     : METHOD_DIRECTIVE
@@ -550,73 +548,73 @@ method returns[MethodDef value]
     }
     member_name { name = $member_name.value; }
     method_prototype {
-        $proto = $method_prototype.value;
-        $args = $proto.countInputRegisters();
+        proto = $method_prototype.value;
+        args = proto.countInputRegisters();
         // Add 'this' reg
-        $args += (access_flags & ACC_STATIC) == 0 ? 1 : 0;
+        args += (access_flags & ACC_STATIC) == 0 ? 1 : 0;
     }
-    method_body {
+    method_body[proto, args, annotations] {
         impl = $method_body.value;
         parameters = $method_body.parameters;
     }
     END_METHOD_DIRECTIVE
     ;
 
-method_body
+method_body[ProtoId proto, int args, NavigableSet<Annotation> method_annotations]
     returns[
         MethodImplementation value,
         List<Parameter> parameters
     ]
     locals[
-        CodeBuilder ib, IntMap<String> pnames,
-        IntMap<NavigableSet<Annotation>> pannos,
-        List<Runnable> actions
+        IContext context, IntMap<String> pnames,
+        IntMap<NavigableSet<Annotation>> pannos
     ]
     @after{
-        if ($ib == null) {
-            $parameters = Parameter.listOf($method::proto.getParameterTypes());
+        if ($context == null) {
+            $parameters = Parameter.listOf($proto.getParameterTypes());
         } else {
-            $actions.forEach(Runnable::run);
-            $value = $ib.finish();
-            $parameters = mergeParameters($ib.registers(),
-                $method::proto, $pnames.freeze(), $pannos.freeze());
+            $context.actions().forEach(Runnable::run);
+            var ib = $context.ib();
+            $value = ib.finish();
+            $parameters = mergeParameters(ib.registers(),
+                $proto, $pnames.freeze(), $pannos.freeze());
         }
     }
     : (
-    ({$ib == null}? regs=registers_directive {
-        $ib = CodeBuilder.newInstance($regs.value, $method::args);
+    ({$context == null}? regs=registers_directive[$args] {
         $pnames = new IntMap<>(); $pannos = new IntMap<>();
-        $actions = new ArrayList<>();
+        var ib = CodeBuilder.newInstance($regs.value, $args);
+        $context = new IContext(ib, new ArrayList<>());
     })
-    | ({$ib != null}?
-        ( instruction
-        | label_directive
-        | debug_directive
-        | catch_directive
-        | catchall_directive
-        | parameter_directive
+    | ({$context != null}?
+        ( instruction[$context]
+        | label_directive[$context.ib()]
+        | debug_directive[$context.ib()]
+        | catch_directive[$context.ib()]
+        | catchall_directive[$context.ib()]
+        | parameter_directive[$context.ib()]
         )
     )
-    | annotation { add($method::annotations, $annotation.value); }
+    | annotation { add($method_annotations, $annotation.value); }
     )*
     ;
 
-registers_directive returns[int value]
+registers_directive[int args] returns[int value]
     : ( REGISTERS_DIRECTIVE count=integral_literal
     { $value = $count.value; }
     | LOCALS_DIRECTIVE count=integral_literal
-    { $value = $count.value + $method::args; }
+    { $value = $count.value + $args; }
     )
     ;
 
-register returns[int value]
+register[CodeBuilder ib] returns[int value]
     : {isRegister()}? val=RAW_SIMPLE_NAME
-    { $value = CodeUtils.parseRegister($method_body::ib, $val.text); }
+    { $value = CodeUtils.parseRegister($ib, $val.text); }
     ;
 
-parameter_directive
+parameter_directive[CodeBuilder ib]
     @init{ int p; var annotations = new TreeSet<Annotation>(); }
-    : PARAMETER_DIRECTIVE register { p = $register.value; }
+    : PARAMETER_DIRECTIVE register[$ib] { p = $register.value; }
     (COMMA name=string_literal { $method_body::pnames.append(p, $name.value); })?
     ((annotation { add(annotations, $annotation.value); })* END_PARAMETER_DIRECTIVE)?
     { $method_body::pannos.append(p, Collections.unmodifiableNavigableSet(annotations)); }
@@ -626,73 +624,73 @@ label returns[String value]
     : COLON simple_name { $value = $simple_name.value; }
     ;
 
-label_directive
-    : label { $method_body::ib.label($label.value); }
+label_directive[CodeBuilder ib]
+    : label { $ib.label($label.value); }
     ;
 
-catch_directive
+catch_directive[CodeBuilder ib]
     : CATCH_DIRECTIVE ex=nonvoid_type_descriptor
     LBRACE from=label DOTDOT to=label RBRACE handler=label
-    { $method_body::ib.try_catch($from.value, $to.value, $ex.value, $handler.value); }
+    { $ib.try_catch($from.value, $to.value, $ex.value, $handler.value); }
     ;
 
-catchall_directive
+catchall_directive[CodeBuilder ib]
     : CATCHALL_DIRECTIVE
     LBRACE from=label DOTDOT to=label RBRACE handler=label
-    { $method_body::ib.try_catch_all($from.value, $to.value, $handler.value); }
+    { $ib.try_catch_all($from.value, $to.value, $handler.value); }
     ;
 
-debug_directive
-    : line_directive
-    | local_directive
-    | end_local_directive
-    | restart_local_directive
-    | prologue_directive
-    | epilogue_directive
-    | source_directive
+debug_directive[CodeBuilder ib]
+    : line_directive[$ib]
+    | local_directive[$ib]
+    | end_local_directive[$ib]
+    | restart_local_directive[$ib]
+    | prologue_directive[$ib]
+    | epilogue_directive[$ib]
+    | source_directive[$ib]
     ;
 
-line_directive
+line_directive[CodeBuilder ib]
     : LINE_DIRECTIVE line=integral_literal
-    { $method_body::ib.line($line.value); }
+    { $ib.line($line.value); }
     ;
 
-local_directive
+local_directive[CodeBuilder ib]
     @init{
         int reg; String name = null;
         TypeId type = null; String signature = null;
     }
-    : LOCAL_DIRECTIVE register { reg = $register.value; }
+    : LOCAL_DIRECTIVE register[$ib] { reg = $register.value; }
     (COMMA (null_literal | (name=string_literal { name=$name.value; }))
     COLON (t=type_descriptor { type = $t.value.isVoid() ? null : $t.value; })
     (COMMA s=string_literal { signature = $s.value; })?)?
-    { $method_body::ib.local(reg, name, type, signature); }
+    { $ib.local(reg, name, type, signature); }
     ;
 
-end_local_directive
-    : END_LOCAL_DIRECTIVE register
-    { $method_body::ib.end_local($register.value); }
+end_local_directive[CodeBuilder ib]
+    : END_LOCAL_DIRECTIVE register[$ib]
+    { $ib.end_local($register.value); }
     ;
 
-restart_local_directive
-    : RESTART_LOCAL_DIRECTIVE register
-    { $method_body::ib.restart_local($register.value); }
+restart_local_directive[CodeBuilder ib]
+    : RESTART_LOCAL_DIRECTIVE register[$ib]
+    { $ib.restart_local($register.value); }
     ;
 
-prologue_directive
+prologue_directive[CodeBuilder ib]
     : PROLOGUE_DIRECTIVE
-    { $method_body::ib.prologue(); }
+    { $ib.prologue(); }
     ;
 
-epilogue_directive
+epilogue_directive[CodeBuilder ib]
     : EPILOGUE_DIRECTIVE
-    { $method_body::ib.epilogue(); }
+    { $ib.epilogue(); }
     ;
 
-source_directive
+source_directive[CodeBuilder ib]
     @init{ String name = null; }
     : SOURCE_DIRECTIVE (name=string_literal { name = $name.value; })?
-    { $method_body::ib.source(name); }
+    { $ib.source(name); }
     ;
 
 class_def
@@ -748,54 +746,54 @@ instruction_name
     | INSTRUCTION_NAME
     ;
 
-instruction locals[Opcode op]
+instruction[IContext context] locals[Opcode op]
     : opname=instruction_name { $op = opcode($opname.text); }
-    ( {$op.format() == Format10t}? args_format10t
-    | {$op.format() == Format10x}? args_format10x
-    | {$op.format() == Format11n}? args_format11n
-    | {$op.format() == Format11p}? args_format11p
-    | {$op.format() == Format11x}? args_format11x
-    | {$op.format() == Format12x}? args_format12x
-    // TODO: | {$op.format() == Format20bc}? args_format20bc
-    | {$op.format() == Format20t}? args_format20t
-    | {$op.format() == Format20t_24}? args_format20t_24
-    | {$op.format() == Format21c}? args_format21c
-    | {$op.format() == Format21ih}? args_format21ih
-    | {$op.format() == Format21lh}? args_format21lh
-    | {$op.format() == Format21s}? args_format21s
-    | {$op.format() == Format21t}? args_format21t
-    | {$op.format() == Format22b}? args_format22b
-    | {$op.format() == Format22c}? args_format22c
-    | {$op.format() == Format22s}? args_format22s
-    | {$op.format() == Format22t}? args_format22t
-    | {$op.format() == Format22x}? args_format22x
-    | {$op.format() == Format23x}? args_format23x
-    | {$op.format() == Format30t}? args_format30t
-    | {$op.format() == Format31c}? args_format31c
-    | {$op.format() == Format31i}? args_format31i
-    | {$op.format() == Format31t}? args_format31t
-    | {$op.format() == Format32x}? args_format32x
-    | {$op.format() == Format34c}? args_format34c
-    | {$op.format() == Format35c}? args_format35c
-    | {$op.format() == Format3rc}? args_format3rc
-    // TODO: | {$op.format() == Format40sc}? args_format40sc
-    | {$op.format() == Format41c}? args_format41c
-    | {$op.format() == Format45cc}? args_format45cc
-    | {$op.format() == Format4rcc}? args_format4rcc
-    | {$op.format() == Format51l}? args_format51l
-    | {$op.format() == Format52c}? args_format52c
-    | {$op.format() == Format5rc}? args_format5rc
-    // TODO: | {$op.format() == FormatRaw}? args_format_raw
-    // TODO: | {$op.format() == FormatRawRef16}? args_format_raw_ref
-    // TODO: | {$op.format() == FormatRawRef32}? args_format_raw_ref_jumbo
+    ( {$op.format() == Format10t}? args_format10t[$context, $op]
+    | {$op.format() == Format10x}? args_format10x[$context, $op]
+    | {$op.format() == Format11n}? args_format11n[$context, $op]
+    | {$op.format() == Format11p}? args_format11p[$context, $op]
+    | {$op.format() == Format11x}? args_format11x[$context, $op]
+    | {$op.format() == Format12x}? args_format12x[$context, $op]
+    // TODO: | {$op.format() == Format20bc}? args_format20bc[$context, $op]
+    | {$op.format() == Format20t}? args_format20t[$context, $op]
+    | {$op.format() == Format20t_24}? args_format20t_24[$context, $op]
+    | {$op.format() == Format21c}? args_format21c[$context, $op]
+    | {$op.format() == Format21ih}? args_format21ih[$context, $op]
+    | {$op.format() == Format21lh}? args_format21lh[$context, $op]
+    | {$op.format() == Format21s}? args_format21s[$context, $op]
+    | {$op.format() == Format21t}? args_format21t[$context, $op]
+    | {$op.format() == Format22b}? args_format22b[$context, $op]
+    | {$op.format() == Format22c}? args_format22c[$context, $op]
+    | {$op.format() == Format22s}? args_format22s[$context, $op]
+    | {$op.format() == Format22t}? args_format22t[$context, $op]
+    | {$op.format() == Format22x}? args_format22x[$context, $op]
+    | {$op.format() == Format23x}? args_format23x[$context, $op]
+    | {$op.format() == Format30t}? args_format30t[$context, $op]
+    | {$op.format() == Format31c}? args_format31c[$context, $op]
+    | {$op.format() == Format31i}? args_format31i[$context, $op]
+    | {$op.format() == Format31t}? args_format31t[$context, $op]
+    | {$op.format() == Format32x}? args_format32x[$context, $op]
+    | {$op.format() == Format34c}? args_format34c[$context, $op]
+    | {$op.format() == Format35c}? args_format35c[$context, $op]
+    | {$op.format() == Format3rc}? args_format3rc[$context, $op]
+    // TODO: | {$op.format() == Format40sc}? args_format40sc[$context, $op]
+    | {$op.format() == Format41c}? args_format41c[$context, $op]
+    | {$op.format() == Format45cc}? args_format45cc[$context, $op]
+    | {$op.format() == Format4rcc}? args_format4rcc[$context, $op]
+    | {$op.format() == Format51l}? args_format51l[$context, $op]
+    | {$op.format() == Format52c}? args_format52c[$context, $op]
+    | {$op.format() == Format5rc}? args_format5rc[$context, $op]
+    // TODO: | {$op.format() == FormatRaw}? args_format_raw[$context, $op]
+    // TODO: | {$op.format() == FormatRawRef16}? args_format_raw_ref[$context, $op]
+    // TODO: | {$op.format() == FormatRawRef32}? args_format_raw_ref_jumbo[$context, $op]
     )
-    | insn_array_data
-    | insn_packed_switch
-    | insn_sparse_switch
+    | insn_array_data[$context.ib()]
+    | insn_packed_switch[$context.ib()]
+    | insn_sparse_switch[$context.ib()]
     ;
 
-reference[int index] returns[Object value] locals[ReferenceType type]
-    @init{ $type = $instruction::op.referenceType($index); }
+reference[Opcode op, int index] returns[Object value] locals[ReferenceType type]
+    @init{ $type = $op.referenceType($index); }
     : {$type == STRING}? string_literal { $value = $string_literal.value; }
     | {$type == TYPE}? type_descriptor { $value = $type_descriptor.value; }
     | {$type == FIELD}? field_reference { $value = $field_reference.value; }
@@ -810,7 +808,6 @@ reference[int index] returns[Object value] locals[ReferenceType type]
     | field_offset { $value = $field_offset.value; }
     )
     ;
-
 inline_index returns[int value]
     : i=INLINE_INDEX { $value = LiteralUtils.parseInlineIndex($i.text); }
     ;
@@ -823,315 +820,319 @@ field_offset returns[int value]
     : i=FIELD_OFFSET { $value = LiteralUtils.parseFieldOffset($i.text); }
     ;
 
-register_list returns[int[] value]
-    : (regs+=register (COMMA regs+=register)*)?
+register_list[CodeBuilder ib] returns[int[] value]
+    : (regs+=register[$ib] (COMMA regs+=register[$ib])*)?
     { $value = $regs.stream().mapToInt(r -> r.value).toArray(); }
     ;
 
-register_range returns[int start, int count]
-    : (register { $start = $register.value; }
-         ((DOTDOT register { $count = $register.value - $start + 1; })
+register_range[CodeBuilder ib] returns[int start, int count]
+    : (register[$ib] { $start = $register.value; }
+         ((DOTDOT register[$ib] { $count = $register.value - $start + 1; })
          | { $count = 1; }
          )
     )
     | { $start = $count = 0; }
     ;
 
-args_format10t returns[String target]
+args_format10t[IContext context, Opcode op] returns[String target]
     : label { $target = $label.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f10t($instruction::op, $target);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f10t($op, $target);
     }
     ;
 
-args_format10x
+args_format10x[IContext context, Opcode op]
     : // nothing
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f10x($instruction::op);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f10x($op);
     }
     ;
 
-args_format11n returns[int reg, int lit]
-    : register { $reg = $register.value; }
+args_format11n[IContext context, Opcode op] returns[int reg, int lit]
+    : register[$context.ib()] { $reg = $register.value; }
     COMMA integral_literal { $lit = $integral_literal.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f11n($instruction::op, $reg, $lit);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f11n($op, $reg, $lit);
     }
     ;
 
-args_format11p returns[int reg, int index]
+args_format11p[IContext context, Opcode op] returns[int reg, int index]
     // Note: index must be in range [0, 15]
-    : register { $reg = $register.value; }
+    : register[$context.ib()] { $reg = $register.value; }
     LBRACE int_literal { $index = $int_literal.value; } RBRACE
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f11p($instruction::op, $reg, $index);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f11p($op, $reg, $index);
     }
     ;
 
-args_format11x returns[int reg]
-    : register { $reg = $register.value; }
+args_format11x[IContext context, Opcode op] returns[int reg]
+    : register[$context.ib()] { $reg = $register.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f11x($instruction::op, $reg);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f11x($op, $reg);
     }
     ;
 
-args_format12x returns[int reg1, int reg2]
-    : r1=register { $reg1 = $r1.value; }
-    COMMA r2=register { $reg2 = $r2.value; }
+args_format12x[IContext context, Opcode op] returns[int reg1, int reg2]
+    : r1=register[$context.ib()] { $reg1 = $r1.value; }
+    COMMA r2=register[$context.ib()] { $reg2 = $r2.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f12x($instruction::op, $reg1, $reg2);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f12x($op, $reg1, $reg2);
     }
     ;
 
-args_format20t returns[String target]
+args_format20t[IContext context, Opcode op] returns[String target]
     : label { $target = $label.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f20t($instruction::op, $target);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f20t($op, $target);
     }
     ;
 
-args_format20t_24 returns[String target]
+args_format20t_24[IContext context, Opcode op] returns[String target]
     : label { $target = $label.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f20t_24($instruction::op, $target);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f20t_24($op, $target);
     }
     ;
 
-args_format21c returns[int reg, Object ref]
-    : register { $reg = $register.value; }
-    COMMA reference[0] { $ref = $reference.value; }
+args_format21c[IContext context, Opcode op] returns[int reg, Object ref]
+    : register[$context.ib()] { $reg = $register.value; }
+    COMMA reference[$op, 0] { $ref = $reference.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f21c($instruction::op, $reg, $ref);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f21c($op, $reg, $ref);
     }
     ;
 
-args_format21ih returns[int reg, int lit]
-    : register { $reg = $register.value; }
+args_format21ih[IContext context, Opcode op] returns[int reg, int lit]
+    : register[$context.ib()] { $reg = $register.value; }
     COMMA l32=fixed_32bit_literal { $lit = $l32.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f21ih($instruction::op, $reg, $lit);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f21ih($op, $reg, $lit);
     }
     ;
 
-args_format21lh returns[int reg, long lit]
-    : register { $reg = $register.value; }
+args_format21lh[IContext context, Opcode op] returns[int reg, long lit]
+    : register[$context.ib()] { $reg = $register.value; }
     COMMA l64=fixed_64bit_literal { $lit = $l64.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f21lh($instruction::op, $reg, $lit);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f21lh($op, $reg, $lit);
     }
     ;
 
-args_format21s returns[int reg, int lit]
-    : register { $reg = $register.value; }
+args_format21s[IContext context, Opcode op] returns[int reg, int lit]
+    : register[$context.ib()] { $reg = $register.value; }
     COMMA integral_literal { $lit = $integral_literal.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f21s($instruction::op, $reg, $lit);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f21s($op, $reg, $lit);
     }
     ;
 
-args_format21t returns[int reg, String target]
-    : register { $reg = $register.value; }
+args_format21t[IContext context, Opcode op] returns[int reg, String target]
+    : register[$context.ib()] { $reg = $register.value; }
     COMMA label { $target = $label.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f21t($instruction::op, $reg, $target);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f21t($op, $reg, $target);
     }
     ;
 
-args_format22b returns[int reg1, int reg2, int lit]
-    : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
+args_format22b[IContext context, Opcode op] returns[int reg1, int reg2, int lit]
+    : r1=register[$context.ib()] { $reg1 = $r1.value; }
+    COMMA r2=register[$context.ib()] { $reg2 = $r2.value; }
     COMMA integral_literal { $lit = $integral_literal.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f22b($instruction::op, $reg1, $reg2, $lit);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f22b($op, $reg1, $reg2, $lit);
     }
     ;
 
-args_format22c returns[int reg1, int reg2, Object ref]
-    : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
-    COMMA reference[0] { $ref = $reference.value; }
+args_format22c[IContext context, Opcode op] returns[int reg1, int reg2, Object ref]
+    : r1=register[$context.ib()] { $reg1 = $r1.value; }
+    COMMA r2=register[$context.ib()] { $reg2 = $r2.value; }
+    COMMA reference[$op, 0] { $ref = $reference.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f22c($instruction::op, $reg1, $reg2, $ref);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f22c($op, $reg1, $reg2, $ref);
     }
     ;
 
-args_format22s returns[int reg1, int reg2, int lit]
-    : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
+args_format22s[IContext context, Opcode op] returns[int reg1, int reg2, int lit]
+    : r1=register[$context.ib()] { $reg1 = $r1.value; }
+    COMMA r2=register[$context.ib()] { $reg2 = $r2.value; }
     COMMA integral_literal { $lit = $integral_literal.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f22s($instruction::op, $reg1, $reg2, $lit);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f22s($op, $reg1, $reg2, $lit);
     }
     ;
 
-args_format22t returns[int reg1, int reg2, String target]
-    : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
+args_format22t[IContext context, Opcode op] returns[int reg1, int reg2, String target]
+    : r1=register[$context.ib()] { $reg1 = $r1.value; }
+    COMMA r2=register[$context.ib()] { $reg2 = $r2.value; }
     COMMA label { $target = $label.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f22t($instruction::op, $reg1, $reg2, $target);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f22t($op, $reg1, $reg2, $target);
     }
     ;
 
-args_format22x returns[int reg1, int reg2]
-    : r1=register { $reg1 = $r1.value; }
-    COMMA r2=register { $reg2 = $r2.value; }
+args_format22x[IContext context, Opcode op] returns[int reg1, int reg2]
+    : r1=register[$context.ib()] { $reg1 = $r1.value; }
+    COMMA r2=register[$context.ib()] { $reg2 = $r2.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f22x($instruction::op, $reg1, $reg2);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f22x($op, $reg1, $reg2);
     }
     ;
 
-args_format23x returns[int reg1, int reg2, int reg3]
-    : r1=register { $reg1 = $r1.value; }
-    COMMA r2=register { $reg2 = $r2.value; }
-    COMMA r3=register { $reg3 = $r3.value; }
+args_format23x[IContext context, Opcode op] returns[int reg1, int reg2, int reg3]
+    : r1=register[$context.ib()] { $reg1 = $r1.value; }
+    COMMA r2=register[$context.ib()] { $reg2 = $r2.value; }
+    COMMA r3=register[$context.ib()] { $reg3 = $r3.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f23x($instruction::op, $reg1, $reg2, $reg3);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f23x($op, $reg1, $reg2, $reg3);
     }
     ;
 
-args_format30t returns[String target]
+args_format30t[IContext context, Opcode op] returns[String target]
     : label { $target = $label.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f30t($instruction::op, $target);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f30t($op, $target);
     }
     ;
 
-args_format31c returns[int reg, Object ref]
-    : register { $reg = $register.value; }
-    COMMA reference[0] { $ref = $reference.value; }
+args_format31c[IContext context, Opcode op] returns[int reg, Object ref]
+    : register[$context.ib()] { $reg = $register.value; }
+    COMMA reference[$op, 0] { $ref = $reference.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f31c($instruction::op, $reg, $ref);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f31c($op, $reg, $ref);
     }
     ;
 
-args_format31i returns[int reg, int lit]
-    : register { $reg = $register.value; }
+args_format31i[IContext context, Opcode op] returns[int reg, int lit]
+    : register[$context.ib()] { $reg = $register.value; }
     COMMA l32=fixed_32bit_literal { $lit = $l32.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f31i($instruction::op, $reg, $lit);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f31i($op, $reg, $lit);
     }
     ;
 
-args_format31t returns[int reg, String target]
-    : register { $reg = $register.value; }
+args_format31t[IContext context, Opcode op] returns[int reg, String target]
+    : register[$context.ib()] { $reg = $register.value; }
     COMMA label { $target = $label.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f31t($instruction::op, $reg, $target);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f31t($op, $reg, $target);
     }
     ;
 
-args_format32x returns[int reg1, int reg2]
-    : r1=register { $reg1 = $r1.value; }
-    COMMA r2=register { $reg2 = $r2.value; }
+args_format32x[IContext context, Opcode op] returns[int reg1, int reg2]
+    : r1=register[$context.ib()] { $reg1 = $r1.value; }
+    COMMA r2=register[$context.ib()] { $reg2 = $r2.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f32x($instruction::op, $reg1, $reg2);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f32x($op, $reg1, $reg2);
     }
     ;
 
-args_format34c returns[int[] args, Object ref]
-    : LBRACE register_list { $args = $register_list.value; }
-    RBRACE COMMA reference[0] { $ref = $reference.value; }
+args_format34c[IContext context, Opcode op] returns[int[] args, Object ref]
+    : LBRACE register_list[$context.ib()] { $args = $register_list.value; }
+    RBRACE COMMA reference[$op, 0] { $ref = $reference.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f34c($instruction::op, $ref, $args);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f34c($op, $ref, $args);
     }
     ;
 
-args_format35c returns[int[] args, Object ref]
-    : LBRACE register_list { $args = $register_list.value; }
-    RBRACE COMMA reference[0] { $ref = $reference.value; }
+args_format35c[IContext context, Opcode op] returns[int[] args, Object ref]
+    : LBRACE register_list[$context.ib()] { $args = $register_list.value; }
+    RBRACE COMMA reference[$op, 0] { $ref = $reference.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f35c($instruction::op, $ref, $args);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f35c($op, $ref, $args);
     }
     ;
 
-args_format3rc returns[int start, int count, Object ref]
-    : LBRACE rr=register_range { $start = $rr.start; $count = $rr.count; }
-    RBRACE COMMA reference[0] { $ref = $reference.value; }
+args_format3rc[IContext context, Opcode op] returns[int start, int count, Object ref]
+    : LBRACE rr=register_range[$context.ib()] { $start = $rr.start; $count = $rr.count; }
+    RBRACE COMMA reference[$op, 0] { $ref = $reference.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f3rc($instruction::op, $ref, $count, $start);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f3rc($op, $ref, $count, $start);
     }
     ;
 
-args_format41c returns[int reg, Object ref]
-    : register { $reg = $register.value; }
-    COMMA reference[0] { $ref = $reference.value; }
+args_format41c[IContext context, Opcode op] returns[int reg, Object ref]
+    : register[$context.ib()] { $reg = $register.value; }
+    COMMA reference[$op, 0] { $ref = $reference.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f41c($instruction::op, $reg, $ref);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f41c($op, $reg, $ref);
     }
     ;
 
-args_format45cc returns[int[] args, Object ref1, Object ref2]
-    : LBRACE register_list { $args = $register_list.value; }
-    RBRACE COMMA r1=reference[0] { $ref1 = $r1.value; }
-    COMMA r2=reference[1] { $ref2 = $r2.value; }
+args_format45cc[IContext context, Opcode op] returns[int[] args, Object ref1, Object ref2]
+    : LBRACE register_list[$context.ib()] { $args = $register_list.value; }
+    RBRACE COMMA r1=reference[$op, 0] { $ref1 = $r1.value; }
+    COMMA r2=reference[$op, 1] { $ref2 = $r2.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f45cc($instruction::op, $ref1, $ref2, $args);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f45cc($op, $ref1, $ref2, $args);
     }
     ;
 
-args_format4rcc returns[int start, int count, Object ref1, Object ref2]
-    : LBRACE rr=register_range { $start = $rr.start; $count = $rr.count; }
-    RBRACE COMMA r1=reference[0] { $ref1 = $r1.value; }
-    COMMA r2=reference[1] { $ref2 = $r2.value; }
+args_format4rcc[IContext context, Opcode op] returns[int start, int count, Object ref1, Object ref2]
+    : LBRACE rr=register_range[$context.ib()] { $start = $rr.start; $count = $rr.count; }
+    RBRACE COMMA r1=reference[$op, 0] { $ref1 = $r1.value; }
+    COMMA r2=reference[$op, 1] { $ref2 = $r2.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f4rcc($instruction::op, $ref1, $ref2, $count, $start);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f4rcc($op, $ref1, $ref2, $count, $start);
     }
     ;
 
-args_format51l returns[int reg, long lit]
-    : register { $reg = $register.value; }
+args_format51l[IContext context, Opcode op] returns[int reg, long lit]
+    : register[$context.ib()] { $reg = $register.value; }
     COMMA l64=fixed_64bit_literal { $lit = $l64.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f51l($instruction::op, $reg, $lit);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f51l($op, $reg, $lit);
     }
     ;
 
-args_format52c returns[int reg1, int reg2, Object ref]
-    : r1=register { $reg1 = $r1.value; } COMMA r2=register { $reg2 = $r2.value; }
-    COMMA reference[0] { $ref = $reference.value; }
+args_format52c[IContext context, Opcode op] returns[int reg1, int reg2, Object ref]
+    : r1=register[$context.ib()] { $reg1 = $r1.value; }
+    COMMA r2=register[$context.ib()] { $reg2 = $r2.value; }
+    COMMA reference[$op, 0] { $ref = $reference.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f52c($instruction::op, $reg1, $reg2, $ref);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f52c($op, $reg1, $reg2, $ref);
     }
     ;
 
-args_format5rc returns[int start, int count, Object ref]
-    : LBRACE rr=register_range { $start = $rr.start; $count = $rr.count; }
-    RBRACE COMMA reference[0] { $ref = $reference.value; }
+args_format5rc[IContext context, Opcode op] returns[int start, int count, Object ref]
+    : LBRACE rr=register_range[$context.ib()] { $start = $rr.start; $count = $rr.count; }
+    RBRACE COMMA reference[$op, 0] { $ref = $reference.value; }
     {
-        if(!CodeUtils.instruction($method_body::ib, $instruction::op, $ctx, $method_body::actions))
-            $method_body::ib.f5rc($instruction::op, $ref, $count, $start);
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f5rc($op, $ref, $count, $start);
     }
     ;
-
 args_array_data returns[int width, List<Number> table]
     : int_literal v+=fixed_64bit_literal*
     {
@@ -1159,23 +1160,23 @@ args_sparse_switch returns[IntMap<Object> table]
     }
     ;
 
-insn_array_data
+insn_array_data[CodeBuilder ib]
     : ARRAY_DATA_DIRECTIVE
     payload=args_array_data
-    { $method_body::ib.put_metadata($payload.ctx); }
+    { $ib.put_metadata($payload.ctx); }
     END_ARRAY_DATA_DIRECTIVE
     ;
 
-insn_packed_switch
+insn_packed_switch[CodeBuilder ib]
     : PACKED_SWITCH_DIRECTIVE
     payload=args_packed_switch
-    { $method_body::ib.put_metadata($payload.ctx); }
+    { $ib.put_metadata($payload.ctx); }
     END_PACKED_SWITCH_DIRECTIVE
     ;
 
-insn_sparse_switch
+insn_sparse_switch[CodeBuilder ib]
     : SPARSE_SWITCH_DIRECTIVE
     payload=args_sparse_switch
-    { $method_body::ib.put_metadata($payload.ctx); }
+    { $ib.put_metadata($payload.ctx); }
     END_SPARSE_SWITCH_DIRECTIVE
     ;
