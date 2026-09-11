@@ -12,5 +12,7 @@ module com.v7878.dex {
     // TODO: move to distinct library
     exports com.v7878.collections;
 
+    exports com.v7878.dex.util to com.v7878.dex.smali;
+
     requires com.v7878.misc;
 }
