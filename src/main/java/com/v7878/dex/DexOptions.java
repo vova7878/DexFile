@@ -93,7 +93,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
         return expanded;
     }
 
-    public D withExpandedInstructions(boolean odex) {
+    public D withExpandedInstructions(boolean expanded) {
         return dup(api, art, odex, expanded, hiddenapi, debug_info);
     }
 

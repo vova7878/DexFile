@@ -81,6 +81,10 @@ public class CodeUtils {
         assert keys.length == length;
         var table = new IntMap<>(length);
         for (int i = 0; i < length; i++) {
+            if (table.contains(keys[i])) {
+                throw new IllegalArgumentException(
+                        "Duplicate key in sparse switch: " + keys[i]);
+            }
             table.append(keys[i], labels[i]);
         }
         return table.freeze();
