@@ -9,4 +9,8 @@ public sealed interface ArrayPayloadInstruction
     int getElementWidth();
 
     List<? extends Number> getArrayElements();
+
+    default int getElementsCount() {
+        return getArrayElements().size();
+    }
 }

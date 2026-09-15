@@ -104,6 +104,18 @@ import java.util.function.Supplier;
  * {@link #attach_block}; blocks still detached when the code is finished are appended
  * at the end, in the order they became detached.
  * <p>
+ * Exception handlers are registered for the code between two labels (either
+ * order of the labels means the same range) with {@link #try_catch} or
+ * {@link #try_catch_all}; a handler is a label marking the catch code. The
+ * registration order matters: exception types are checked in that order, and the
+ * first matching handler wins. Ranges may overlap and are split at their borders
+ * automatically; an empty range is ignored. Registered handlers can be removed
+ * for a range with {@link #remove_try_catch} or {@link #remove_all_try_catch};
+ * removals are processed in registration order together with the additions.
+ * The methods only queue the handlers: ranges and handlers are resolved when
+ * the code is finished, and conflicting registrations fail only then; a removal
+ * registered after a conflicting registration comes too late to cancel it.
+ * <p>
  * Note on internals: a few operations may leave empty internal positions so that
  * existing labels stay valid. They are invisible to the user: label resolution and
  * position navigation transparently skip them.
@@ -1110,6 +1122,15 @@ public final class CodeBuilder {
         try_items.add(new BuilderTryItem(label1, label2, exceptionType, handler));
     }
 
+    /**
+     * Registers {@code handler} for {@code exceptionType} thrown inside the range
+     * between {@code label1} and {@code label2}.
+     *
+     * @throws NullPointerException     if any argument is null
+     * @throws IllegalArgumentException from {@link #finish} if this exception type
+     *                                  is already handled in an overlapping part of
+     *                                  the range
+     */
     public CodeBuilder try_catch(Object label1, Object label2, TypeId exceptionType, Object handler) {
         Objects.requireNonNull(exceptionType);
         Objects.requireNonNull(handler);
@@ -1117,20 +1138,45 @@ public final class CodeBuilder {
         return this;
     }
 
+    /**
+     * Shortcut for {@link #try_catch(Object, Object, TypeId, Object)} that uses
+     * the current position as the handler: call it right before emitting the
+     * catch code.
+     */
     public CodeBuilder try_catch(Object label1, Object label2, TypeId exceptionType) {
         return try_catch(label1, label2, exceptionType, current_label());
     }
 
+    /**
+     * Registers a catch-all {@code handler} for any exception thrown inside the
+     * range between {@code label1} and {@code label2}.
+     *
+     * @throws NullPointerException     if any argument is null
+     * @throws IllegalArgumentException from {@link #finish} if a catch-all handler
+     *                                  is already registered for an overlapping part
+     *                                  of the range
+     */
     public CodeBuilder try_catch_all(Object label1, Object label2, Object handler) {
         Objects.requireNonNull(handler);
         addTryBlock(label1, label2, null, handler);
         return this;
     }
 
+    /**
+     * Shortcut for {@link #try_catch_all(Object, Object, Object)} that uses the
+     * current position as the handler: call it right before emitting the catch
+     * code.
+     */
     public CodeBuilder try_catch_all(Object label1, Object label2) {
         return try_catch_all(label1, label2, current_label());
     }
 
+    /**
+     * Registers a handler from {@code table} for each exception type inside the
+     * range between {@code label1} and {@code label2}. The iteration order of the
+     * table defines the check order, so a map with a predictable order is
+     * recommended.
+     */
     public CodeBuilder try_catch(Object label1, Object label2, Map<TypeId, ?> table) {
         for (var entry : table.entrySet()) {
             try_catch(label1, label2, entry.getKey(), entry.getValue());
@@ -1138,6 +1184,11 @@ public final class CodeBuilder {
         return this;
     }
 
+    /**
+     * Combination of {@link #try_catch_all(Object, Object, Object)} and
+     * {@link #try_catch(Object, Object, Map)} for the same range: a catch-all
+     * handler plus a table of typed handlers.
+     */
     public CodeBuilder try_catch(Object label1, Object label2,
                                  Object catch_all_handler,
                                  Map<TypeId, ?> table) {
@@ -1145,12 +1196,26 @@ public final class CodeBuilder {
                 .try_catch(label1, label2, table);
     }
 
+    /**
+     * Removes handlers of {@code exceptionType} registered for the range between
+     * {@code label1} and {@code label2}; only the parts of earlier registrations
+     * that fall inside the range are affected.
+     *
+     * @throws NullPointerException if any argument is null
+     */
     public CodeBuilder remove_try_catch(Object label1, Object label2, TypeId exceptionType) {
+        Objects.requireNonNull(exceptionType);
         addTryBlock(label1, label2, exceptionType, null);
         return this;
     }
 
-    /// Removes all try-catch blocks in the specified range, not just one try-catch-all block
+    /**
+     * Removes all exception handlers, typed and catch-all, registered for the
+     * range between {@code label1} and {@code label2}; only the parts of earlier
+     * registrations that fall inside the range are affected.
+     *
+     * @throws NullPointerException if label1 or label2 is null
+     */
     public CodeBuilder remove_all_try_catch(Object label1, Object label2) {
         addTryBlock(label1, label2, null, null);
         return this;
