@@ -219,7 +219,27 @@ UNCHECKED_METHOD_PROTO
 
 // For some reason, antlr thinks the first parser rule is the entry point,
 // and that this rule can't have a returns block. This is ugly
-file: smali;
+eof: EOF;
+
+full_dex_file
+    : dex_file eof
+    ;
+
+full_class_def
+    : class_def eof
+    ;
+
+full_annotation
+    : annotation eof
+    ;
+
+full_field
+    : field eof
+    ;
+
+full_method
+    : method eof
+    ;
 
 simple_name returns[String value]
     : val=RAW_SIMPLE_NAME { $value = $val.text; }
@@ -699,21 +719,19 @@ source_directive[CodeBuilder ib]
 
 class_def
     returns[ClassDef value]
-    locals[TypeId type, boolean has_super, boolean has_source]
+    locals[TypeId type, TypeId superclass, String source]
     @init {
         int access_flags;
-        TypeId superclass = null;
         var interfaces = new ArrayList<TypeId>();
-        String source = null;
         var fields = new TreeSet<FieldDef>();
         var methods = new TreeSet<MethodDef>();
         var annotations = new TreeSet<Annotation>();
     }
     @after {
         $value = ClassDef.raw(
-            $type, access_flags, superclass,
+            $type, access_flags, $superclass,
             Collections.unmodifiableList(interfaces),
-            source,
+            $source,
             Collections.unmodifiableNavigableSet(fields),
             Collections.unmodifiableNavigableSet(methods),
             Collections.unmodifiableNavigableSet(annotations)
@@ -724,13 +742,11 @@ class_def
         access_flags = $class_spec.access_flags;
     }
     (
-    { !$has_super }? super_spec {
-        superclass = $super_spec.value;
-        $has_super = true;
+    { $superclass == null }? super_spec {
+        $superclass = $super_spec.value;
     }
-    | { !$has_source }? source_spec {
-          source = $source_spec.value;
-          $has_source = true;
+    | { $source == null }? source_spec {
+          $source = $source_spec.value;
       }
     | implements_spec { interfaces.add($implements_spec.value); }
     | annotation { add(annotations, $annotation.value); }
@@ -739,10 +755,10 @@ class_def
     )+
     ;
 
-smali returns[Dex dex]
+dex_file returns[Dex value]
     @init { var classes = new ArrayList<ClassDef>(); }
-    @after { $dex = Dex.raw(Collections.unmodifiableList(classes)); }
-    : (class_def { classes.add($class_def.value); })+ EOF
+    @after { $value = Dex.raw(Collections.unmodifiableList(classes)); }
+    : (class_def { classes.add($class_def.value); })+
     ;
 
 instruction_name
