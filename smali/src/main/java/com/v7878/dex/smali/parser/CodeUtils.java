@@ -81,13 +81,18 @@ public class CodeUtils {
         assert keys.length == length;
         var table = new IntMap<>(length);
         for (int i = 0; i < length; i++) {
+            if (table.contains(keys[i])) {
+                throw new IllegalArgumentException(
+                        "Duplicate key in sparse switch: " + keys[i]);
+            }
             table.append(keys[i], labels[i]);
         }
         return table.freeze();
     }
 
-    public static boolean instruction(
-            CodeBuilder ib, Opcode op, Object raw_args, List<Runnable> actions) {
+    public static boolean instruction(IContext context, Opcode op, Object raw_args) {
+        var ib = context.ib();
+        var actions = context.actions();
         switch (op) {
             case M_PACKED_SWITCH -> {
                 // TODO: m-packed-switch

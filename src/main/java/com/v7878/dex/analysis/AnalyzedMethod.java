@@ -291,21 +291,8 @@ public final class AnalyzedMethod {
             throw unexpectedRegisterCount(current, reg_count, sig_count, proto);
         }
 
-        if (reg_count > 0) {
-            current.input(tmp.getRegister1());
-        }
-        if (reg_count > 1) {
-            current.input(tmp.getRegister2());
-        }
-        if (reg_count > 2) {
-            current.input(tmp.getRegister3());
-        }
-        if (reg_count > 3) {
-            current.input(tmp.getRegister4());
-        }
-        if (reg_count > 4) {
-            assert reg_count == 5;
-            current.input(tmp.getRegister5());
+        for (var reg : tmp.getRegisters()) {
+            current.input(reg);
         }
 
         switch (proto.getReturnType().getRegisterCount()) {
@@ -1356,13 +1343,7 @@ public final class AnalyzedMethod {
         VariableFiveRegisterInstruction tmp = current.instruction();
         var proto = current.accessProto();
 
-        var regs = new int[]{
-                tmp.getRegister1(),
-                tmp.getRegister2(),
-                tmp.getRegister3(),
-                tmp.getRegister4(),
-                tmp.getRegister5()
-        };
+        var regs = tmp.getRegisters();
 
         int reg_index = 0;
         for (var arg : proto.getParameterTypes()) {
