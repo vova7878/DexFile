@@ -1961,10 +1961,10 @@ public final class CodeBuilder {
     }
 
     /**
-     * @param dst_reg_peir u8
+     * @param dst_reg_pair u8
      */
-    public CodeBuilder move_result_wide(int dst_reg_peir) {
-        return f11x(MOVE_RESULT_WIDE, dst_reg_peir);
+    public CodeBuilder move_result_wide(int dst_reg_pair) {
+        return f11x(MOVE_RESULT_WIDE, dst_reg_pair);
     }
 
     /**
@@ -2010,10 +2010,10 @@ public final class CodeBuilder {
     }
 
     /**
-     * @param return_value_reg_peir u8
+     * @param return_value_reg_pair u8
      */
-    public CodeBuilder return_wide(int return_value_reg_peir) {
-        return f11x(RETURN_WIDE, return_value_reg_peir);
+    public CodeBuilder return_wide(int return_value_reg_pair) {
+        return f11x(RETURN_WIDE, return_value_reg_pair);
     }
 
     /**

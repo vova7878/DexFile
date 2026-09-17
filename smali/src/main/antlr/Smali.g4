@@ -411,7 +411,13 @@ method_reference returns[MethodId value]
     @init { TypeId declaring_class = null; }
     : (
         (ref=reference_type_descriptor ARROW) { declaring_class = $ref.value; }
-        | { declaring_class = $class_def::type; }
+        | {
+            if(getInvokingContext(RULE_class_def) == null) {
+                throw new IllegalArgumentException(
+                    "short-form member reference requires an enclosing class");
+            }
+            declaring_class = $class_def::type;
+        }
     )
     name=member_name proto=method_prototype
     { $value = MethodId.of(declaring_class, $name.value, $proto.value); }
@@ -421,7 +427,13 @@ field_reference returns[FieldId value]
     @init { TypeId declaring_class = null; }
     : (
         (ref=reference_type_descriptor ARROW) { declaring_class = $ref.value; }
-        | { declaring_class = $class_def::type; }
+        | {
+            if(getInvokingContext(RULE_class_def) == null) {
+                throw new IllegalArgumentException(
+                    "short-form member reference requires an enclosing class");
+            }
+            declaring_class = $class_def::type;
+        }
     )
     name=member_name COLON type=nonvoid_type_descriptor
     { $value = FieldId.of(declaring_class, $name.value, $type.value); }

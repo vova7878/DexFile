@@ -190,7 +190,27 @@ public final class DexReader implements DexReaderCache {
             int class_data_off, List<EncodedValue> static_values
     ) implements ClassHeader {
         @Override
-        public NavigableSet<Annotation> class_annotations() {
+        public TypeId getType() {
+            return type;
+        }
+
+        @Override
+        public int getAccessFlags() {
+            return access_flags;
+        }
+
+        @Override
+        public TypeId getSuperclass() {
+            return superclass;
+        }
+
+        @Override
+        public List<TypeId> getInterfaces() {
+            return interfaces;
+        }
+
+        @Override
+        public NavigableSet<Annotation> getAnnotations() {
             return annotations.class_annotations();
         }
     }

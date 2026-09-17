@@ -22,7 +22,16 @@ import com.v7878.dex.util.Ids;
 
 import java.util.Objects;
 
+/**
+ * A value stored in a register at one position of the method analysis:
+ * a constant, a primitive or reference value, or one of the special
+ * states (undefined, conflict, a broken wide pair).
+ */
 public sealed abstract class Register {
+    /**
+     * Where the value came from: the address of the defining
+     * instruction and the register slot. Parameters use address -1.
+     */
     public record Identifier(int address, int slot) {
         public Identifier {
             if (address != -1 && address < 0) {
@@ -101,6 +110,9 @@ public sealed abstract class Register {
         }
     }
 
+    /**
+     * Incompatible values merged into the same register.
+     */
     public static final class Conflict extends DynamicRegister {
         private Conflict(Identifier source) {
             super(source);
@@ -156,6 +168,11 @@ public sealed abstract class Register {
         }
     }
 
+    /**
+     * The kind of a constant: the value range it is known to fit in,
+     * or a non-numeric constant (string, class, ...). The is*()
+     * queries widen the ranges.
+     */
     public enum ConstantKind {
         // Constant [0]
         // Merged [0]
@@ -313,6 +330,9 @@ public sealed abstract class Register {
         }
     }
 
+    /**
+     * The narrowest constant kind that always holds the value.
+     */
     public static ConstantKind intKind(int value) {
         if (value == 0) {
             return ZERO;
@@ -334,6 +354,9 @@ public sealed abstract class Register {
         return INT;
     }
 
+    /**
+     * A register with a known {@link TypeInfo}.
+     */
     public static abstract sealed class TypedRegister extends DynamicRegister {
         private final TypeInfo type_info;
 
@@ -364,6 +387,9 @@ public sealed abstract class Register {
         }
     }
 
+    /**
+     * A constant value, classified by {@link ConstantKind}.
+     */
     public static final class Constant extends DynamicRegister {
         private final ConstantKind kind;
 
@@ -407,6 +433,9 @@ public sealed abstract class Register {
         }
     }
 
+    /**
+     * A non-wide primitive value: Z, B, S, C, I or F.
+     */
     public static final class Primitive extends TypedRegister {
         private Primitive(Identifier source, TypeId type) {
             super(source, TypeInfo.of(type));
@@ -440,6 +469,9 @@ public sealed abstract class Register {
         }
     }
 
+    /**
+     * A half of a wide (J or D) value.
+     */
     public static final class WidePrimitive extends TypedRegister {
         private final boolean lo;
 
@@ -485,6 +517,9 @@ public sealed abstract class Register {
         }
     }
 
+    /**
+     * A reference value with a possibly unresolved type.
+     */
     public static sealed class Reference extends TypedRegister {
         private final boolean non_null;
 
@@ -529,6 +564,10 @@ public sealed abstract class Register {
         }
     }
 
+    /**
+     * A reference to an object allocated by new-instance but not yet
+     * initialized by a constructor call.
+     */
     public static final class UninitializedRef extends Reference {
         private final boolean thiz;
 
@@ -597,6 +636,10 @@ public sealed abstract class Register {
         };
     }
 
+    /**
+     * Merges two values flowing into the same register slot from
+     * different predecessors; the result may be a conflict.
+     */
     public static Register merge(TypeResolver resolver, int address, int slot, Register a, Register b) {
         if (Objects.equals(a, b)) return a;
         if (a.isUndefined() || b.isUndefined()) {
@@ -673,7 +716,7 @@ public sealed abstract class Register {
                 return Reference.of(ident, a_type, non_null);
             }
             assert a_type.isReference() && b_type.isReference();
-            return Reference.of(ident, TypeResolver._join(resolver, a_type, b_type), non_null);
+            return Reference.of(ident, resolver.join(a_type, b_type), non_null);
         }
         return Conflict.of(ident);
     }
@@ -948,9 +991,14 @@ public sealed abstract class Register {
         return null;
     }
 
-    // Note: only for ref types
-    public final boolean instanceOf(TypeResolver resolver, TypeId type,
-                                    boolean allow_uninitialized, boolean default_value, boolean strict) {
+    /**
+     * Checks whether this register's value is assignable to the type;
+     * reference values only.
+     *
+     * @see TypeResolver#isAssignable(TypeInfo, TypeId, boolean, boolean)
+     */
+    public final boolean isAssignable(TypeResolver resolver, TypeId type,
+                                      boolean allow_uninitialized, boolean unknownMatches, boolean strict) {
         Objects.requireNonNull(type);
         if (!type.isReference()) {
             return false;
@@ -963,7 +1011,7 @@ public sealed abstract class Register {
             }
             if (kind.isNonZeroOrNullRef()) {
                 var info = getRefTypeInfo(kind);
-                return TypeResolver._instanceOf(resolver, info, type, default_value, strict);
+                return resolver.isAssignable(info, type, unknownMatches, strict);
             }
             return false;
         }
@@ -971,13 +1019,16 @@ public sealed abstract class Register {
             if (!allow_uninitialized && ref instanceof UninitializedRef) {
                 return false;
             }
-            return TypeResolver._instanceOf(resolver, ref.typeInfo(), type, default_value, strict);
+            return resolver.isAssignable(ref.typeInfo(), type, unknownMatches, strict);
         }
         return false;
     }
 
-    public final boolean instanceOf(TypeResolver resolver, TypeId type,
-                                    boolean allow_uninitialized, boolean default_value) {
-        return instanceOf(resolver, type, allow_uninitialized, default_value, true);
+    /**
+     * @see #isAssignable(TypeResolver, TypeId, boolean, boolean, boolean)
+     */
+    public final boolean isAssignable(TypeResolver resolver, TypeId type,
+                                      boolean allow_uninitialized, boolean unknownMatches) {
+        return isAssignable(resolver, type, allow_uninitialized, unknownMatches, true);
     }
 }

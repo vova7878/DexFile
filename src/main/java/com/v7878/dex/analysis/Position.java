@@ -15,10 +15,20 @@ import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.TreeSet;
 
+/**
+ * A single instruction position in the analyzed method: the register
+ * states before and after it, its control-flow edges, the used and
+ * defined registers and the analysis flags.
+ */
 public final class Position {
     public static final int RESULT_REGISTER = -2; // -1 for high wide half
     public static final int EXCEPTION_REGISTER = -3;
 
+    /**
+     * A control-flow edge to a target address, optionally carrying the
+     * caught exception type. Sorted: fallthrough first, then by
+     * exception, then by address.
+     */
     public static final class Transition implements Comparable<Transition> {
         private final int address;
         private final TypeId exception;
@@ -84,7 +94,7 @@ public final class Position {
 
     private static final int REACHABLE = 0b1;
     private static final int NOP_EXACT = 0b10;
-    private static final int NOP_NAROWWING = 0b100;
+    private static final int NOP_NARROWING = 0b100;
     private static final int INSIDE_TRY_BLOCK = 0b1000;
 
     private final Instruction instruction;
@@ -261,6 +271,10 @@ public final class Position {
         return isFirst() || !predecessors.isEmpty();
     }
 
+    /**
+     * Whether this position is entered by something other than a single
+     * fallthrough edge, i.e. it is a real branch target.
+     */
     public boolean isBranchTarget() {
         var preds = predecessors();
         if (preds.isEmpty()) {
@@ -295,13 +309,13 @@ public final class Position {
     }
 
     /* package */ void setNarrowingNop(boolean value) {
-        flags = (flags & ~NOP_NAROWWING) | (value ? NOP_NAROWWING : 0);
+        flags = (flags & ~NOP_NARROWING) | (value ? NOP_NARROWING : 0);
     }
 
     // for example cast to j.l.Object
     // or cast zero to anything
     public boolean isNarrowingNop() {
-        return (flags & NOP_NAROWWING) != 0;
+        return (flags & NOP_NARROWING) != 0;
     }
 
     /* package */ void setInsideTryBlock() {

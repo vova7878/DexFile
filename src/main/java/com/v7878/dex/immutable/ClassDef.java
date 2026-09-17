@@ -1,5 +1,7 @@
 package com.v7878.dex.immutable;
 
+import static com.v7878.dex.DexIO.ClassHeader;
+
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.MemberUtils;
@@ -13,7 +15,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 
-public final class ClassDef implements Annotatable {
+public final class ClassDef implements Annotatable, ClassHeader {
     private final TypeId type;
     private final int access_flags;
     private final TypeId superclass;
@@ -77,18 +79,22 @@ public final class ClassDef implements Annotatable {
                 Converter.toNavigableSet(methods), Converter.toNavigableSet(annotations));
     }
 
+    @Override
     public TypeId getType() {
         return type;
     }
 
+    @Override
     public int getAccessFlags() {
         return access_flags;
     }
 
+    @Override
     public TypeId getSuperclass() {
         return superclass;
     }
 
+    @Override
     public List<TypeId> getInterfaces() {
         return interfaces;
     }

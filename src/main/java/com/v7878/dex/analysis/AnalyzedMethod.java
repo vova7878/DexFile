@@ -1131,15 +1131,15 @@ public final class AnalyzedMethod {
             if (exception == null) {
                 throw new AnalysisException("Can flow through to " + describe(current));
             }
-            if (exception.isPrimitive() || !TypeResolver._instanceOf(
-                    resolver, exception, THROWABLE, true, true)) {
+            if (exception.isPrimitive() || !resolver.isAssignable(
+                    exception, THROWABLE, true, true)) {
                 throw new AnalysisException("Unexpected non-throwable class target "
                         + exception + " for " + describe(current));
             }
             if (common == null) {
                 common = TypeInfo.of(exception);
             } else {
-                common = TypeResolver._join(resolver, common, exception);
+                common = resolver.join(common, exception);
             }
         }
         if (common == null) {
@@ -1275,7 +1275,7 @@ public final class AnalyzedMethod {
             if (!switch (shorty) {
                 case 'Z', 'B', 'S', 'C', 'I' -> reg.isInt();
                 case 'F' -> reg.isFloat();
-                case 'L' -> reg.instanceOf(resolver, type, false, true, false);
+                case 'L' -> reg.isAssignable(resolver, type, false, true, false);
                 default -> throw invalidShorty(shorty);
             }) {
                 throw unexpectedReg(current, ireg, reg);
@@ -1596,14 +1596,14 @@ public final class AnalyzedMethod {
                         is_narrowing_nop = false;
                         is_nop = true;
                     } else if (reg.isRuntimeNonNullRef() &&
-                            !TypeResolver._instanceOf(resolver, type, ref, true, true) &&
-                            !TypeResolver._instanceOf(resolver, ref, type, true, true)) {
+                            !resolver.isAssignable(type, ref, true, true) &&
+                            !resolver.isAssignable(ref, type, true, true)) {
                         // Mutually incompatible types.
                         // i.e. Integer and String or Object[] and int[] etc.
                         is_narrowing_nop = false;
                         is_nop = false;
                         next_reachable = false;
-                    } else if (TypeResolver._instanceOf(resolver, type, ref, false, true)) {
+                    } else if (resolver.isAssignable(type, ref, false, true)) {
                         is_narrowing_nop = true;
                         is_nop = false;
                     } else {
@@ -1889,11 +1889,11 @@ public final class AnalyzedMethod {
                 var reg2 = current.before().at(ireg2);
 
                 ToIntFunction<Register> classifier = reg -> {
-                    if (reg1.isZeroOrNull()) {
+                    if (reg.isZeroOrNull()) {
                         return 0b00; // 0
-                    } else if (reg1.isInt()) {
+                    } else if (reg.isInt()) {
                         return 0b01; // 1
-                    } else if (reg1.isRef()) {
+                    } else if (reg.isRef()) {
                         return 0b10; // 2
                     }
                     return 0b11; // 3
@@ -2076,7 +2076,7 @@ public final class AnalyzedMethod {
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) {
-                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true, false)) {
+                    if (!obj.isAssignable(resolver, ref.getDeclaringClass(), true, true, false)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
                     if (obj.isUninitializedRef()) {
@@ -2107,7 +2107,7 @@ public final class AnalyzedMethod {
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) {
-                    if (!obj.instanceOf(resolver, ref.getDeclaringClass(), true, true, false)) {
+                    if (!obj.isAssignable(resolver, ref.getDeclaringClass(), true, true, false)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
 
@@ -2203,8 +2203,20 @@ public final class AnalyzedMethod {
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
-                 INVOKE_INTERFACE_RANGE, INVOKE_POLYMORPHIC_RANGE -> {
+                 INVOKE_INTERFACE_RANGE -> {
                 var tmp = (InstructionNrc) insn;
+
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getStartRegister();
+                var this_reg = current.before().at(ithis_reg);
+
+                if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
+
+                if (this_reg.isZeroOrNull()) next_reachable = false;
+                markNonNull(current, ithis_reg, this_reg);
+            }
+            case INVOKE_POLYMORPHIC_RANGE -> {
+                var tmp = (InstructionNrcc) insn;
 
                 assert tmp.getRegisterCount() > 0;
                 int ithis_reg = tmp.getStartRegister();

@@ -2,6 +2,7 @@ package com.v7878.dex;
 
 import static com.v7878.dex.util.Checks.checkIndex;
 
+import com.v7878.dex.immutable.Annotatable;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.ClassDef;
@@ -39,16 +40,16 @@ public final class DexIO {
         int offset();
     }
 
-    public sealed interface ClassHeader permits ClassDefHeader {
-        TypeId type();
+    public sealed interface ClassHeader extends Annotatable permits ClassDef, ClassDefHeader {
+        TypeId getType();
 
-        int access_flags();
+        int getAccessFlags();
 
-        TypeId superclass();
+        TypeId getSuperclass();
 
-        List<TypeId> interfaces();
+        List<TypeId> getInterfaces();
 
-        NavigableSet<Annotation> class_annotations();
+        NavigableSet<Annotation> getAnnotations();
     }
 
     public sealed interface DexReaderCache permits DexReader {

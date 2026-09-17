@@ -1,10 +1,11 @@
 package com.v7878.dex.immutable;
 
+import com.v7878.dex.DexIO.ClassHeader;
 import com.v7878.dex.util.MemberUtils;
 
 import java.util.NavigableSet;
 
-public sealed interface Annotatable permits ClassDef, MemberDef, Parameter {
+public sealed interface Annotatable permits ClassHeader, ClassDef, MemberDef, Parameter {
     NavigableSet<Annotation> getAnnotations();
 
     default Annotation findAnnotation(TypeId type) {

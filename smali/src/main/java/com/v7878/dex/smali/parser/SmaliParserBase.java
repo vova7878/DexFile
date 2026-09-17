@@ -56,7 +56,7 @@ public abstract class SmaliParserBase extends Parser {
         var names = new HashMap<String, Opcode>();
         for (var opcode : Opcode.values()) {
             if (names.putIfAbsent(opcode.opname(), opcode) != null) {
-                throw new IllegalStateException("Dublicate: " + opcode);
+                throw new IllegalStateException("Duplicate: " + opcode);
             }
         }
         opcodesByName = Collections.unmodifiableMap(names);
