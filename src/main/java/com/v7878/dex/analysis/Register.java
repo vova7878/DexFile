@@ -52,6 +52,37 @@ public sealed abstract class Register {
 
     public abstract Identifier getSource();
 
+    /**
+     * Local registers in which nothing was stored yet.
+     */
+    public static final class Undefined extends Register {
+        public static final Undefined INSTANCE = new Undefined();
+
+        private Undefined() {
+        }
+
+        @Override
+        public Identifier getSource() {
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            return "undefined";
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) return true;
+            return obj instanceof Undefined;
+        }
+
+        @Override
+        public int hashCode() {
+            return Undefined.class.hashCode();
+        }
+    }
+
     public static sealed abstract class DynamicRegister extends Register {
         private final Identifier source;
 
@@ -78,35 +109,6 @@ public sealed abstract class Register {
         @Override
         public int hashCode() {
             return Objects.hashCode(source);
-        }
-    }
-
-    // Local registers in which nothing was stored yet
-    public static final class Undefined extends Register {
-        public static final Undefined INSTANCE = new Undefined();
-
-        private Undefined() {
-        }
-
-        @Override
-        public Identifier getSource() {
-            return null;
-        }
-
-        @Override
-        public String toString() {
-            return "undefined";
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == this) return true;
-            return obj instanceof Undefined;
-        }
-
-        @Override
-        public int hashCode() {
-            return Undefined.class.hashCode();
         }
     }
 
@@ -140,7 +142,9 @@ public sealed abstract class Register {
         }
     }
 
-    // A piece of broken wide pair
+    /**
+     * A piece of broken wide pair.
+     */
     public static final class WidePiece extends DynamicRegister {
         private WidePiece(Identifier source) {
             super(source);
@@ -663,16 +667,17 @@ public sealed abstract class Register {
         if (a instanceof Constant ac && b instanceof Constant bc) {
             var ak = ac.classify();
             var bk = bc.classify();
+            if (ak == bk) {
+                return Constant.of(ident, ak);
+            }
             if (ak.isWide() || bk.isWide()) {
-                if (ak == bk) {
-                    return Constant.of(ident, ak);
+                if (ak.isWide() && bk.isWide()) {
+                    // lo | hi
+                    return WidePiece.of(ident);
                 }
                 return Conflict.of(ident);
             }
             assert !ak.isWide() && !bk.isWide();
-            if (ak == bk) {
-                return Constant.of(ident, ak);
-            }
             if (ak == ZERO) return Constant.of(ident, bk);
             if (bk == ZERO) return Constant.of(ident, ak);
             if (ak == NULL || bk == NULL) {
@@ -717,6 +722,10 @@ public sealed abstract class Register {
             }
             assert a_type.isReference() && b_type.isReference();
             return Reference.of(ident, resolver.join(a_type, b_type), non_null);
+        }
+        if ((a.isWideLo() && b.isWideHi()) || (a.isWideHi() && b.isWideLo())) {
+            // lo | hi
+            return WidePiece.of(ident);
         }
         return Conflict.of(ident);
     }
@@ -883,6 +892,13 @@ public sealed abstract class Register {
         return this instanceof Primitive;
     }
 
+    public final boolean isWide() {
+        if (this instanceof Constant constant) {
+            return constant.classify().isWide();
+        }
+        return this instanceof WidePrimitive;
+    }
+
     public final boolean isWideLo() {
         if (this instanceof Constant constant) {
             return constant.classify().isWideLo();
@@ -903,6 +919,14 @@ public sealed abstract class Register {
         return false;
     }
 
+    public final boolean isLong() {
+        if (this instanceof Constant constant) {
+            return constant.classify().isWide();
+        }
+        return this instanceof WidePrimitive wide
+                && wide.getShorty() == 'J';
+    }
+
     public final boolean isLongLo() {
         if (this instanceof Constant constant) {
             return constant.classify().isWideLo();
@@ -921,6 +945,14 @@ public sealed abstract class Register {
             return wide.isHi() && (wide.getShorty() == 'J');
         }
         return false;
+    }
+
+    public final boolean isDouble() {
+        if (this instanceof Constant constant) {
+            return constant.classify().isWide();
+        }
+        return this instanceof WidePrimitive wide
+                && wide.getShorty() == 'D';
     }
 
     public final boolean isDoubleLo() {
@@ -998,7 +1030,7 @@ public sealed abstract class Register {
      * @see TypeResolver#isAssignable(TypeInfo, TypeId, boolean, boolean)
      */
     public final boolean isAssignable(TypeResolver resolver, TypeId type,
-                                      boolean allow_uninitialized, boolean unknownMatches, boolean strict) {
+                                      boolean allowUninitialized, boolean unknownMatches, boolean strict) {
         Objects.requireNonNull(type);
         if (!type.isReference()) {
             return false;
@@ -1016,7 +1048,7 @@ public sealed abstract class Register {
             return false;
         }
         if (this instanceof Reference ref) {
-            if (!allow_uninitialized && ref instanceof UninitializedRef) {
+            if (!allowUninitialized && ref instanceof UninitializedRef) {
                 return false;
             }
             return resolver.isAssignable(ref.typeInfo(), type, unknownMatches, strict);
@@ -1028,7 +1060,7 @@ public sealed abstract class Register {
      * @see #isAssignable(TypeResolver, TypeId, boolean, boolean, boolean)
      */
     public final boolean isAssignable(TypeResolver resolver, TypeId type,
-                                      boolean allow_uninitialized, boolean unknownMatches) {
-        return isAssignable(resolver, type, allow_uninitialized, unknownMatches, true);
+                                      boolean allowUninitialized, boolean unknownMatches) {
+        return isAssignable(resolver, type, allowUninitialized, unknownMatches, true);
     }
 }
