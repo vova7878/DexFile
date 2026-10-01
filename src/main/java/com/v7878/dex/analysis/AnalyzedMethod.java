@@ -2190,7 +2190,7 @@ public final class AnalyzedMethod {
                 if (this_reg.isZeroOrNull()) next_reachable = false;
                 markNonNull(current, ithis_reg, this_reg);
             }
-            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_INTERFACE, INVOKE_POLYMORPHIC -> {
+            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_INTERFACE -> {
                 var tmp = (InstructionNv5c) insn;
 
                 assert tmp.getRegisterCount() > 0;
@@ -2202,8 +2202,19 @@ public final class AnalyzedMethod {
                 if (this_reg.isZeroOrNull()) next_reachable = false;
                 markNonNull(current, ithis_reg, this_reg);
             }
-            case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
-                 INVOKE_INTERFACE_RANGE -> {
+            case INVOKE_POLYMORPHIC -> {
+                var tmp = (InstructionNv5cc) insn;
+
+                assert tmp.getRegisterCount() > 0;
+                int ithis_reg = tmp.getRegister1();
+                var this_reg = current.before().at(ithis_reg);
+
+                if (verify) verify_35c_45cc_args(resolver, current, true, true);
+
+                if (this_reg.isZeroOrNull()) next_reachable = false;
+                markNonNull(current, ithis_reg, this_reg);
+            }
+            case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE, INVOKE_INTERFACE_RANGE -> {
                 var tmp = (InstructionNrc) insn;
 
                 assert tmp.getRegisterCount() > 0;
