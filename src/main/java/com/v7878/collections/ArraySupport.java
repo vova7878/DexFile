@@ -43,6 +43,25 @@ class ArraySupport {
         return new_array;
     }
 
+    public static long[] insert(long[] array, int size, int index, long value) {
+        assert size <= array.length;
+        assert index <= size;
+        if (size < array.length) {
+            if (index < size) {
+                System.arraycopy(array, index, array, index + 1, size - index);
+            }
+            array[index] = value;
+            return array;
+        }
+        var new_array = new long[growSize(size)];
+        System.arraycopy(array, 0, new_array, 0, index);
+        if (index < size) {
+            System.arraycopy(array, index, new_array, index + 1, size - index);
+        }
+        new_array[index] = value;
+        return new_array;
+    }
+
     // Version without range checks
     public static int binarySearch(int[] a, int from, int to, int key) {
         int low = from;
@@ -51,6 +70,25 @@ class ArraySupport {
         while (low <= high) {
             int mid = (low + high) >>> 1;
             int midVal = a[mid];
+
+            if (midVal < key)
+                low = mid + 1;
+            else if (midVal > key)
+                high = mid - 1;
+            else
+                return mid; // key found
+        }
+        return -(low + 1);  // key not found
+    }
+
+    // Version without range checks
+    public static int binarySearch(long[] a, int from, int to, long key) {
+        int low = from;
+        int high = to - 1;
+
+        while (low <= high) {
+            int mid = (low + high) >>> 1;
+            long midVal = a[mid];
 
             if (midVal < key)
                 low = mid + 1;

@@ -13,6 +13,7 @@ import com.v7878.dex.raw.SharedData.StringPosition;
 
 public class EmptyArrays {
     public static final int[] INT = new int[0];
+    public static final long[] LONG = new long[0];
     public static final Object[] OBJECT = new Object[0];
     public static final StringPosition[] STRING = new StringPosition[0];
 

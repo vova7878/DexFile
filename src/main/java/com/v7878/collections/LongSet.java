@@ -1,0 +1,313 @@
+package com.v7878.collections;
+
+import com.v7878.dex.util.EmptyArrays;
+
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.stream.LongStream;
+
+public final class LongSet implements Iterable<Long> {
+    private boolean ro;
+    private long[] array;
+    private int size;
+
+    public LongSet() {
+        this(0);
+    }
+
+    public LongSet(int initialCapacity) {
+        this.array = initialCapacity <= 0 ? EmptyArrays.LONG : new long[initialCapacity];
+        this.size = 0;
+        this.ro = false;
+    }
+
+    public LongSet(LongSet other) {
+        var length = other.size;
+        this.size = length;
+        if (length == 0) {
+            this.array = EmptyArrays.LONG;
+        } else {
+            this.array = other.array.clone();
+        }
+        this.ro = false;
+    }
+
+    LongSet(LongSet other, boolean ro) {
+        var length = other.size;
+        this.size = length;
+        if (length == 0) {
+            this.array = EmptyArrays.LONG;
+        } else {
+            if (ro) {
+                this.array = other.array;
+                if (!trimToSize()) {
+                    this.array = this.array.clone();
+                }
+            } else {
+                this.array = other.array.clone();
+            }
+        }
+        this.ro = ro;
+    }
+
+    LongSet(long[] array, int size, boolean ro) {
+        this.array = array;
+        this.size = size;
+        this.ro = ro;
+    }
+
+    private static final LongSet EMPTY = new LongSet(
+            EmptyArrays.LONG, 0, true);
+
+    public static LongSet empty() {
+        return EMPTY;
+    }
+
+    public LongSet duplicate() {
+        return new LongSet(this, ro);
+    }
+
+    public LongSet freeze() {
+        if (ro) {
+            return this;
+        }
+        trimToSize();
+        ro = true;
+        return this;
+    }
+
+    private void checkWritable() {
+        if (ro) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    public void ensureCapacity(int minCapacity) {
+        checkWritable();
+        if (minCapacity > array.length) {
+            array = Arrays.copyOf(array, minCapacity);
+        }
+    }
+
+    public int indexOf(long value) {
+        return ArraySupport.binarySearch(array, 0, size, value);
+    }
+
+    public boolean contains(long value) {
+        return indexOf(value) >= 0;
+    }
+
+    private void removeAtRaw(int index) {
+        int from = index + 1;
+        if (from < size) {
+            System.arraycopy(array, from, array, index, size - from);
+        }
+        size--;
+    }
+
+    /**
+     * @return {@code true} if this set contained the specified element
+     */
+    public boolean remove(long value) {
+        checkWritable();
+        int i = indexOf(value);
+        if (i >= 0) {
+            removeAtRaw(i);
+            return true;
+        }
+        return false;
+    }
+
+    public void removeAt(int index) {
+        checkWritable();
+        Objects.checkIndex(index, size);
+        removeAtRaw(index);
+    }
+
+    // TODO: public void removeRange(long from_value, long to_value)
+
+    public void removeAtRange(int from_index, int to_index) {
+        checkWritable();
+        Objects.checkFromToIndex(from_index, to_index, size);
+        if (to_index <= from_index) {
+            return;
+        }
+        if (to_index < size) {
+            // Here the meaning of 'to' and 'from' is reversed
+            System.arraycopy(array, to_index, array, from_index, size - to_index);
+        }
+        size -= to_index - from_index;
+    }
+
+    /**
+     * @return {@code true} if this set did not already contain the specified element
+     */
+    public boolean add(long value) {
+        checkWritable();
+        int i = indexOf(value);
+        if (i >= 0) {
+            return false;
+        }
+        i = ~i;
+        array = ArraySupport.insert(array, size, i, value);
+        size++;
+        return true;
+    }
+
+    // TODO: public void addRange(int from_value, int to_value)
+
+    public void addAll(LongSet other) {
+        checkWritable();
+        Objects.requireNonNull(other);
+        int length = other.size;
+        if (length == 0) {
+            return;
+        }
+        ensureCapacity(size + length);
+        long[] other_array = other.array;
+        for (int i = 0; i < length; i++) {
+            add(other_array[i]);
+        }
+    }
+
+    public void addAll(long[] other) {
+        checkWritable();
+        Objects.requireNonNull(other);
+        int length = other.length;
+        if (length == 0) {
+            return;
+        }
+        ensureCapacity(size + length);
+        for (long v : other) {
+            add(v);
+        }
+    }
+
+    public int size() {
+        return size;
+    }
+
+    public boolean isEmpty() {
+        return size == 0;
+    }
+
+    public long at(int index) {
+        Objects.checkIndex(index, size);
+        return array[index];
+    }
+
+    public long first() {
+        return at(0);
+    }
+
+    public long last() {
+        return at(size - 1);
+    }
+
+    public long[] toArray() {
+        return Arrays.copyOf(array, size);
+    }
+
+    public LongStream stream() {
+        return Arrays.stream(array, 0, size);
+    }
+
+    public void clear() {
+        checkWritable();
+        size = 0;
+    }
+
+    @Override
+    public String toString() {
+        int length = size;
+        if (length <= 0) {
+            return "{}";
+        }
+        StringBuilder buffer = new StringBuilder(length * 12);
+        buffer.append('{');
+        for (int i = 0; i < length; i++) {
+            if (i > 0) {
+                buffer.append(", ");
+            }
+            long key = at(i);
+            buffer.append(key);
+        }
+        buffer.append('}');
+        return buffer.toString();
+    }
+
+    public boolean contentEquals(LongSet other) {
+        if (other == null) {
+            return false;
+        }
+        int length = size;
+        if (length != other.size) {
+            return false;
+        }
+        return Arrays.equals(array, 0, size,
+                other.array, 0, other.size);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        return obj instanceof LongSet other
+                && contentEquals(other);
+    }
+
+    public int contentHashCode() {
+        int hash = 0;
+        int length = size;
+        for (int index = 0; index < length; index++) {
+            int value = Long.hashCode(array[index]);
+            hash = 31 * hash + value;
+        }
+        return hash;
+    }
+
+    @Override
+    public int hashCode() {
+        return contentHashCode();
+    }
+
+    public boolean trimToSize() {
+        checkWritable();
+        int length = size;
+        if (array.length > length) {
+            array = Arrays.copyOf(array, length);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public Iterator<Long> iterator() {
+        return new Iterator<>() {
+            int cursor;       // Index of next element to return
+            int lastRet = -1; // Index of last element returned; -1 if no such
+
+            public boolean hasNext() {
+                return cursor < size;
+            }
+
+            public Long next() {
+                int i = cursor;
+                if (i >= size)
+                    throw new NoSuchElementException();
+                cursor = i + 1;
+                return array[lastRet = i];
+            }
+
+            public void remove() {
+                int i = lastRet;
+                if (i < 0)
+                    throw new IllegalStateException();
+                removeAt(i);
+                cursor = i;
+                lastRet = -1;
+            }
+        };
+    }
+}
