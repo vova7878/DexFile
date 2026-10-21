@@ -263,7 +263,7 @@ public final class AnalyzedMethod {
         }
         if (!kind.isRef()) {
             throw new IllegalArgumentException(String.format(
-                    "Unexpected register type %s, expected integral constant", reg));
+                    "Unexpected register type %s, expected reference constant", reg));
         }
 
         var values = new LinkedHashSet<>();
