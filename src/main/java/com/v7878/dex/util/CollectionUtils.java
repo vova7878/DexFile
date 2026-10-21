@@ -1,5 +1,6 @@
 package com.v7878.dex.util;
 
+import java.util.AbstractList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -41,6 +42,21 @@ public class CollectionUtils {
             if (out != 0) return out;
         }
         return Boolean.compare(i1.hasNext(), i2.hasNext());
+    }
+
+    public static <T> List<T> reverseList(List<T> list) {
+        if (list == null) return null;
+        return new AbstractList<>() {
+            @Override
+            public int size() {
+                return list.size();
+            }
+
+            @Override
+            public T get(int index) {
+                return list.get(list.size() - index - 1);
+            }
+        };
     }
 
     public static <E extends Comparable<E>> E findValue(NavigableSet<E> set, E e) {

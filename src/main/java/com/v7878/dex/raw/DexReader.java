@@ -588,8 +588,8 @@ public final class DexReader implements DexReaderCache {
         int size = in.readSmallULeb128();
         NavigableSet<AnnotationElement> elements = new TreeSet<>();
         for (int i = 0; i < size; i++) {
-            // TODO: check for duplicates
-            elements.add(readAnnotationElement(in));
+            MemberUtils.addAnnotationElement(
+                    elements, readAnnotationElement(in));
         }
         elements = Collections.unmodifiableNavigableSet(elements);
         return EncodedAnnotation.raw(type, elements);
@@ -647,8 +647,8 @@ public final class DexReader implements DexReaderCache {
         int size = in.readSmallUInt();
         var out = new TreeSet<Annotation>();
         for (int i = 0; i < size; i++) {
-            // TODO: check for duplicates
-            out.add(getAnnotation(in.readSmallUInt()));
+            MemberUtils.addAnnotation(
+                    out, getAnnotation(in.readSmallUInt()));
         }
         return Collections.unmodifiableNavigableSet(out);
     }
@@ -1013,7 +1013,7 @@ public final class DexReader implements DexReaderCache {
                 initial_value = (static_values != null && i < static_values.size()) ?
                         static_values.get(i) : EncodedValue.defaultValue(id.getType());
             }
-            // TODO: check for duplicates
+            // Potential duplicates are handled when merging lists
             out.add(FieldDef.raw(id.getName(), id.getType(), access_flags, hiddenapi_flags,
                     initial_value, annotations_map.get(index, Collections.emptyNavigableSet())));
         }
@@ -1224,7 +1224,7 @@ public final class DexReader implements DexReaderCache {
             int code_off = in.readSmallULeb128();
             var code = code_off == NO_OFFSET ? null :
                     (!options.hasMethodBodies() ?
-                     CodeItem.EMPTY : getCodeItem(code_off));
+                            CodeItem.EMPTY : getCodeItem(code_off));
             DebugInfo debug_info;
             if (code == null || !options.hasDebugInfo()) {
                 debug_info = null;
@@ -1239,7 +1239,7 @@ public final class DexReader implements DexReaderCache {
                     debug_info == null ? null : debug_info.parameter_names(),
                     id.getParameterTypes(), parameter_annotations.get(index, List.of()));
             MethodImplementation implementation = toImplementation(code, debug_info);
-            // TODO: check for duplicates
+            // Potential duplicates are handled when merging lists
             out.add(MethodDef.raw(id.getName(), id.getReturnType(), parameters,
                     access_flags, hiddenapi_flags, implementation,
                     method_annotations.get(index, Collections.emptyNavigableSet())));

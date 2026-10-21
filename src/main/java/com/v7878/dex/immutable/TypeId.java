@@ -318,6 +318,34 @@ public final class TypeId implements Comparable<TypeId> {
         return baseType().getBinaryName() + "[]".repeat(array_depth);
     }
 
+    // Class::IsInSamePackage
+    // https://android.googlesource.com/platform/art/+/refs/heads/android17-release/runtime/mirror/class.cc#479
+    public static boolean isInSamePackage(TypeId a, TypeId b) {
+        Objects.requireNonNull(a);
+        Objects.requireNonNull(b);
+
+        if (a == b) return true;
+        a = a.baseType();
+        b = b.baseType();
+        if (Objects.equals(a, b)) return true;
+
+        if (a.isPrimitive() || b.isPrimitive()) {
+            var aprim = a.isPrimitive();
+            if (aprim && b.isPrimitive()) {
+                return true;
+            }
+            var t = aprim ? b : a;
+            return t.getDescriptor().indexOf('/') < 0;
+        }
+
+        var ad = a.getDescriptor();
+        var bd = b.getDescriptor();
+
+        var d1_after_package = ad.lastIndexOf('/') + 1;
+        return bd.regionMatches(0, ad, 0, d1_after_package)
+                && bd.indexOf('/', d1_after_package) < 0;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hashCode(getDescriptor());

@@ -42,6 +42,8 @@ import static com.v7878.dex.util.Ids.THROWABLE;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
 import com.v7878.collections.IntMap;
+import com.v7878.collections.IntSet;
+import com.v7878.collections.LongSet;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.analysis.Position.Transition;
 import com.v7878.dex.analysis.Register.Constant;
@@ -83,9 +85,15 @@ import com.v7878.dex.immutable.bytecode.iface.VariableFiveRegisterInstruction;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Formatter;
 
+import java.util.ArrayDeque;
 import java.util.BitSet;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.StringJoiner;
+import java.util.function.BiConsumer;
 import java.util.function.ToIntFunction;
 
 public final class AnalyzedMethod {
@@ -167,6 +175,108 @@ public final class AnalyzedMethod {
                     opcode, address, expected));
         }
         return out;
+    }
+
+    private void iterate_sources(Register reg, BiConsumer<Position, Register> action) {
+        Objects.requireNonNull(reg);
+        Objects.requireNonNull(action);
+
+        var todo = new ArrayDeque<Register>();
+        var done = new HashSet<Register>();
+
+        todo.add(reg);
+        while (!todo.isEmpty()) {
+            var tmp = todo.poll();
+            if (done.contains(tmp)) {
+                continue;
+            }
+            done.add(tmp);
+
+            var ident = reg.getSource();
+
+            if (ident.isParameter()) {
+                action.accept(null, tmp);
+                continue;
+            }
+
+            var pos = position(ident.address());
+            if (pos.outputs().contains(ident.slot())) {
+                action.accept(pos, tmp);
+            } else {
+                for (var trans : pos.predecessors()) {
+                    var parent = position(trans.address());
+                    var line = trans.isNormal() ? parent.after() : parent.before();
+                    todo.add(line.at(ident.slot()));
+                }
+            }
+        }
+    }
+
+    public Set<Register> value_sources(Register reg) {
+        var values = new LinkedHashSet<Register>();
+        iterate_sources(reg, (pos, target) -> values.add(target));
+        return Collections.unmodifiableSet(values);
+    }
+
+    public IntSet constant_values(Register reg) {
+        var kind = reg.getConstantKind();
+        if (kind == null) {
+            throw new IllegalArgumentException("Not a constant register " + reg);
+        }
+        if (!kind.isInt()) {
+            throw new IllegalArgumentException(String.format(
+                    "Unexpected register type %s, expected integral constant", reg));
+        }
+
+        var values = new IntSet();
+        iterate_sources(reg, (pos, target) -> {
+            InstructionN1i src = pos.instruction();
+            values.add(src.getLiteral());
+        });
+
+        return values.freeze();
+    }
+
+    public LongSet wide_constant_values(Register reg) {
+        var kind = reg.getConstantKind();
+        if (kind == null) {
+            throw new IllegalArgumentException("Not a constant register " + reg);
+        }
+        if (!kind.isWide()) {
+            throw new IllegalArgumentException(String.format(
+                    "Unexpected register type %s, expected wide constant", reg));
+        }
+
+        var values = new LongSet();
+        iterate_sources(reg, (pos, target) -> {
+            InstructionN1l src = pos.instruction();
+            values.add(src.getWideLiteral());
+        });
+
+        return values.freeze();
+    }
+
+    public Set<Object> ref_constant_values(Register reg) {
+        var kind = reg.getConstantKind();
+        if (kind == null) {
+            throw new IllegalArgumentException("Not a constant register " + reg);
+        }
+        if (!kind.isRef()) {
+            throw new IllegalArgumentException(String.format(
+                    "Unexpected register type %s, expected integral constant", reg));
+        }
+
+        var values = new LinkedHashSet<>();
+        iterate_sources(reg, (pos, target) -> {
+            if (target.isZeroOrNull()) {
+                values.add(null);
+            } else {
+                InstructionN1c src = pos.instruction();
+                values.add(src.getReference1());
+            }
+        });
+
+        return Collections.unmodifiableSet(values);
     }
 
     public static AnalyzedMethod analyze(

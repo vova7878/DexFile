@@ -30,6 +30,33 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             String name, TypeId return_type, List<Parameter> parameters,
             int access_flags, int hiddenapi_flags, MethodImplementation implementation,
             NavigableSet<Annotation> annotations) {
+        this.name = Objects.requireNonNull(name);
+        this.return_type = Objects.requireNonNull(return_type);
+        this.parameters = Objects.requireNonNull(parameters);
+        this.access_flags = access_flags;
+        this.hiddenapi_flags = hiddenapi_flags;
+        this.implementation = implementation; // may be null
+        this.annotations = Objects.requireNonNull(annotations);
+    }
+
+    @Internal
+    public static MethodDef unchecked(
+            String name, TypeId return_type, List<Parameter> parameters,
+            int access_flags, int hiddenapi_flags, MethodImplementation implementation,
+            NavigableSet<Annotation> annotations) {
+        return new MethodDef(name, return_type, parameters,
+                access_flags, hiddenapi_flags, implementation, annotations);
+    }
+
+    @Internal
+    public static MethodDef raw(
+            String name, TypeId return_type, List<Parameter> parameters,
+            int access_flags, int hiddenapi_flags, MethodImplementation implementation,
+            NavigableSet<Annotation> annotations) {
+        //noinspection DataFlowIssue
+        access_flags = Preconditions.checkMethodAccessFlags(access_flags);
+        //noinspection DataFlowIssue
+        hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
         if ((access_flags & (ACC_ABSTRACT | ACC_NATIVE)) != 0) {
             if (implementation != null) {
                 throw new IllegalArgumentException("Abstract or native methods should not have implementation");
@@ -80,20 +107,6 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 }
             }
         }
-        this.name = Objects.requireNonNull(name);
-        this.return_type = Objects.requireNonNull(return_type);
-        this.parameters = Objects.requireNonNull(parameters);
-        this.access_flags = Preconditions.checkMethodAccessFlags(access_flags);
-        this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
-        this.implementation = implementation; // may be null
-        this.annotations = Objects.requireNonNull(annotations);
-    }
-
-    @Internal
-    public static MethodDef raw(
-            String name, TypeId return_type, List<Parameter> parameters,
-            int access_flags, int hiddenapi_flags, MethodImplementation implementation,
-            NavigableSet<Annotation> annotations) {
         return new MethodDef(name, return_type, parameters,
                 access_flags, hiddenapi_flags, implementation, annotations);
     }
@@ -102,7 +115,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             String name, TypeId return_type, Iterable<Parameter> parameters,
             int access_flags, int hiddenapi_flags, MethodImplementation implementation,
             Iterable<Annotation> annotations) {
-        return new MethodDef(name, return_type, Converter.toList(parameters), access_flags,
+        return raw(name, return_type, Converter.toList(parameters), access_flags,
                 hiddenapi_flags, implementation, Converter.toNavigableSet(annotations));
     }
 

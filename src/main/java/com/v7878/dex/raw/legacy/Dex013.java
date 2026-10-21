@@ -340,7 +340,7 @@ public class Dex013 {
 
             var code = code_off == NO_OFFSET ? null :
                     (!reader.options().hasMethodBodies() ?
-                     CodeItem.EMPTY : readCodeItem(reader, mid, code_off));
+                            CodeItem.EMPTY : readCodeItem(reader, mid, code_off));
             var debug_info = code == null ? null : code.debug_info();
             list.add(MethodDef.of(mid.getName(), mid.getReturnType(),
                     Parameter.listOf(mid.getParameterTypes()), access_flags, 0,

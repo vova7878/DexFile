@@ -1,8 +1,6 @@
 package com.v7878.dex.util;
 
-import static com.v7878.dex.DexConstants.ACC_CONSTRUCTOR;
-import static com.v7878.dex.DexConstants.ACC_NATIVE;
-import static com.v7878.dex.DexConstants.ACC_PRIVATE;
+import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 
 import com.v7878.dex.AnnotationVisibility;
@@ -29,15 +27,7 @@ public class MemberUtils {
     }
 
     private static MethodDef searchableMethod(String name, TypeId ret, List<Parameter> parameters, boolean is_direct) {
-        int flags = ACC_NATIVE; // implementation == null
-        if (is_direct) {
-            flags |= switch (name) {
-                case "<init>" -> ACC_CONSTRUCTOR;
-                case "<clinit>" -> ACC_STATIC | ACC_CONSTRUCTOR;
-                default -> ACC_PRIVATE;
-            };
-        }
-        return MethodDef.raw(name, ret, parameters, flags,
+        return MethodDef.unchecked(name, ret, parameters, is_direct ? ACC_DIRECT_MASK : 0,
                 0, null, Collections.emptyNavigableSet());
     }
 
@@ -77,17 +67,23 @@ public class MemberUtils {
 
     public static NavigableSet<FieldDef> mergeFields(List<FieldDef> static_, List<FieldDef> instance) {
         var out = new TreeSet<FieldDef>();
-        // TODO: check for duplicates
-        if (static_ != null) out.addAll(static_);
-        if (instance != null) out.addAll(instance);
+        if (static_ != null) for (var field : static_) {
+            MemberUtils.addField(out, field);
+        }
+        if (instance != null) for (var field : instance) {
+            MemberUtils.addField(out, field);
+        }
         return Collections.unmodifiableNavigableSet(out);
     }
 
     public static NavigableSet<MethodDef> mergeMethods(List<MethodDef> direct, List<MethodDef> virtual) {
         var out = new TreeSet<MethodDef>();
-        // TODO: check for duplicates
-        if (direct != null) out.addAll(direct);
-        if (virtual != null) out.addAll(virtual);
+        if (direct != null) for (var method : direct) {
+            MemberUtils.addMethod(out, method);
+        }
+        if (virtual != null) for (var method : virtual) {
+            MemberUtils.addMethod(out, method);
+        }
         return Collections.unmodifiableNavigableSet(out);
     }
 
@@ -123,5 +119,37 @@ public class MemberUtils {
             return floor;
         }
         return null;
+    }
+
+    public static void addAnnotationElement(NavigableSet<AnnotationElement> elements, AnnotationElement value) {
+        if (!elements.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate annotation element with name %s", value.getName()
+            ));
+        }
+    }
+
+    public static void addAnnotation(NavigableSet<Annotation> annotations, Annotation value) {
+        if (!annotations.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate annotation with type %s", value.getType()
+            ));
+        }
+    }
+
+    public static void addMethod(NavigableSet<MethodDef> methods, MethodDef value) {
+        if (!methods.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate method with signature %s", value.getName() + value.getProto()
+            ));
+        }
+    }
+
+    public static void addField(NavigableSet<FieldDef> fields, FieldDef value) {
+        if (!fields.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate field with signature %s", value.getName() + ":" + value.getType()
+            ));
+        }
     }
 }

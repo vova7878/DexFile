@@ -10,6 +10,7 @@ import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.util.MemberUtils;
 
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.TokenStream;
@@ -217,23 +218,19 @@ public abstract class SmaliParserBase extends Parser {
     }
 
     public static void add(NavigableSet<Annotation> annotations, Annotation value) {
-        // TODO: check for duplicates
-        annotations.add(value);
+        MemberUtils.addAnnotation(annotations, value);
     }
 
     public static void add(NavigableSet<MethodDef> methods, MethodDef value) {
-        // TODO: check for duplicates
-        methods.add(value);
+        MemberUtils.addMethod(methods, value);
     }
 
     public static void add(NavigableSet<FieldDef> fields, FieldDef value) {
-        // TODO: check for duplicates
-        fields.add(value);
+        MemberUtils.addField(fields, value);
     }
 
     public static void add(NavigableSet<AnnotationElement> elements, AnnotationElement value) {
-        // TODO: check for duplicates
-        elements.add(value);
+        MemberUtils.addAnnotationElement(elements, value);
     }
 
     public static List<Parameter> mergeParameters(

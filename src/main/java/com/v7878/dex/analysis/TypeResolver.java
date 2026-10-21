@@ -34,7 +34,7 @@ public abstract sealed class TypeResolver {
      * implemented interfaces and the interface flag. Classes the mapper
      * cannot resolve are unknown.
      */
-    public static TypeResolver simple(Function<TypeId, ClassHeader> mapper) {
+    public static TypeResolver simple(Function<TypeId, ? extends ClassHeader> mapper) {
         return new SimpleResolver(mapper);
     }
 
@@ -263,9 +263,9 @@ public abstract sealed class TypeResolver {
     }
 
     private static final class SimpleResolver extends TypeResolver {
-        private final Function<TypeId, ClassHeader> mapper;
+        private final Function<TypeId, ? extends ClassHeader> mapper;
 
-        SimpleResolver(Function<TypeId, ClassHeader> mapper) {
+        SimpleResolver(Function<TypeId, ? extends ClassHeader> mapper) {
             this.mapper = Objects.requireNonNull(mapper);
         }
 

@@ -1,6 +1,8 @@
 package com.v7878.dex.immutable;
 
+import static com.v7878.dex.DexConstants.ACC_INTERFACE;
 import static com.v7878.dex.DexIO.ClassHeader;
+import static com.v7878.dex.immutable.TypeId.OBJECT;
 
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.Converter;
@@ -53,6 +55,18 @@ public final class ClassDef implements Annotatable, ClassHeader {
                      NavigableSet<MethodDef> methods, NavigableSet<Annotation> annotations) {
         this.type = Objects.requireNonNull(type);
         this.access_flags = Preconditions.checkClassAccessFlags(access_flags);
+        if (isInterface() && !OBJECT.equals(superclass)) {
+            throw new IllegalArgumentException("Interface " + type +
+                    " must have java.lang.Object as superclass, got " + superclass);
+        }
+        if (isJavaLangObject() && superclass != null) {
+            throw new IllegalArgumentException(
+                    "java.lang.Object must not have a superclass, got " + superclass);
+        }
+        if (superclass == null && !isJavaLangObject()) {
+            throw new IllegalArgumentException(
+                    "Missing superclass for " + type);
+        }
         this.superclass = superclass; // may be null
         this.interfaces = Objects.requireNonNull(interfaces);
         this.source_file = source_file; // may be null
@@ -84,9 +98,17 @@ public final class ClassDef implements Annotatable, ClassHeader {
         return type;
     }
 
+    public boolean isJavaLangObject() {
+        return OBJECT.equals(type);
+    }
+
     @Override
     public int getAccessFlags() {
         return access_flags;
+    }
+
+    public boolean isInterface() {
+        return (access_flags & ACC_INTERFACE) != 0;
     }
 
     @Override

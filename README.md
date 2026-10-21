@@ -15,19 +15,19 @@ dependencies {
 
 ### Supported DEX Versions
 
-| Version        | Supported API |      Read      |      Write      | Instruction Set                                       |
-|:---------------|:-------------:|:--------------:|:---------------:|:------------------------------------------------------|
-| **041**        |      35+      | ✅ <sup>1</sup> | ✅ <sup>1</sup>  | Standard <sup>2</sup>                                 |
-| **040**        |      30+      |       ✅        |        ✅        | Standard + ODEX                                       |
-| **039**        |      28+      |       ✅        |        ✅        | Standard + ODEX                                       |
-| **038**        |      26+      |       ✅        |        ✅        | Standard + ODEX                                       |
-| **037**        |      26+      |       ✅        |        ✅        | Standard + ODEX                                       |
-| **037**        |    24 - 25    |       ✅        |        ✅        | Standard + ODEX + ⏳lambda opcodes <sup>3</sup>        |
-| **036**        |    16 - 20    |       ✅        |        ✅        | Standard + ODEX <sup>4</sup>                          |
-| **036**        |    14 - 15    |       ✅        |        ✅        | Standard + ODEX + expanded jumbo opcodes <sup>5</sup> |
-| **035**        |      1+       |       ✅        |        ✅        | Standard + ODEX                                       |
-| **013**        |      M5       |       ✅        |        ⏳        | Early Dalvik + ODEX <sup>6</sup>                      |
-| **009**        |      M3       |       ✅        |        ⏳        | Early Dalvik + ODEX <sup>6</sup>                      |
+| Version        | Supported API |      Read       |      Write      | Instruction Set                                       |
+|:---------------|:-------------:|:---------------:|:---------------:|:------------------------------------------------------|
+| **041**        |      35+      | ✅ <sup>1</sup> | ✅ <sup>1</sup> | Standard <sup>2</sup>                                 |
+| **040**        |      30+      |       ✅        |       ✅        | Standard + ODEX                                       |
+| **039**        |      28+      |       ✅        |       ✅        | Standard + ODEX                                       |
+| **038**        |      26+      |       ✅        |       ✅        | Standard + ODEX                                       |
+| **037**        |      26+      |       ✅        |       ✅        | Standard + ODEX                                       |
+| **037**        |    24 - 25    |       ✅        |       ✅        | Standard + ODEX + ⏳lambda opcodes <sup>3</sup>       |
+| **036**        |    16 - 20    |       ✅        |       ✅        | Standard + ODEX <sup>4</sup>                          |
+| **036**        |    14 - 15    |       ✅        |       ✅        | Standard + ODEX + expanded jumbo opcodes <sup>5</sup> |
+| **035**        |      1+       |       ✅        |       ✅        | Standard + ODEX                                       |
+| **013**        |      M5       |       ✅        |       ⏳        | Early Dalvik + ODEX <sup>6</sup>                      |
+| **009**        |      M3       |       ✅        |       ⏳        | Early Dalvik + ODEX <sup>6</sup>                      |
 | **cdex (001)** |    28 - 35    | ✅ <sup>7</sup> | ⚠️ <sup>8</sup> | Standard + ODEX                                       |
 
 * <sup>1</sup> Supports reading and writing as a **container** that can combine multiple logical DEX files into a single physical file to save space and share data (e.g., strings).

@@ -660,7 +660,7 @@ public sealed abstract class Register {
             return Conflict.of(ident);
         }
         if (a.isUninitializedRef() || b.isUninitializedRef()) {
-            // Unitialized types are special. They may only ever be merged with
+            // Uninitialized types are special. They may only ever be merged with
             // themselves (Equality check above). So mark any other merge as conflicting
             return Conflict.of(ident);
         }
