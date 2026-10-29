@@ -4,6 +4,8 @@ import static com.v7878.dex.DexConstants.ACC_FINAL;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 import static com.v7878.dex.analysis.ClassLinker.LinkedClass;
 import static com.v7878.dex.analysis.ClassLinker.LinkedMethod;
+import static com.v7878.dex.analysis.ClassLinker.MethodKind.DECLARED;
+import static com.v7878.dex.analysis.ClassLinker.MethodKind.DEFAULT_CONFLICT;
 import static com.v7878.dex.immutable.TypeId.OBJECT;
 import static com.v7878.dex.util.CollectionUtils.reverseList;
 
@@ -164,6 +166,12 @@ public class ClassPath {
             Objects.requireNonNull(declaringClass);
             Objects.requireNonNull(field);
         }
+
+        @Override
+        public String toString() {
+            return declaringClass.getType().getDescriptor() +
+                    "->" + field.getName() + ":" + field.getType().getDescriptor();
+        }
     }
 
     /**
@@ -177,6 +185,12 @@ public class ClassPath {
 
         public boolean isDefault() {
             return declaringClass.isInterface() && method.getImplementation() != null;
+        }
+
+        @Override
+        public String toString() {
+            return declaringClass.getType().getDescriptor() +
+                    "->" + method.getName() + method.getProto();
         }
     }
 
@@ -207,15 +221,6 @@ public class ClassPath {
     }
 
     /**
-     * Kind of a methods-array entry vs the ART flags (kAccCopied — "copied
-     * from an interface"): DECLARED — a method declared by the class;
-     * MIRANDA — a miranda copy (kAccCopied | kAccAbstract); DEFAULT — a
-     * default-method copy (kAccCopied | kAccDefault); DEFAULT_CONFLICT — a
-     * conflict copy (kAccCopied | kAccAbstract | kAccDefault, not invokable).
-     */
-    public enum MethodKind {DECLARED, MIRANDA, DEFAULT, DEFAULT_CONFLICT}
-
-    /**
      * Dispatch outcome: a concrete method or a default-method conflict. The
      * execution error lives in the target itself — {@link #invocationError()}.
      */
@@ -227,11 +232,10 @@ public class ClassPath {
          * error; {@link #isInvokable()} is derived
          * ({@code invocationError == NONE}).
          */
-        record Method(ResolvedMethod method, MethodKind kind,
+        record Method(ResolvedMethod method,
                       InvocationError invocationError) implements CallTarget {
             public Method {
                 Objects.requireNonNull(method);
-                Objects.requireNonNull(kind);
                 Objects.requireNonNull(invocationError);
             }
 
@@ -511,20 +515,20 @@ public class ClassPath {
         Objects.requireNonNull(referrer);
         Objects.requireNonNull(type);
         var m = normalize(mid);
-        var r = resolveMethodWithChecksCached(m, referrer, type);
+        var r = resolveMethodWithChecks(m, referrer, type);
         if (r.value() == null) {
             return Result.fail(r.exact(), r.error(), r.message());
         }
         return Result.ok(r.exact(), toResolved(r.value()));
     }
 
-    private Result<LinkedMethod> resolveMethodWithChecksCached(
+    private Result<LinkedMethod> resolveMethodWithChecks(
             MethodId mid, TypeId referrer, InvokeType type) {
         return method_check_cache.computeIfAbsent(new ResolveKey(mid, referrer, type),
-                key -> resolveMethodWithChecks(key.mid(), key.referrer(), key.type()));
+                key -> resolveMethodWithChecksUncached(key.mid(), key.referrer(), key.type()));
     }
 
-    private Result<LinkedMethod> resolveMethodWithChecks(
+    private Result<LinkedMethod> resolveMethodWithChecksUncached(
             MethodId mid, TypeId referrer, InvokeType type) {
         var klassType = mid.getDeclaringClass();
         var lc = linker.link(klassType);
@@ -638,7 +642,7 @@ public class ClassPath {
 
     private Result<CallTarget> findMethodToCallUncached(
             MethodId mid, TypeId referrer, InvokeType type, TypeId receiver) {
-        var resolution = resolveMethodWithChecksCached(mid, referrer, type);
+        var resolution = resolveMethodWithChecks(mid, referrer, type);
         if (resolution.value() == null) {
             return Result.fail(resolution.exact(), resolution.error(), resolution.message());
         }
@@ -709,7 +713,7 @@ public class ClassPath {
     private Result<CallTarget> findSuperMethodToCallUncached(
             MethodId mid, TypeId referrer, TypeId receiver) {
         // NterpGetMethod: kSuper -> ResolveMethodWithChecks, then FindSuperMethodToCall
-        var resolution = resolveMethodWithChecksCached(mid, referrer, InvokeType.SUPER);
+        var resolution = resolveMethodWithChecks(mid, referrer, InvokeType.SUPER);
         if (resolution.value() == null) {
             return Result.fail(resolution.exact(), resolution.error(), resolution.message());
         }
@@ -777,7 +781,7 @@ public class ClassPath {
 
     private Result<CallTarget> findNonVirtualMethodToCallUncached(
             MethodId mid, TypeId referrer, InvokeType type) {
-        var resolution = resolveMethodWithChecksCached(mid, referrer, type);
+        var resolution = resolveMethodWithChecks(mid, referrer, type);
         if (resolution.value() == null) {
             return Result.fail(resolution.exact(), resolution.error(), resolution.message());
         }
@@ -820,7 +824,7 @@ public class ClassPath {
             case STATIC -> !m.isStatic();
             case DIRECT -> !m.isDirect() || m.isStatic();
             case VIRTUAL -> m.isDirect()
-                    || (m.declaring.isInterface() && m.kind == MethodKind.DECLARED);
+                    || (m.declaring.isInterface() && m.kind == DECLARED);
             case SUPER -> m.isConstructor() || m.isStatic();
             case INTERFACE -> m.isDirect()
                     || !(m.declaring.isInterface() || m.declaring.type.equals(OBJECT));
@@ -840,8 +844,7 @@ public class ClassPath {
      * non-determinable — the result is marked exact=false.
      */
     private Result<CallTarget> wrap(LinkedMethod called, boolean exact, TypeId receiverType) {
-        var kind = called.kind;
-        if (kind == MethodKind.DEFAULT_CONFLICT) {
+        if (called.kind == DEFAULT_CONFLICT) {
             var candidates = new ArrayList<ResolvedMethod>(called.conflictCandidates.size());
             for (var lm : called.conflictCandidates) {
                 candidates.add(toResolved(lm));
@@ -861,6 +864,6 @@ public class ClassPath {
         }
 
         assert invokable == (invocationError == InvocationError.NONE);
-        return Result.ok(exact, new CallTarget.Method(toResolved(called), kind, invocationError));
+        return Result.ok(exact, new CallTarget.Method(toResolved(called), invocationError));
     }
 }

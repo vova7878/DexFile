@@ -43,7 +43,7 @@ import com.v7878.dex.util.ShortyUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -455,14 +455,14 @@ public class DexCollector {
         method_handles = new TreeSet<>();
         call_sites = new TreeSet<>();
 
-        type_lists = new HashMap<>();
-        encoded_arrays = new HashMap<>();
-        debug_infos = new HashMap<>();
-        code_items = new HashMap<>();
-        annotations = new HashMap<>();
-        annotation_sets = new HashMap<>();
-        annotation_set_lists = new HashMap<>();
-        annotation_directories = new HashMap<>();
+        type_lists = new LinkedHashMap<>();
+        encoded_arrays = new LinkedHashMap<>();
+        debug_infos = new LinkedHashMap<>();
+        code_items = new LinkedHashMap<>();
+        annotations = new LinkedHashMap<>();
+        annotation_sets = new LinkedHashMap<>();
+        annotation_set_lists = new LinkedHashMap<>();
+        annotation_directories = new LinkedHashMap<>();
 
         class_defs = new ArrayList<>();
     }

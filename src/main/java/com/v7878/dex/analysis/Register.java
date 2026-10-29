@@ -615,7 +615,7 @@ public sealed abstract class Register {
         if (ak.isPositiveByte() && bk.isPositiveByte()) return POSITIVE_BYTE;
         if (ak.isPositiveShort() && bk.isPositiveShort()) return POSITIVE_SHORT;
         if (ak.isChar() && bk.isChar()) return CHAR;
-        if (ak.isPositiveInt() && bk.isPositiveInt()) return POSITIVE_SHORT;
+        if (ak.isPositiveInt() && bk.isPositiveInt()) return POSITIVE_INT;
         if (ak.isByte() && bk.isByte()) return BYTE;
         if (ak.isShort() && bk.isShort()) return SHORT;
         return INT;

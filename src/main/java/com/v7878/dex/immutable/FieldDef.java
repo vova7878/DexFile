@@ -95,7 +95,8 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
                 && getHiddenApiFlags() == other.getHiddenApiFlags()
                 && Objects.equals(getName(), other.getName())
                 && Objects.equals(getType(), other.getType())
-                && Objects.equals(getInitialValue(), other.getInitialValue());
+                && Objects.equals(getInitialValue(), other.getInitialValue())
+                && Objects.equals(getAnnotations(), other.getAnnotations());
     }
 
     @Override

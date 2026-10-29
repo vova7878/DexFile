@@ -220,7 +220,8 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 && Objects.equals(getName(), other.getName())
                 && Objects.equals(getReturnType(), other.getReturnType())
                 && Objects.equals(getParameters(), other.getParameters())
-                && Objects.equals(getImplementation(), other.getImplementation());
+                && Objects.equals(getImplementation(), other.getImplementation())
+                && Objects.equals(getAnnotations(), other.getAnnotations());
     }
 
     @Override

@@ -11,6 +11,8 @@ import com.v7878.dex.immutable.TypeId;
  * @param array_depth the number of array dimensions
  */
 public record TypeInfo(TypeId base, int array_depth) {
+    public static final TypeInfo UNKNOWN = new TypeInfo(null, 0);
+
     public TypeInfo {
         if (base != null && base.isArray()) {
             throw new IllegalArgumentException("Illegal base " + base);
@@ -25,7 +27,7 @@ public record TypeInfo(TypeId base, int array_depth) {
      * unresolved.
      */
     public static TypeInfo of(TypeId type) {
-        if (type == null) return new TypeInfo(null, 0);
+        if (type == null) return UNKNOWN;
         return new TypeInfo(type.baseType(), type.getArrayDepth());
     }
 

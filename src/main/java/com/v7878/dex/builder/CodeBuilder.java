@@ -72,7 +72,7 @@ import com.v7878.dex.util.TryBlocksMerger.TryItem;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -397,7 +397,7 @@ public final class CodeBuilder {
         this.ins_size = checkRange(ins_size, 0, regs_size + 1) + this_reg;
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
-        this.labels = new HashMap<>();
+        this.labels = new LinkedHashMap<>();
         this.detached = new LinkedHashSet<>();
         this.root = this.current = new BuilderPosition(null);
         this.payloads = new BuilderPosition(null);

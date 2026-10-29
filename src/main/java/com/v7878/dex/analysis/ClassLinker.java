@@ -10,7 +10,6 @@ import static com.v7878.dex.DexConstants.NO_INDEX;
 
 import com.v7878.collections.IntMap;
 import com.v7878.dex.analysis.ClassPath.InvocationError;
-import com.v7878.dex.analysis.ClassPath.MethodKind;
 import com.v7878.dex.immutable.ClassDef;
 import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.ProtoId;
@@ -20,6 +19,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -66,6 +66,15 @@ final class ClassLinker {
     private ClassDef resolveClass(TypeId type) {
         return mapper.apply(type);
     }
+
+    /**
+     * Kind of a methods-array entry vs the ART flags (kAccCopied — "copied
+     * from an interface"): DECLARED — a method declared by the class;
+     * MIRANDA — a miranda copy (kAccCopied | kAccAbstract); DEFAULT — a
+     * default-method copy (kAccCopied | kAccDefault); DEFAULT_CONFLICT — a
+     * conflict copy (kAccCopied | kAccAbstract | kAccDefault, not invokable).
+     */
+    enum MethodKind {DECLARED, MIRANDA, DEFAULT, DEFAULT_CONFLICT}
 
     // =====================================================================
     // Model
@@ -204,7 +213,7 @@ final class ClassLinker {
         List<LinkedMethod> copied = List.of();
         // USE_SUPER aliases: present in the vtable but not in the methods
         // array — invisible to FindClassMethod (no kUseSuperMethod copy in
-        // the class, t13). Deviation from ART: it reuses the superclass
+        // the class). Deviation from ART: it reuses the superclass
         // method object itself; here — a separate alias with the same
         // def/declaring/kind/index
         List<LinkedMethod> aliases = List.of();
@@ -290,8 +299,8 @@ final class ClassLinker {
             return out;
         }
         var stack = new ArrayDeque<TypeId>();
-        var visiting = new LinkedHashSet<TypeId>();
-        var expanded = new HashSet<TypeId>();
+        var visiting = new HashSet<TypeId>(); // The order does not matter
+        var expanded = new HashSet<TypeId>(); // The order does not matter
         stack.push(type);
         visiting.add(type);
         while (!stack.isEmpty()) {
@@ -457,7 +466,7 @@ final class ClassLinker {
      */
     private void computeInterfaceLink(LinkedClass lc, List<LinkedClass> directIfaces) {
         // an interface's superclass is j.l.Object: FindClassMethod on an
-        // interface walks the superclass chain and reaches Object.clone (t56)
+        // interface walks the superclass chain and reaches Object.clone
         lc.superLC = OBJ;
 
         boolean hasDefaults = false;
@@ -616,13 +625,13 @@ final class ClassLinker {
         int vtableLen = superVtableLen;
 
         // declared virtuals by signature (first on duplicates)
-        var declaredBySig = new LinkedHashMap<Sig, LinkedMethod>();
+        var declaredBySig = new HashMap<Sig, LinkedMethod>(); // The order does not matter
         for (var m : lc.declaredVirtual) {
             declaredBySig.putIfAbsent(sig(m), m);
         }
 
         // super vtable overrides (AssignVTableIndexes, first loop)
-        var initialized = new HashSet<LinkedMethod>();
+        var initialized = new HashSet<LinkedMethod>(); // The order does not matter
         int[] sameSigLists = new int[superVtableLen];
         Arrays.fill(sameSigLists, NO_INDEX);
         for (int j = 0; j < superVtableLen; j++) {

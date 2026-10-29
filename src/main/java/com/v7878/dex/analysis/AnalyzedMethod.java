@@ -105,10 +105,12 @@ public final class AnalyzedMethod {
     private final ProtoId call_proto;
     private final int register_count;
 
+    private final boolean verify;
+
     private AnalyzedMethod(TypeId declaring_class, MethodDef method,
                            MethodImplementation implementation,
                            IntMap<Position> positions, int last_offset,
-                           ProtoId call_proto, int register_count) {
+                           ProtoId call_proto, int register_count, boolean verify) {
         this.declaring_class = declaring_class;
         this.method = method;
         this.implementation = implementation;
@@ -116,6 +118,7 @@ public final class AnalyzedMethod {
         this.last_offset = last_offset;
         this.call_proto = call_proto;
         this.register_count = register_count;
+        this.verify = verify;
     }
 
     public TypeId getDeclaringClass() {
@@ -192,7 +195,7 @@ public final class AnalyzedMethod {
             }
             done.add(tmp);
 
-            var ident = reg.getSource();
+            var ident = tmp.getSource();
 
             if (ident.isParameter()) {
                 action.accept(null, tmp);
@@ -280,13 +283,13 @@ public final class AnalyzedMethod {
     }
 
     public static AnalyzedMethod analyze(
-            TypeId declaring_class, MethodDef def, boolean verify) {
-        return analyze(TypeResolver.DEFAULT, declaring_class, def, verify);
+            TypeId declaring_class, MethodDef def, AnalysisOptions options) {
+        return analyze(TypeResolver.DEFAULT, declaring_class, def, options);
     }
 
     public static AnalyzedMethod analyze(
             TypeResolver resolver, TypeId declaring_class,
-            MethodDef def, boolean verify) {
+            MethodDef def, AnalysisOptions options) {
         Objects.requireNonNull(declaring_class);
         Objects.requireNonNull(def);
         var implementation = def.getImplementation();
@@ -308,9 +311,9 @@ public final class AnalyzedMethod {
         }
         var method = new AnalyzedMethod(declaring_class,
                 def, implementation, code_map, offset,
-                def.callProto(declaring_class), regs);
-        method.init(verify);
-        method.analyze(resolver, verify);
+                def.callProto(declaring_class), regs, options.hasVerification());
+        method.init();
+        method.analyze(resolver);
         method.freeze();
         return method;
     }
@@ -353,7 +356,7 @@ public final class AnalyzedMethod {
         return line;
     }
 
-    private void init(boolean verify) {
+    private void init() {
         position(0).before().copy(firstLine());
         int count = positions.size();
         BitSet done = new BitSet(count);
@@ -364,7 +367,7 @@ public final class AnalyzedMethod {
                 continue;
             }
             done.set(i);
-            initPosition(todo, i, verify);
+            initPosition(todo, i);
         }
     }
 
@@ -434,7 +437,7 @@ public final class AnalyzedMethod {
         }
     }
 
-    private void initPosition(BitSet todo, int index, boolean verify) {
+    private void initPosition(BitSet todo, int index) {
         var current = positionAt(index);
         if (index == 0) {
             // The first instruction is always reachable
@@ -1087,14 +1090,14 @@ public final class AnalyzedMethod {
         }
     }
 
-    private void analyze(TypeResolver resolver, boolean verify) {
+    private void analyze(TypeResolver resolver) {
         int count = positions.size();
         BitSet touched = new BitSet(count);
         touched.set(0);
         BitSet todo = new BitSet(count);
         for (int i = 0; i >= 0; i = todo.nextSetBit(0)) {
             todo.clear(i);
-            analyzePosition(resolver, touched, todo, i, verify);
+            analyzePosition(resolver, touched, todo, i);
         }
     }
 
@@ -1513,7 +1516,8 @@ public final class AnalyzedMethod {
 
     // At this stage, there is no need to check the boundaries of
     // register indices, as they have already been checked earlier
-    private void analyzePosition(TypeResolver resolver, BitSet touched, BitSet todo, int index, boolean verify) {
+    private void analyzePosition(TypeResolver resolver, BitSet touched,
+                                 BitSet todo, int index) {
         var current = positionAt(index);
         int address = current.address();
         var insn = current.instruction();

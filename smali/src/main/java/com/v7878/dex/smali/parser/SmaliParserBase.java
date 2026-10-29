@@ -54,7 +54,7 @@ public abstract class SmaliParserBase extends Parser {
     private static final Map<String, Opcode> opcodesByName;
 
     static {
-        var names = new HashMap<String, Opcode>();
+        var names = new HashMap<String, Opcode>(); // The order does not matter
         for (var opcode : Opcode.values()) {
             if (names.putIfAbsent(opcode.opname(), opcode) != null) {
                 throw new IllegalStateException("Duplicate: " + opcode);

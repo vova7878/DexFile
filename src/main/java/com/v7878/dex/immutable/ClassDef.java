@@ -3,6 +3,7 @@ package com.v7878.dex.immutable;
 import static com.v7878.dex.DexConstants.ACC_INTERFACE;
 import static com.v7878.dex.DexIO.ClassHeader;
 import static com.v7878.dex.immutable.TypeId.OBJECT;
+import static com.v7878.dex.immutable.TypeId.V;
 
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.Converter;
@@ -37,7 +38,7 @@ public final class ClassDef implements Annotatable, ClassHeader {
 
         int capacity = interfaces instanceof Collection<?> c ? c.size() : 0;
         var list = new ArrayList<TypeId>(capacity);
-        var set = new HashSet<TypeId>(capacity);
+        var set = new HashSet<TypeId>(capacity); // The order does not matter
 
         for (var value : interfaces) {
             Objects.requireNonNull(value);
@@ -191,6 +192,10 @@ public final class ClassDef implements Annotatable, ClassHeader {
         return findDirectMethod(id.getName(), id.getProto());
     }
 
+    public MethodDef findClassInitializer() {
+        return findDirectMethod("<clinit>", ProtoId.of(V));
+    }
+
     public NavigableSet<MethodDef> getVirtualMethods() {
         return MemberUtils.getVirtualMethodsSubset(getMethods());
     }
@@ -240,6 +245,7 @@ public final class ClassDef implements Annotatable, ClassHeader {
                 && Objects.equals(getSourceFile(), other.getSourceFile())
                 && Objects.equals(getInterfaces(), other.getInterfaces())
                 && Objects.equals(getFields(), other.getFields())
-                && Objects.equals(getMethods(), other.getMethods());
+                && Objects.equals(getMethods(), other.getMethods())
+                && Objects.equals(getAnnotations(), other.getAnnotations());
     }
 }
