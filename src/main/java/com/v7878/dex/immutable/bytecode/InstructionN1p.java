@@ -60,8 +60,8 @@ public final class InstructionN1p extends Instruction implements OneRegisterInst
         this.index = Preconditions.checkNibbleIndex(index);
     }
 
-    public static InstructionN1p of(Opcode opcode, int register1, int literal) {
-        return new InstructionN1p(opcode, register1, literal);
+    public static InstructionN1p of(Opcode opcode, int register1, int index) {
+        return new InstructionN1p(opcode, register1, index);
     }
 
     @Override
@@ -86,7 +86,7 @@ public final class InstructionN1p extends Instruction implements OneRegisterInst
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegister1(), getLiteral());
+        return Objects.hash(getOpcode(), getRegister1(), getIndex());
     }
 
     @Override

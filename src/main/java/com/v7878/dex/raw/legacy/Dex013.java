@@ -333,7 +333,7 @@ public class Dex013 {
             int code_off = in.readSmallUInt();
 
             List<Annotation> annotations = null;
-            if (throws_list_off != NO_OFFSET) {
+            if (reader.options().hasAnnotations() && throws_list_off != NO_OFFSET) {
                 var throws_list = reader.getTypeList(throws_list_off);
                 annotations = List.of(Annotation.Throws(throws_list));
             }

@@ -3,6 +3,7 @@ package com.v7878.dex.immutable;
 import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.bytecode.Instruction;
 import com.v7878.dex.immutable.debug.DebugItem;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
@@ -46,11 +47,14 @@ public final class MethodImplementation {
         return new MethodImplementation(register_count, instructions, try_blocks, debug_items);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static MethodImplementation of(int register_count, Iterable<Instruction> instructions,
                                           Iterable<TryBlock> try_blocks, Iterable<DebugItem> debug_items) {
         return new MethodImplementation(register_count,
                 Converter.toList(instructions),
-                Converter.toNavigableSet(try_blocks),
+                MemberUtils.toTryBlockSet(try_blocks),
                 Converter.toList(debug_items));
     }
 
@@ -76,7 +80,8 @@ public final class MethodImplementation {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getRegisterCount(), getInstructions(), getTryBlocks(), getDebugItems());
+        return Objects.hash(getRegisterCount(), getInstructions(),
+                CollectionUtils.setHashCode(getTryBlocks()), getDebugItems());
     }
 
     @Override
@@ -85,7 +90,20 @@ public final class MethodImplementation {
         return obj instanceof MethodImplementation other
                 && getRegisterCount() == other.getRegisterCount()
                 && Objects.equals(getInstructions(), other.getInstructions())
-                && Objects.equals(getTryBlocks(), other.getTryBlocks())
+                && CollectionUtils.setEquals(getTryBlocks(), other.getTryBlocks())
                 && Objects.equals(getDebugItems(), other.getDebugItems());
+    }
+
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        return "MethodImplementation{registers=" + getRegisterCount()
+                + " instructions=" + getInstructions().size()
+                + " try-blocks=" + getTryBlocks().size()
+                + " debug-items=" + getDebugItems().size()
+                + "}";
     }
 }

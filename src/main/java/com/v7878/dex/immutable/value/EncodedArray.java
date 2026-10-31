@@ -24,12 +24,18 @@ public final class EncodedArray extends EncodedValue {
         return new EncodedArray(values);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static EncodedArray of(Iterable<EncodedValue> values) {
         var value = Converter.toList(values);
         if (value.isEmpty()) return EMPTY;
         return new EncodedArray(value);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static EncodedArray of(EncodedValue... values) {
         var value = Converter.toList(values);
         if (value.isEmpty()) return EMPTY;

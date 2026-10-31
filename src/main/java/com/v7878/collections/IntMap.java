@@ -258,6 +258,12 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
         return size() == 0;
     }
 
+    private void checkNotEmpty() {
+        if (size() == 0) {
+            throw new NoSuchElementException();
+        }
+    }
+
     public int keyAt(int index) {
         Objects.checkIndex(index, size());
         // size() call above took care about gc() compaction
@@ -265,10 +271,12 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
     }
 
     public int firstKey() {
+        checkNotEmpty();
         return keyAt(0);
     }
 
     public int lastKey() {
+        checkNotEmpty();
         return keyAt(size() - 1);
     }
 
@@ -291,10 +299,12 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
     }
 
     public E firstValue() {
+        checkNotEmpty();
         return valueAt(0);
     }
 
     public E lastValue() {
+        checkNotEmpty();
         return valueAt(size() - 1);
     }
 
@@ -332,10 +342,12 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
     }
 
     public Entry<E> firstEntry() {
+        checkNotEmpty();
         return entryAt(0);
     }
 
     public Entry<E> lastEntry() {
+        checkNotEmpty();
         return entryAt(size() - 1);
     }
 

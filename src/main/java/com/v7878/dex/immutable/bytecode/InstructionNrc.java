@@ -74,9 +74,18 @@ public final class InstructionNrc extends Instruction
 
     @Override
     public String toString() {
-        var start = start_register;
-        var end = start + register_count;
-        return getName() + " {" + Formatter.register(start) + " .. " + Formatter.register(end) + "}"
-                + ", " + ReferenceType.describe(getReferenceType1(), reference1);
+        var builder = new StringBuilder();
+        builder.append(getName());
+        builder.append(" {");
+        // The range is inclusive: the last register is start + count - 1
+        if (register_count > 0) {
+            builder.append(Formatter.register(start_register));
+            builder.append(" .. ");
+            builder.append(Formatter.register(start_register + register_count - 1));
+        }
+        builder.append("}");
+        builder.append(", ");
+        builder.append(ReferenceType.describe(getReferenceType1(), reference1));
+        return builder.toString();
     }
 }

@@ -28,6 +28,9 @@ public final class ArrayPayload extends Instruction implements ArrayPayloadInstr
         return new ArrayPayload(element_width, elements);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static ArrayPayload of(int element_width, Iterable<? extends Number> elements) {
         return new ArrayPayload(element_width, Preconditions.checkArrayPayloadElements(
                 element_width, Converter.toList(elements)));

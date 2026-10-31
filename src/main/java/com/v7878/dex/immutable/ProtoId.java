@@ -28,10 +28,16 @@ public final class ProtoId implements Comparable<ProtoId> {
         return new ProtoId(return_type, parameters);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static ProtoId of(TypeId return_type, Iterable<TypeId> parameters) {
         return new ProtoId(return_type, Converter.toList(parameters));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static ProtoId of(TypeId return_type, TypeId... parameters) {
         return new ProtoId(return_type, Converter.toList(parameters));
     }

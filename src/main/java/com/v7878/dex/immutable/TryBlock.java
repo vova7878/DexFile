@@ -34,6 +34,9 @@ public final class TryBlock implements Comparable<TryBlock> {
         return new TryBlock(start_address, unit_count, catch_all_address, handlers);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static TryBlock of(int start_address, int unit_count,
                               Integer catch_all_address,
                               Iterable<ExceptionHandler> handlers) {
@@ -41,6 +44,9 @@ public final class TryBlock implements Comparable<TryBlock> {
                 catch_all_address, Converter.toList(handlers));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static TryBlock of(int start_address, int unit_count,
                               Integer catch_all_address,
                               ExceptionHandler... handlers) {
@@ -81,6 +87,21 @@ public final class TryBlock implements Comparable<TryBlock> {
                 && Objects.equals(getUnitCount(), other.getUnitCount())
                 && Objects.equals(getCatchAllAddress(), other.getCatchAllAddress())
                 && Objects.equals(getHandlers(), other.getHandlers());
+    }
+
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        var builder = new StringBuilder("TryBlock{start=").append(getStartAddress())
+                .append(" end=").append(getEndAddress())
+                .append(" handlers=").append(getHandlers());
+        if (getCatchAllAddress() != null) {
+            builder.append(" catch-all=").append(getCatchAllAddress());
+        }
+        return builder.append('}').toString();
     }
 
     @Override

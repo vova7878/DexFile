@@ -12,6 +12,7 @@ import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.immutable.bytecode.SwitchElement;
 import com.v7878.dex.immutable.value.EncodedNull;
 
 import java.util.Collections;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
+import java.util.function.BiConsumer;
 
 public class MemberUtils {
     private static FieldDef searchableField(String name, TypeId type, boolean is_static) {
@@ -43,7 +45,7 @@ public class MemberUtils {
         return TryBlock.raw(address, 0, 0, List.of());
     }
 
-    private static final TypeId FIRST_TYPE = TypeId.raw(0, "");
+    private static final TypeId FIRST_TYPE = TypeId.raw("");
     private static final FieldDef FIRST_INSTANCE_FIELD =
             searchableField("", FIRST_TYPE, false);
     private static final MethodDef FIRST_VIRTUAL_METHOD =
@@ -151,5 +153,66 @@ public class MemberUtils {
                     "Duplicate field with signature %s", value.getName() + ":" + value.getType()
             ));
         }
+    }
+
+    public static void addTryBlock(NavigableSet<TryBlock> blocks, TryBlock value) {
+        if (!blocks.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate try block %s", value));
+        }
+    }
+
+    public static void addSwitchElement(NavigableSet<SwitchElement> elements, SwitchElement value) {
+        if (!elements.add(value)) {
+            throw new IllegalArgumentException(
+                    "Duplicate switch key: " + value.getKey());
+        }
+    }
+
+    /**
+     * Builds an unmodifiable set through the typed {@code add*} helper, so a
+     * duplicate is rejected with a message that names the colliding member.
+     * <p>
+     * The source is always traversed element by element: even a
+     * {@link NavigableSet} argument is not copied with {@code addAll}, because
+     * it may use a custom comparator and then its contents are not necessarily
+     * the same set as the one built with the natural ordering.
+     */
+    private static <T extends Comparable<? super T>> NavigableSet<T> toSet(
+            Iterable<T> values, BiConsumer<NavigableSet<T>, T> adder) {
+        if (values == null) {
+            return Collections.emptyNavigableSet();
+        }
+        var out = new TreeSet<T>();
+        for (var value : values) {
+            adder.accept(out, value);
+        }
+        return Collections.unmodifiableNavigableSet(out);
+    }
+
+    public static NavigableSet<FieldDef> toFieldSet(Iterable<FieldDef> fields) {
+        return toSet(fields, MemberUtils::addField);
+    }
+
+    public static NavigableSet<MethodDef> toMethodSet(Iterable<MethodDef> methods) {
+        return toSet(methods, MemberUtils::addMethod);
+    }
+
+    public static NavigableSet<Annotation> toAnnotationSet(Iterable<Annotation> annotations) {
+        return toSet(annotations, MemberUtils::addAnnotation);
+    }
+
+    public static NavigableSet<AnnotationElement> toAnnotationElementSet(
+            Iterable<AnnotationElement> elements) {
+        return toSet(elements, MemberUtils::addAnnotationElement);
+    }
+
+    public static NavigableSet<TryBlock> toTryBlockSet(Iterable<TryBlock> blocks) {
+        return toSet(blocks, MemberUtils::addTryBlock);
+    }
+
+    public static NavigableSet<SwitchElement> toSwitchElementSet(
+            Iterable<SwitchElement> elements) {
+        return toSet(elements, MemberUtils::addSwitchElement);
     }
 }

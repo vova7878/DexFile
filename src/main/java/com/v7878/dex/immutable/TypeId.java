@@ -6,9 +6,9 @@ import static com.v7878.dex.util.ShortyUtils.invalidType;
 
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.ShortyUtils;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.StreamSupport;
@@ -49,8 +49,7 @@ public final class TypeId implements Comparable<TypeId> {
         };
     }
 
-    @Internal
-    public static TypeId raw(int array_depth, String descriptor) {
+    private static TypeId raw(int array_depth, String descriptor) {
         return switch (descriptor) {
             case "V" -> V;
             case "Z" -> Z;
@@ -138,6 +137,10 @@ public final class TypeId implements Comparable<TypeId> {
                     }
                     sep_or_first = true;
                 }
+                case '[', ']' -> {
+                    // Array markers are only valid before the descriptor
+                    return -1;
+                }
                 default -> sep_or_first = false;
             }
         }
@@ -202,16 +205,25 @@ public final class TypeId implements Comparable<TypeId> {
         };
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static List<TypeId> listOf(Iterable<String> descriptors) {
         // TODO: improve performance
+        if (descriptors == null) {
+            return List.of();
+        }
         return toUnmodifiableList(StreamSupport
                 .stream(descriptors.spliterator(), false)
                 .map(TypeId::of));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static List<TypeId> listOf(String... descriptors) {
         // TODO: improve performance
-        return listOf(Arrays.asList(descriptors));
+        return listOf(Converter.toList(descriptors));
     }
 
     public String getDescriptor() {

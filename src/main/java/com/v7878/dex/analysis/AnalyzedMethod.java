@@ -1,6 +1,12 @@
 package com.v7878.dex.analysis;
 
 import static com.v7878.dex.DexConstants.ACC_STATIC;
+import static com.v7878.dex.Opcode.AGET;
+import static com.v7878.dex.Opcode.AGET_BOOLEAN;
+import static com.v7878.dex.Opcode.AGET_BYTE;
+import static com.v7878.dex.Opcode.AGET_CHAR;
+import static com.v7878.dex.Opcode.AGET_SHORT;
+import static com.v7878.dex.Opcode.AGET_WIDE;
 import static com.v7878.dex.Opcode.APUT_WIDE;
 import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
 import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY;
@@ -79,9 +85,11 @@ import com.v7878.dex.immutable.bytecode.InstructionNrcc;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
 import com.v7878.dex.immutable.bytecode.SwitchPayload;
+import com.v7878.dex.immutable.bytecode.iface.LiteralInstruction;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.VariableFiveRegisterInstruction;
+import com.v7878.dex.immutable.bytecode.iface.WideLiteralInstruction;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Formatter;
 
@@ -233,8 +241,17 @@ public final class AnalyzedMethod {
 
         var values = new IntSet();
         iterate_sources(reg, (pos, target) -> {
-            InstructionN1i src = pos.instruction();
-            values.add(src.getLiteral());
+            var insn = pos.instruction();
+            if (insn instanceof LiteralInstruction src) {
+                values.add(src.getLiteral());
+            } else {
+                // The value is unknown here
+                assert insn.getOpcode() == AGET
+                        || insn.getOpcode() == AGET_BOOLEAN
+                        || insn.getOpcode() == AGET_BYTE
+                        || insn.getOpcode() == AGET_CHAR
+                        || insn.getOpcode() == AGET_SHORT;
+            }
         });
 
         return values.freeze();
@@ -252,8 +269,16 @@ public final class AnalyzedMethod {
 
         var values = new LongSet();
         iterate_sources(reg, (pos, target) -> {
-            InstructionN1l src = pos.instruction();
-            values.add(src.getWideLiteral());
+            Instruction insn = pos.instruction();
+            if (insn instanceof WideLiteralInstruction src) {
+                values.add(src.getWideLiteral());
+            } else if (insn instanceof LiteralInstruction src) {
+                // const-wide/16 and const-wide/32 are carried by InstructionN1i
+                values.add(src.getLiteral());
+            } else {
+                // The value is unknown here
+                assert insn.getOpcode() == AGET_WIDE;
+            }
         });
 
         return values.freeze();

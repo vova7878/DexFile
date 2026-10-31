@@ -6,14 +6,17 @@ import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
 import static com.v7878.dex.DexConstants.ACC_NATIVE;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 
+import com.v7878.dex.AccessFlag;
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.NavigableSet;
 import java.util.Objects;
 
@@ -48,6 +51,9 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 access_flags, hiddenapi_flags, implementation, annotations);
     }
 
+    /**
+     * Stored verbatim; see {@link Preconditions#checkHiddenApiFlags}.
+     */
     @Internal
     public static MethodDef raw(
             String name, TypeId return_type, List<Parameter> parameters,
@@ -111,12 +117,15 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 access_flags, hiddenapi_flags, implementation, annotations);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static MethodDef of(
             String name, TypeId return_type, Iterable<Parameter> parameters,
             int access_flags, int hiddenapi_flags, MethodImplementation implementation,
             Iterable<Annotation> annotations) {
         return raw(name, return_type, Converter.toList(parameters), access_flags,
-                hiddenapi_flags, implementation, Converter.toNavigableSet(annotations));
+                hiddenapi_flags, implementation, MemberUtils.toAnnotationSet(annotations));
     }
 
     @Override
@@ -208,7 +217,8 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     @Override
     public int hashCode() {
         return Objects.hash(getName(), getAccessFlags(), getHiddenApiFlags(),
-                getReturnType(), getParameters(), getImplementation());
+                getReturnType(), getParameters(), getImplementation(),
+                CollectionUtils.setHashCode(getAnnotations()));
     }
 
     @Override
@@ -221,7 +231,21 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 && Objects.equals(getReturnType(), other.getReturnType())
                 && Objects.equals(getParameters(), other.getParameters())
                 && Objects.equals(getImplementation(), other.getImplementation())
-                && Objects.equals(getAnnotations(), other.getAnnotations());
+                && CollectionUtils.setEquals(getAnnotations(), other.getAnnotations());
+    }
+
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        return "MethodDef{flags=[" + AccessFlag.formatAccessFlagsForMethod(getAccessFlags())
+                + "] name=" + getName()
+                + " proto=" + getProto()
+                + " hiddenapi=" + String.format(Locale.ROOT, "0x%08X", getHiddenApiFlags())
+                + " annotations=" + getAnnotations().size()
+                + "}";
     }
 
     @Override

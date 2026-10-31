@@ -193,16 +193,24 @@ public final class LongSet implements Iterable<Long> {
         return size == 0;
     }
 
+    private void checkNotEmpty() {
+        if (size == 0) {
+            throw new NoSuchElementException();
+        }
+    }
+
     public long at(int index) {
         Objects.checkIndex(index, size);
         return array[index];
     }
 
     public long first() {
+        checkNotEmpty();
         return at(0);
     }
 
     public long last() {
+        checkNotEmpty();
         return at(size - 1);
     }
 

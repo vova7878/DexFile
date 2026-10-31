@@ -258,6 +258,12 @@ public final class LongMap<E> implements Iterable<LongMap.Entry<E>> {
         return size() == 0;
     }
 
+    private void checkNotEmpty() {
+        if (size() == 0) {
+            throw new NoSuchElementException();
+        }
+    }
+
     public long keyAt(int index) {
         Objects.checkIndex(index, size());
         // size() call above took care about gc() compaction
@@ -265,10 +271,12 @@ public final class LongMap<E> implements Iterable<LongMap.Entry<E>> {
     }
 
     public long firstKey() {
+        checkNotEmpty();
         return keyAt(0);
     }
 
     public long lastKey() {
+        checkNotEmpty();
         return keyAt(size() - 1);
     }
 
@@ -291,10 +299,12 @@ public final class LongMap<E> implements Iterable<LongMap.Entry<E>> {
     }
 
     public E firstValue() {
+        checkNotEmpty();
         return valueAt(0);
     }
 
     public E lastValue() {
+        checkNotEmpty();
         return valueAt(size() - 1);
     }
 
@@ -332,10 +342,12 @@ public final class LongMap<E> implements Iterable<LongMap.Entry<E>> {
     }
 
     public Entry<E> firstEntry() {
+        checkNotEmpty();
         return entryAt(0);
     }
 
     public Entry<E> lastEntry() {
+        checkNotEmpty();
         return entryAt(size() - 1);
     }
 

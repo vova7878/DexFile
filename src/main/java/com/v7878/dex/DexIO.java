@@ -207,6 +207,9 @@ public final class DexIO {
         return readCache(ReadOptions.defaultOptions(), data, 0, 0);
     }
 
+    /**
+     * Repeated indices produce repeated classes; no uniqueness check.
+     */
     public static Dex read(ReadOptions options, byte[] data,
                            int data_offset, int header_offset, int[] ids) {
         var reader = readCache(options, data, data_offset, header_offset);
@@ -221,6 +224,9 @@ public final class DexIO {
         return Dex.of(out);
     }
 
+    /**
+     * Same as {@link #read(ReadOptions, byte[], int, int, int[])} with {@code null} ids.
+     */
     public static Dex read(ReadOptions options, byte[] data,
                            int data_offset, int header_offset) {
         return read(options, data, data_offset, header_offset, null);
@@ -238,7 +244,13 @@ public final class DexIO {
         while (header_offset != input.size()) {
             var reader = new DexReader(options, input, header_offset, 0);
             readers.add(reader);
-            header_offset += reader.getFileSize();
+            int next_offset = header_offset + reader.getFileSize();
+            if (next_offset <= header_offset) {
+                throw new InvalidDexFile(String.format(
+                        "Dex container component at offset %d has invalid size %d",
+                        header_offset, reader.getFileSize()));
+            }
+            header_offset = next_offset;
         }
         return readers.toArray(EmptyArrays.DEX_READER_CACHE);
     }
@@ -290,6 +302,10 @@ public final class DexIO {
 
     public static byte[] writeDexContainer(WriteOptions options, Dex... data) {
         Objects.requireNonNull(data);
+        if (data.length == 0) {
+            throw new IllegalArgumentException(
+                    "At least one dex component is required");
+        }
         var version = options.getDexVersion();
         if (!version.isDexContainer()) {
             throw new IllegalArgumentException(

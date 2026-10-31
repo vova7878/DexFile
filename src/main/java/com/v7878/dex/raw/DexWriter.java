@@ -15,6 +15,7 @@ import static com.v7878.dex.DexConstants.DBG_SET_PROLOGUE_END;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL_EXTENDED;
 import static com.v7878.dex.DexConstants.ENDIAN_CONSTANT;
+import static com.v7878.dex.DexConstants.MAX_POOL_SIZE;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM;
@@ -255,11 +256,10 @@ public class DexWriter implements StringIndexer {
     private final CompactData compact_debug_info;
 
     private static void checkSizeLimit(int size, String name) {
-        // One less than 0xffff because this value is reserved
-        if (size >= 65535) {
+        if (size > MAX_POOL_SIZE) {
             throw new IllegalStateException(String.format(
                     "Size(%d) should not exceed limit(%d) for %s section",
-                    size, 65535, name));
+                    size, MAX_POOL_SIZE, name));
         }
     }
 

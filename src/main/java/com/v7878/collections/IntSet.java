@@ -193,16 +193,24 @@ public final class IntSet implements Iterable<Integer> {
         return size == 0;
     }
 
+    private void checkNotEmpty() {
+        if (size == 0) {
+            throw new NoSuchElementException();
+        }
+    }
+
     public int at(int index) {
         Objects.checkIndex(index, size);
         return array[index];
     }
 
     public int first() {
+        checkNotEmpty();
         return at(0);
     }
 
     public int last() {
+        checkNotEmpty();
         return at(size - 1);
     }
 

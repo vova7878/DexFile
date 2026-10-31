@@ -1,5 +1,7 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.DexConstants.MAX_POOL_SIZE;
+
 import com.v7878.dex.ReferenceType;
 import com.v7878.dex.WriteOptions;
 import com.v7878.dex.immutable.Annotation;
@@ -51,8 +53,7 @@ public class DexBalancer {
     private final boolean debug;
 
     private static boolean check(Collection<?> collection) {
-        // One less than 0xffff because this value is reserved
-        return collection.size() >= 0xffff;
+        return collection.size() > MAX_POOL_SIZE;
     }
 
     private boolean check() {

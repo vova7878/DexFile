@@ -5,8 +5,9 @@ import static com.v7878.dex.DexIO.ClassHeader;
 import static com.v7878.dex.immutable.TypeId.OBJECT;
 import static com.v7878.dex.immutable.TypeId.V;
 
+import com.v7878.dex.AccessFlag;
 import com.v7878.dex.Internal;
-import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
@@ -81,17 +82,23 @@ public final class ClassDef implements Annotatable, ClassHeader {
             TypeId type, int access_flags, TypeId superclass, List<TypeId> interfaces,
             String source_file, NavigableSet<FieldDef> fields,
             NavigableSet<MethodDef> methods, NavigableSet<Annotation> annotations) {
-        return new ClassDef(type, access_flags, superclass, interfaces,
+        Objects.requireNonNull(interfaces);
+        // raw() skips the copying of the collections, but the interface list
+        // is rebuilt anyway: duplicates there would produce an invalid class_def.
+        return new ClassDef(type, access_flags, superclass, toInterfacesList(interfaces),
                 source_file, fields, methods, annotations);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static ClassDef of(
             TypeId type, int access_flags, TypeId superclass, Iterable<TypeId> interfaces,
             String source_file, Iterable<FieldDef> fields,
             Iterable<MethodDef> methods, Iterable<Annotation> annotations) {
         return new ClassDef(type, access_flags, superclass, toInterfacesList(interfaces),
-                source_file, Converter.toNavigableSet(fields),
-                Converter.toNavigableSet(methods), Converter.toNavigableSet(annotations));
+                source_file, MemberUtils.toFieldSet(fields),
+                MemberUtils.toMethodSet(methods), MemberUtils.toAnnotationSet(annotations));
     }
 
     @Override
@@ -160,12 +167,18 @@ public final class ClassDef implements Annotatable, ClassHeader {
         return findInstanceField(id.getName(), id.getType());
     }
 
+    /**
+     * Instance list first; cross-list duplicates are invalid in a dex but are not checked.
+     */
     public FieldDef findField(String name, TypeId type) {
         var out = findInstanceField(name, type);
         if (out != null) return out;
         return findStaticField(name, type);
     }
 
+    /**
+     * @see #findField(String, TypeId)
+     */
     public FieldDef findField(FieldId id) {
         if (!getType().equals(id.getDeclaringClass())) {
             return null;
@@ -211,12 +224,18 @@ public final class ClassDef implements Annotatable, ClassHeader {
         return findVirtualMethod(id.getName(), id.getProto());
     }
 
+    /**
+     * Virtual list first; cross-list duplicates are invalid in a dex but are not checked.
+     */
     public MethodDef findMethod(String name, ProtoId proto) {
         var out = findVirtualMethod(name, proto);
         if (out != null) return out;
         return findDirectMethod(name, proto);
     }
 
+    /**
+     * @see #findMethod(String, ProtoId)
+     */
     public MethodDef findMethod(MethodId id) {
         if (!getType().equals(id.getDeclaringClass())) {
             return null;
@@ -229,10 +248,37 @@ public final class ClassDef implements Annotatable, ClassHeader {
         return annotations;
     }
 
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        var builder = new StringBuilder("ClassDef{type=").append(getType());
+        builder.append(" flags=[").append(
+                AccessFlag.formatAccessFlagsForClass(getAccessFlags())).append(']');
+        if (getSuperclass() != null) {
+            builder.append(" superclass=").append(getSuperclass());
+        }
+        if (!getInterfaces().isEmpty()) {
+            builder.append(" interfaces=").append(getInterfaces());
+        }
+        if (getSourceFile() != null) {
+            builder.append(" source=").append(getSourceFile());
+        }
+        builder.append(" fields=").append(getFields().size());
+        builder.append(" methods=").append(getMethods().size());
+        builder.append(" annotations=").append(getAnnotations().size());
+        return builder.append('}').toString();
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(getType(), getAccessFlags(), getSuperclass(),
-                getInterfaces(), getSourceFile(), getFields(), getMethods());
+                getInterfaces(), getSourceFile(),
+                CollectionUtils.setHashCode(getFields()),
+                CollectionUtils.setHashCode(getMethods()),
+                CollectionUtils.setHashCode(getAnnotations()));
     }
 
     @Override
@@ -244,8 +290,8 @@ public final class ClassDef implements Annotatable, ClassHeader {
                 && Objects.equals(getSuperclass(), other.getSuperclass())
                 && Objects.equals(getSourceFile(), other.getSourceFile())
                 && Objects.equals(getInterfaces(), other.getInterfaces())
-                && Objects.equals(getFields(), other.getFields())
-                && Objects.equals(getMethods(), other.getMethods())
-                && Objects.equals(getAnnotations(), other.getAnnotations());
+                && CollectionUtils.setEquals(getFields(), other.getFields())
+                && CollectionUtils.setEquals(getMethods(), other.getMethods())
+                && CollectionUtils.setEquals(getAnnotations(), other.getAnnotations());
     }
 }

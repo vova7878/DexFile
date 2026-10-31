@@ -9,7 +9,8 @@ import static com.v7878.dex.util.Checks.shouldNotReachHere;
 import com.v7878.dex.Internal;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.iface.SwitchPayloadInstruction;
-import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.NavigableSet;
@@ -31,12 +32,20 @@ public final class SwitchPayload extends Instruction implements SwitchPayloadIns
         return new SwitchPayload(opcode, elements);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static SwitchPayload of(Opcode opcode, Iterable<SwitchElement> elements) {
-        var set = Converter.toNavigableSet(elements);
+        Preconditions.checkFormat(opcode, "SwitchPayload",
+                PackedSwitchPayload, SparseSwitchPayload,
+                MPackedSwitchPayload, MSparseSwitchPayload);
+        // Duplicate keys are invalid dex, so they are rejected while the set
+        // is built instead of being silently dropped by the conversion
+        var result = MemberUtils.toSwitchElementSet(elements);
         return new SwitchPayload(opcode, switch (opcode.format()) {
             case MPackedSwitchPayload, PackedSwitchPayload ->
-                    Preconditions.checkSequentialOrderedKeys(set);
-            case MSparseSwitchPayload, SparseSwitchPayload -> set;
+                    Preconditions.checkSequentialOrderedKeys(result);
+            case MSparseSwitchPayload, SparseSwitchPayload -> result;
             default -> throw shouldNotReachHere();
         });
     }
@@ -60,7 +69,8 @@ public final class SwitchPayload extends Instruction implements SwitchPayloadIns
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getSwitchElements());
+        return Objects.hash(getOpcode(),
+                CollectionUtils.setHashCode(getSwitchElements()));
     }
 
     @Override
@@ -68,7 +78,7 @@ public final class SwitchPayload extends Instruction implements SwitchPayloadIns
         if (obj == this) return true;
         return obj instanceof SwitchPayload other
                 && Objects.equals(getOpcode(), other.getOpcode())
-                && Objects.equals(getSwitchElements(), other.getSwitchElements());
+                && CollectionUtils.setEquals(getSwitchElements(), other.getSwitchElements());
     }
 
     @Override

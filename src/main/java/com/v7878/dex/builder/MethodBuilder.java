@@ -15,7 +15,6 @@ import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
@@ -154,18 +153,30 @@ public final class MethodBuilder {
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withParameters(Iterable<Parameter> parameters) {
         return withParametersInternal(Converter.toList(parameters));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withParameters(Parameter... parameters) {
         return withParametersInternal(Converter.toList(parameters));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withParameterTypes(Iterable<TypeId> parameters) {
         return withParametersInternal(Parameter.listOf(parameters));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withParameterTypes(TypeId... parameters) {
         return withParametersInternal(Parameter.listOf(parameters));
     }
@@ -179,10 +190,16 @@ public final class MethodBuilder {
         return withProto(ProtoId.of(descriptor));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withProto(TypeId return_type, Iterable<TypeId> parameters) {
         return withProto(ProtoId.of(return_type, parameters));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withProto(TypeId return_type, TypeId... parameters) {
         return withProto(ProtoId.of(return_type, parameters));
     }
@@ -196,6 +213,9 @@ public final class MethodBuilder {
         return withFlags(AccessFlag.combine(flags));
     }
 
+    /**
+     * Stored verbatim; see {@link Preconditions#checkHiddenApiFlags}.
+     */
     public MethodBuilder withHiddenApiFlags(int flags) {
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(flags);
         return this;
@@ -212,31 +232,49 @@ public final class MethodBuilder {
                 (access_flags & ACC_STATIC) == 0, consumer));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder setAnnotations(Iterable<Annotation> annotations) {
         this.annotations.clear();
         CollectionUtils.addAll(this.annotations, annotations);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder setAnnotations(Annotation... annotations) {
-        return setAnnotations(Arrays.asList(annotations));
+        return setAnnotations(Converter.toList(annotations));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withAnnotations(Iterable<Annotation> annotations) {
         CollectionUtils.replaceAll(this.annotations, annotations);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withAnnotations(Annotation... annotations) {
-        return withAnnotations(Arrays.asList(annotations));
+        return withAnnotations(Converter.toList(annotations));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withoutAnnotations(Iterable<Annotation> annotations) {
         CollectionUtils.removeAll(this.annotations, annotations);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public MethodBuilder withoutAnnotations(Annotation... annotations) {
-        return withoutAnnotations(Arrays.asList(annotations));
+        return withoutAnnotations(Converter.toList(annotations));
     }
 }

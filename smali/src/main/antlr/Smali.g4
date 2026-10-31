@@ -734,7 +734,8 @@ class_def
     locals[TypeId type, TypeId superclass, String source]
     @init {
         int access_flags;
-        var interfaces = new ArrayList<TypeId>();
+        // keep the declaration order, drop repeated .implements directives
+        var interfaces = new LinkedHashSet<TypeId>();
         var fields = new TreeSet<FieldDef>();
         var methods = new TreeSet<MethodDef>();
         var annotations = new TreeSet<Annotation>();
@@ -742,7 +743,7 @@ class_def
     @after {
         $value = ClassDef.raw(
             $type, access_flags, $superclass,
-            Collections.unmodifiableList(interfaces),
+            List.copyOf(interfaces),
             $source,
             Collections.unmodifiableNavigableSet(fields),
             Collections.unmodifiableNavigableSet(methods),

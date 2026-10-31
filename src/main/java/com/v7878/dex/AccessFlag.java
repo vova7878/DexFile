@@ -25,8 +25,6 @@ import static com.v7878.dex.DexConstants.ACC_VERIFIED;
 import static com.v7878.dex.DexConstants.ACC_VOLATILE;
 
 import java.util.Arrays;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 public enum AccessFlag {
     PUBLIC(ACC_PUBLIC, "public", true, true, true, false, true),
@@ -77,19 +75,19 @@ public enum AccessFlag {
             .toArray(AccessFlag[]::new);
     public static final int VALID_INNER_CLASS_FLAGS_MASK = combine(CACHED_INNER_CLASS_FLAGS);
 
-    public static final AccessFlag[] CACHED_METHOD_FLAGS = Arrays
+    private static final AccessFlag[] CACHED_METHOD_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForMethod)
             .toArray(AccessFlag[]::new);
     public static final int VALID_METHOD_FLAGS_MASK = combine(CACHED_METHOD_FLAGS);
 
-    public static final AccessFlag[] CACHED_PARAMETER_FLAGS = Arrays
+    private static final AccessFlag[] CACHED_PARAMETER_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForParameter)
             .toArray(AccessFlag[]::new);
     public static final int VALID_PARAMETER_FLAGS_MASK = combine(CACHED_PARAMETER_FLAGS);
 
-    public static final AccessFlag[] CACHED_FIELD_FLAGS = Arrays
+    private static final AccessFlag[] CACHED_FIELD_FLAGS = Arrays
             .stream(CACHED_ALL_FLAGS)
             .filter(flag -> flag.validForField)
             .toArray(AccessFlag[]::new);
@@ -135,10 +133,21 @@ public enum AccessFlag {
         return flags == (flags & VALID_FIELD_FLAGS_MASK);
     }
 
-    private static String formatAccessFlags(AccessFlag[] flags) {
-        // TODO: Print unknown flags as "[1 << X]"
-        return Arrays.stream(flags).map(Objects::toString)
-                .collect(Collectors.joining(" "));
+    private static String formatAccessFlags(AccessFlag[] flags, int value, int mask) {
+        var out = new StringBuilder();
+        for (var flag : flags) {
+            if (!out.isEmpty()) out.append(' ');
+            out.append(flag);
+        }
+        for (int bit = 0; bit < Integer.SIZE; bit++) {
+            int flag = 1 << bit;
+            if ((value & flag) == 0 || (mask & flag) != 0) {
+                continue;
+            }
+            if (!out.isEmpty()) out.append(' ');
+            out.append("[1 << ").append(bit).append(']');
+        }
+        return out.toString();
     }
 
     public static AccessFlag[] getAccessFlagsForClass(int flags) {
@@ -148,7 +157,7 @@ public enum AccessFlag {
     }
 
     public static String formatAccessFlagsForClass(int flags) {
-        return formatAccessFlags(getAccessFlagsForClass(flags));
+        return formatAccessFlags(getAccessFlagsForClass(flags), flags, VALID_CLASS_FLAGS_MASK);
     }
 
     public static AccessFlag[] getAccessFlagsForInnerClass(int flags) {
@@ -158,7 +167,8 @@ public enum AccessFlag {
     }
 
     public static String formatAccessFlagsForInnerClass(int flags) {
-        return formatAccessFlags(getAccessFlagsForInnerClass(flags));
+        return formatAccessFlags(getAccessFlagsForInnerClass(flags), flags,
+                VALID_INNER_CLASS_FLAGS_MASK);
     }
 
     public static AccessFlag[] getAccessFlagsForMethod(int flags) {
@@ -168,7 +178,7 @@ public enum AccessFlag {
     }
 
     public static String formatAccessFlagsForMethod(int flags) {
-        return formatAccessFlags(getAccessFlagsForMethod(flags));
+        return formatAccessFlags(getAccessFlagsForMethod(flags), flags, VALID_METHOD_FLAGS_MASK);
     }
 
     public static AccessFlag[] getAccessFlagsForParameter(int flags) {
@@ -178,7 +188,8 @@ public enum AccessFlag {
     }
 
     public static String formatAccessFlagsForParameter(int flags) {
-        return formatAccessFlags(getAccessFlagsForParameter(flags));
+        return formatAccessFlags(getAccessFlagsForParameter(flags), flags,
+                VALID_PARAMETER_FLAGS_MASK);
     }
 
     public static AccessFlag[] getAccessFlagsForField(int flags) {
@@ -188,7 +199,7 @@ public enum AccessFlag {
     }
 
     public static String formatAccessFlagsForField(int flags) {
-        return formatAccessFlags(getAccessFlagsForField(flags));
+        return formatAccessFlags(getAccessFlagsForField(flags), flags, VALID_FIELD_FLAGS_MASK);
     }
 
     public boolean isSet(int flags) {

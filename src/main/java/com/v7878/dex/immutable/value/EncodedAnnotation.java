@@ -7,8 +7,8 @@ import com.v7878.dex.immutable.CommonAnnotation;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.MemberUtils;
 
-import java.util.Arrays;
 import java.util.NavigableSet;
 import java.util.Objects;
 
@@ -26,12 +26,18 @@ public final class EncodedAnnotation extends EncodedValue implements CommonAnnot
         return new EncodedAnnotation(type, elements);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static EncodedAnnotation of(TypeId type, Iterable<AnnotationElement> elements) {
-        return new EncodedAnnotation(type, Converter.toNavigableSet(elements));
+        return new EncodedAnnotation(type, MemberUtils.toAnnotationElementSet(elements));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static EncodedAnnotation of(TypeId type, AnnotationElement... elements) {
-        return of(type, Arrays.asList(elements));
+        return of(type, Converter.toList(elements));
     }
 
     public static EncodedAnnotation of(CommonAnnotation other) {
@@ -61,7 +67,7 @@ public final class EncodedAnnotation extends EncodedValue implements CommonAnnot
 
     @Override
     public int hashCode() {
-        return Objects.hash(getType(), getElements());
+        return Objects.hash(getType(), CollectionUtils.setHashCode(getElements()));
     }
 
     @Override
@@ -69,7 +75,7 @@ public final class EncodedAnnotation extends EncodedValue implements CommonAnnot
         if (obj == this) return true;
         return obj instanceof EncodedAnnotation other
                 && Objects.equals(getType(), other.getType())
-                && Objects.equals(getElements(), other.getElements());
+                && CollectionUtils.setEquals(getElements(), other.getElements());
     }
 
     @Override

@@ -267,9 +267,15 @@ public final class DexReader implements DexReaderCache {
         if (main_buffer.size() < Math.addExact(header_offset, BASE_HEADER_SIZE)) {
             throw new NotADexFile("File is too short");
         }
-        version = DexVersion.forMagic(mainAt(header_offset + MAGIC_OFFSET).readLong());
+        long magic = mainAt(header_offset + MAGIC_OFFSET).readLong();
+        try {
+            version = DexVersion.forMagic(magic);
+        } catch (IllegalArgumentException e) {
+            throw new NotADexFile(e.getMessage(), e);
+        }
         version.checkApi(options.getTargetApi());
-        if (main_buffer.size() < Math.addExact(header_offset, headerSize(version))) {
+        int header_size = headerSize(version);
+        if (main_buffer.size() < Math.addExact(header_offset, header_size)) {
             throw new NotADexFile("File is too short");
         }
 
@@ -287,6 +293,11 @@ public final class DexReader implements DexReaderCache {
         }
 
         file_size = mainAt(header_offset + FILE_SIZE_OFFSET).readSmallUInt();
+        if (file_size < header_size) {
+            throw new InvalidDexFile(String.format(
+                    "Invalid file size: %d. Must be at least the %s header size (%d)",
+                    file_size, version, header_size));
+        }
         if (main_buffer.size() < Math.addExact(header_offset, file_size)) {
             throw new InvalidDexFile("Truncated dex file");
         }
@@ -342,13 +353,13 @@ public final class DexReader implements DexReaderCache {
                         mainAt(header_offset + M3_FIELD_START_OFFSET).readSmallUInt(),
                         M3_FIELD_ID_SIZE, this::readFieldId
                 );
-                proto_section = null;
+                proto_section = Collections.emptyList();
                 method_section = makeSection(
                         mainAt(header_offset + M3_METHOD_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M3_METHOD_START_OFFSET).readSmallUInt(),
                         M3_METHOD_ID_SIZE, this::readMethodId
                 );
-                class_header_section = null;
+                class_header_section = Collections.emptyList();
                 class_section = makeSection(
                         mainAt(header_offset + M3_CLASS_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M3_CLASS_START_OFFSET).readSmallUInt(),
@@ -372,13 +383,13 @@ public final class DexReader implements DexReaderCache {
                         mainAt(header_offset + M5_FIELD_START_OFFSET).readSmallUInt(),
                         M5_FIELD_ID_SIZE, this::readFieldId
                 );
-                proto_section = null;
+                proto_section = Collections.emptyList();
                 method_section = makeSection(
                         mainAt(header_offset + M5_METHOD_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M5_METHOD_START_OFFSET).readSmallUInt(),
                         M5_METHOD_ID_SIZE, this::readMethodId
                 );
-                class_header_section = null;
+                class_header_section = Collections.emptyList();
                 class_section = makeSection(
                         mainAt(header_offset + M5_CLASS_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M5_CLASS_START_OFFSET).readSmallUInt(),
@@ -426,9 +437,9 @@ public final class DexReader implements DexReaderCache {
         }
 
         if (version == DEX013 || version == DEX009) {
-            map_items = null;
-            method_handle_section = null;
-            callsite_section = null;
+            map_items = Collections.emptyList();
+            method_handle_section = Collections.emptyList();
+            callsite_section = Collections.emptyList();
         } else {
             map_items = readMapItemsList(mainAt(header_offset + MAP_OFFSET).readSmallUInt());
 

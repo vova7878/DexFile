@@ -37,4 +37,15 @@ public final class ExceptionHandler {
                 && getAddress() == other.getAddress()
                 && Objects.equals(getExceptionType(), other.getExceptionType());
     }
+
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        return "ExceptionHandler{type=" + getExceptionType()
+                + " address=" + getAddress()
+                + "}";
+    }
 }
