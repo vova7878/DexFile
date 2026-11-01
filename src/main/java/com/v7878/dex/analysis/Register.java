@@ -9,6 +9,7 @@ import static com.v7878.dex.analysis.Register.ConstantKind.POSITIVE_BYTE;
 import static com.v7878.dex.analysis.Register.ConstantKind.POSITIVE_INT;
 import static com.v7878.dex.analysis.Register.ConstantKind.POSITIVE_SHORT;
 import static com.v7878.dex.analysis.Register.ConstantKind.REFERENCE;
+import static com.v7878.dex.analysis.Register.ConstantKind.REFERENCE_OR_NULL;
 import static com.v7878.dex.analysis.Register.ConstantKind.SHORT;
 import static com.v7878.dex.analysis.Register.ConstantKind.WIDE_HI;
 import static com.v7878.dex.analysis.Register.ConstantKind.WIDE_LO;
@@ -29,15 +30,29 @@ import java.util.Objects;
  */
 public sealed abstract class Register {
     /**
-     * Where the value came from: the address of the defining
-     * instruction and the register slot. Parameters use address -1.
+     * Where the value came from: the address of the instruction and the
+     * register slot, plus {@code produced}, which is true only when that
+     * instruction produced the value. It is false for a merge point
+     * (the value is joined from several predecessors) and for an
+     * instruction that only refined the value flowing into it (a null
+     * check, a constructor call); such a value belongs to the instruction
+     * that produced it. Parameters use address -1.
      */
-    public record Identifier(int address, int slot) {
+    public record Identifier(int address, int slot, boolean produced) {
         public Identifier {
             if (address != -1 && address < 0) {
                 throw new IllegalArgumentException(
                         "Invalid address: " + address);
             }
+            if (produced && address < 0) {
+                throw new IllegalArgumentException(
+                        "Invalid produced value address: " + address);
+            }
+        }
+
+        public Identifier(int address, int slot) {
+            // A parameter address identifies a value no instruction produced
+            this(address, slot, address >= 0);
         }
 
         public boolean isParameter() {
@@ -46,7 +61,8 @@ public sealed abstract class Register {
 
         @Override
         public String toString() {
-            return (address < 0 ? "parameter" : Integer.toHexString(address)) + "[" + slot + "]";
+            return (address < 0 ? "parameter" : Integer.toHexString(address)) + "[" + slot + "]"
+                    + (produced ? "" : "<incoming>");
         }
     }
 
@@ -208,10 +224,20 @@ public sealed abstract class Register {
         WIDE_LO,
         WIDE_HI,
         STRING,
+        // A string or null
+        STRING_OR_NULL,
         CLASS,
+        // A class or null
+        CLASS_OR_NULL,
         METHOD_TYPE,
+        // A method type or null
+        METHOD_TYPE_OR_NULL,
         METHOD_HANDLE,
+        // A method handle or null
+        METHOD_HANDLE_OR_NULL,
         REFERENCE,
+        // A reference of any type or null
+        REFERENCE_OR_NULL,
         // Result of dereferencing null
         NULL;
 
@@ -274,27 +300,95 @@ public sealed abstract class Register {
         }
 
         public boolean isString() {
-            return this == STRING;
+            return this == STRING || this == STRING_OR_NULL;
         }
 
         public boolean isClass() {
-            return this == CLASS;
+            return this == CLASS || this == CLASS_OR_NULL;
         }
 
         public boolean isMethodType() {
-            return this == METHOD_TYPE;
+            return this == METHOD_TYPE || this == METHOD_TYPE_OR_NULL;
         }
 
         public boolean isMethodHandle() {
-            return this == METHOD_HANDLE;
+            return this == METHOD_HANDLE || this == METHOD_HANDLE_OR_NULL;
         }
 
+        /**
+         * Whether the kind is a non-null reference constant. Nullable
+         * kinds answer false: their value may be the null reference.
+         */
         public boolean isNonZeroOrNullRef() {
-            return isString()
-                    || isClass()
-                    || isMethodType()
-                    || isMethodHandle()
+            return this == STRING
+                    || this == CLASS
+                    || this == METHOD_TYPE
+                    || this == METHOD_HANDLE
                     || this == REFERENCE;
+        }
+
+        /**
+         * Whether the kind is a reference constant that also covers the
+         * null reference (a nullable kind).
+         */
+        public boolean isNullable() {
+            return switch (this) {
+                case STRING_OR_NULL, CLASS_OR_NULL, METHOD_TYPE_OR_NULL,
+                     METHOD_HANDLE_OR_NULL, REFERENCE_OR_NULL -> true;
+                default -> false;
+            };
+        }
+
+        /**
+         * Whether the kind is a reference constant that is not guaranteed
+         * non-null: the null reference, zero, or a nullable kind.
+         */
+        public boolean isMaybeNullRef() {
+            return isZeroOrNull() || isNullable();
+        }
+
+        /**
+         * The same kind widened with the null reference; kinds that are not
+         * non-null reference constants are returned unchanged.
+         */
+        public ConstantKind withNull() {
+            return switch (this) {
+                case STRING -> STRING_OR_NULL;
+                case CLASS -> CLASS_OR_NULL;
+                case METHOD_TYPE -> METHOD_TYPE_OR_NULL;
+                case METHOD_HANDLE -> METHOD_HANDLE_OR_NULL;
+                case REFERENCE -> REFERENCE_OR_NULL;
+                default -> this;
+            };
+        }
+
+        /**
+         * The same kind without the null reference; kinds that are not
+         * nullable are returned unchanged.
+         */
+        public ConstantKind withoutNull() {
+            return switch (this) {
+                case STRING_OR_NULL -> STRING;
+                case CLASS_OR_NULL -> CLASS;
+                case METHOD_TYPE_OR_NULL -> METHOD_TYPE;
+                case METHOD_HANDLE_OR_NULL -> METHOD_HANDLE;
+                case REFERENCE_OR_NULL -> REFERENCE;
+                default -> this;
+            };
+        }
+
+        /**
+         * Whether the non-null values of the kind are exactly instances of
+         * the class it denotes: the classes of a string, class and method
+         * type constant are final, while a method handle is abstract and a
+         * plain reference is Object.
+         */
+        public boolean isExactType() {
+            return switch (this) {
+                case STRING, STRING_OR_NULL, CLASS, CLASS_OR_NULL,
+                     METHOD_TYPE, METHOD_TYPE_OR_NULL -> true;
+                default -> false;
+            };
         }
 
         public boolean isNull() {
@@ -306,7 +400,7 @@ public sealed abstract class Register {
         }
 
         public boolean isRef() {
-            return isZeroOrNull()
+            return isMaybeNullRef()
                     || isNonZeroOrNullRef();
         }
 
@@ -325,10 +419,15 @@ public sealed abstract class Register {
                 case WIDE_LO -> "<wide";
                 case WIDE_HI -> ">wide";
                 case STRING -> "string";
+                case STRING_OR_NULL -> "string|null";
                 case CLASS -> "class";
+                case CLASS_OR_NULL -> "class|null";
                 case METHOD_TYPE -> "method type";
+                case METHOD_TYPE_OR_NULL -> "method type|null";
                 case METHOD_HANDLE -> "method handle";
+                case METHOD_HANDLE_OR_NULL -> "method handle|null";
                 case REFERENCE -> "reference";
+                case REFERENCE_OR_NULL -> "reference|null";
                 case NULL -> "null";
             };
         }
@@ -526,45 +625,73 @@ public sealed abstract class Register {
      */
     public static sealed class Reference extends TypedRegister {
         private final boolean non_null;
+        private final boolean exact;
 
-        private Reference(Identifier source, TypeInfo type, boolean non_null) {
+        private Reference(Identifier source, TypeInfo type, boolean non_null, boolean exact) {
             super(source, type);
             if (type.isPrimitive()) {
                 throw new IllegalArgumentException(
                         type + " must not be primitive");
             }
+            assert !exact || !type.isUnresolved();
             this.non_null = non_null;
+            this.exact = exact;
+        }
+
+        /**
+         * @param exact whether a non-null value is exactly of the type, not
+         *              of a subtype of it
+         */
+        public static Reference of(Identifier source, TypeInfo type,
+                                   boolean non_null, boolean exact) {
+            return new Reference(source, type, non_null, exact);
         }
 
         public static Reference of(Identifier source, TypeInfo type, boolean non_null) {
-            return new Reference(source, type, non_null);
+            return of(source, type, non_null, false);
+        }
+
+        // type is null if exact is unknown
+        public static Reference of(Identifier source, TypeId type,
+                                   boolean non_null, boolean exact) {
+            return of(source, TypeInfo.of(type), non_null, exact);
         }
 
         // type is null if exact is unknown
         public static Reference of(Identifier source, TypeId type, boolean non_null) {
-            return of(source, TypeInfo.of(type), non_null);
+            return of(source, type, non_null, false);
         }
 
         /* package */ boolean isNonNull() {
             return non_null;
         }
 
+        /* package */ boolean isExact() {
+            return exact;
+        }
+
         @Override
         public String toString() {
-            return toString(typeInfo().toString()) + (non_null ? "!" : "");
+            return toString(typeInfo().toString())
+                    + (non_null ? "!" : "")
+                    + (exact ? "*" : "");
         }
 
         @Override
         public boolean equals(Object obj) {
             if (obj == this) return true;
+            // The exact class matters: UninitializedRef is a subclass with
+            // more state, and equality must be symmetric for both kinds
+            if (obj == null || obj.getClass() != getClass()) return false;
             if (!super.equals(obj)) return false;
-            return obj instanceof Reference other
-                    && non_null == other.non_null;
+            var other = (Reference) obj;
+            return non_null == other.non_null
+                    && exact == other.exact;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), non_null);
+            return Objects.hash(super.hashCode(), non_null, exact);
         }
     }
 
@@ -575,15 +702,27 @@ public sealed abstract class Register {
     public static final class UninitializedRef extends Reference {
         private final boolean thiz;
 
-        private UninitializedRef(Identifier source, TypeId type, boolean thiz) {
-            // Uninitialized ref type must always be known and non-null
-            super(source, TypeInfo.of(Objects.requireNonNull(type)), true);
+        private UninitializedRef(Identifier source, TypeId type, boolean thiz, boolean exact) {
+            // Uninitialized ref type must always be known and non-null.
+            // Exactness is independent of the initialization state: a
+            // new-instance value is exactly its class, while the receiver
+            // of a constructor may be an instance of a subclass.
+            super(source, TypeInfo.of(Objects.requireNonNull(type)), true, exact);
             assert !type.isArray();
             this.thiz = thiz;
         }
 
         public static UninitializedRef of(Identifier source, TypeId type, boolean thiz) {
-            return new UninitializedRef(source, type, thiz);
+            return new UninitializedRef(source, type, thiz, false);
+        }
+
+        /**
+         * @param exact whether the allocated value is exactly of the type,
+         *              not of a subtype of it
+         */
+        public static UninitializedRef of(Identifier source, TypeId type,
+                                          boolean thiz, boolean exact) {
+            return new UninitializedRef(source, type, thiz, exact);
         }
 
         /* package */ boolean isThis() {
@@ -598,9 +737,9 @@ public sealed abstract class Register {
         @Override
         public boolean equals(Object obj) {
             if (obj == this) return true;
+            if (obj == null || obj.getClass() != UninitializedRef.class) return false;
             if (!super.equals(obj)) return false;
-            return obj instanceof UninitializedRef other
-                    && thiz == other.thiz;
+            return thiz == ((UninitializedRef) obj).thiz;
         }
 
         @Override
@@ -621,6 +760,18 @@ public sealed abstract class Register {
         return INT;
     }
 
+    private static ConstantKind mergeRefKinds(ConstantKind ak, ConstantKind bk) {
+        assert ak.isRef() && bk.isRef();
+        var a_base = ak.withoutNull();
+        var b_base = bk.withoutNull();
+        var nullable = ak.isNullable() || bk.isNullable();
+        if (a_base == b_base) {
+            return nullable ? a_base.withNull() : a_base;
+        }
+        // Different constant classes: the common supertype is Object
+        return nullable ? REFERENCE_OR_NULL : REFERENCE;
+    }
+
     private static TypeInfo getRefTypeInfo(ConstantKind kind) {
         class Helper {
             // Cached values
@@ -631,11 +782,11 @@ public sealed abstract class Register {
             static final TypeInfo REFERENCE = TypeInfo.of(OBJECT);
         }
         return switch (kind) {
-            case STRING -> Helper.STRING;
-            case CLASS -> Helper.CLASS;
-            case METHOD_TYPE -> Helper.METHOD_TYPE;
-            case METHOD_HANDLE -> Helper.METHOD_HANDLE;
-            case REFERENCE -> Helper.REFERENCE;
+            case STRING, STRING_OR_NULL -> Helper.STRING;
+            case CLASS, CLASS_OR_NULL -> Helper.CLASS;
+            case METHOD_TYPE, METHOD_TYPE_OR_NULL -> Helper.METHOD_TYPE;
+            case METHOD_HANDLE, METHOD_HANDLE_OR_NULL -> Helper.METHOD_HANDLE;
+            case REFERENCE, REFERENCE_OR_NULL -> Helper.REFERENCE;
             default -> throw shouldNotReachHere();
         };
     }
@@ -649,7 +800,9 @@ public sealed abstract class Register {
         if (a.isUndefined() || b.isUndefined()) {
             return Undefined.INSTANCE;
         }
-        var ident = new Identifier(address, slot);
+        // A joined value is identified by the merge point itself, never by
+        // the instruction that happens to follow it
+        var ident = new Identifier(address, slot, false);
         if (a.isConflict() || b.isConflict()) {
             return Conflict.of(ident);
         }
@@ -678,18 +831,21 @@ public sealed abstract class Register {
                 return Conflict.of(ident);
             }
             assert !ak.isWide() && !bk.isWide();
-            if (ak == ZERO) return Constant.of(ident, bk);
-            if (bk == ZERO) return Constant.of(ident, ak);
+            // Zero is both the integer 0 and the null reference, so it
+            // adopts the other kind together with its nullability
+            if (ak == ZERO) return Constant.of(ident, bk.withNull());
+            if (bk == ZERO) return Constant.of(ident, ak.withNull());
             if (ak == NULL || bk == NULL) {
-                if (ak.isNonZeroOrNullRef()) return Constant.of(ident, ak);
-                if (bk.isNonZeroOrNullRef()) return Constant.of(ident, bk);
+                // Merging null with a reference keeps that reference
+                // nullable; a nullable kind keeps its nullability
+                var other = ak == NULL ? bk : ak;
+                if (other.isRef()) return Constant.of(ident, other.withNull());
                 // Merge NULL with a primitive type
                 return Conflict.of(ident);
             }
-            if (ak.isNonZeroOrNullRef() || bk.isNonZeroOrNullRef()) {
-                if (ak.isNonZeroOrNullRef() == bk.isNonZeroOrNullRef()) {
-                    // ref constants with different types
-                    return Constant.of(ident, REFERENCE);
+            if (ak.isRef() || bk.isRef()) {
+                if (ak.isRef() && bk.isRef()) {
+                    return Constant.of(ident, mergeRefKinds(ak, bk));
                 }
                 // Merge ref constant with a primitive type
                 return Conflict.of(ident);
@@ -721,7 +877,11 @@ public sealed abstract class Register {
                 return Reference.of(ident, a_type, non_null);
             }
             assert a_type.isReference() && b_type.isReference();
-            return Reference.of(ident, resolver.join(a_type, b_type), non_null);
+            // The join is exactly typed only when both sides are exactly
+            // the same class
+            var exact = a.isExactRef() && b.isExactRef()
+                    && Objects.equals(a_type, b_type);
+            return Reference.of(ident, resolver.join(a_type, b_type), non_null, exact);
         }
         if ((a.isWideLo() && b.isWideHi()) || (a.isWideHi() && b.isWideLo())) {
             // lo | hi
@@ -1016,11 +1176,29 @@ public sealed abstract class Register {
         }
         if (this instanceof Constant constant) {
             var kind = constant.classify();
-            if (kind.isNonZeroOrNullRef()) {
+            if (kind.isRef() && !kind.isZeroOrNull()) {
                 return getRefTypeInfo(kind);
             }
         }
         return null;
+    }
+
+    /**
+     * Whether every non-null value of this register is exactly of the type
+     * reported by {@link #getTypeInfo()}, never of a subtype: a string,
+     * class or method type constant, or a reference initialized from a
+     * new-instance value. A method handle constant is not exactly typed
+     * because java.lang.invoke.MethodHandle is abstract, and neither is a
+     * plain reference constant.
+     */
+    public final boolean isExactRef() {
+        if (this instanceof Constant constant) {
+            return constant.classify().isExactType();
+        }
+        if (this instanceof Reference ref) {
+            return ref.isExact();
+        }
+        return false;
     }
 
     /**
@@ -1041,7 +1219,7 @@ public sealed abstract class Register {
                 // All reference types can be assigned null
                 return true;
             }
-            if (kind.isNonZeroOrNullRef()) {
+            if (kind.isRef()) {
                 var info = getRefTypeInfo(kind);
                 return resolver.isAssignable(info, type, unknownMatches, strict);
             }

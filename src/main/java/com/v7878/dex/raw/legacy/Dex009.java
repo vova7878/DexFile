@@ -196,8 +196,8 @@ public class Dex009 {
                     null : reader.getString(descriptor_id);
             // Note: This version had an additional value
             // for the register type that meant untyped null
-            var type = "<null>".equals(descriptor) ? null :
-                    TypeId.of(descriptor);
+            var type = descriptor == null || "<null>".equals(descriptor) ?
+                    null : TypeId.of(descriptor);
 
             items.add(new RawDebugItem(items.size(), start,
                     StartLocal.of(register, name, type, null)));

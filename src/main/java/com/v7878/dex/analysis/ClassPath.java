@@ -86,7 +86,7 @@ public class ClassPath {
      * found, the method is not returned. Execution-stage errors —
      * {@link InvocationError}.
      */
-    public enum Error {
+    public enum ResolutionError {
         NONE,
         NO_SUCH_METHOD,
         NO_SUCH_FIELD,
@@ -134,17 +134,17 @@ public class ClassPath {
      * @param error   the resolution error ART would throw
      * @param message details (classes/methods, link error text)
      */
-    public record Result<T>(boolean exact, T value, Error error, String message) {
+    public record Result<T>(boolean exact, T value, ResolutionError error, String message) {
 
         public Result(boolean exact, T value) {
-            this(exact, value, Error.NONE, null);
+            this(exact, value, ResolutionError.NONE, null);
         }
 
         public static <T> Result<T> ok(boolean exact, T value) {
-            return new Result<>(exact, value, Error.NONE, null);
+            return new Result<>(exact, value, ResolutionError.NONE, null);
         }
 
-        public static <T> Result<T> fail(boolean exact, Error error, String message) {
+        public static <T> Result<T> fail(boolean exact, ResolutionError error, String message) {
             return new Result<>(exact, null, error, message);
         }
 
@@ -154,7 +154,7 @@ public class ClassPath {
          * branch of invoke-super) the referrer superclass is unknown.
          */
         public static <T> Result<T> unknown() {
-            return new Result<>(false, null, Error.NONE, null);
+            return new Result<>(false, null, ResolutionError.NONE, null);
         }
     }
 
@@ -304,7 +304,7 @@ public class ClassPath {
         var startType = fid.getDeclaringClass();
         var startLC = linker.link(startType);
         if (startLC.linkError != null) {
-            return Result.fail(true, Error.NO_CLASS_DEF,
+            return Result.fail(true, ResolutionError.NO_CLASS_DEF,
                     "class failed to link: " + startLC.linkError);
         }
         // exactness is computed by the traversal: a hit before an unknown
@@ -344,7 +344,7 @@ public class ClassPath {
             }
             // the queue head is now {I1, ..., IN, SUPER, ...}
         }
-        return Result.fail(exact, Error.NO_SUCH_FIELD, null);
+        return Result.fail(exact, ResolutionError.NO_SUCH_FIELD, null);
     }
 
     /**
@@ -378,7 +378,7 @@ public class ClassPath {
     private Result<ResolvedField> resolveFieldWithChecksUncached(FieldId fid, TypeId referrer, FieldAccess access) {
         var refLC = linker.link(referrer);
         if (refLC.linkError != null) {
-            return Result.fail(true, Error.NO_CLASS_DEF,
+            return Result.fail(true, ResolutionError.NO_CLASS_DEF,
                     "referrer failed to link: " + refLC.linkError);
         }
         var r = resolveField(fid);
@@ -389,7 +389,7 @@ public class ClassPath {
         var exact = r.exact();
         boolean fieldIsStatic = (resolved.field().getAccessFlags() & ACC_STATIC) != 0;
         if (fieldIsStatic != access.isStatic()) {
-            return Result.fail(exact, Error.INCOMPATIBLE_CLASS_CHANGE,
+            return Result.fail(exact, ResolutionError.INCOMPATIBLE_CLASS_CHANGE,
                     "expected " + (access.isStatic() ? "static" : "instance") + " field, got "
                             + (fieldIsStatic ? "static" : "instance") + ": " + resolved);
         }
@@ -403,7 +403,7 @@ public class ClassPath {
             if (accessDeclaring == null || accessKlass == null) {
                 exact = false;
             } else {
-                return Result.fail(exact, Error.ILLEGAL_ACCESS,
+                return Result.fail(exact, ResolutionError.ILLEGAL_ACCESS,
                         "class " + referrer + " cannot access class " + klassLC.type
                                 + " for field access: " + resolved);
             }
@@ -414,11 +414,11 @@ public class ClassPath {
             // protected with an unknown/incomplete referrer hierarchy — fail-open
             exact = false;
         } else if (!memberAccess) {
-            return Result.fail(exact, Error.ILLEGAL_ACCESS,
+            return Result.fail(exact, ResolutionError.ILLEGAL_ACCESS,
                     "class " + referrer + " cannot access field " + resolved);
         }
         if (access.isPut() && !canBeChangedBy(resolved, referrer)) {
-            return Result.fail(exact, Error.ILLEGAL_ACCESS,
+            return Result.fail(exact, ResolutionError.ILLEGAL_ACCESS,
                     "final field of " + resolved.declaringClass().getType()
                             + " cannot be written from " + referrer + ": " + resolved);
         }
@@ -470,7 +470,7 @@ public class ClassPath {
         }
         var lc = linker.link(klassType);
         if (lc.linkError != null) {
-            return Result.fail(true, Error.NO_CLASS_DEF,
+            return Result.fail(true, ResolutionError.NO_CLASS_DEF,
                     "class failed to link: " + lc.linkError);
         }
         if (lc.isUnknown()) {
@@ -484,7 +484,7 @@ public class ClassPath {
                 ? linker.findInterfaceMethodWithSignature(lc, mid.getName(), mid.getProto(), exact)
                 : linker.findClassMethod(lc, mid.getName(), mid.getProto(), exact);
         if (found == null) {
-            return Result.fail(exact[0], Error.NO_SUCH_METHOD, null);
+            return Result.fail(exact[0], ResolutionError.NO_SUCH_METHOD, null);
         }
         return Result.ok(exact[0], found);
     }
@@ -533,7 +533,7 @@ public class ClassPath {
         var klassType = mid.getDeclaringClass();
         var lc = linker.link(klassType);
         if (lc.linkError != null) {
-            return Result.fail(true, Error.NO_CLASS_DEF,
+            return Result.fail(true, ResolutionError.NO_CLASS_DEF,
                     "class failed to link: " + lc.linkError);
         }
         if (lc.isUnknown()) {
@@ -541,15 +541,15 @@ public class ClassPath {
         }
         var refLC = linker.link(referrer);
         if (refLC.linkError != null) {
-            return Result.fail(true, Error.NO_CLASS_DEF,
+            return Result.fail(true, ResolutionError.NO_CLASS_DEF,
                     "referrer failed to link: " + refLC.linkError);
         }
         if (type == InvokeType.INTERFACE && !lc.isInterface()) {
-            return Result.fail(true, Error.INCOMPATIBLE_CLASS_CHANGE,
+            return Result.fail(true, ResolutionError.INCOMPATIBLE_CLASS_CHANGE,
                     "Found class " + klassType + ", but interface was expected");
         }
         if (type == InvokeType.VIRTUAL && lc.isInterface()) {
-            return Result.fail(true, Error.INCOMPATIBLE_CLASS_CHANGE,
+            return Result.fail(true, ResolutionError.INCOMPATIBLE_CLASS_CHANGE,
                     "Found interface " + klassType + ", but class was expected");
         }
         // the search computes the klass hierarchy completeness; the referrer
@@ -564,11 +564,11 @@ public class ClassPath {
             if (lc.isInterface()) {
                 resolved = linker.findClassMethod(lc, mid.getName(), mid.getProto(), exact);
                 if (resolved != null) {
-                    return Result.fail(exact[0], Error.INCOMPATIBLE_CLASS_CHANGE,
+                    return Result.fail(exact[0], ResolutionError.INCOMPATIBLE_CLASS_CHANGE,
                             "incompatible method: " + resolved);
                 }
             }
-            return Result.fail(exact[0], Error.NO_SUCH_METHOD,
+            return Result.fail(exact[0], ResolutionError.NO_SUCH_METHOD,
                     "no method " + mid.getName() + mid.getProto() + " in " + klassType);
         }
         // CanAccess(declarer) with the MethodId class escape hatch (the method
@@ -582,7 +582,7 @@ public class ClassPath {
             if (accessDeclaring == null || accessKlass == null) {
                 exact[0] = false;
             } else {
-                return Result.fail(exact[0], Error.ILLEGAL_ACCESS,
+                return Result.fail(exact[0], ResolutionError.ILLEGAL_ACCESS,
                         "class " + referrer + " cannot access class " + lc.type
                                 + " for method dispatch: " + resolved);
             }
@@ -592,12 +592,12 @@ public class ClassPath {
         if (memberAccess == null) {
             exact[0] = false;
         } else if (!memberAccess) {
-            return Result.fail(exact[0], Error.ILLEGAL_ACCESS,
+            return Result.fail(exact[0], ResolutionError.ILLEGAL_ACCESS,
                     "class " + referrer + " cannot access method " + resolved);
         }
         // CheckIncompatibleClassChange
         if (checkIncompatibleClassChange(resolved, type)) {
-            return Result.fail(exact[0], Error.INCOMPATIBLE_CLASS_CHANGE,
+            return Result.fail(exact[0], ResolutionError.INCOMPATIBLE_CLASS_CHANGE,
                     "invoke-" + type + " on incompatible method: " + resolved);
         }
         return Result.ok(exact[0], resolved);
@@ -649,14 +649,14 @@ public class ClassPath {
         var resolved = resolution.value();
         var rlc = linker.link(receiver);
         if (rlc.linkError != null) {
-            return Result.fail(true, Error.NO_CLASS_DEF,
+            return Result.fail(true, ResolutionError.NO_CLASS_DEF,
                     "receiver failed to link: " + rlc.linkError);
         }
         if (rlc.isUnknown()) {
             return Result.unknown();
         }
         if (rlc.isInterface()) {
-            return Result.fail(resolution.exact(), Error.INCOMPATIBLE_CLASS_CHANGE,
+            return Result.fail(resolution.exact(), ResolutionError.INCOMPATIBLE_CLASS_CHANGE,
                     "receiver is an interface: " + receiver);
         }
         var exact = resolution.exact() && rlc.exact;
@@ -672,7 +672,7 @@ public class ClassPath {
         };
         if (called == null) {
             // ThrowIncompatibleClassChangeErrorClassForInterfaceDispatch
-            return Result.fail(exact, Error.INCOMPATIBLE_CLASS_CHANGE,
+            return Result.fail(exact, ResolutionError.INCOMPATIBLE_CLASS_CHANGE,
                     "no dispatch for " + resolved + " in receiver " + receiver);
         }
         return wrap(called, exact, receiver);
@@ -725,19 +725,19 @@ public class ClassPath {
         if (assignable == null) {
             exact[0] = false;
         } else if (!assignable) {
-            return Result.fail(exact[0], Error.NO_SUCH_METHOD,
+            return Result.fail(exact[0], ResolutionError.NO_SUCH_METHOD,
                     "no super method: " + referrer +
                             " is not assignable to " + mid.getDeclaringClass());
         }
         if (lc.isInterface()) {
             if (!resolved.declaring.isInterface()) {
                 // invoke-super from interface should not resolve to Object methods
-                return Result.fail(exact[0], Error.INCOMPATIBLE_CLASS_CHANGE,
+                return Result.fail(exact[0], ResolutionError.INCOMPATIBLE_CLASS_CHANGE,
                         "invoke-super from interface resolved to Object method: " + resolved);
             }
             var found = linker.findVirtualMethodForInterfaceSuper(lc, resolved, exact);
             if (found == null) {
-                return Result.fail(exact[0], Error.NO_SUCH_METHOD,
+                return Result.fail(exact[0], ResolutionError.NO_SUCH_METHOD,
                         "no super method " + resolved);
             }
             return wrap(found, exact[0], receiver);
@@ -751,7 +751,7 @@ public class ClassPath {
             exact[0] = false;
         }
         if (superLC == null || superLC.isUnknown() || vi < 0 || vi >= superLC.vtable.size()) {
-            return Result.fail(exact[0], Error.NO_SUCH_METHOD,
+            return Result.fail(exact[0], ResolutionError.NO_SUCH_METHOD,
                     "no super method " + resolved + " in class " + resolved.declaring.type);
         }
         return wrap(superLC.vtable.get(vi), exact[0], receiver);

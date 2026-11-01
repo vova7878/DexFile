@@ -65,8 +65,11 @@ public final class IntSet implements Iterable<Integer> {
         return EMPTY;
     }
 
+    /**
+     * A frozen set returns itself; a mutable set returns a writable copy.
+     */
     public IntSet duplicate() {
-        return new IntSet(this, ro);
+        return ro ? this : new IntSet(this, false);
     }
 
     public IntSet freeze() {
@@ -309,6 +312,7 @@ public final class IntSet implements Iterable<Integer> {
             }
 
             public void remove() {
+                checkWritable();
                 int i = lastRet;
                 if (i < 0)
                     throw new IllegalStateException();

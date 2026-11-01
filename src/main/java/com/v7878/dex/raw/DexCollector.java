@@ -146,7 +146,11 @@ public class DexCollector {
             this.compact = compact;
 
             this.debug_info_offset = -1;
-            this.hash = Objects.hash(ins, /* outs, */ value.getRegisterCount(),
+            this.hash = compact
+                    // For compact dex files, debug info is not compared
+                    ? Objects.hash(ins, /* outs, */ value.getRegisterCount(),
+                    value.getInstructions(), value.getTryBlocks())
+                    : Objects.hash(ins, /* outs, */ value.getRegisterCount(),
                     value.getInstructions(), value.getTryBlocks(), debug_info);
         }
 
@@ -606,9 +610,12 @@ public class DexCollector {
             for (var tmp : value.value.getTryBlocks()) {
                 fillTryBlock(tmp);
             }
-            var debug_info = value.debug_info;
-            if (debug_info != null) addDebugInfo(debug_info);
         }
+        // For compact dex files, equal code items with different debug
+        // info share one code item, but every method still refers to its
+        // own debug info
+        var debug_info = value.debug_info;
+        if (debug_info != null) addDebugInfo(debug_info);
     }
 
     public void fillDex(Dex value) {

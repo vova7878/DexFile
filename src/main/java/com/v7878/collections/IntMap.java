@@ -82,8 +82,11 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
         return (IntMap<T>) EMPTY;
     }
 
+    /**
+     * A frozen map returns itself; a mutable map returns a writable copy.
+     */
     public IntMap<E> duplicate() {
-        return new IntMap<>(this, ro);
+        return ro ? this : new IntMap<>(this, false);
     }
 
     public IntMap<E> freeze() {
@@ -482,6 +485,7 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
             }
 
             public void remove() {
+                checkWritable();
                 int i = lastRet;
                 if (i < 0)
                     throw new IllegalStateException();

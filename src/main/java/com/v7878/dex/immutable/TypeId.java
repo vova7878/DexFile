@@ -272,6 +272,13 @@ public final class TypeId implements Comparable<TypeId> {
     }
 
     public TypeId array(int depth) {
+        if (depth == 0) {
+            return this;
+        }
+        if (isVoid()) {
+            // there is no array of void: the descriptor would be rejected by of()
+            throw invalidType("[".repeat(depth) + descriptor);
+        }
         return raw(array_depth + depth, "[".repeat(depth) + descriptor);
     }
 

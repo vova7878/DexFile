@@ -82,8 +82,11 @@ public final class LongMap<E> implements Iterable<LongMap.Entry<E>> {
         return (LongMap<T>) EMPTY;
     }
 
+    /**
+     * A frozen map returns itself; a mutable map returns a writable copy.
+     */
     public LongMap<E> duplicate() {
-        return new LongMap<>(this, ro);
+        return ro ? this : new LongMap<>(this, false);
     }
 
     public LongMap<E> freeze() {
@@ -482,6 +485,7 @@ public final class LongMap<E> implements Iterable<LongMap.Entry<E>> {
             }
 
             public void remove() {
+                checkWritable();
                 int i = lastRet;
                 if (i < 0)
                     throw new IllegalStateException();

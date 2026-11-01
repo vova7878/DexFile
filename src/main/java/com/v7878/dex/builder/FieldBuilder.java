@@ -134,9 +134,6 @@ public final class FieldBuilder {
         return withFlags(AccessFlag.combine(flags));
     }
 
-    /**
-     * Stored verbatim; see {@link Preconditions#checkHiddenApiFlags}.
-     */
     public FieldBuilder withHiddenApiFlags(int flags) {
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(flags);
         return this;

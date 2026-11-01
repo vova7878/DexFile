@@ -70,7 +70,8 @@ public class ProtoDescriptor {
     }
 
     public static ProtoId parseProto(String descriptor) {
-        if (descriptor.charAt(0) != '('
+        if (descriptor.isEmpty()
+                || descriptor.charAt(0) != '('
                 || descriptor.indexOf(')') < 0
                 || descriptor.indexOf('.') >= 0) {
             throw new IllegalArgumentException(

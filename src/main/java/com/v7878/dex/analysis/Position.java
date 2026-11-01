@@ -93,7 +93,7 @@ public final class Position {
     }
 
     private static final int REACHABLE = 0b1;
-    private static final int NOP_EXACT = 0b10;
+    private static final int NOP_STRICT = 0b10;
     private static final int NOP_NARROWING = 0b100;
     private static final int INSIDE_TRY_BLOCK = 0b1000;
 
@@ -296,16 +296,16 @@ public final class Position {
         return (flags & REACHABLE) != 0;
     }
 
-    /* package */ void setNopExact(boolean value) {
-        flags = (flags & ~NOP_EXACT) | (value ? NOP_EXACT : 0);
+    /* package */ void setStrictNop(boolean value) {
+        flags = (flags & ~NOP_STRICT) | (value ? NOP_STRICT : 0);
     }
 
     // for example const 0 to register with zero constant
     // or move of any kind to self
     // or goto/if/switch to next
     // or cast to itself
-    public boolean isNopExact() {
-        return (flags & NOP_EXACT) != 0;
+    public boolean isStrictNop() {
+        return (flags & NOP_STRICT) != 0;
     }
 
     /* package */ void setNarrowingNop(boolean value) {
@@ -337,8 +337,8 @@ public final class Position {
             sj.add("unreachable");
         }
 
-        if (isNopExact()) {
-            sj.add("exact nop");
+        if (isStrictNop()) {
+            sj.add("strict nop");
         } else if (isNarrowingNop()) {
             sj.add("narrowing nop");
         }

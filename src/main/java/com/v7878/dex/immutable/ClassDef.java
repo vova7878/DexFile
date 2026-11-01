@@ -52,11 +52,29 @@ public final class ClassDef implements Annotatable, ClassHeader {
         return Collections.unmodifiableList(list);
     }
 
+    private static void checkClassType(TypeId type, String position) {
+        if (type.isPrimitive() || type.isArray()) {
+            throw new IllegalArgumentException("Invalid " + position + ": " + type);
+        }
+    }
+
     private ClassDef(TypeId type, int access_flags, TypeId superclass, List<TypeId> interfaces,
                      String source_file, NavigableSet<FieldDef> fields,
                      NavigableSet<MethodDef> methods, NavigableSet<Annotation> annotations) {
+        // null checks first, as in the other factories (P11)
         this.type = Objects.requireNonNull(type);
+        this.interfaces = Objects.requireNonNull(interfaces);
+        this.fields = Objects.requireNonNull(fields);
+        this.methods = Objects.requireNonNull(methods);
+        this.annotations = Objects.requireNonNull(annotations);
         this.access_flags = Preconditions.checkClassAccessFlags(access_flags);
+        checkClassType(type, "class type");
+        if (superclass != null) {
+            checkClassType(superclass, "superclass");
+        }
+        for (int i = 0; i < interfaces.size(); i++) {
+            checkClassType(interfaces.get(i), "interface");
+        }
         if (isInterface() && !OBJECT.equals(superclass)) {
             throw new IllegalArgumentException("Interface " + type +
                     " must have java.lang.Object as superclass, got " + superclass);
@@ -70,11 +88,7 @@ public final class ClassDef implements Annotatable, ClassHeader {
                     "Missing superclass for " + type);
         }
         this.superclass = superclass; // may be null
-        this.interfaces = Objects.requireNonNull(interfaces);
         this.source_file = source_file; // may be null
-        this.fields = Objects.requireNonNull(fields);
-        this.methods = Objects.requireNonNull(methods);
-        this.annotations = Objects.requireNonNull(annotations);
     }
 
     @Internal

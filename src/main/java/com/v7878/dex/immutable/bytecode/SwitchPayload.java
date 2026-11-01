@@ -39,8 +39,6 @@ public final class SwitchPayload extends Instruction implements SwitchPayloadIns
         Preconditions.checkFormat(opcode, "SwitchPayload",
                 PackedSwitchPayload, SparseSwitchPayload,
                 MPackedSwitchPayload, MSparseSwitchPayload);
-        // Duplicate keys are invalid dex, so they are rejected while the set
-        // is built instead of being silently dropped by the conversion
         var result = MemberUtils.toSwitchElementSet(elements);
         return new SwitchPayload(opcode, switch (opcode.format()) {
             case MPackedSwitchPayload, PackedSwitchPayload ->

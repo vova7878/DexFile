@@ -56,9 +56,32 @@ public class DexBalancer {
         return collection.size() > MAX_POOL_SIZE;
     }
 
-    private boolean check() {
-        return check(types) || check(protos) || check(fields) ||
-                check(methods) || check(method_handles) || check(call_sites);
+    private static String overflow(String name, int size) {
+        return String.format(
+                "%s pool has %d entries, limit is %d",
+                name, size, MAX_POOL_SIZE);
+    }
+
+    private String overflow() {
+        if (check(types)) {
+            return overflow("type", types.size());
+        }
+        if (check(protos)) {
+            return overflow("proto", protos.size());
+        }
+        if (check(fields)) {
+            return overflow("field", fields.size());
+        }
+        if (check(methods)) {
+            return overflow("method", methods.size());
+        }
+        if (check(method_handles)) {
+            return overflow("method handle", method_handles.size());
+        }
+        if (check(call_sites)) {
+            return overflow("call site", call_sites.size());
+        }
+        return null;
     }
 
     private DexBalancer(boolean debug) {
@@ -81,7 +104,13 @@ public class DexBalancer {
                 balancer = new DexBalancer(options.hasDebugInfo());
             }
             balancer.fillClassDef(classes.get(i));
-            if (balancer.check()) {
+            var overflow = balancer.overflow();
+            if (overflow != null) {
+                if (i == start) {
+                    throw new IllegalStateException(String.format(
+                            "Class %s does not fit into a single dex: %s",
+                            classes.get(i).getType().getDescriptor(), overflow));
+                }
                 balancer = null;
                 dexes.add(Dex.of(classes.subList(start, i)));
                 start = i--;

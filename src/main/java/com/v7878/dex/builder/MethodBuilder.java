@@ -213,9 +213,6 @@ public final class MethodBuilder {
         return withFlags(AccessFlag.combine(flags));
     }
 
-    /**
-     * Stored verbatim; see {@link Preconditions#checkHiddenApiFlags}.
-     */
     public MethodBuilder withHiddenApiFlags(int flags) {
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(flags);
         return this;

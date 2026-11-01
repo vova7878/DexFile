@@ -20,6 +20,9 @@ public final class Parameter implements Annotatable {
 
     private Parameter(TypeId type, String name, NavigableSet<Annotation> annotations) {
         this.type = Objects.requireNonNull(type);
+        if (type.isVoid()) {
+            throw new IllegalArgumentException("Parameter type must not be void: " + type);
+        }
         this.name = name; // may be null
         this.annotations = Objects.requireNonNull(annotations);
     }

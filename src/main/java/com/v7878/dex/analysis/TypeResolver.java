@@ -1,5 +1,6 @@
 package com.v7878.dex.analysis;
 
+import static com.v7878.dex.DexConstants.ACC_FINAL;
 import static com.v7878.dex.DexConstants.ACC_INTERFACE;
 import static com.v7878.dex.immutable.TypeId.OBJECT;
 import static com.v7878.dex.util.Ids.CLONEABLE;
@@ -52,6 +53,12 @@ public abstract sealed class TypeResolver {
      * Whether the class is an interface; null means unknown.
      */
     protected abstract Boolean resolveIsInterface(TypeId type);
+
+    /**
+     * Whether the class is final, i.e. has no subclasses; null means
+     * unknown.
+     */
+    protected abstract Boolean resolveIsFinal(TypeId type);
 
     /**
      * Returns the least common supertype of a and b. Array depths are
@@ -205,6 +212,54 @@ public abstract sealed class TypeResolver {
         return isInterface(TypeInfo.of(type), defaultValue);
     }
 
+    /**
+     * Checks whether the type is a final class, i.e. has no proper subtypes.
+     *
+     * <p>An array type is final exactly when its component type is final:
+     * an array is a subtype of another array exactly when its component is a
+     * subtype of that component, so an array whose component has no proper
+     * subtypes has none either. An array of a primitive has no array subtype
+     * at all.
+     *
+     * @param defaultValue result used for unknown types
+     * @throws IllegalArgumentException if the type is primitive
+     */
+    public boolean isFinal(TypeInfo type, boolean defaultValue) {
+        if (type.isArray()) {
+            // Array finality is the finality of the base class at every
+            // depth: T[]...[] has a proper array subtype exactly when T
+            // has a proper subtype. A primitive base means an array of a
+            // primitive, which has no array subtype at all
+            if (type.isBasePrimitive()) {
+                return true;
+            }
+            var base = type.base();
+            if (base == null) {
+                return defaultValue;
+            }
+            var out = resolveIsFinal(base);
+            return out == null ? defaultValue : out;
+        }
+        if (type.isPrimitive()) {
+            throw new IllegalArgumentException(
+                    "The argument can only be a reference type");
+        }
+        var exact = type.exactType();
+        if (exact == null) {
+            return defaultValue;
+        }
+        var out = resolveIsFinal(exact);
+        return out == null ? defaultValue : out;
+    }
+
+    /**
+     * @see #isFinal(TypeInfo, boolean)
+     */
+    public boolean isFinal(TypeId type, boolean defaultValue) {
+        Objects.requireNonNull(type);
+        return isFinal(TypeInfo.of(type), defaultValue);
+    }
+
     private boolean instanceOfFlat(TypeId a, TypeId b, boolean defaultValue, boolean strict) {
         if (OBJECT.equals(b)) {
             return true;
@@ -258,6 +313,11 @@ public abstract sealed class TypeResolver {
 
         @Override
         protected Boolean resolveIsInterface(TypeId type) {
+            return null;
+        }
+
+        @Override
+        protected Boolean resolveIsFinal(TypeId type) {
             return null;
         }
     }
@@ -369,6 +429,13 @@ public abstract sealed class TypeResolver {
             var info = mapper.apply(type);
             if (info == null) return null;
             return (info.getAccessFlags() & ACC_INTERFACE) != 0;
+        }
+
+        @Override
+        protected Boolean resolveIsFinal(TypeId type) {
+            var info = mapper.apply(type);
+            if (info == null) return null;
+            return (info.getAccessFlags() & ACC_FINAL) != 0;
         }
     }
 }

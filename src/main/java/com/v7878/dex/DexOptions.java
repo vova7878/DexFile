@@ -20,6 +20,9 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
 
     DexOptions(int api, boolean art, boolean odex, boolean expanded,
                boolean hiddenapi, boolean debug_info) {
+        if (api > MAX_TARGET_API) {
+            api = MAX_TARGET_API;
+        }
         this.api = api;
         this.art = art;
         this.odex = odex;

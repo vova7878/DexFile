@@ -38,9 +38,6 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
         this.annotations = annotations;
     }
 
-    /**
-     * Stored verbatim; see {@link Preconditions#checkHiddenApiFlags}.
-     */
     @Internal
     public static FieldDef raw(String name, TypeId type, int access_flags, int hiddenapi_flags,
                                EncodedValue initial_value, NavigableSet<Annotation> annotations) {

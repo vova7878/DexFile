@@ -5,12 +5,10 @@ import java.util.Arrays;
 import java.util.Objects;
 
 class ModifiableArray {
-    static final int DEFAULT_GROW_FACTOR = 4096; // 4 KiB
-    static final int MAX_GROW_FACTOR = 1024 * 1024; // 1 MiB
+    private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
     private byte[] data;
     private int data_size;
-    private int grow_factor = DEFAULT_GROW_FACTOR;
 
     ModifiableArray(int size) {
         this.data = new byte[size];
@@ -20,13 +18,6 @@ class ModifiableArray {
     ModifiableArray(byte[] new_data) {
         this.data = new_data.clone();
         this.data_size = data.length;
-    }
-
-    void setGrowFactor(int new_grow_factor) {
-        if (new_grow_factor <= 0) {
-            new_grow_factor = DEFAULT_GROW_FACTOR;
-        }
-        grow_factor = Math.min(new_grow_factor, MAX_GROW_FACTOR);
     }
 
     int size() {
@@ -46,7 +37,13 @@ class ModifiableArray {
             throw new IllegalArgumentException("negative size");
         }
         if (new_size > data.length) {
-            data = Arrays.copyOf(data, new_size + grow_factor);
+            // Grow geometrically
+            long grown = Math.max((long) data.length * 2, new_size);
+            int capacity = (int) Math.min(grown, MAX_ARRAY_SIZE);
+            if (capacity < new_size) {
+                throw new OutOfMemoryError("Required array size too large");
+            }
+            data = Arrays.copyOf(data, capacity);
         }
         if (new_size > data_size) {
             data_size = new_size;
@@ -55,6 +52,7 @@ class ModifiableArray {
 }
 
 public class ByteArrayIO implements RandomIO {
+    private static final int DEFAULT_SIZE = 4096; // 4 KiB
     private final ModifiableArray arr;
     private ByteOrder order;
     private int start;
@@ -76,7 +74,7 @@ public class ByteArrayIO implements RandomIO {
     }
 
     public ByteArrayIO() {
-        this(0);
+        this(DEFAULT_SIZE);
     }
 
     public ByteOrder getByteOrder() {
@@ -85,10 +83,6 @@ public class ByteArrayIO implements RandomIO {
 
     public void setByteOrder(ByteOrder order) {
         this.order = Objects.requireNonNull(order);
-    }
-
-    public void setGrowFactor(int new_grow_factor) {
-        arr.setGrowFactor(new_grow_factor);
     }
 
     @Override

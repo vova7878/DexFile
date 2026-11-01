@@ -21,6 +21,13 @@ public final class ProtoId implements Comparable<ProtoId> {
     private ProtoId(TypeId return_type, List<TypeId> parameters) {
         this.return_type = Objects.requireNonNull(return_type);
         this.parameters = Objects.requireNonNull(parameters);
+        // void is not a valid parameter type
+        for (int i = 0; i < parameters.size(); i++) {
+            if (TypeId.V.equals(parameters.get(i))) {
+                throw new IllegalArgumentException(
+                        "Invalid parameter type at index " + i + ": " + TypeId.V);
+            }
+        }
     }
 
     @Internal

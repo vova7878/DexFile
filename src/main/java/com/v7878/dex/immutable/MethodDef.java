@@ -35,6 +35,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             NavigableSet<Annotation> annotations) {
         this.name = Objects.requireNonNull(name);
         this.return_type = Objects.requireNonNull(return_type);
+        // The parameter constructor has already rejected void
         this.parameters = Objects.requireNonNull(parameters);
         this.access_flags = access_flags;
         this.hiddenapi_flags = hiddenapi_flags;
@@ -51,9 +52,6 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 access_flags, hiddenapi_flags, implementation, annotations);
     }
 
-    /**
-     * Stored verbatim; see {@link Preconditions#checkHiddenApiFlags}.
-     */
     @Internal
     public static MethodDef raw(
             String name, TypeId return_type, List<Parameter> parameters,
@@ -150,6 +148,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     }
 
     public ProtoId callProto(TypeId declaring_class) {
+        Objects.requireNonNull(declaring_class);
         var proto = getProto();
         if ((access_flags & ACC_STATIC) == 0) {
             return proto.insertThis(declaring_class);
