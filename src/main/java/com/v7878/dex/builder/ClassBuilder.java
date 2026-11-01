@@ -10,10 +10,10 @@ import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
@@ -38,7 +38,7 @@ public final class ClassBuilder {
         return access_flags;
     }
 
-    public TypeId getSuperClass() {
+    public TypeId getSuperclass() {
         return superclass;
     }
 
@@ -56,6 +56,10 @@ public final class ClassBuilder {
 
     public NavigableSet<MethodDef> getMethods() {
         return methods;
+    }
+
+    public NavigableSet<Annotation> getAnnotations() {
+        return annotations;
     }
 
     private ClassBuilder() {
@@ -110,7 +114,7 @@ public final class ClassBuilder {
         Objects.requireNonNull(def);
         return withType(def.getType())
                 .withFlags(def.getAccessFlags())
-                .withSuperClass(def.getSuperclass())
+                .withSuperclass(def.getSuperclass())
                 .setInterfaces(def.getInterfaces())
                 .withSourceFile(def.getSourceFile())
                 .setFields(def.getFields())
@@ -137,84 +141,132 @@ public final class ClassBuilder {
         return this;
     }
 
-    public ClassBuilder withSuperClass(TypeId superclass) {
+    public ClassBuilder withSuperclass(TypeId superclass) {
         this.superclass = superclass;
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder setInterfaces(Iterable<TypeId> interfaces) {
         this.interfaces.clear();
         CollectionUtils.addAll(this.interfaces, interfaces);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder setInterfaces(TypeId... interfaces) {
-        return setInterfaces(Arrays.asList(interfaces));
+        return setInterfaces(Converter.toList(interfaces));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withInterfaces(Iterable<TypeId> interfaces) {
         CollectionUtils.addAll(this.interfaces, interfaces);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withInterfaces(TypeId... interfaces) {
-        return withInterfaces(Arrays.asList(interfaces));
+        return withInterfaces(Converter.toList(interfaces));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withoutInterfaces(Iterable<TypeId> interfaces) {
         CollectionUtils.removeAll(this.interfaces, interfaces);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withoutInterfaces(TypeId... interfaces) {
-        return withoutInterfaces(Arrays.asList(interfaces));
+        return withoutInterfaces(Converter.toList(interfaces));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder setAnnotations(Iterable<Annotation> annotations) {
         this.annotations.clear();
         CollectionUtils.addAll(this.annotations, annotations);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder setAnnotations(Annotation... annotations) {
-        return setAnnotations(Arrays.asList(annotations));
+        return setAnnotations(Converter.toList(annotations));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withAnnotations(Iterable<Annotation> annotations) {
         CollectionUtils.replaceAll(this.annotations, annotations);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withAnnotations(Annotation... annotations) {
-        return withAnnotations(Arrays.asList(annotations));
+        return withAnnotations(Converter.toList(annotations));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withoutAnnotations(Iterable<Annotation> annotations) {
         CollectionUtils.removeAll(this.annotations, annotations);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withoutAnnotations(Annotation... annotations) {
-        return withoutAnnotations(Arrays.asList(annotations));
+        return withoutAnnotations(Converter.toList(annotations));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder setFields(Iterable<FieldDef> fields) {
         this.fields.clear();
         CollectionUtils.addAll(this.fields, fields);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder setFields(FieldDef... fields) {
-        return setFields(Arrays.asList(fields));
+        return setFields(Converter.toList(fields));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withFields(Iterable<FieldDef> fields) {
         CollectionUtils.replaceAll(this.fields, fields);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withFields(FieldDef... fields) {
-        return withFields(Arrays.asList(fields));
+        return withFields(Converter.toList(fields));
     }
 
     public ClassBuilder withField(Consumer<FieldBuilder> consumer) {
@@ -253,32 +305,50 @@ public final class ClassBuilder {
         );
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withoutFields(Iterable<FieldDef> fields) {
         CollectionUtils.removeAll(this.fields, fields);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withoutFields(FieldDef... fields) {
-        return withoutFields(Arrays.asList(fields));
+        return withoutFields(Converter.toList(fields));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder setMethods(Iterable<MethodDef> methods) {
         this.methods.clear();
         CollectionUtils.addAll(this.methods, methods);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder setMethods(MethodDef... methods) {
-        return setMethods(Arrays.asList(methods));
+        return setMethods(Converter.toList(methods));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withMethods(Iterable<MethodDef> methods) {
         CollectionUtils.replaceAll(this.methods, methods);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withMethods(MethodDef... methods) {
-        return withMethods(Arrays.asList(methods));
+        return withMethods(Converter.toList(methods));
     }
 
     public ClassBuilder withMethod(Consumer<MethodBuilder> consumer) {
@@ -323,12 +393,18 @@ public final class ClassBuilder {
         );
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withoutMethods(Iterable<MethodDef> methods) {
         CollectionUtils.removeAll(this.methods, methods);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public ClassBuilder withoutMethods(MethodDef... methods) {
-        return withoutMethods(Arrays.asList(methods));
+        return withoutMethods(Converter.toList(methods));
     }
 }

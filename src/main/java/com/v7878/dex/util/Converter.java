@@ -13,9 +13,14 @@ import java.util.function.IntFunction;
 import java.util.function.Predicate;
 
 public class Converter {
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     @SafeVarargs
     public static <T> List<T> toList(T... elements) {
-        Objects.requireNonNull(elements);
+        if (elements == null) {
+            return Collections.emptyList();
+        }
         return List.of(elements);
     }
 

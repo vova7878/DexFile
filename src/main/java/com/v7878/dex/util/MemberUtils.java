@@ -1,8 +1,6 @@
 package com.v7878.dex.util;
 
-import static com.v7878.dex.DexConstants.ACC_CONSTRUCTOR;
-import static com.v7878.dex.DexConstants.ACC_NATIVE;
-import static com.v7878.dex.DexConstants.ACC_PRIVATE;
+import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 
 import com.v7878.dex.AnnotationVisibility;
@@ -14,6 +12,7 @@ import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
+import com.v7878.dex.immutable.bytecode.SwitchElement;
 import com.v7878.dex.immutable.value.EncodedNull;
 
 import java.util.Collections;
@@ -21,6 +20,7 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
+import java.util.function.BiConsumer;
 
 public class MemberUtils {
     private static FieldDef searchableField(String name, TypeId type, boolean is_static) {
@@ -29,15 +29,7 @@ public class MemberUtils {
     }
 
     private static MethodDef searchableMethod(String name, TypeId ret, List<Parameter> parameters, boolean is_direct) {
-        int flags = ACC_NATIVE; // implementation == null
-        if (is_direct) {
-            flags |= switch (name) {
-                case "<init>" -> ACC_CONSTRUCTOR;
-                case "<clinit>" -> ACC_STATIC | ACC_CONSTRUCTOR;
-                default -> ACC_PRIVATE;
-            };
-        }
-        return MethodDef.raw(name, ret, parameters, flags,
+        return MethodDef.unchecked(name, ret, parameters, is_direct ? ACC_DIRECT_MASK : 0,
                 0, null, Collections.emptyNavigableSet());
     }
 
@@ -53,7 +45,7 @@ public class MemberUtils {
         return TryBlock.raw(address, 0, 0, List.of());
     }
 
-    private static final TypeId FIRST_TYPE = TypeId.raw(0, "");
+    private static final TypeId FIRST_TYPE = TypeId.raw("");
     private static final FieldDef FIRST_INSTANCE_FIELD =
             searchableField("", FIRST_TYPE, false);
     private static final MethodDef FIRST_VIRTUAL_METHOD =
@@ -77,17 +69,23 @@ public class MemberUtils {
 
     public static NavigableSet<FieldDef> mergeFields(List<FieldDef> static_, List<FieldDef> instance) {
         var out = new TreeSet<FieldDef>();
-        // TODO: check for duplicates
-        if (static_ != null) out.addAll(static_);
-        if (instance != null) out.addAll(instance);
+        if (static_ != null) for (var field : static_) {
+            MemberUtils.addField(out, field);
+        }
+        if (instance != null) for (var field : instance) {
+            MemberUtils.addField(out, field);
+        }
         return Collections.unmodifiableNavigableSet(out);
     }
 
     public static NavigableSet<MethodDef> mergeMethods(List<MethodDef> direct, List<MethodDef> virtual) {
         var out = new TreeSet<MethodDef>();
-        // TODO: check for duplicates
-        if (direct != null) out.addAll(direct);
-        if (virtual != null) out.addAll(virtual);
+        if (direct != null) for (var method : direct) {
+            MemberUtils.addMethod(out, method);
+        }
+        if (virtual != null) for (var method : virtual) {
+            MemberUtils.addMethod(out, method);
+        }
         return Collections.unmodifiableNavigableSet(out);
     }
 
@@ -123,5 +121,98 @@ public class MemberUtils {
             return floor;
         }
         return null;
+    }
+
+    public static void addAnnotationElement(NavigableSet<AnnotationElement> elements, AnnotationElement value) {
+        if (!elements.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate annotation element with name %s", value.getName()
+            ));
+        }
+    }
+
+    public static void addAnnotation(NavigableSet<Annotation> annotations, Annotation value) {
+        if (!annotations.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate annotation with type %s", value.getType()
+            ));
+        }
+    }
+
+    public static void addMethod(NavigableSet<MethodDef> methods, MethodDef value) {
+        if (!methods.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate method with signature %s", value.getName() + value.getProto()
+            ));
+        }
+    }
+
+    public static void addField(NavigableSet<FieldDef> fields, FieldDef value) {
+        if (!fields.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate field with signature %s", value.getName() + ":" + value.getType()
+            ));
+        }
+    }
+
+    public static void addTryBlock(NavigableSet<TryBlock> blocks, TryBlock value) {
+        if (!blocks.add(value)) {
+            throw new IllegalArgumentException(String.format(
+                    "Duplicate try block %s", value));
+        }
+    }
+
+    public static void addSwitchElement(NavigableSet<SwitchElement> elements, SwitchElement value) {
+        if (!elements.add(value)) {
+            throw new IllegalArgumentException(
+                    "Duplicate switch key: " + value.getKey());
+        }
+    }
+
+    /**
+     * Builds an unmodifiable set through the typed {@code add*} helper, so a
+     * duplicate is rejected with a message that names the colliding member.
+     * <p>
+     * The source is always traversed element by element: even a
+     * {@link NavigableSet} argument is not copied with {@code addAll}, because
+     * it may use a custom comparator and then its contents are not necessarily
+     * the same set as the one built with the natural ordering.
+     */
+    private static <T extends Comparable<? super T>> NavigableSet<T> toSet(
+            Iterable<T> values, BiConsumer<NavigableSet<T>, T> adder) {
+        if (values == null) {
+            return Collections.emptyNavigableSet();
+        }
+        var out = new TreeSet<T>();
+        for (var value : values) {
+            adder.accept(out, value);
+        }
+        return Collections.unmodifiableNavigableSet(out);
+    }
+
+    public static NavigableSet<FieldDef> toFieldSet(Iterable<FieldDef> fields) {
+        return toSet(fields, MemberUtils::addField);
+    }
+
+    public static NavigableSet<MethodDef> toMethodSet(Iterable<MethodDef> methods) {
+        return toSet(methods, MemberUtils::addMethod);
+    }
+
+    public static NavigableSet<Annotation> toAnnotationSet(Iterable<Annotation> annotations) {
+        return toSet(annotations, MemberUtils::addAnnotation);
+    }
+
+    public static NavigableSet<AnnotationElement> toAnnotationElementSet(
+            Iterable<AnnotationElement> elements) {
+        return toSet(elements, MemberUtils::addAnnotationElement);
+    }
+
+    public static NavigableSet<TryBlock> toTryBlockSet(Iterable<TryBlock> blocks) {
+        return toSet(blocks, MemberUtils::addTryBlock);
+    }
+
+    public static NavigableSet<SwitchElement> toSwitchElementSet(
+            Iterable<SwitchElement> elements) {
+        return toSet(elements, MemberUtils::addSwitchElement);
     }
 }

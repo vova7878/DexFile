@@ -2,12 +2,14 @@ package com.v7878.dex.immutable;
 
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 
+import com.v7878.dex.AccessFlag;
 import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
-import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
+import java.util.Locale;
 import java.util.NavigableSet;
 import java.util.Objects;
 
@@ -21,15 +23,19 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
 
     private FieldDef(String name, TypeId type, int access_flags, int hiddenapi_flags,
                      EncodedValue initial_value, NavigableSet<Annotation> annotations) {
+        // Checked before the semantic rules, so a null argument is reported first.
+        Objects.requireNonNull(name);
+        Objects.requireNonNull(type);
+        Objects.requireNonNull(annotations);
         if ((access_flags & ACC_STATIC) == 0 && initial_value != null) {
             throw new IllegalArgumentException("Instance fields can`t have initial value");
         }
-        this.name = Objects.requireNonNull(name);
-        this.type = Objects.requireNonNull(type);
+        this.name = name;
+        this.type = type;
         this.access_flags = Preconditions.checkFieldAccessFlags(access_flags);
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
         this.initial_value = initial_value; // may be null
-        this.annotations = Objects.requireNonNull(annotations);
+        this.annotations = annotations;
     }
 
     @Internal
@@ -39,10 +45,13 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
                 hiddenapi_flags, initial_value, annotations);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static FieldDef of(String name, TypeId type, int access_flags, int hiddenapi_flags,
                               EncodedValue initial_value, Iterable<Annotation> annotations) {
         return new FieldDef(name, type, access_flags, hiddenapi_flags,
-                initial_value, Converter.toNavigableSet(annotations));
+                initial_value, MemberUtils.toAnnotationSet(annotations));
     }
 
     @Override
@@ -83,8 +92,9 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getAccessFlags(),
-                getHiddenApiFlags(), getType(), getInitialValue());
+        return Objects.hash(getName(), getAccessFlags(), getHiddenApiFlags(),
+                getType(), getInitialValue(),
+                CollectionUtils.setHashCode(getAnnotations()));
     }
 
     @Override
@@ -95,7 +105,22 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
                 && getHiddenApiFlags() == other.getHiddenApiFlags()
                 && Objects.equals(getName(), other.getName())
                 && Objects.equals(getType(), other.getType())
-                && Objects.equals(getInitialValue(), other.getInitialValue());
+                && Objects.equals(getInitialValue(), other.getInitialValue())
+                && CollectionUtils.setEquals(getAnnotations(), other.getAnnotations());
+    }
+
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        return "FieldDef{flags=[" + AccessFlag.formatAccessFlagsForField(getAccessFlags())
+                + "] name=" + getName()
+                + " type=" + getType()
+                + " hiddenapi=" + String.format(Locale.ROOT, "0x%08X", getHiddenApiFlags())
+                + " annotations=" + getAnnotations().size()
+                + "}";
     }
 
     @Override

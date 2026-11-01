@@ -196,8 +196,8 @@ public class Dex009 {
                     null : reader.getString(descriptor_id);
             // Note: This version had an additional value
             // for the register type that meant untyped null
-            var type = "<null>".equals(descriptor) ? null :
-                    TypeId.of(descriptor);
+            var type = descriptor == null || "<null>".equals(descriptor) ?
+                    null : TypeId.of(descriptor);
 
             items.add(new RawDebugItem(items.size(), start,
                     StartLocal.of(register, name, type, null)));
@@ -275,14 +275,14 @@ public class Dex009 {
             int code_off = in.readSmallUInt();
 
             List<Annotation> annotations = null;
-            if (throws_list_off != NO_OFFSET) {
+            if (reader.options().hasAnnotations() && throws_list_off != NO_OFFSET) {
                 var throws_list = reader.getTypeList(throws_list_off);
                 annotations = List.of(Annotation.Throws(throws_list));
             }
 
             var code = code_off == NO_OFFSET ? null :
                     (!reader.options().hasMethodBodies() ?
-                     CodeItem.EMPTY : readCodeItem(reader, mid, code_off));
+                            CodeItem.EMPTY : readCodeItem(reader, mid, code_off));
             DebugInfo debug_info = code == null ? null : code.debug_info();
             list.add(MethodDef.of(mid.getName(), mid.getReturnType(),
                     Parameter.listOf(mid.getParameterTypes()), access_flags, 0,

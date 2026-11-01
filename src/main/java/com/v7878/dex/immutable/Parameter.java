@@ -3,9 +3,10 @@ package com.v7878.dex.immutable;
 import static com.v7878.dex.util.CollectionUtils.toUnmodifiableList;
 
 import com.v7878.dex.Internal;
+import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.MemberUtils;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
@@ -19,6 +20,9 @@ public final class Parameter implements Annotatable {
 
     private Parameter(TypeId type, String name, NavigableSet<Annotation> annotations) {
         this.type = Objects.requireNonNull(type);
+        if (type.isVoid()) {
+            throw new IllegalArgumentException("Parameter type must not be void: " + type);
+        }
         this.name = name; // may be null
         this.annotations = Objects.requireNonNull(annotations);
     }
@@ -28,8 +32,11 @@ public final class Parameter implements Annotatable {
         return new Parameter(type, name, annotations);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static Parameter of(TypeId type, String name, Iterable<Annotation> annotations) {
-        return new Parameter(type, name, Converter.toNavigableSet(annotations));
+        return new Parameter(type, name, MemberUtils.toAnnotationSet(annotations));
     }
 
     public static Parameter of(TypeId type, String name) {
@@ -40,16 +47,25 @@ public final class Parameter implements Annotatable {
         return of(type, null);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static List<Parameter> listOf(Iterable<TypeId> types) {
         // TODO: improve performance
+        if (types == null) {
+            return Collections.emptyList();
+        }
         return toUnmodifiableList(StreamSupport
                 .stream(types.spliterator(), false)
                 .map(Parameter::of));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static List<Parameter> listOf(TypeId... types) {
         // TODO: improve performance
-        return listOf(Arrays.asList(types));
+        return listOf(Converter.toList(types));
     }
 
     public TypeId getType() {
@@ -67,7 +83,20 @@ public final class Parameter implements Annotatable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getType(), getAnnotations());
+        return Objects.hash(getName(), getType(),
+                CollectionUtils.setHashCode(getAnnotations()));
+    }
+
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        return "Parameter{type=" + getType()
+                + " name=" + (getName() == null ? "<unnamed>" : getName())
+                + " annotations=" + getAnnotations().size()
+                + "}";
     }
 
     @Override
@@ -76,6 +105,6 @@ public final class Parameter implements Annotatable {
         return obj instanceof Parameter other
                 && Objects.equals(getName(), other.getName())
                 && Objects.equals(getType(), other.getType())
-                && Objects.equals(getAnnotations(), other.getAnnotations());
+                && CollectionUtils.setEquals(getAnnotations(), other.getAnnotations());
     }
 }

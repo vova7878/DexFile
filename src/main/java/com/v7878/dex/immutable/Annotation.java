@@ -14,6 +14,7 @@ import static com.v7878.dex.util.Ids.THROWS;
 import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.Internal;
 import com.v7878.dex.immutable.value.EncodedAnnotation;
+import com.v7878.dex.immutable.value.EncodedArray;
 import com.v7878.dex.immutable.value.EncodedInt;
 import com.v7878.dex.immutable.value.EncodedMethod;
 import com.v7878.dex.immutable.value.EncodedNull;
@@ -22,9 +23,9 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
-import java.util.Arrays;
 import java.util.NavigableSet;
 import java.util.Objects;
 
@@ -46,14 +47,20 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
         return new Annotation(visibility, type, elements);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static Annotation of(AnnotationVisibility visibility, TypeId type,
                                 Iterable<AnnotationElement> elements) {
-        return new Annotation(visibility, type, Converter.toNavigableSet(elements));
+        return new Annotation(visibility, type, MemberUtils.toAnnotationElementSet(elements));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static Annotation of(AnnotationVisibility visibility, TypeId type,
                                 AnnotationElement... elements) {
-        return of(visibility, type, Arrays.asList(elements));
+        return of(visibility, type, Converter.toList(elements));
     }
 
     public static Annotation of(AnnotationVisibility visibility, CommonAnnotation annotation) {
@@ -91,14 +98,20 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
                         Preconditions.checkInnerClassAccessFlags(access_flags))));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static Annotation MemberClasses(TypeId... classes) {
         return Annotation.of(AnnotationVisibility.SYSTEM, MEMBER_CLASSES,
-                AnnotationElement.of("value", EncodedValue.ofValue(classes)));
+                AnnotationElement.of("value", arrayValue(classes)));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static Annotation MemberClasses(Iterable<TypeId> classes) {
         return Annotation.of(AnnotationVisibility.SYSTEM, MEMBER_CLASSES,
-                AnnotationElement.of("value", EncodedValue.ofValue(classes)));
+                AnnotationElement.of("value", arrayValue(classes)));
     }
 
     public static Annotation MethodParameters(String[] names, int[] access_flags) {
@@ -117,24 +130,41 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
                 AnnotationElement.of("accessFlags", EncodedValue.ofValue(access_flags)));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static Annotation Signature(String... value) {
         return Annotation.of(AnnotationVisibility.SYSTEM, SIGNATURE,
-                AnnotationElement.of("value", EncodedValue.ofValue(value)));
+                AnnotationElement.of("value", arrayValue(value)));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static Annotation Signature(Iterable<String> value) {
         return Annotation.of(AnnotationVisibility.SYSTEM, SIGNATURE,
-                AnnotationElement.of("value", EncodedValue.ofValue(value)));
+                AnnotationElement.of("value", arrayValue(value)));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static Annotation Throws(TypeId... exceptions) {
         return Annotation.of(AnnotationVisibility.SYSTEM, THROWS,
-                AnnotationElement.of("value", EncodedValue.ofValue(exceptions)));
+                AnnotationElement.of("value", arrayValue(exceptions)));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static Annotation Throws(Iterable<TypeId> exceptions) {
         return Annotation.of(AnnotationVisibility.SYSTEM, THROWS,
-                AnnotationElement.of("value", EncodedValue.ofValue(exceptions)));
+                AnnotationElement.of("value", arrayValue(exceptions)));
+    }
+
+    // A null array/Iterable is an empty array value, not an EncodedNull value.
+    private static EncodedValue arrayValue(Object value) {
+        return value == null ? EncodedArray.EMPTY : EncodedValue.ofValue(value);
     }
 
     public AnnotationVisibility getVisibility() {
@@ -153,7 +183,8 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
 
     @Override
     public int hashCode() {
-        return Objects.hash(getVisibility(), getType(), getElements());
+        return Objects.hash(getVisibility(), getType(),
+                CollectionUtils.setHashCode(getElements()));
     }
 
     @Override
@@ -162,7 +193,19 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
         return obj instanceof Annotation other
                 && Objects.equals(getVisibility(), other.getVisibility())
                 && Objects.equals(getType(), other.getType())
-                && Objects.equals(getElements(), other.getElements());
+                && CollectionUtils.setEquals(getElements(), other.getElements());
+    }
+
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        return "Annotation{visibility=" + getVisibility()
+                + " type=" + getType()
+                + " elements=" + getElements().size()
+                + "}";
     }
 
     @Override

@@ -79,13 +79,13 @@ public enum DexVersion {
         }
     }
 
-    public boolean isStandart() {
+    public boolean isStandard() {
         return this != CDEX001 && this != DEX036;
     }
 
     public static DexVersion forApi(int api) {
         for (DexVersion version : values()) {
-            if (version.isStandart() && api >= version.minApi) {
+            if (version.isStandard() && api >= version.minApi) {
                 return version;
             }
         }

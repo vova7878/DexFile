@@ -1,6 +1,7 @@
 @SuppressWarnings("JavaModuleNaming")
 module com.v7878.dex {
     exports com.v7878.dex;
+    exports com.v7878.dex.analysis;
     exports com.v7878.dex.builder;
     exports com.v7878.dex.rewriter;
     exports com.v7878.dex.immutable;

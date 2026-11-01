@@ -7,9 +7,9 @@ import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Preconditions;
 
-import java.util.Arrays;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeSet;
@@ -144,31 +144,49 @@ public final class FieldBuilder {
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public FieldBuilder setAnnotations(Iterable<Annotation> annotations) {
         this.annotations.clear();
         CollectionUtils.addAll(this.annotations, annotations);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public FieldBuilder setAnnotations(Annotation... annotations) {
-        return setAnnotations(Arrays.asList(annotations));
+        return setAnnotations(Converter.toList(annotations));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public FieldBuilder withAnnotations(Iterable<Annotation> annotations) {
         CollectionUtils.replaceAll(this.annotations, annotations);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public FieldBuilder withAnnotations(Annotation... annotations) {
-        return withAnnotations(Arrays.asList(annotations));
+        return withAnnotations(Converter.toList(annotations));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public FieldBuilder withoutAnnotations(Iterable<Annotation> annotations) {
         CollectionUtils.removeAll(this.annotations, annotations);
         return this;
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public FieldBuilder withoutAnnotations(Annotation... annotations) {
-        return withoutAnnotations(Arrays.asList(annotations));
+        return withoutAnnotations(Converter.toList(annotations));
     }
 }

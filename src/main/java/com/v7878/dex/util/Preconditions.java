@@ -104,6 +104,9 @@ public class Preconditions {
         return access_flags;
     }
 
+    /**
+     * Placeholder: hiddenapi bits are version-dependent and stored verbatim.
+     */
     public static int checkHiddenApiFlags(int hiddenapi_flags) {
         // TODO: check
         return hiddenapi_flags;

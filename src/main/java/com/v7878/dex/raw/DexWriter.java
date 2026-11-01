@@ -15,6 +15,7 @@ import static com.v7878.dex.DexConstants.DBG_SET_PROLOGUE_END;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL;
 import static com.v7878.dex.DexConstants.DBG_START_LOCAL_EXTENDED;
 import static com.v7878.dex.DexConstants.ENDIAN_CONSTANT;
+import static com.v7878.dex.DexConstants.MAX_POOL_SIZE;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM;
@@ -143,6 +144,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -254,11 +256,10 @@ public class DexWriter implements StringIndexer {
     private final CompactData compact_debug_info;
 
     private static void checkSizeLimit(int size, String name) {
-        // One less than 0xffff because this value is reserved
-        if (size >= 65535) {
+        if (size > MAX_POOL_SIZE) {
             throw new IllegalStateException(String.format(
                     "Size(%d) should not exceed limit(%d) for %s section",
-                    size, 65535, name));
+                    size, MAX_POOL_SIZE, name));
         }
     }
 
@@ -1416,7 +1417,7 @@ public class DexWriter implements StringIndexer {
     }
 
     public void writeTryBlock(TryBlockContainer value, RandomOutput out,
-                              HashMap<CatchHandler, Integer> handlers) {
+                              Map<CatchHandler, Integer> handlers) {
         out.writeInt(value.value().getStartAddress());
         out.writeShort(value.value().getUnitCount());
         Integer offset = handlers.get(value.handler());
@@ -1481,7 +1482,7 @@ public class DexWriter implements StringIndexer {
             var tries_buffer = data_buffer.duplicate();
             data_buffer.addPosition(TRY_ITEM_SIZE * tries_size);
 
-            HashMap<CatchHandler, Integer> handlers = new HashMap<>(tries_size);
+            Map<CatchHandler, Integer> handlers = new LinkedHashMap<>(tries_size);
             for (var tmp : tries) {
                 handlers.put(tmp.handler(), null);
             }

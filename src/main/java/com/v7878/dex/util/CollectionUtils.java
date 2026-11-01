@@ -1,5 +1,6 @@
 package com.v7878.dex.util;
 
+import java.util.AbstractList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -41,6 +42,21 @@ public class CollectionUtils {
             if (out != 0) return out;
         }
         return Boolean.compare(i1.hasNext(), i2.hasNext());
+    }
+
+    public static <T> List<T> reverseList(List<T> list) {
+        if (list == null) return null;
+        return new AbstractList<>() {
+            @Override
+            public int size() {
+                return list.size();
+            }
+
+            @Override
+            public T get(int index) {
+                return list.get(list.size() - index - 1);
+            }
+        };
     }
 
     public static <E extends Comparable<E>> E findValue(NavigableSet<E> set, E e) {
@@ -95,6 +111,66 @@ public class CollectionUtils {
         } else for (T tmp : iterable) {
             while (list.remove(tmp)) { /* nop */ }
         }
+    }
+
+    /**
+     * Compares two ordered sets by {@link Object#equals(Object)}, never through
+     * {@link java.util.Set#contains(Object)}, {@link java.util.Set#equals(Object)}
+     * or {@link java.util.Set#hashCode()}.
+     * <p>
+     * Both arguments must be sets with natural ordering, so equal content always
+     * produces the same iteration order. The elements are walked pairwise in
+     * iteration order and compared with {@code equals}; equality is element-wise
+     * structural equality and never uses {@code compareTo}.
+     * <p>
+     * A set with a custom comparator is a misuse in the model and is rejected
+     * with {@link IllegalArgumentException}.
+     */
+    public static boolean setEquals(NavigableSet<?> left, NavigableSet<?> right) {
+        checkNaturalOrder(left);
+        checkNaturalOrder(right);
+        if (left == right) return true;
+        if (left == null || right == null || left.size() != right.size()) {
+            return false;
+        }
+        var leftIterator = left.iterator();
+        var rightIterator = right.iterator();
+        while (leftIterator.hasNext() && rightIterator.hasNext()) {
+            if (!Objects.equals(leftIterator.next(), rightIterator.next())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static void checkNaturalOrder(NavigableSet<?> set) {
+        if (set != null && set.comparator() != null) {
+            throw new IllegalArgumentException(
+                    "Custom comparators are not supported: the model requires natural ordering");
+        }
+    }
+
+    /**
+     * Hashes the elements of a naturally ordered set in iteration order.
+     * Consistent with {@link #setEquals(NavigableSet, NavigableSet)}: naturally
+     * ordered sets with equal content always have the same iteration order, so
+     * they always produce the same hash.
+     * <p>
+     * The combination is order-dependent, which is only well-defined for
+     * ordered sets: a plain hash set has no deterministic iteration order and
+     * must not be passed here.
+     * <p>
+     * The argument must be a set with natural ordering; a set with a custom
+     * comparator is rejected with {@link IllegalArgumentException}, because
+     * otherwise {@code equals} and {@code hashCode} could disagree.
+     */
+    public static int setHashCode(NavigableSet<?> set) {
+        checkNaturalOrder(set);
+        int hash = 0;
+        for (var value : set) {
+            hash = 31 * hash + Objects.hashCode(value);
+        }
+        return hash;
     }
 
     public static <A extends Comparable<? super V>, V> int

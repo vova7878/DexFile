@@ -10,6 +10,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * Snapshot of all register values at one position of the method
+ * analysis. Package-private mutators are used by the analysis engine.
+ */
 public final class RegisterLine {
     private final Register[] registers;
     private boolean this_initialized;
@@ -45,6 +49,9 @@ public final class RegisterLine {
         this_initialized = true;
     }
 
+    /**
+     * Two consecutive registers as seen by a wide operation.
+     */
     public record RegisterPair(Register lo, Register hi) {
         public RegisterPair {
             Objects.requireNonNull(lo);

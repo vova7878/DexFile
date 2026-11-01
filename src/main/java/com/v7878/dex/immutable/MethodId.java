@@ -25,20 +25,32 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
         return new MethodId(declaring_class, name, proto);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static MethodId of(TypeId declaring_class, String name,
                               TypeId returnType, Iterable<TypeId> parameters) {
         return new MethodId(declaring_class, name, ProtoId.of(returnType, parameters));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static MethodId of(TypeId declaring_class, String name,
                               TypeId returnType, TypeId... parameters) {
         return new MethodId(declaring_class, name, ProtoId.of(returnType, parameters));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static MethodId constructor(TypeId declaring_class, Iterable<TypeId> parameters) {
         return of(declaring_class, "<init>", TypeId.V, parameters);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static MethodId constructor(TypeId declaring_class, TypeId... parameters) {
         return of(declaring_class, "<init>", TypeId.V, parameters);
     }

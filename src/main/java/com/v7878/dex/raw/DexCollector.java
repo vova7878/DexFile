@@ -43,7 +43,7 @@ import com.v7878.dex.util.ShortyUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -146,7 +146,11 @@ public class DexCollector {
             this.compact = compact;
 
             this.debug_info_offset = -1;
-            this.hash = Objects.hash(ins, /* outs, */ value.getRegisterCount(),
+            this.hash = compact
+                    // For compact dex files, debug info is not compared
+                    ? Objects.hash(ins, /* outs, */ value.getRegisterCount(),
+                    value.getInstructions(), value.getTryBlocks())
+                    : Objects.hash(ins, /* outs, */ value.getRegisterCount(),
                     value.getInstructions(), value.getTryBlocks(), debug_info);
         }
 
@@ -455,14 +459,14 @@ public class DexCollector {
         method_handles = new TreeSet<>();
         call_sites = new TreeSet<>();
 
-        type_lists = new HashMap<>();
-        encoded_arrays = new HashMap<>();
-        debug_infos = new HashMap<>();
-        code_items = new HashMap<>();
-        annotations = new HashMap<>();
-        annotation_sets = new HashMap<>();
-        annotation_set_lists = new HashMap<>();
-        annotation_directories = new HashMap<>();
+        type_lists = new LinkedHashMap<>();
+        encoded_arrays = new LinkedHashMap<>();
+        debug_infos = new LinkedHashMap<>();
+        code_items = new LinkedHashMap<>();
+        annotations = new LinkedHashMap<>();
+        annotation_sets = new LinkedHashMap<>();
+        annotation_set_lists = new LinkedHashMap<>();
+        annotation_directories = new LinkedHashMap<>();
 
         class_defs = new ArrayList<>();
     }
@@ -606,9 +610,12 @@ public class DexCollector {
             for (var tmp : value.value.getTryBlocks()) {
                 fillTryBlock(tmp);
             }
-            var debug_info = value.debug_info;
-            if (debug_info != null) addDebugInfo(debug_info);
         }
+        // For compact dex files, equal code items with different debug
+        // info share one code item, but every method still refers to its
+        // own debug info
+        var debug_info = value.debug_info;
+        if (debug_info != null) addDebugInfo(debug_info);
     }
 
     public void fillDex(Dex value) {

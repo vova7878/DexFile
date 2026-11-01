@@ -15,6 +15,7 @@ public final class EncodedString extends EncodedValue {
     }
 
     public static EncodedString of(String value) {
+        Objects.requireNonNull(value, "value");
         return value.isEmpty() ? EMPTY : new EncodedString(value);
     }
 

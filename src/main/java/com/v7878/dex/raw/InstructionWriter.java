@@ -661,13 +661,29 @@ public class InstructionWriter {
     }
 
     public static void write_m_packed_switch_payload(SwitchPayload value, RandomOutput out, int opcode) {
-        // TODO
-        throw new UnsupportedOperationException("Unimplemented yet!");
+        var elements = value.getSwitchElements();
+        int size = unsigned(elements.size(), 16);
+        out.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
+        write_base(out, opcode);
+        out.writeShort(size);
+        out.writeInt(elements.isEmpty() ? 0 : elements.first().getKey());
+        for (var element : elements) {
+            out.writeShort(signed(element.getOffset(), 16));
+        }
     }
 
     public static void write_m_sparse_switch_payload(SwitchPayload value, RandomOutput out, int opcode) {
-        // TODO
-        throw new UnsupportedOperationException("Unimplemented yet!");
+        var elements = value.getSwitchElements();
+        int size = unsigned(elements.size(), 16);
+        out.requireAlignment(PAYLOAD_INSTRUCTION_ALIGNMENT);
+        write_base(out, opcode);
+        out.writeShort(size);
+        for (var element : elements) {
+            out.writeInt(element.getKey());
+        }
+        for (var element : elements) {
+            out.writeShort(signed(element.getOffset(), 16));
+        }
     }
 
     private static void write_raw_10x(InstructionRaw0x value, RandomOutput out) {

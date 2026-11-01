@@ -12,6 +12,11 @@ public final class DexConstants {
     public static final int NO_INDEX = -1;
     public static final int NO_OFFSET = 0;
 
+    /**
+     * A dex pool may hold at most this many entries: {@code 65535} is reserved.
+     */
+    public static final int MAX_POOL_SIZE = 65534;
+
     // access_flags definitions
     public static final int ACC_PUBLIC = 0x1;
     public static final int ACC_PRIVATE = 0x2;

@@ -9,12 +9,25 @@ public final class MethodHandleId implements Comparable<MethodHandleId> {
     private final MethodHandleType handle_type;
     private final MemberId member;
 
+    private static RuntimeException wrongMemberType(
+            MethodHandleType handle_type, String expected, MemberId member) {
+        throw new IllegalArgumentException("Method handle " + handle_type
+                + " requires " + expected + ", got " + member);
+    }
+
     private MethodHandleId(MethodHandleType handle_type, MemberId member) {
         this.handle_type = Objects.requireNonNull(handle_type);
+        Objects.requireNonNull(member);
         if (handle_type.isMethodAccess()) {
-            this.member = Objects.requireNonNull((MethodId) member);
+            if (!(member instanceof MethodId method)) {
+                throw wrongMemberType(handle_type, "method id", member);
+            }
+            this.member = method;
         } else {
-            this.member = Objects.requireNonNull((FieldId) member);
+            if (!(member instanceof FieldId field)) {
+                throw wrongMemberType(handle_type, "field id", member);
+            }
+            this.member = field;
         }
     }
 

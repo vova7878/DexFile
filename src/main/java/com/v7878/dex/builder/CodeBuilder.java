@@ -72,7 +72,7 @@ import com.v7878.dex.util.TryBlocksMerger.TryItem;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -397,7 +397,7 @@ public final class CodeBuilder {
         this.ins_size = checkRange(ins_size, 0, regs_size + 1) + this_reg;
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
-        this.labels = new HashMap<>();
+        this.labels = new LinkedHashMap<>();
         this.detached = new LinkedHashSet<>();
         this.root = this.current = new BuilderPosition(null);
         this.payloads = new BuilderPosition(null);
@@ -1961,10 +1961,10 @@ public final class CodeBuilder {
     }
 
     /**
-     * @param dst_reg_peir u8
+     * @param dst_reg_pair u8
      */
-    public CodeBuilder move_result_wide(int dst_reg_peir) {
-        return f11x(MOVE_RESULT_WIDE, dst_reg_peir);
+    public CodeBuilder move_result_wide(int dst_reg_pair) {
+        return f11x(MOVE_RESULT_WIDE, dst_reg_pair);
     }
 
     /**
@@ -2010,10 +2010,10 @@ public final class CodeBuilder {
     }
 
     /**
-     * @param return_value_reg_peir u8
+     * @param return_value_reg_pair u8
      */
-    public CodeBuilder return_wide(int return_value_reg_peir) {
-        return f11x(RETURN_WIDE, return_value_reg_peir);
+    public CodeBuilder return_wide(int return_value_reg_pair) {
+        return f11x(RETURN_WIDE, return_value_reg_pair);
     }
 
     /**
@@ -2281,6 +2281,8 @@ public final class CodeBuilder {
     }
 
     /**
+     * Unlike the non-raw overloads, {@code null} is not allowed here.
+     *
      * @param arr_ref_reg   u8
      * @param element_width 1, 2, 4 or 8
      */
@@ -2290,18 +2292,28 @@ public final class CodeBuilder {
     }
 
     /**
+     * {@code null} is treated as an empty collection.
+     *
      * @param arr_ref_reg   u8
      * @param element_width 1, 2, 4 or 8
      */
     public CodeBuilder fill_array_data(int arr_ref_reg, int element_width, Iterable<? extends Number> data) {
         var checked_data = Preconditions.checkArrayPayloadElements(element_width, Converter.toList(data));
+        if (checked_data.isEmpty()) {
+            return nop();
+        }
         return fill_array_data_internal(arr_ref_reg, element_width, checked_data);
     }
 
     /**
+     * {@code null} is treated as an empty collection.
+     *
      * @param arr_ref_reg u8
      */
     public CodeBuilder fill_array_data(int arr_ref_reg, boolean[] data) {
+        if (data == null || data.length == 0) {
+            return nop();
+        }
         List<Byte> list = new ArrayList<>(data.length);
         for (var value : data) {
             list.add((byte) (value ? 1 : 0));
@@ -2311,9 +2323,14 @@ public final class CodeBuilder {
     }
 
     /**
+     * {@code null} is treated as an empty collection.
+     *
      * @param arr_ref_reg u8
      */
     public CodeBuilder fill_array_data(int arr_ref_reg, byte[] data) {
+        if (data == null || data.length == 0) {
+            return nop();
+        }
         List<Byte> list = new ArrayList<>(data.length);
         for (var value : data) {
             list.add(value);
@@ -2323,9 +2340,14 @@ public final class CodeBuilder {
     }
 
     /**
+     * {@code null} is treated as an empty collection.
+     *
      * @param arr_ref_reg u8
      */
     public CodeBuilder fill_array_data(int arr_ref_reg, short[] data) {
+        if (data == null || data.length == 0) {
+            return nop();
+        }
         List<Short> list = new ArrayList<>(data.length);
         for (var value : data) {
             list.add(value);
@@ -2335,9 +2357,14 @@ public final class CodeBuilder {
     }
 
     /**
+     * {@code null} is treated as an empty collection.
+     *
      * @param arr_ref_reg u8
      */
     public CodeBuilder fill_array_data(int arr_ref_reg, char[] data) {
+        if (data == null || data.length == 0) {
+            return nop();
+        }
         List<Short> list = new ArrayList<>(data.length);
         for (var value : data) {
             list.add((short) value);
@@ -2347,9 +2374,14 @@ public final class CodeBuilder {
     }
 
     /**
+     * {@code null} is treated as an empty collection.
+     *
      * @param arr_ref_reg u8
      */
     public CodeBuilder fill_array_data(int arr_ref_reg, int[] data) {
+        if (data == null || data.length == 0) {
+            return nop();
+        }
         List<Integer> list = new ArrayList<>(data.length);
         for (var value : data) {
             list.add(value);
@@ -2359,9 +2391,14 @@ public final class CodeBuilder {
     }
 
     /**
+     * {@code null} is treated as an empty collection.
+     *
      * @param arr_ref_reg u8
      */
     public CodeBuilder fill_array_data(int arr_ref_reg, float[] data) {
+        if (data == null || data.length == 0) {
+            return nop();
+        }
         List<Integer> list = new ArrayList<>(data.length);
         for (var value : data) {
             list.add(Float.floatToRawIntBits(value));
@@ -2371,9 +2408,14 @@ public final class CodeBuilder {
     }
 
     /**
+     * {@code null} is treated as an empty collection.
+     *
      * @param arr_ref_reg u8
      */
     public CodeBuilder fill_array_data(int arr_ref_reg, long[] data) {
+        if (data == null || data.length == 0) {
+            return nop();
+        }
         List<Long> list = new ArrayList<>(data.length);
         for (var value : data) {
             list.add(value);
@@ -2383,9 +2425,14 @@ public final class CodeBuilder {
     }
 
     /**
+     * {@code null} is treated as an empty collection.
+     *
      * @param arr_ref_reg u8
      */
     public CodeBuilder fill_array_data(int arr_ref_reg, double[] data) {
+        if (data == null || data.length == 0) {
+            return nop();
+        }
         List<Long> list = new ArrayList<>(data.length);
         for (var value : data) {
             list.add(Double.doubleToRawLongBits(value));

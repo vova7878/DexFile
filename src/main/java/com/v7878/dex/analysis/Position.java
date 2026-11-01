@@ -15,10 +15,20 @@ import java.util.Objects;
 import java.util.StringJoiner;
 import java.util.TreeSet;
 
+/**
+ * A single instruction position in the analyzed method: the register
+ * states before and after it, its control-flow edges, the used and
+ * defined registers and the analysis flags.
+ */
 public final class Position {
     public static final int RESULT_REGISTER = -2; // -1 for high wide half
     public static final int EXCEPTION_REGISTER = -3;
 
+    /**
+     * A control-flow edge to a target address, optionally carrying the
+     * caught exception type. Sorted: fallthrough first, then by
+     * exception, then by address.
+     */
     public static final class Transition implements Comparable<Transition> {
         private final int address;
         private final TypeId exception;
@@ -83,8 +93,8 @@ public final class Position {
     }
 
     private static final int REACHABLE = 0b1;
-    private static final int NOP_EXACT = 0b10;
-    private static final int NOP_NAROWWING = 0b100;
+    private static final int NOP_STRICT = 0b10;
+    private static final int NOP_LOSSY = 0b100;
     private static final int INSIDE_TRY_BLOCK = 0b1000;
 
     private final Instruction instruction;
@@ -261,6 +271,10 @@ public final class Position {
         return isFirst() || !predecessors.isEmpty();
     }
 
+    /**
+     * Whether this position is entered by something other than a single
+     * fallthrough edge, i.e. it is a real branch target.
+     */
     public boolean isBranchTarget() {
         var preds = predecessors();
         if (preds.isEmpty()) {
@@ -282,26 +296,32 @@ public final class Position {
         return (flags & REACHABLE) != 0;
     }
 
-    /* package */ void setNopExact(boolean value) {
-        flags = (flags & ~NOP_EXACT) | (value ? NOP_EXACT : 0);
+    /* package */ void setStrictNop(boolean value) {
+        flags = (flags & ~NOP_STRICT) | (value ? NOP_STRICT : 0);
     }
 
     // for example const 0 to register with zero constant
     // or move of any kind to self
     // or goto/if/switch to next
     // or cast to itself
-    public boolean isNopExact() {
-        return (flags & NOP_EXACT) != 0;
+    // here neither the content nor the knowledge about it changes
+    public boolean isStrictNop() {
+        return (flags & NOP_STRICT) != 0;
     }
 
-    /* package */ void setNarrowingNop(boolean value) {
-        flags = (flags & ~NOP_NAROWWING) | (value ? NOP_NAROWWING : 0);
+    /* package */ void setLossyNop(boolean value) {
+        flags = (flags & ~NOP_LOSSY) | (value ? NOP_LOSSY : 0);
     }
 
-    // for example cast to j.l.Object
-    // or cast zero to anything
-    public boolean isNarrowingNop() {
-        return (flags & NOP_NAROWWING) != 0;
+    /**
+     * Whether this instruction leaves the register contents unchanged and cannot
+     * throw, but the verifier knows less about the result afterwards. A
+     * check-cast to a supertype replaces the static type of the value with a
+     * wider one, and a check-cast of a zero constant replaces every non-wide
+     * constant kind and any reference type with a single reference type.
+     */
+    public boolean isLossyNop() {
+        return (flags & NOP_LOSSY) != 0;
     }
 
     /* package */ void setInsideTryBlock() {
@@ -323,10 +343,10 @@ public final class Position {
             sj.add("unreachable");
         }
 
-        if (isNopExact()) {
-            sj.add("exact nop");
-        } else if (isNarrowingNop()) {
-            sj.add("narrowing nop");
+        if (isStrictNop()) {
+            sj.add("strict nop");
+        } else if (isLossyNop()) {
+            sj.add("lossy nop");
         }
 
         return sj.toString();

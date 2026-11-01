@@ -39,6 +39,17 @@ public final class AnnotationElement implements Comparable<AnnotationElement> {
                 && Objects.equals(getValue(), other.getValue());
     }
 
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        return "AnnotationElement{name=" + getName()
+                + " type=" + getValue().getValueType()
+                + "}";
+    }
+
     @Override
     public int compareTo(AnnotationElement other) {
         if (other == this) return 0;

@@ -6,14 +6,17 @@ import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
 import static com.v7878.dex.DexConstants.ACC_NATIVE;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 
+import com.v7878.dex.AccessFlag;
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 import com.v7878.dex.util.ShortyUtils;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.NavigableSet;
 import java.util.Objects;
 
@@ -30,6 +33,34 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             String name, TypeId return_type, List<Parameter> parameters,
             int access_flags, int hiddenapi_flags, MethodImplementation implementation,
             NavigableSet<Annotation> annotations) {
+        this.name = Objects.requireNonNull(name);
+        this.return_type = Objects.requireNonNull(return_type);
+        // The parameter constructor has already rejected void
+        this.parameters = Objects.requireNonNull(parameters);
+        this.access_flags = access_flags;
+        this.hiddenapi_flags = hiddenapi_flags;
+        this.implementation = implementation; // may be null
+        this.annotations = Objects.requireNonNull(annotations);
+    }
+
+    @Internal
+    public static MethodDef unchecked(
+            String name, TypeId return_type, List<Parameter> parameters,
+            int access_flags, int hiddenapi_flags, MethodImplementation implementation,
+            NavigableSet<Annotation> annotations) {
+        return new MethodDef(name, return_type, parameters,
+                access_flags, hiddenapi_flags, implementation, annotations);
+    }
+
+    @Internal
+    public static MethodDef raw(
+            String name, TypeId return_type, List<Parameter> parameters,
+            int access_flags, int hiddenapi_flags, MethodImplementation implementation,
+            NavigableSet<Annotation> annotations) {
+        //noinspection DataFlowIssue
+        access_flags = Preconditions.checkMethodAccessFlags(access_flags);
+        //noinspection DataFlowIssue
+        hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
         if ((access_flags & (ACC_ABSTRACT | ACC_NATIVE)) != 0) {
             if (implementation != null) {
                 throw new IllegalArgumentException("Abstract or native methods should not have implementation");
@@ -80,30 +111,19 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 }
             }
         }
-        this.name = Objects.requireNonNull(name);
-        this.return_type = Objects.requireNonNull(return_type);
-        this.parameters = Objects.requireNonNull(parameters);
-        this.access_flags = Preconditions.checkMethodAccessFlags(access_flags);
-        this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
-        this.implementation = implementation; // may be null
-        this.annotations = Objects.requireNonNull(annotations);
-    }
-
-    @Internal
-    public static MethodDef raw(
-            String name, TypeId return_type, List<Parameter> parameters,
-            int access_flags, int hiddenapi_flags, MethodImplementation implementation,
-            NavigableSet<Annotation> annotations) {
         return new MethodDef(name, return_type, parameters,
                 access_flags, hiddenapi_flags, implementation, annotations);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static MethodDef of(
             String name, TypeId return_type, Iterable<Parameter> parameters,
             int access_flags, int hiddenapi_flags, MethodImplementation implementation,
             Iterable<Annotation> annotations) {
-        return new MethodDef(name, return_type, Converter.toList(parameters), access_flags,
-                hiddenapi_flags, implementation, Converter.toNavigableSet(annotations));
+        return raw(name, return_type, Converter.toList(parameters), access_flags,
+                hiddenapi_flags, implementation, MemberUtils.toAnnotationSet(annotations));
     }
 
     @Override
@@ -128,6 +148,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     }
 
     public ProtoId callProto(TypeId declaring_class) {
+        Objects.requireNonNull(declaring_class);
         var proto = getProto();
         if ((access_flags & ACC_STATIC) == 0) {
             return proto.insertThis(declaring_class);
@@ -195,7 +216,8 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     @Override
     public int hashCode() {
         return Objects.hash(getName(), getAccessFlags(), getHiddenApiFlags(),
-                getReturnType(), getParameters(), getImplementation());
+                getReturnType(), getParameters(), getImplementation(),
+                CollectionUtils.setHashCode(getAnnotations()));
     }
 
     @Override
@@ -207,7 +229,22 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 && Objects.equals(getName(), other.getName())
                 && Objects.equals(getReturnType(), other.getReturnType())
                 && Objects.equals(getParameters(), other.getParameters())
-                && Objects.equals(getImplementation(), other.getImplementation());
+                && Objects.equals(getImplementation(), other.getImplementation())
+                && CollectionUtils.setEquals(getAnnotations(), other.getAnnotations());
+    }
+
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        return "MethodDef{flags=[" + AccessFlag.formatAccessFlagsForMethod(getAccessFlags())
+                + "] name=" + getName()
+                + " proto=" + getProto()
+                + " hiddenapi=" + String.format(Locale.ROOT, "0x%08X", getHiddenApiFlags())
+                + " annotations=" + getAnnotations().size()
+                + "}";
     }
 
     @Override

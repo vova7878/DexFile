@@ -32,11 +32,17 @@ public final class CallSiteId implements Comparable<CallSiteId> {
         return new CallSiteId(name, method_handle, method_name, method_proto, extra_arguments);
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static CallSiteId of(String name, MethodHandleId method_handle, String method_name,
                                 ProtoId method_proto, Iterable<EncodedValue> extra_arguments) {
         return new CallSiteId(name, method_handle, method_name, method_proto, Converter.toList(extra_arguments));
     }
 
+    /**
+     * {@code null} is treated as an empty collection.
+     */
     public static CallSiteId of(String name, MethodHandleId method_handle, String method_name,
                                 ProtoId method_proto, EncodedValue... extra_arguments) {
         return new CallSiteId(name, method_handle, method_name, method_proto, Converter.toList(extra_arguments));
@@ -79,6 +85,20 @@ public final class CallSiteId implements Comparable<CallSiteId> {
                 && Objects.equals(getExtraArguments(), other.getExtraArguments());
     }
 
+    /**
+     * Debug view, not part of the API contract.
+     */
+    @Override
+    public String toString() {
+        // TODO: replace with the smali printer
+        return "CallSiteId{name=" + getName()
+                + " handle=" + getMethodHandle()
+                + " method=" + getMethodName()
+                + " proto=" + getMethodProto()
+                + " extras=" + getExtraArguments().size()
+                + "}";
+    }
+
     @Override
     public int compareTo(CallSiteId other) {
         if (other == this) return 0;
@@ -93,5 +113,4 @@ public final class CallSiteId implements Comparable<CallSiteId> {
         return CollectionUtils.compareLexicographically(getExtraArguments(), other.getExtraArguments());
     }
 
-    // TODO: @Override public String toString() {}
 }

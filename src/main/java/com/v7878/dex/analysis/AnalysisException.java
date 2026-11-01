@@ -1,5 +1,8 @@
 package com.v7878.dex.analysis;
 
+/**
+ * Signals that method analysis cannot proceed.
+ */
 public class AnalysisException extends RuntimeException {
     public AnalysisException() {
         super();
