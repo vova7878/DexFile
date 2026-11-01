@@ -94,7 +94,7 @@ public final class Position {
 
     private static final int REACHABLE = 0b1;
     private static final int NOP_STRICT = 0b10;
-    private static final int NOP_NARROWING = 0b100;
+    private static final int NOP_LOSSY = 0b100;
     private static final int INSIDE_TRY_BLOCK = 0b1000;
 
     private final Instruction instruction;
@@ -304,18 +304,24 @@ public final class Position {
     // or move of any kind to self
     // or goto/if/switch to next
     // or cast to itself
+    // here neither the content nor the knowledge about it changes
     public boolean isStrictNop() {
         return (flags & NOP_STRICT) != 0;
     }
 
-    /* package */ void setNarrowingNop(boolean value) {
-        flags = (flags & ~NOP_NARROWING) | (value ? NOP_NARROWING : 0);
+    /* package */ void setLossyNop(boolean value) {
+        flags = (flags & ~NOP_LOSSY) | (value ? NOP_LOSSY : 0);
     }
 
-    // for example cast to j.l.Object
-    // or cast zero to anything
-    public boolean isNarrowingNop() {
-        return (flags & NOP_NARROWING) != 0;
+    /**
+     * Whether this instruction leaves the register contents unchanged and cannot
+     * throw, but the verifier knows less about the result afterwards. A
+     * check-cast to a supertype replaces the static type of the value with a
+     * wider one, and a check-cast of a zero constant replaces every non-wide
+     * constant kind and any reference type with a single reference type.
+     */
+    public boolean isLossyNop() {
+        return (flags & NOP_LOSSY) != 0;
     }
 
     /* package */ void setInsideTryBlock() {
@@ -339,8 +345,8 @@ public final class Position {
 
         if (isStrictNop()) {
             sj.add("strict nop");
-        } else if (isNarrowingNop()) {
-            sj.add("narrowing nop");
+        } else if (isLossyNop()) {
+            sj.add("lossy nop");
         }
 
         return sj.toString();

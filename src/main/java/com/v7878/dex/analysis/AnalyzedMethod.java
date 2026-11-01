@@ -1363,11 +1363,11 @@ public final class AnalyzedMethod {
 
     /**
      * Answers whether a check-cast of a value statically typed {@code source}
-     * to {@code target} provably cannot fail: every value of the source type
-     * is already assignable to the target, so the cast only refines the
-     * static type. An undeterminable relation is not safe.
+     * to {@code target} is a widening cast that provably cannot fail: every
+     * value of the source type is already assignable to the target, so the
+     * cast only widens the static type. An undeterminable relation is not safe.
      */
-    private static boolean isNarrowingCast(TypeResolver resolver, TypeInfo source, TypeInfo target) {
+    private static boolean isWideningCast(TypeResolver resolver, TypeInfo source, TypeInfo target) {
         return resolver.isAssignable(source, target, false, true);
     }
 
@@ -1687,7 +1687,7 @@ public final class AnalyzedMethod {
         }
         boolean next_reachable = true;
         boolean is_strict_nop = current.isStrictNop();
-        boolean is_narrowing_nop = current.isNarrowingNop();
+        boolean is_lossy_nop = current.isLossyNop();
         switch (opcode) {
             case NOP, GOTO, GOTO_16, GOTO_32 -> {
                 // No effect on or use of registers
@@ -1854,8 +1854,11 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
+                // A cast that provably cannot fail changes no runtime value and
+                // cannot throw: only the static type is replaced by the target,
+                // so the verifier ends up knowing less about the value.
                 if (reg.isZeroOrNull()) {
-                    is_narrowing_nop = true;
+                    is_lossy_nop = true;
                     is_strict_nop = false;
                 } else {
                     var type = reg.getTypeInfo();
@@ -1864,21 +1867,21 @@ public final class AnalyzedMethod {
                         // We don't use a constant check here because for ref values the
                         // difference exists only for us, but not for the Android verifier
                         //
-                        // is_narrowing_nop = reg.isConstant();
+                        // is_lossy_nop = reg.isConstant();
                         // is_strict_nop = !reg.isConstant();
-                        is_narrowing_nop = false;
+                        is_lossy_nop = false;
                         is_strict_nop = true;
                     } else if (reg.isRuntimeNonNullRef() && isImpossibleCast(
                             resolver, type, reg.isExactRef(), TypeInfo.of(ref))) {
                         // No runtime class can be a subtype of both types
-                        is_narrowing_nop = false;
+                        is_lossy_nop = false;
                         is_strict_nop = false;
                         next_reachable = false;
-                    } else if (isNarrowingCast(resolver, type, TypeInfo.of(ref))) {
-                        is_narrowing_nop = true;
+                    } else if (isWideningCast(resolver, type, TypeInfo.of(ref))) {
+                        is_lossy_nop = true;
                         is_strict_nop = false;
                     } else {
-                        is_narrowing_nop = false;
+                        is_lossy_nop = false;
                         is_strict_nop = false;
                     }
                 }
@@ -2578,7 +2581,7 @@ public final class AnalyzedMethod {
                 };
 
                 // This instruction converts a constant register into a regular value
-                is_narrowing_nop = src.isConstant() && check;
+                is_lossy_nop = src.isConstant() && check;
                 is_strict_nop = !src.isConstant() && check;
 
                 var type = switch (opcode) {
@@ -2622,7 +2625,7 @@ public final class AnalyzedMethod {
             default -> throw shouldNotReachHere();
         }
         current.setStrictNop(is_strict_nop);
-        current.setNarrowingNop(is_narrowing_nop);
+        current.setLossyNop(is_lossy_nop);
         if (opcode.isConditionalBranch() || opcode.isSwitch()) {
             // 'if' and 'switch' instructions have special handling because they
             // provide information about the state of the register in different branches
