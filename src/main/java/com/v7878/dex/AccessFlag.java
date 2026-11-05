@@ -50,6 +50,7 @@ public enum AccessFlag {
     MANDATED(ACC_MANDATED, "mandated", false, false, false, true, false),
     CONSTRUCTOR(ACC_CONSTRUCTOR, "constructor", false, false, true, false, false),
     DECLARED_SYNCHRONIZED(ACC_DECLARED_SYNCHRONIZED, "declared-synchronized", false, false, true, false, false),
+    // Obsolete dalvik-only ODEX flags (api: m3, m5, 1-20)
     VERIFIED(ACC_VERIFIED, "verified", true, false, false, false, false),
     OPTIMIZED(ACC_OPTIMIZED, "optimized", true, false, false, false, false);
 
@@ -113,22 +114,42 @@ public enum AccessFlag {
         return value;
     }
 
+    /**
+     * Tests that every set bit is valid on a class. This is a mask of
+     * allowed bits only, not a combination rule
+     */
     public static boolean isValidForClass(int flags) {
         return flags == (flags & VALID_CLASS_FLAGS_MASK);
     }
 
+    /**
+     * Tests that every set bit is valid on an inner class. This is a mask
+     * of allowed bits only, not a combination rule
+     */
     public static boolean isValidForInnerClass(int flags) {
         return flags == (flags & VALID_INNER_CLASS_FLAGS_MASK);
     }
 
+    /**
+     * Tests that every set bit is valid on a method. This is a mask of
+     * allowed bits only, not a combination rule
+     */
     public static boolean isValidForMethod(int flags) {
         return flags == (flags & VALID_METHOD_FLAGS_MASK);
     }
 
+    /**
+     * Tests that every set bit is valid on a parameter. This is a mask of
+     * allowed bits only, not a combination rule
+     */
     public static boolean isValidForParameter(int flags) {
         return flags == (flags & VALID_PARAMETER_FLAGS_MASK);
     }
 
+    /**
+     * Tests that every set bit is valid on a field. This is a mask of
+     * allowed bits only, not a combination rule
+     */
     public static boolean isValidForField(int flags) {
         return flags == (flags & VALID_FIELD_FLAGS_MASK);
     }

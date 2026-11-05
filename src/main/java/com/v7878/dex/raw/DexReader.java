@@ -1,5 +1,7 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.DexConstants.ACC_OPTIMIZED;
+import static com.v7878.dex.DexConstants.ACC_VERIFIED;
 import static com.v7878.dex.DexConstants.DBG_ADVANCE_LINE;
 import static com.v7878.dex.DexConstants.DBG_ADVANCE_PC;
 import static com.v7878.dex.DexConstants.DBG_END_LOCAL;
@@ -17,19 +19,36 @@ import static com.v7878.dex.DexConstants.ENDIAN_CONSTANT;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 import static com.v7878.dex.DexConstants.NO_OFFSET;
 import static com.v7878.dex.DexConstants.REVERSE_ENDIAN_CONSTANT;
+import static com.v7878.dex.DexConstants.TYPE_ANNOTATIONS_DIRECTORY_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_ANNOTATION_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_ANNOTATION_SET_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_ANNOTATION_SET_REF_LIST;
 import static com.v7878.dex.DexConstants.TYPE_CALL_SITE_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_CLASS_DATA_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_CLASS_DEF_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_CODE_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_DEBUG_INFO_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_ENCODED_ARRAY_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_FIELD_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_HEADER_ITEM;
 import static com.v7878.dex.DexConstants.TYPE_HIDDENAPI_CLASS_DATA_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_MAP_LIST;
 import static com.v7878.dex.DexConstants.TYPE_METHOD_HANDLE_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_METHOD_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_PROTO_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_STRING_DATA_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_STRING_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_TYPE_ID_ITEM;
+import static com.v7878.dex.DexConstants.TYPE_TYPE_LIST;
 import static com.v7878.dex.DexIO.ClassHeader;
 import static com.v7878.dex.DexIO.DexReaderCache;
-import static com.v7878.dex.DexIO.InvalidDexFile;
-import static com.v7878.dex.DexIO.NotADexFile;
 import static com.v7878.dex.DexOffsets.BASE_HEADER_SIZE;
 import static com.v7878.dex.DexOffsets.CALL_SITE_ID_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.CLASS_START_OFFSET;
 import static com.v7878.dex.DexOffsets.CONTAINER_SIZE_OFFSET;
+import static com.v7878.dex.DexOffsets.DATA_SIZE_OFFSET;
 import static com.v7878.dex.DexOffsets.DATA_START_OFFSET;
 import static com.v7878.dex.DexOffsets.DEBUG_INFO_BASE_OFFSET;
 import static com.v7878.dex.DexOffsets.DEBUG_INFO_OFFSETS_POS_OFFSET;
@@ -40,6 +59,9 @@ import static com.v7878.dex.DexOffsets.FIELD_ID_SIZE;
 import static com.v7878.dex.DexOffsets.FIELD_START_OFFSET;
 import static com.v7878.dex.DexOffsets.FILE_SIZE_OFFSET;
 import static com.v7878.dex.DexOffsets.HEADER_OFF_OFFSET;
+import static com.v7878.dex.DexOffsets.HEADER_SIZE_OFFSET;
+import static com.v7878.dex.DexOffsets.LINK_SIZE_OFFSET;
+import static com.v7878.dex.DexOffsets.LINK_START_OFFSET;
 import static com.v7878.dex.DexOffsets.M3_CLASS_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.M3_CLASS_DEF_SIZE;
 import static com.v7878.dex.DexOffsets.M3_CLASS_START_OFFSET;
@@ -69,6 +91,7 @@ import static com.v7878.dex.DexOffsets.M5_STRING_START_OFFSET;
 import static com.v7878.dex.DexOffsets.M5_TYPE_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.M5_TYPE_START_OFFSET;
 import static com.v7878.dex.DexOffsets.MAGIC_OFFSET;
+import static com.v7878.dex.DexOffsets.MAP_ITEM_SIZE;
 import static com.v7878.dex.DexOffsets.MAP_OFFSET;
 import static com.v7878.dex.DexOffsets.METHOD_COUNT_OFFSET;
 import static com.v7878.dex.DexOffsets.METHOD_HANDLE_ID_SIZE;
@@ -103,6 +126,8 @@ import static com.v7878.dex.util.Checks.checkIndex;
 
 import com.v7878.collections.IntMap;
 import com.v7878.dex.AnnotationVisibility;
+import com.v7878.dex.DexIO.InvalidDexFile;
+import com.v7878.dex.DexIO.NotADexFile;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.MethodHandleType;
 import com.v7878.dex.Opcodes;
@@ -265,7 +290,9 @@ public final class DexReader implements DexReaderCache {
         main_buffer = input.duplicate();
 
         if (main_buffer.size() < Math.addExact(header_offset, BASE_HEADER_SIZE)) {
-            throw new NotADexFile("File is too short");
+            throw new NotADexFile(String.format(
+                    "File is too short: %d bytes, need at least %d for a dex header",
+                    main_buffer.size(), header_offset + BASE_HEADER_SIZE));
         }
         long magic = mainAt(header_offset + MAGIC_OFFSET).readLong();
         try {
@@ -276,7 +303,9 @@ public final class DexReader implements DexReaderCache {
         version.checkApi(options.getTargetApi());
         int header_size = headerSize(version);
         if (main_buffer.size() < Math.addExact(header_offset, header_size)) {
-            throw new NotADexFile("File is too short");
+            throw new NotADexFile(String.format(
+                    "File is too short: %d bytes, need at least %d for a %s header",
+                    main_buffer.size(), header_offset + header_size, version));
         }
 
         if (version != DEX013 && version != DEX009) {
@@ -290,6 +319,12 @@ public final class DexReader implements DexReaderCache {
                 default -> throw new InvalidDexFile(String.format(
                         "Invalid endian tag: 0x%x", endian_tag));
             }
+            int header_size_field = mainAt(header_offset + HEADER_SIZE_OFFSET).readSmallUInt();
+            if (header_size_field != header_size) {
+                throw new InvalidDexFile(String.format(
+                        "Invalid header size: %d, expected %d for %s",
+                        header_size_field, header_size, version));
+            }
         }
 
         file_size = mainAt(header_offset + FILE_SIZE_OFFSET).readSmallUInt();
@@ -298,8 +333,10 @@ public final class DexReader implements DexReaderCache {
                     "Invalid file size: %d. Must be at least the %s header size (%d)",
                     file_size, version, header_size));
         }
-        if (main_buffer.size() < Math.addExact(header_offset, file_size)) {
-            throw new InvalidDexFile("Truncated dex file");
+        if (file_size > main_buffer.size() - header_offset) {
+            throw new InvalidDexFile(String.format(
+                    "Truncated dex file: file size %d, available %d",
+                    file_size, main_buffer.size() - header_offset));
         }
 
         int container_off = 0;
@@ -312,7 +349,25 @@ public final class DexReader implements DexReaderCache {
             throw new InvalidDexFile("Unexpected header offset " + container_off);
         }
         if (main_buffer.size() < container_size) {
-            throw new InvalidDexFile("Truncated dex file");
+            throw new InvalidDexFile(String.format(
+                    "Truncated dex container: size %d, available %d",
+                    container_size, main_buffer.size()));
+        }
+
+        // The link section must be zero or in-bounds
+        if (version != DEX013 && version != DEX009) {
+            checkHeaderSection("link",
+                    mainAt(header_offset + LINK_START_OFFSET).readSmallUInt(),
+                    mainAt(header_offset + LINK_SIZE_OFFSET).readSmallUInt(),
+                    header_offset, header_size);
+            // TODO?: check link for dex009 / dex013
+        }
+        if (!version.isCompact() && !version.isDexContainer()
+                && version != DEX013 && version != DEX009) {
+            checkHeaderSection("data",
+                    mainAt(header_offset + DATA_START_OFFSET).readSmallUInt(),
+                    mainAt(header_offset + DATA_SIZE_OFFSET).readSmallUInt(),
+                    header_offset, header_size);
         }
 
         opcodes = Opcodes.of(version, options);
@@ -338,29 +393,29 @@ public final class DexReader implements DexReaderCache {
         switch (version) {
             case DEX009 -> {
                 code_cache = null;
-                string_section = makeSection(
+                string_section = makeSection("string_ids",
                         mainAt(header_offset + M3_STRING_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M3_STRING_START_OFFSET).readSmallUInt(),
                         M3_STRING_ID_SIZE, this::readString
                 );
-                type_section = makeSection(
+                type_section = makeSection("type_ids",
                         mainAt(header_offset + M3_TYPE_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M3_TYPE_START_OFFSET).readSmallUInt(),
                         TYPE_ID_SIZE, this::readTypeId
                 );
-                field_section = makeSection(
+                field_section = makeSection("field_ids",
                         mainAt(header_offset + M3_FIELD_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M3_FIELD_START_OFFSET).readSmallUInt(),
                         M3_FIELD_ID_SIZE, this::readFieldId
                 );
                 proto_section = Collections.emptyList();
-                method_section = makeSection(
+                method_section = makeSection("method_ids",
                         mainAt(header_offset + M3_METHOD_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M3_METHOD_START_OFFSET).readSmallUInt(),
                         M3_METHOD_ID_SIZE, this::readMethodId
                 );
                 class_header_section = Collections.emptyList();
-                class_section = makeSection(
+                class_section = makeSection("class_defs",
                         mainAt(header_offset + M3_CLASS_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M3_CLASS_START_OFFSET).readSmallUInt(),
                         M3_CLASS_DEF_SIZE, this::readClassDef
@@ -368,29 +423,29 @@ public final class DexReader implements DexReaderCache {
             }
             case DEX013 -> {
                 code_cache = null;
-                string_section = makeSection(
+                string_section = makeSection("string_ids",
                         mainAt(header_offset + M5_STRING_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M5_STRING_START_OFFSET).readSmallUInt(),
                         M5_STRING_ID_SIZE, this::readString
                 );
-                type_section = makeSection(
+                type_section = makeSection("type_ids",
                         mainAt(header_offset + M5_TYPE_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M5_TYPE_START_OFFSET).readSmallUInt(),
                         TYPE_ID_SIZE, this::readTypeId
                 );
-                field_section = makeSection(
+                field_section = makeSection("field_ids",
                         mainAt(header_offset + M5_FIELD_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M5_FIELD_START_OFFSET).readSmallUInt(),
                         M5_FIELD_ID_SIZE, this::readFieldId
                 );
                 proto_section = Collections.emptyList();
-                method_section = makeSection(
+                method_section = makeSection("method_ids",
                         mainAt(header_offset + M5_METHOD_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M5_METHOD_START_OFFSET).readSmallUInt(),
                         M5_METHOD_ID_SIZE, this::readMethodId
                 );
                 class_header_section = Collections.emptyList();
-                class_section = makeSection(
+                class_section = makeSection("class_defs",
                         mainAt(header_offset + M5_CLASS_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + M5_CLASS_START_OFFSET).readSmallUInt(),
                         M5_CLASS_DEF_SIZE, this::readClassDef
@@ -398,38 +453,38 @@ public final class DexReader implements DexReaderCache {
             }
             default -> {
                 code_cache = makeOffsetCache(this::readCodeItem);
-                string_section = makeSection(
+                string_section = makeSection("string_ids",
                         mainAt(header_offset + STRING_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + STRING_START_OFFSET).readSmallUInt(),
                         STRING_ID_SIZE, this::readString
                 );
-                type_section = makeSection(
+                type_section = makeSection("type_ids",
                         mainAt(header_offset + TYPE_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + TYPE_START_OFFSET).readSmallUInt(),
                         TYPE_ID_SIZE, this::readTypeId
                 );
-                field_section = makeSection(
+                field_section = makeSection("field_ids",
                         mainAt(header_offset + FIELD_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + FIELD_START_OFFSET).readSmallUInt(),
                         FIELD_ID_SIZE, this::readFieldId
                 );
-                proto_section = makeSection(
+                proto_section = makeSection("proto_ids",
                         mainAt(header_offset + PROTO_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + PROTO_START_OFFSET).readSmallUInt(),
                         PROTO_ID_SIZE, this::readProtoId
                 );
-                method_section = makeSection(
+                method_section = makeSection("method_ids",
                         mainAt(header_offset + METHOD_COUNT_OFFSET).readSmallUInt(),
                         mainAt(header_offset + METHOD_START_OFFSET).readSmallUInt(),
                         METHOD_ID_SIZE, this::readMethodId
                 );
                 var class_count = mainAt(header_offset + CLASS_COUNT_OFFSET).readSmallUInt();
                 var class_offset = mainAt(header_offset + CLASS_START_OFFSET).readSmallUInt();
-                class_header_section = makeSection(
+                class_header_section = makeSection("class_defs",
                         class_count, class_offset,
                         CLASS_DEF_SIZE, this::readClassDefHeader
                 );
-                class_section = makeSection(
+                class_section = makeSection("class_defs",
                         class_count, class_offset,
                         CLASS_DEF_SIZE, this::readClassDef
                 );
@@ -443,15 +498,18 @@ public final class DexReader implements DexReaderCache {
         } else {
             map_items = readMapItemsList(mainAt(header_offset + MAP_OFFSET).readSmallUInt());
 
+            // Method handles and call sites were added to the format later,
+            // so the header has no fields for them: they are part of the
+            // main section but are located through map_items only
             MapItem method_handles = getMapItemForSection(TYPE_METHOD_HANDLE_ITEM);
-            method_handle_section = makeSection(
+            method_handle_section = makeSection("method_handles",
                     method_handles != null ? method_handles.size() : 0,
                     method_handles != null ? method_handles.offset() : NO_OFFSET,
                     METHOD_HANDLE_ID_SIZE, this::readMethodHandleId
             );
 
             MapItem callsites = getMapItemForSection(TYPE_CALL_SITE_ID_ITEM);
-            callsite_section = makeSection(
+            callsite_section = makeSection("call_site_ids",
                     callsites != null ? callsites.size() : 0,
                     callsites != null ? callsites.offset() : NO_OFFSET,
                     CALL_SITE_ID_SIZE, this::readCallSiteId
@@ -479,6 +537,32 @@ public final class DexReader implements DexReaderCache {
 
     public RandomInput mainAt(int offset) {
         return main_buffer.duplicateAt(offset);
+    }
+
+    /**
+     * Checks that a header-announced section is zero or in-bounds: a zero
+     * size requires a zero offset, a non-zero offset must lie after the
+     * header, and the whole section must fit into the available data
+     */
+    private void checkHeaderSection(String name, int offset, int size,
+                                    int header_offset, int header_size) {
+        if (size == 0) {
+            if (offset != 0) {
+                throw new IllegalStateException(String.format(
+                        "Unexpected %s section offset 0x%x for an empty section",
+                        name, offset));
+            }
+            return;
+        }
+        if (offset < header_offset + header_size) {
+            throw new IllegalStateException(String.format(
+                    "%s section offset 0x%x is inside the header", name, offset));
+        }
+        if (offset + (long) size > main_buffer.size()) {
+            throw new IllegalStateException(String.format(
+                    "%s section is out of bounds: offset 0x%x, size %d, available %d",
+                    name, offset, size, main_buffer.size() - offset));
+        }
     }
 
     public RandomInput dataAt(int offset) {
@@ -516,13 +600,90 @@ public final class DexReader implements DexReaderCache {
 
     private List<MapItem> readMapItemsList(int map_off) {
         if (map_off == NO_OFFSET) return List.of();
+        if (map_off >= data_buffer.size()) {
+            throw new IllegalStateException(String.format(
+                    "map_list offset 0x%x is out of bounds, available %d",
+                    map_off, data_buffer.size()));
+        }
         var in = dataAt(map_off);
         int map_size = in.readSmallUInt();
+        if (map_size * (long) MAP_ITEM_SIZE > in.available()) {
+            throw new IllegalStateException(String.format(
+                    "map_list is too large: %d entries at offset 0x%x",
+                    map_size, map_off));
+        }
         var out = new ArrayList<MapItem>(map_size);
         for (int i = 0; i < map_size; i++) {
-            out.add(i, readMapItem(in));
+            var item = readMapItem(in);
+            checkMapItem(item, i);
+            out.add(i, item);
         }
         return Collections.unmodifiableList(out);
+    }
+
+    /**
+     * Checks one map entry: the type code must be known and the section it
+     * announces must fit into the data the reader can address. Id sections
+     * and the header are addressed from the dex start, data sections from
+     * the data section start.
+     */
+    private void checkMapItem(MapItem item, int index) {
+        if (item.size() == 0) {
+            // nothing is dereferenced through a zero-sized entry
+            return;
+        }
+        long entry_bytes = mapEntryBytes(item.type(), item.size(), index);
+        int bound = isMainRelativeMapSection(item.type())
+                ? main_buffer.size() : data_buffer.size();
+        if (item.offset() >= bound) {
+            throw new IllegalStateException(String.format(
+                    "Map item %d (type 0x%x) offset 0x%x is out of bounds, available %d",
+                    index, item.type(), item.offset(), bound));
+        }
+        if (item.offset() + entry_bytes > bound) {
+            throw new IllegalStateException(String.format(
+                    "Map item %d (type 0x%x) section is out of bounds: "
+                            + "offset 0x%x, size %d, available %d",
+                    index, item.type(), item.offset(), item.size(),
+                    bound - item.offset()));
+        }
+    }
+
+    /**
+     * Returns the number of bytes a map entry claims: fixed element sizes
+     * for the id sections, the 4+n list forms, and 0 for sections whose
+     * item sizes are implicit (only their offset is checked).
+     */
+    private static long mapEntryBytes(int type, int size, int index) {
+        return switch (type) {
+            case TYPE_STRING_ID_ITEM -> size * (long) STRING_ID_SIZE;
+            case TYPE_TYPE_ID_ITEM -> size * (long) TYPE_ID_SIZE;
+            case TYPE_PROTO_ID_ITEM -> size * (long) PROTO_ID_SIZE;
+            case TYPE_FIELD_ID_ITEM -> size * (long) FIELD_ID_SIZE;
+            case TYPE_METHOD_ID_ITEM -> size * (long) METHOD_ID_SIZE;
+            case TYPE_CLASS_DEF_ITEM -> size * (long) CLASS_DEF_SIZE;
+            case TYPE_CALL_SITE_ID_ITEM -> size * (long) CALL_SITE_ID_SIZE;
+            case TYPE_METHOD_HANDLE_ITEM -> size * (long) METHOD_HANDLE_ID_SIZE;
+            case TYPE_TYPE_LIST -> 4 + size * 2L;
+            case TYPE_ANNOTATION_SET_REF_LIST, TYPE_ANNOTATION_SET_ITEM -> 4 + size * 4L;
+            case TYPE_HEADER_ITEM, TYPE_MAP_LIST, TYPE_CLASS_DATA_ITEM,
+                 TYPE_CODE_ITEM, TYPE_STRING_DATA_ITEM, TYPE_DEBUG_INFO_ITEM,
+                 TYPE_ANNOTATION_ITEM, TYPE_ENCODED_ARRAY_ITEM,
+                 TYPE_ANNOTATIONS_DIRECTORY_ITEM,
+                 TYPE_HIDDENAPI_CLASS_DATA_ITEM -> 0;
+            default -> throw new IllegalStateException(String.format(
+                    "Unknown map section type 0x%x at index %d", type, index));
+        };
+    }
+
+    private static boolean isMainRelativeMapSection(int type) {
+        return switch (type) {
+            case TYPE_HEADER_ITEM, TYPE_STRING_ID_ITEM, TYPE_TYPE_ID_ITEM,
+                 TYPE_PROTO_ID_ITEM, TYPE_FIELD_ID_ITEM, TYPE_METHOD_ID_ITEM,
+                 TYPE_CLASS_DEF_ITEM, TYPE_CALL_SITE_ID_ITEM,
+                 TYPE_METHOD_HANDLE_ITEM -> true;
+            default -> false;
+        };
     }
 
     @Override
@@ -610,7 +771,9 @@ public final class DexReader implements DexReaderCache {
         int type_and_arg = in.readUByte();
         int arg = (type_and_arg & 0xe0) >> 5;
         int int_type = type_and_arg & 0x1f;
-        return switch (ValueType.of(int_type)) {
+        var type = ValueType.of(int_type);
+        checkEncodedValueArg(type, arg, in.position() - 1);
+        return switch (type) {
             case BOOLEAN -> EncodedBoolean.of(arg != 0);
             case BYTE -> EncodedByte.of((byte) ValueCoder.readSignedInt(in, arg));
             case SHORT -> EncodedShort.of((short) ValueCoder.readSignedInt(in, arg));
@@ -640,6 +803,27 @@ public final class DexReader implements DexReaderCache {
             case ARRAY -> readEncodedArray(in);
             case ANNOTATION -> readEncodedAnnotation(in);
         };
+    }
+
+    /**
+     * The 3-bit value_arg is the width of the payload minus one, so its
+     * range depends on the value type (CheckEncodedValue in the verifier).
+     * An out of range arg would make the decoder read extra bytes and
+     * shift by a negative count, so it is a content error instead.
+     */
+    private static void checkEncodedValueArg(ValueType type, int arg, int position) {
+        boolean valid = switch (type) {
+            case BYTE, ARRAY, ANNOTATION, NULL -> arg == 0;
+            case SHORT, CHAR, BOOLEAN -> arg <= 1;
+            case INT, FLOAT, STRING, TYPE, FIELD, ENUM, METHOD, METHOD_TYPE,
+                 METHOD_HANDLE -> arg <= 3;
+            case LONG, DOUBLE -> true;
+        };
+        if (!valid) {
+            throw new IllegalStateException(String.format(
+                    "Bad encoded_value arg %d for %s at position %d",
+                    arg, type, position));
+        }
     }
 
     private Annotation readAnnotation(int offset) {
@@ -731,12 +915,26 @@ public final class DexReader implements DexReaderCache {
         T read(int index, int offset);
     }
 
-    private <T> List<T> makeSection(int section_size, int offset, int element_size, SectionReader<T> reader) {
+    private <T> List<T> makeSection(String name, int section_size, int offset,
+                                    int element_size, SectionReader<T> reader) {
         if (section_size == 0) return List.of();
+        long section_bytes = section_size * (long) element_size;
+        if (offset + section_bytes > main_buffer.size()) {
+            throw new IllegalStateException(String.format(
+                    "%s section is out of bounds: offset 0x%x, size %d, available %d",
+                    name, offset, section_size, main_buffer.size() - offset));
+        }
         return new CachedFixedSizeList<>(section_size) {
             @Override
             protected T compute(int index) {
-                return reader.read(index, offset + index * element_size);
+                try {
+                    return reader.read(index, offset + index * element_size);
+                } catch (InvalidDexFile | NotADexFile e) {
+                    throw e;
+                } catch (RuntimeException e) {
+                    throw new InvalidDexFile(String.format(
+                            "Failed to read %s item %d", name, index), e);
+                }
             }
         };
     }
@@ -1033,8 +1231,17 @@ public final class DexReader implements DexReaderCache {
     }
 
     private CatchHandler readCatchHandler(RandomInput in) {
+        int pos = in.position();
         int size = in.readSLeb128();
-        int handlersCount = Math.abs(size);
+        // Each handler element takes at least two bytes, so the size of
+        // either sign cannot exceed half of the remaining data. This also
+        // rejects Integer.MIN_VALUE, whose absolute value overflows
+        int max_size = in.available() / 2;
+        if (size > max_size || size < -max_size) {
+            throw new IllegalStateException("Out of range catch handler size "
+                    + size + " at position " + pos);
+        }
+        int handlersCount = size < 0 ? -size : size;
         List<ExceptionHandler> handlers = new ArrayList<>(handlersCount);
         for (int i = 0; i < handlersCount; i++) {
             var type = getType(in.readSmallULeb128());
@@ -1056,8 +1263,8 @@ public final class DexReader implements DexReaderCache {
         int handler_off = in.readUShort();
         CatchHandler handler = handlers.get(handler_off);
         if (handler == null) {
-            throw new InvalidDexFile(
-                    "Unable to find catch handler with offset " + handler_off);
+            throw new IllegalStateException("Unable to find catch handler with offset "
+                    + handler_off + " at position " + (in.position() - TRY_ITEM_SIZE));
         }
         return TryBlock.raw(start_addr, unit_count, handler.catch_all_addr(), handler.elements());
     }
@@ -1113,18 +1320,34 @@ public final class DexReader implements DexReaderCache {
 
             // In compact dex files, debug information is located in a separate table
             debug_info = null;
+
+            // registers_size already includes ins_size here.
+            // ins_size and outs_size are redundant.
         } else {
             registers_size = in.readUShort();
             ins_size = in.readUShort();
             outs_size = in.readUShort();
             tries_size = in.readUShort();
             int debug_info_off = in.readSmallUInt();
+            insns_count = in.readSmallUInt();
+            // ins_size and outs_size are redundant.
             if (options.hasDebugInfo() && debug_info_off != NO_OFFSET) {
+                if (debug_info_off >= data_buffer.size()) {
+                    throw new IllegalStateException(String.format(
+                            "Invalid debug_info_off 0x%x for code item at offset 0x%x",
+                            debug_info_off, offset));
+                }
                 debug_info = getDebugInfo(debug_info_off);
             } else {
                 debug_info = null;
             }
-            insns_count = in.readSmallUInt();
+        }
+
+        // The instructions must fit into the remaining data
+        if (insns_count * 2L > in.available()) {
+            throw new IllegalStateException(String.format(
+                    "Out of range insns_size %d for code item at offset 0x%x",
+                    insns_count, offset));
         }
 
         var instructions = InstructionReader.readArray(this, in, insns_count);
@@ -1138,6 +1361,12 @@ public final class DexReader implements DexReaderCache {
 
             int handlers_start = in.position();
             int handlers_size = in.readSmallULeb128();
+            // Each handler takes at least two bytes, so the list size
+            // cannot exceed half of the remaining data
+            if (handlers_size > in.available() / 2) {
+                throw new IllegalStateException("Out of range handlers size "
+                        + handlers_size + " at position " + handlers_start);
+            }
 
             var handlers = new IntMap<CatchHandler>(handlers_size);
             for (int i = 0; i < handlers_size; i++) {
@@ -1259,11 +1488,28 @@ public final class DexReader implements DexReaderCache {
         return out;
     }
 
+    /**
+     * ACC_VERIFIED and ACC_OPTIMIZED are ODEX-only markers: ART rejects
+     * class_def flags outside kAccJavaFlagsMask, so they are accepted only
+     * when the target is Dalvik and odex instructions are expected.
+     */
+    private void checkOdexClassFlags(int index, TypeId type, int access_flags) {
+        int odex_flags = access_flags & (ACC_VERIFIED | ACC_OPTIMIZED);
+        if (odex_flags == 0 || (options.isTargetForDalvik() && options.hasOdexInstructions())) {
+            return;
+        }
+        throw new IllegalStateException(String.format(
+                "Class %d (%s) has odex access flags 0x%08X,"
+                        + " expected a Dalvik target with odex instructions",
+                index, type.getDescriptor(), odex_flags));
+    }
+
     private ClassDefHeader readClassDefHeader(int index, int offset) {
         var in = mainAt(offset);
 
         TypeId clazz = getType(in.readSmallUInt());
         int access_flags = in.readInt();
+        checkOdexClassFlags(index, clazz, access_flags);
         int superclass_idx = in.readSmallUIntWithM1();
         TypeId superclass = superclass_idx == NO_INDEX ?
                 null : getType(superclass_idx);
@@ -1295,12 +1541,22 @@ public final class DexReader implements DexReaderCache {
         return (ClassDefHeader) DexReaderCache.super.getClassHeader(index);
     }
 
+    /**
+     * Legacy readers parse access_flags themselves, so the gate is applied
+     * to the class they return; the standard path is checked when its
+     * header is read.
+     */
+    private ClassDef checkOdexClassFlags(int index, ClassDef value) {
+        checkOdexClassFlags(index, value.getType(), value.getAccessFlags());
+        return value;
+    }
+
     private ClassDef readClassDef(int index, int offset) {
         if (version == DEX013) {
-            return Dex013.readClassDef(this, index, offset);
+            return checkOdexClassFlags(index, Dex013.readClassDef(this, index, offset));
         }
         if (version == DEX009) {
-            return Dex009.readClassDef(this, index, offset);
+            return checkOdexClassFlags(index, Dex009.readClassDef(this, index, offset));
         }
 
         var pre_def = getClassHeader(index);

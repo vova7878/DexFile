@@ -353,7 +353,9 @@ public final class AnalyzedMethod {
         var method = new AnalyzedMethod(declaring_class,
                 def, implementation, code_map, offset,
                 def.callProto(declaring_class), regs, options.hasVerification());
+        method.scan();
         method.init();
+        method.resolve(resolver);
         method.analyze(resolver);
         method.freeze();
         return method;
@@ -397,6 +399,121 @@ public final class AnalyzedMethod {
         return line;
     }
 
+    /**
+     * Validates every instruction against the standard opcode set and
+     * fills the per-instruction payload and call signature caches.
+     */
+    private void scan() {
+        int count = positions.size();
+        for (int i = 0; i < count; i++) {
+            scanPosition(positionAt(i));
+        }
+    }
+
+    private void scanPosition(Position current) {
+        var insn = current.instruction();
+        var opcode = insn.getOpcode();
+        int address = current.address();
+        switch (opcode) {
+            case FILLED_NEW_ARRAY -> {
+                var tmp = (InstructionNv5c) insn;
+                var ref = (TypeId) tmp.getReference1();
+                var reg_count = tmp.getRegisterCount();
+
+                var component = ref.componentType();
+                if (verify) if (component == null || component.isWidePrimitive()) {
+                    throw unexpectedType(current, ref);
+                }
+
+                current.accessProto(ProtoId.raw(ref,
+                        Converter.listOf(reg_count, component)));
+            }
+            case FILLED_NEW_ARRAY_RANGE -> {
+                var tmp = (InstructionNrc) insn;
+                var ref = (TypeId) tmp.getReference1();
+                var reg_count = tmp.getRegisterCount();
+
+                var component = ref.componentType();
+                if (verify) if (component == null || component.isWidePrimitive()) {
+                    throw unexpectedType(current, ref);
+                }
+
+                current.accessProto(ProtoId.raw(ref,
+                        Converter.listOf(reg_count, component)));
+            }
+            case FILL_ARRAY_DATA -> {
+                var tmp = (InstructionN1t) insn;
+                current.payload(instruction(ARRAY_PAYLOAD,
+                        address + tmp.getBranchOffset()));
+            }
+            case PACKED_SWITCH, SPARSE_SWITCH -> {
+                var tmp = (InstructionN1t) insn;
+                var expected = opcode == PACKED_SWITCH ?
+                        PACKED_SWITCH_PAYLOAD : SPARSE_SWITCH_PAYLOAD;
+                current.payload(instruction(expected,
+                        address + tmp.getBranchOffset()));
+            }
+            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_DIRECT,
+                 INVOKE_STATIC, INVOKE_INTERFACE -> {
+                var tmp = (InstructionNv5c) insn;
+                var ref = (MethodId) tmp.getReference1();
+
+                current.accessProto(opcode == INVOKE_STATIC ?
+                        ref.getProto() : ref.instanceProto());
+            }
+            case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
+                 INVOKE_DIRECT_RANGE, INVOKE_STATIC_RANGE,
+                 INVOKE_INTERFACE_RANGE -> {
+                var tmp = (InstructionNrc) insn;
+                var ref = (MethodId) tmp.getReference1();
+
+                current.accessProto(opcode == INVOKE_STATIC_RANGE ?
+                        ref.getProto() : ref.instanceProto());
+            }
+            case INVOKE_POLYMORPHIC -> {
+                var tmp = (InstructionNv5cc) insn;
+                var ref = (ProtoId) tmp.getReference2();
+
+                current.accessProto(ref.insertThis(METHOD_HANDLE));
+            }
+            case INVOKE_POLYMORPHIC_RANGE -> {
+                var tmp = (InstructionNrcc) insn;
+                var ref = (ProtoId) tmp.getReference2();
+
+                current.accessProto(ref.insertThis(METHOD_HANDLE));
+            }
+            case INVOKE_CUSTOM -> {
+                var tmp = (InstructionNv5c) insn;
+                // TODO? verify callsite
+                var ref = (CallSiteId) tmp.getReference1();
+
+                current.accessProto(ref.getMethodProto());
+            }
+            case INVOKE_CUSTOM_RANGE -> {
+                var tmp = (InstructionNrc) insn;
+                // TODO? verify callsite
+                var ref = (CallSiteId) tmp.getReference1();
+
+                current.accessProto(ref.getMethodProto());
+            }
+            default -> {
+                if (opcode.odexOnly()) {
+                    throw unsupportedOpcode(current, "odex");
+                }
+                if (opcode.isLegacy()) {
+                    throw unsupportedOpcode(current, "legacy");
+                }
+                if (opcode.isExpanded()) {
+                    throw unsupportedOpcode(current, "expanded");
+                }
+                if (opcode.isRaw()) {
+                    throw unsupportedOpcode(current, "raw");
+                }
+                // no per-instruction cache
+            }
+        }
+    }
+
     private void init() {
         position(0).before().copy(firstLine());
         int count = positions.size();
@@ -436,8 +553,9 @@ public final class AnalyzedMethod {
         }
     }
 
-    private static void init_35c_45cc_args(
-            Position current, VariableFiveRegisterInstruction tmp, ProtoId proto, boolean verify) {
+    private static void init_35c_45cc_args(Position current, boolean verify) {
+        VariableFiveRegisterInstruction tmp = current.instruction();
+        var proto = current.accessProto();
         var reg_count = tmp.getRegisterCount();
         var sig_count = proto.countInputRegisters();
 
@@ -457,8 +575,9 @@ public final class AnalyzedMethod {
         }
     }
 
-    private static void init_3rc_4rcc_args(
-            Position current, RegisterRangeInstruction tmp, ProtoId proto, boolean verify) {
+    private static void init_3rc_4rcc_args(Position current, boolean verify) {
+        RegisterRangeInstruction tmp = current.instruction();
+        var proto = current.accessProto();
         var reg_count = tmp.getRegisterCount();
         var sig_count = proto.countInputRegisters();
 
@@ -521,6 +640,9 @@ public final class AnalyzedMethod {
                 current.wideOutput(idst);
             }
             case MOVE_EXCEPTION -> {
+                if (address == 0) {
+                    throw new AnalysisException("move-exception at pc 0x0");
+                }
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
@@ -656,42 +778,11 @@ public final class AnalyzedMethod {
                 current.input(isrc);
                 current.output(idst);
             }
-            case FILLED_NEW_ARRAY -> {
-                var tmp = (InstructionNv5c) insn;
-                var ref = (TypeId) tmp.getReference1();
-                var reg_count = tmp.getRegisterCount();
-
-                var component = ref.componentType();
-                if (verify) if (component == null || component.isWidePrimitive()) {
-                    throw unexpectedType(current, ref);
-                }
-
-                var proto = ProtoId.raw(ref, Converter.listOf(reg_count, component));
-                current.accessProto(proto);
-
-                init_35c_45cc_args(current, tmp, proto, verify);
-            }
-            case FILLED_NEW_ARRAY_RANGE -> {
-                var tmp = (InstructionNrc) insn;
-                var ref = (TypeId) tmp.getReference1();
-                var reg_count = tmp.getRegisterCount();
-
-                var component = ref.componentType();
-                if (verify) if (component == null || component.isWidePrimitive()) {
-                    throw unexpectedType(current, ref);
-                }
-
-                var proto = ProtoId.raw(ref, Converter.listOf(reg_count, component));
-                current.accessProto(proto);
-
-                init_3rc_4rcc_args(current, tmp, proto, verify);
-            }
+            case FILLED_NEW_ARRAY -> init_35c_45cc_args(current, verify);
+            case FILLED_NEW_ARRAY_RANGE -> init_3rc_4rcc_args(current, verify);
             case FILL_ARRAY_DATA -> {
                 var tmp = (InstructionN1t) insn;
                 var ireg = tmp.getRegister1();
-
-                current.payload(instruction(ARRAY_PAYLOAD,
-                        address + tmp.getBranchOffset()));
 
                 current.input(ireg);
             }
@@ -708,11 +799,7 @@ public final class AnalyzedMethod {
                 var unit_count = tmp.getUnitCount();
                 var ireg = tmp.getRegister1();
 
-                var expected = opcode == PACKED_SWITCH ?
-                        PACKED_SWITCH_PAYLOAD : SPARSE_SWITCH_PAYLOAD;
-                SwitchPayload payload = instruction(
-                        expected, address + tmp.getBranchOffset());
-                current.payload(payload);
+                var payload = (SwitchPayload) current.payload();
 
                 boolean nop = true;
                 for (var entry : payload.getSwitchElements()) {
@@ -913,67 +1000,16 @@ public final class AnalyzedMethod {
 
                 input(current, ival, shorty);
             }
-            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_DIRECT,
-                 INVOKE_STATIC, INVOKE_INTERFACE -> {
-                var tmp = (InstructionNv5c) insn;
-                var ref = (MethodId) tmp.getReference1();
-
-                var proto = (opcode == INVOKE_STATIC) ?
-                        ref.getProto() : ref.instanceProto();
-                current.accessProto(proto);
-
-                init_35c_45cc_args(current, tmp, proto, verify);
-            }
+            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_DIRECT, INVOKE_STATIC,
+                 INVOKE_INTERFACE, INVOKE_CUSTOM, INVOKE_POLYMORPHIC ->
+                //noinspection DuplicateBranchesInSwitch
+                    init_35c_45cc_args(current, verify);
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
                  INVOKE_DIRECT_RANGE, INVOKE_STATIC_RANGE,
-                 INVOKE_INTERFACE_RANGE -> {
-                var tmp = (InstructionNrc) insn;
-                var ref = (MethodId) tmp.getReference1();
-
-                var proto = (opcode == INVOKE_STATIC_RANGE) ?
-                        ref.getProto() : ref.instanceProto();
-                current.accessProto(proto);
-
-                init_3rc_4rcc_args(current, tmp, proto, verify);
-            }
-            case INVOKE_POLYMORPHIC -> {
-                var tmp = (InstructionNv5cc) insn;
-                var ref = (ProtoId) tmp.getReference2();
-
-                var proto = ref.insertThis(METHOD_HANDLE);
-                current.accessProto(proto);
-
-                init_35c_45cc_args(current, tmp, proto, verify);
-            }
-            case INVOKE_POLYMORPHIC_RANGE -> {
-                var tmp = (InstructionNrcc) insn;
-                var ref = (ProtoId) tmp.getReference2();
-
-                var proto = ref.insertThis(METHOD_HANDLE);
-                current.accessProto(proto);
-
-                init_3rc_4rcc_args(current, tmp, proto, verify);
-            }
-            case INVOKE_CUSTOM -> {
-                var tmp = (InstructionNv5c) insn;
-                // TODO? verify callsite
-                var ref = (CallSiteId) tmp.getReference1();
-
-                var proto = ref.getMethodProto();
-                current.accessProto(proto);
-
-                init_35c_45cc_args(current, tmp, proto, verify);
-            }
-            case INVOKE_CUSTOM_RANGE -> {
-                var tmp = (InstructionNrc) insn;
-                // TODO? verify callsite
-                var ref = (CallSiteId) tmp.getReference1();
-
-                var proto = ref.getMethodProto();
-                current.accessProto(proto);
-
-                init_3rc_4rcc_args(current, tmp, proto, verify);
-            }
+                 INVOKE_INTERFACE_RANGE, INVOKE_CUSTOM_RANGE,
+                 INVOKE_POLYMORPHIC_RANGE ->
+                //noinspection DuplicateBranchesInSwitch
+                    init_3rc_4rcc_args(current, verify);
             case NEG_INT, NOT_INT, NEG_FLOAT, INT_TO_FLOAT, FLOAT_TO_INT,
                  INT_TO_BYTE, INT_TO_CHAR, INT_TO_SHORT ->
             //noinspection DuplicateBranchesInSwitch
@@ -1095,14 +1131,10 @@ public final class AnalyzedMethod {
                 current.output(idst);
             }
             default -> {
+                // A payload is data for an instruction that points at it;
+                // the worklist can only reach one by executing it as code
                 if (opcode.isPayload()) {
                     throw new AnalysisException("Encountered data table in instruction stream");
-                }
-                if (opcode.odexOnly()) {
-                    throw new AnalysisException("Encountered odex instruction");
-                }
-                if (opcode.isRaw()) {
-                    throw new AnalysisException("Encountered raw instruction");
                 }
                 throw shouldNotReachHere();
             }
@@ -1127,6 +1159,26 @@ public final class AnalyzedMethod {
                     var target = position(catch_all);
                     transition(todo, current, target, THROWABLE);
                 }
+            }
+        }
+    }
+
+    /**
+     * Resolves, once per instruction, the inputs of
+     * the move-result and move-exception instructions.
+     */
+    private void resolve(TypeResolver resolver) {
+        int count = positions.size();
+        for (int i = 0; i < count; i++) {
+            var current = positionAt(i);
+            if (!current.isStructurallyReachable()) {
+                continue;
+            }
+            switch (current.opcode()) {
+                case MOVE_RESULT, MOVE_RESULT_WIDE, MOVE_RESULT_OBJECT ->
+                        current.resultType(getResultType(current));
+                case MOVE_EXCEPTION -> current.exceptionType(getExceptionType(resolver, current));
+                default -> { /* no resolved type */ }
             }
         }
     }
@@ -1191,6 +1243,11 @@ public final class AnalyzedMethod {
                 "Rejecting invocation, expected %s argument registers, but method signature %s has %s in %s",
                 reg_count, proto, sig_count, describe(current)
         ));
+    }
+
+    private static RuntimeException unsupportedOpcode(Position current, String category) {
+        throw new AnalysisException("Encountered " + category
+                + " instruction " + current.opcode() + " in " + describe(current));
     }
 
     private static RuntimeException invalidBranchTarget(Position current) {
@@ -1734,12 +1791,11 @@ public final class AnalyzedMethod {
 
                 current.after().copy(address, idst, src);
             }
-            // TODO: separate stage for move_result/exception verification
             case MOVE_RESULT -> {
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
-                var type = getResultType(current);
+                var type = current.resultType();
                 if (verify) if (!type.isThinPrimitive()) {
                     throw unexpectedType(current, type);
                 }
@@ -1750,7 +1806,7 @@ public final class AnalyzedMethod {
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
-                var type = getResultType(current);
+                var type = current.resultType();
                 if (verify) if (!type.isWidePrimitive()) {
                     throw unexpectedType(current, type);
                 }
@@ -1761,25 +1817,23 @@ public final class AnalyzedMethod {
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
-                var predecessor = getResultPredecessor(current);
-                var type = predecessor.accessProto().getReturnType();
+                var type = current.resultType();
                 if (verify) if (!type.isReference()) {
                     throw unexpectedType(current, type);
                 }
 
+                // Validity verified at the resolve stage
+                var predecessor = positionAt(index - 1);
                 var non_null = hasNonNullResult(predecessor);
                 // filled-new-array creates exactly an array of its type
                 var exact = hasExactResult(predecessor);
                 outputRef(current, idst, type, non_null, exact);
             }
             case MOVE_EXCEPTION -> {
-                if (address == 0) {
-                    throw new AnalysisException("move-exception at pc 0x0");
-                }
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
-                var type = getExceptionType(resolver, current);
+                var type = current.exceptionType();
                 assert type.isReference();
 
                 // Note: move-exception never returns null

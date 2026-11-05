@@ -16,6 +16,10 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 
 public class TryBlocksMerger {
+    // try_item.insn_count is a ushort, so a single try block
+    // may cover at most this many code units
+    private static final int MAX_TRY_UNIT_COUNT = 0xFFFF;
+
     public interface TryItem {
         int start();
 
@@ -53,17 +57,21 @@ public class TryBlocksMerger {
             Integer catch_all_address = null;
         }
 
+        // The caller's list is never mutated: empty items are dropped
+        // from a local copy only
+        var items = new ArrayList<TryItem>(try_items);
+
         int[] borders;
         {
-            int count = try_items.size();
+            int count = items.size();
             var borders_set = new IntSet(count);
             for (int i = 0; i < count; ) {
-                var block = try_items.get(i);
+                var block = items.get(i);
                 int start = block.start(), end = block.end();
                 // Empty block
                 if (end <= start) {
                     assert start == end;
-                    try_items.remove(i);
+                    items.remove(i);
                     count--;
                     continue;
                 }
@@ -81,7 +89,7 @@ public class TryBlocksMerger {
             elements.put(borders[i], new TryContainer());
         }
 
-        for (var item : try_items) {
+        for (var item : items) {
             var exception = item.exception();
             var handler_address = item.handler();
             var is_exclusion = handler_address < 0;
@@ -127,8 +135,18 @@ public class TryBlocksMerger {
                 for (var e : container.handlers.entrySet()) {
                     handlers.add(ExceptionHandler.of(e.getKey(), e.getValue()));
                 }
-                out.add(TryBlock.raw(borders[i], borders[i + 1] - borders[i],
-                        container.catch_all_address, Collections.unmodifiableList(handlers)));
+                var fixed_handlers = Collections.unmodifiableList(handlers);
+                int start = borders[i];
+                int count = borders[i + 1] - start;
+                // A range longer than the try_item.insn_count ushort limit
+                // is split into consecutive parts with the same handlers
+                while (count > 0) {
+                    int part = Math.min(count, MAX_TRY_UNIT_COUNT);
+                    out.add(TryBlock.raw(start, part,
+                            container.catch_all_address, fixed_handlers));
+                    start += part;
+                    count -= part;
+                }
             }
         }
         return Collections.unmodifiableNavigableSet(out);

@@ -29,6 +29,7 @@ public final class DexOffsets {
     public static final int CALL_SITE_ID_SIZE = 4;
     public static final int CLASS_DEF_SIZE = 32;
     public static final int TRY_ITEM_SIZE = 8;
+    public static final int MAP_ITEM_SIZE = 12;
 
     // dex element alignments
     public static final int MAIN_SECTION_ALIGNMENT = 4;
@@ -55,6 +56,8 @@ public final class DexOffsets {
     public static final int FILE_SIZE_OFFSET = 32;
     public static final int HEADER_SIZE_OFFSET = 36;
     public static final int ENDIAN_TAG_OFFSET = 40;
+    public static final int LINK_SIZE_OFFSET = 44;
+    public static final int LINK_START_OFFSET = 48;
     public static final int MAP_OFFSET = 52;
     public static final int STRING_COUNT_OFFSET = 56;
     public static final int STRING_START_OFFSET = 60;

@@ -46,10 +46,11 @@ import java.util.function.Function;
  *       classpath) superclass, numbering is relative to the known part (the
  *       prefix is assumed length 0) — the "resolved index → receiver vtable"
  *       dispatch stays correct, the class is marked exact=false;</li>
- *   <li>link errors (final-override, implements non-interface, cycles, too
- *       many methods) are reported as linkError and propagated to subclasses
+ *   <li>link errors (final-override, abstract+final class, final interface,
+ *       implements non-interface, cycles, too many methods) are reported as
+ *       linkError and propagated to subclasses
  *       (in ART the class fails to load, any use of it —
- *       NoClassDefFoundError).</li>
+ *       NoClassDefFoundError or VerifyError).</li>
  * </ul>
  */
 final class ClassLinker {
@@ -188,7 +189,7 @@ final class ClassLinker {
 
         @Override
         public String toString() {
-            return declaring.type + "." + name() + proto();
+            return declaring.type + "->" + name() + proto();
         }
     }
 
@@ -356,6 +357,24 @@ final class ClassLinker {
             var lc = new LinkedClass(t, def);
             if (def == null) {
                 lc.exact = false;
+                return lc;
+            }
+
+            // A final interface, or a class that is both abstract and final,
+            // is a legal dex definition (dex verifier rejects only
+            // non-Java bits) that cannot be loaded: ART's class linker treats
+            // an interface as abstract even when ACC_ABSTRACT is absent from
+            // its class_def, and a final class must be concrete. The class
+            // fails to load, so any use fails with VerifyError.
+            // Reported before the method/interface/superclass work.
+            if (def.isInterface()) {
+                if ((def.getAccessFlags() & ACC_FINAL) != 0) {
+                    lc.linkError = "ClassFormatError: interface " + t + " is final";
+                    return lc;
+                }
+            } else if ((def.getAccessFlags() & (ACC_ABSTRACT | ACC_FINAL))
+                    == (ACC_ABSTRACT | ACC_FINAL)) {
+                lc.linkError = "ClassFormatError: class " + t + " is both abstract and final";
                 return lc;
             }
 

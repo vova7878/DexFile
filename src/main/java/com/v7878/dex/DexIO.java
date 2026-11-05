@@ -189,13 +189,33 @@ public final class DexIO {
         }
     }
 
+    /**
+     * Wraps the raw error of a file-content failure into an InvalidDexFile
+     * carrying the raw message; an already wrapped error passes through.
+     */
+    private static RuntimeException wrapInvalidDexFile(RuntimeException e) {
+        if (e instanceof NotADexFile || e instanceof InvalidDexFile) {
+            return e;
+        }
+        return new InvalidDexFile(e.getMessage(), e);
+    }
+
     // The content_offset parameter should always be 0.
     // Other values can be used to read obfuscated dex files
     public static DexReaderCache readCache(ReadOptions options, byte[] data, int data_offset,
                                            int header_offset, int content_offset) {
         Objects.requireNonNull(options);
+        Objects.requireNonNull(data);
+        options.validate();
+        if (header_offset < 0) {
+            throw new IllegalArgumentException("Negative header offset");
+        }
         var input = new ByteArrayInput(data).duplicateAt(data_offset).markAsStart();
-        return new DexReader(options, input, header_offset, content_offset);
+        try {
+            return new DexReader(options, input, header_offset, content_offset);
+        } catch (RuntimeException e) {
+            throw wrapInvalidDexFile(e);
+        }
     }
 
     public static DexReaderCache readCache(ReadOptions options, byte[] data,
@@ -214,14 +234,23 @@ public final class DexIO {
                            int data_offset, int header_offset, int[] ids) {
         var reader = readCache(options, data, data_offset, header_offset);
         var classes = reader.getClasses();
-        if (ids == null) {
-            return Dex.of(classes);
+        if (ids != null) {
+            for (int idx : ids) {
+                checkIndex(idx, classes.size(), "class");
+            }
         }
-        var out = new ArrayList<ClassDef>(ids.length);
-        for (int idx : ids) {
-            out.add(classes.get(idx));
+        try {
+            if (ids == null) {
+                return Dex.of(classes);
+            }
+            var out = new ArrayList<ClassDef>(ids.length);
+            for (int idx : ids) {
+                out.add(classes.get(idx));
+            }
+            return Dex.raw(Collections.unmodifiableList(out));
+        } catch (RuntimeException e) {
+            throw wrapInvalidDexFile(e);
         }
-        return Dex.of(out);
     }
 
     /**
@@ -238,21 +267,30 @@ public final class DexIO {
 
     public static DexReaderCache[] readDexContainerCache(ReadOptions options, byte[] data, int data_offset) {
         Objects.requireNonNull(options);
+        Objects.requireNonNull(data);
+        options.validate();
         var input = new ByteArrayInput(data).duplicateAt(data_offset).markAsStart();
-        var readers = new ArrayList<DexReader>();
-        int header_offset = 0;
-        while (header_offset != input.size()) {
-            var reader = new DexReader(options, input, header_offset, 0);
-            readers.add(reader);
-            int next_offset = header_offset + reader.getFileSize();
-            if (next_offset <= header_offset) {
-                throw new InvalidDexFile(String.format(
-                        "Dex container component at offset %d has invalid size %d",
-                        header_offset, reader.getFileSize()));
-            }
-            header_offset = next_offset;
+        if (input.size() == 0) {
+            throw new NotADexFile("Empty dex container");
         }
-        return readers.toArray(EmptyArrays.DEX_READER_CACHE);
+        var readers = new ArrayList<DexReader>();
+        try {
+            int header_offset = 0;
+            while (header_offset != input.size()) {
+                var reader = new DexReader(options, input, header_offset, 0);
+                readers.add(reader);
+                int next_offset = header_offset + reader.getFileSize();
+                if (next_offset <= header_offset) {
+                    throw new InvalidDexFile(String.format(
+                            "Dex container component at offset %d has invalid size %d",
+                            header_offset, reader.getFileSize()));
+                }
+                header_offset = next_offset;
+            }
+            return readers.toArray(EmptyArrays.DEX_READER_CACHE);
+        } catch (RuntimeException e) {
+            throw wrapInvalidDexFile(e);
+        }
     }
 
     //TODO: public static Dex[] readDexContainer(ReadOptions options, byte[] data, int[][] ids) {}
@@ -260,8 +298,12 @@ public final class DexIO {
     public static Dex[] readDexContainer(ReadOptions options, byte[] data, int data_offset) {
         var readers = readDexContainerCache(options, data, data_offset);
         var out = new Dex[readers.length];
-        for (int i = 0; i < out.length; i++) {
-            out[i] = Dex.of(readers[i].getClasses());
+        try {
+            for (int i = 0; i < out.length; i++) {
+                out[i] = Dex.of(readers[i].getClasses());
+            }
+        } catch (RuntimeException e) {
+            throw wrapInvalidDexFile(e);
         }
         return out;
     }

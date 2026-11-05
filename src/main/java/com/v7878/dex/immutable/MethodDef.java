@@ -1,10 +1,13 @@
 package com.v7878.dex.immutable;
 
 import static com.v7878.dex.DexConstants.ACC_ABSTRACT;
+import static com.v7878.dex.DexConstants.ACC_BRIDGE;
 import static com.v7878.dex.DexConstants.ACC_CONSTRUCTOR;
 import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
+import static com.v7878.dex.DexConstants.ACC_FINAL;
 import static com.v7878.dex.DexConstants.ACC_NATIVE;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
+import static com.v7878.dex.DexConstants.ACC_SYNCHRONIZED;
 
 import com.v7878.dex.AccessFlag;
 import com.v7878.dex.Internal;
@@ -88,6 +91,18 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 if (!TypeId.V.equals(return_type)) {
                     throw new IllegalArgumentException("<init> must be void");
                 }
+                // Constructors must always have code
+                if ((access_flags & (ACC_ABSTRACT | ACC_NATIVE)) != 0) {
+                    throw new IllegalArgumentException(
+                            "<init> must not be abstract or native");
+                }
+                // Everything outside the verifier's kInitAllowed whitelist:
+                // private, protected, public, strictfp, varargs, synthetic
+                if ((access_flags & (ACC_FINAL | ACC_SYNCHRONIZED | ACC_BRIDGE)) != 0) {
+                    throw new IllegalArgumentException(String.format(
+                            "<init> may not have flags: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForMethod(access_flags)));
+                }
                 access_flags |= ACC_CONSTRUCTOR;
             }
             case "<clinit>" -> {
@@ -101,6 +116,11 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 if (!(TypeId.V.equals(return_type) && parameters.isEmpty())) {
                     throw new IllegalArgumentException(
                             "<clinit> must have descriptor ()V");
+                }
+                // Constructors must always have code
+                if ((access_flags & (ACC_ABSTRACT | ACC_NATIVE)) != 0) {
+                    throw new IllegalArgumentException(
+                            "<clinit> must not be abstract or native");
                 }
                 access_flags |= ACC_CONSTRUCTOR;
             }

@@ -24,6 +24,46 @@ public final class MethodImplementation {
         this.register_count = Preconditions.checkMethodRegisterCount(register_count);
         this.instructions = Objects.requireNonNull(instructions);
         this.try_blocks = Objects.requireNonNull(try_blocks);
+        checkTryBlocks(instructions, try_blocks);
+        // TODO: deduplicate and remove unused AdvancePC items
+        this.debug_items = Objects.requireNonNull(debug_items);
+    }
+
+    /**
+     * Try blocks and handler addresses must lie inside the code: the sum
+     * of the instruction unit counts (payload instructions included) is
+     * the code size, every block must end at or before it, and every
+     * handler address must be strictly below it.
+     */
+    private static void checkTryBlocks(List<Instruction> instructions,
+                                       NavigableSet<TryBlock> try_blocks) {
+        if (try_blocks.isEmpty()) {
+            return;
+        }
+        int total_units = 0;
+        for (var instruction : instructions) {
+            total_units += instruction.getUnitCount();
+        }
+        for (var block : try_blocks) {
+            if (block.getEndAddress() > total_units) {
+                throw new IllegalArgumentException(String.format(
+                        "Try block at %d with unit count %d exceeds the code size of %d units",
+                        block.getStartAddress(), block.getUnitCount(), total_units));
+            }
+            for (var handler : block.getHandlers()) {
+                if (handler.getAddress() >= total_units) {
+                    throw new IllegalArgumentException(String.format(
+                            "Handler for %s at address %d is beyond the code size of %d units",
+                            handler.getExceptionType(), handler.getAddress(), total_units));
+                }
+            }
+            var catch_all = block.getCatchAllAddress();
+            if (catch_all != null && catch_all >= total_units) {
+                throw new IllegalArgumentException(String.format(
+                        "Catch-all handler at address %d is beyond the code size of %d units",
+                        catch_all, total_units));
+            }
+        }
         if (try_blocks.size() > 1) {
             var iterator = try_blocks.iterator();
             var prev = iterator.next();
@@ -37,8 +77,6 @@ public final class MethodImplementation {
                 prev = curr;
             }
         }
-        // TODO: deduplicate and remove unused AdvancePC items
-        this.debug_items = Objects.requireNonNull(debug_items);
     }
 
     @Internal

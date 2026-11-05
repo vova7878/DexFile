@@ -1,5 +1,10 @@
 package com.v7878.dex.analysis;
 
+import static com.v7878.dex.Opcode.MOVE_EXCEPTION;
+import static com.v7878.dex.Opcode.MOVE_RESULT;
+import static com.v7878.dex.Opcode.MOVE_RESULT_OBJECT;
+import static com.v7878.dex.Opcode.MOVE_RESULT_WIDE;
+
 import com.v7878.collections.IntSet;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.ProtoId;
@@ -101,6 +106,8 @@ public final class Position {
     private int flags;
     private PayloadInstruction payload;
     private ProtoId proto;
+    private TypeId result_type;
+    private TypeInfo exception_type;
     private final int index, address;
     private final int register_count;
     private final RegisterLine before, after;
@@ -146,8 +153,11 @@ public final class Position {
     }
 
     /* package */ void freeze() {
-        assert instruction.getOpcode().hasPayload() == (payload != null);
-        assert instruction.getOpcode().isVariableRegister() == (proto != null);
+        var opcode = instruction.getOpcode();
+        assert opcode.hasPayload() == (payload != null);
+        assert opcode.isVariableRegister() == (proto != null);
+        assert result_type == null || isMoveResult();
+        assert exception_type == null || opcode == MOVE_EXCEPTION;
         inputs.freeze();
         outputs.freeze();
     }
@@ -177,6 +187,40 @@ public final class Position {
     /* package */ void accessProto(ProtoId proto) {
         assert instruction.getOpcode().isVariableRegister();
         this.proto = Objects.requireNonNull(proto);
+    }
+
+    /**
+     * The type of the call result consumed by this instruction, or null
+     * for a non-applicable opcode or a position the analysis never
+     * entered.
+     */
+    public TypeId resultType() {
+        return result_type;
+    }
+
+    /* package */ void resultType(TypeId type) {
+        assert isMoveResult();
+        this.result_type = Objects.requireNonNull(type);
+    }
+
+    /**
+     * The joined type of the exception caught at this instruction, or
+     * null for a non-applicable opcode or a position the analysis never
+     * entered.
+     */
+    public TypeInfo exceptionType() {
+        return exception_type;
+    }
+
+    /* package */ void exceptionType(TypeInfo type) {
+        assert instruction.getOpcode() == MOVE_EXCEPTION;
+        this.exception_type = Objects.requireNonNull(type);
+    }
+
+    private boolean isMoveResult() {
+        var opcode = instruction.getOpcode();
+        return opcode == MOVE_RESULT || opcode == MOVE_RESULT_WIDE
+                || opcode == MOVE_RESULT_OBJECT;
     }
 
     public RegisterLine before() {
@@ -292,7 +336,10 @@ public final class Position {
     }
 
     public boolean isRuntimeReachable() {
-        assert isStructurallyReachable();
+        if (!isStructurallyReachable()) {
+            // The control flow graph never enters this position
+            return false;
+        }
         return (flags & REACHABLE) != 0;
     }
 

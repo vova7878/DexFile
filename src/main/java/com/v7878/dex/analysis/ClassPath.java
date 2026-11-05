@@ -307,6 +307,9 @@ public class ClassPath {
             return Result.fail(true, ResolutionError.NO_CLASS_DEF,
                     "class failed to link: " + startLC.linkError);
         }
+        if (startLC.isUnknown()) {
+            return Result.unknown();
+        }
         // exactness is computed by the traversal: a hit before an unknown
         // node is exact (the unknown part lies further in the search order
         // and cannot shadow it); an unknown node makes all later answers

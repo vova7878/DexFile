@@ -633,7 +633,10 @@ public sealed abstract class Register {
                 throw new IllegalArgumentException(
                         type + " must not be primitive");
             }
-            assert !exact || !type.isUnresolved();
+            if (exact && type.isUnresolved()) {
+                throw new IllegalArgumentException(
+                        "Exact value must have a resolved type");
+            }
             this.non_null = non_null;
             this.exact = exact;
         }
@@ -707,9 +710,17 @@ public sealed abstract class Register {
             // Exactness is independent of the initialization state: a
             // new-instance value is exactly its class, while the receiver
             // of a constructor may be an instance of a subclass.
-            super(source, TypeInfo.of(Objects.requireNonNull(type)), true, exact);
+            super(source, checkType(type, exact), true, exact);
             assert !type.isArray();
             this.thiz = thiz;
+        }
+
+        private static TypeInfo checkType(TypeId type, boolean exact) {
+            if (exact && type == null) {
+                throw new IllegalArgumentException(
+                        "Exact value must have a resolved type");
+            }
+            return TypeInfo.of(Objects.requireNonNull(type));
         }
 
         public static UninitializedRef of(Identifier source, TypeId type, boolean thiz) {

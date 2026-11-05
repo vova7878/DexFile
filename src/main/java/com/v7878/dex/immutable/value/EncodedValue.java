@@ -28,6 +28,10 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
         return getValueType().getType();
     }
 
+    public char getShorty() {
+        return getType().getShorty();
+    }
+
     public abstract boolean isDefault();
 
     public static EncodedValue defaultValue(TypeId type) {

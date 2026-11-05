@@ -550,6 +550,8 @@ field returns[FieldDef value]
     member_name { name = $member_name.value; }
     COLON type=nonvoid_type_descriptor { type = $type.value; }
     (ASSIGN literal { initial_value = $literal.value; })?
+    // Annotations before .end field belong to the field;
+    // otherwise they are class annotations
     ((annotation { add(annotations, $annotation.value); })*
     END_FIELD_DIRECTIVE)?
     ;
@@ -652,10 +654,11 @@ parameter_directive[
     @init{ int p; var annotations = new TreeSet<Annotation>(); }
     : PARAMETER_DIRECTIVE register[$ib] { p = $register.value; }
     (COMMA name=string_literal { $parameter_names.append(p, $name.value); })?
+    // Annotations before .end param belong to the parameter;
+    // otherwise they are method annotations
     ((annotation { add(annotations, $annotation.value); })* END_PARAMETER_DIRECTIVE)?
     { $parameter_annotations.append(p, Collections.unmodifiableNavigableSet(annotations)); }
     ;
-
 label returns[String value]
     : COLON simple_name { $value = $simple_name.value; }
     ;
@@ -664,6 +667,8 @@ label_directive[CodeBuilder ib]
     : label { $ib.label($label.value); }
     ;
 
+// A primitive, array or non-throwable reference type is legal here:
+// ART verifies such a handler unless it executes move-exception.
 catch_directive[CodeBuilder ib]
     : CATCH_DIRECTIVE ex=nonvoid_type_descriptor
     LBRACE from=label DOTDOT to=label RBRACE handler=label
@@ -691,6 +696,7 @@ line_directive[CodeBuilder ib]
     { $ib.line($line.value); }
     ;
 
+// The type is required; V denotes a null type
 local_directive[CodeBuilder ib]
     @init{
         int reg; String name = null;
@@ -728,7 +734,6 @@ source_directive[CodeBuilder ib]
     : SOURCE_DIRECTIVE (name=string_literal { name = $name.value; })?
     { $ib.source(name); }
     ;
-
 class_def
     returns[ClassDef value]
     locals[TypeId type, TypeId superclass, String source]

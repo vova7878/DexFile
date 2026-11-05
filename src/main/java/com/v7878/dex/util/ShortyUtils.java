@@ -119,6 +119,7 @@ public class ShortyUtils {
         int out_regs = 0;
         for (var instruction : insns) {
             if (instruction.getOpcode().isInvoke()) {
+                // Every invoke opcode uses a variable-register format
                 out_regs = Math.max(out_regs, ((VariableRegisterInstruction) instruction).getRegisterCount());
             }
         }

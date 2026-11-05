@@ -29,6 +29,10 @@ public final class RegisterLine {
         this.registers = array;
     }
 
+    /**
+     * An unmodifiable view over the line's registers, stable once the analysis
+     * completes; only indices below {@link #registerCount()} are valid.
+     */
     public List<Register> registers() {
         return Collections.unmodifiableList(Arrays.asList(registers));
     }

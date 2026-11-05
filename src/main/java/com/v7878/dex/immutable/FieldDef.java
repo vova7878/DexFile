@@ -29,6 +29,8 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
         Objects.requireNonNull(annotations);
         if ((access_flags & ACC_STATIC) == 0 && initial_value != null) {
             throw new IllegalArgumentException("Instance fields can`t have initial value");
+        } else if (initial_value != null) {
+            checkInitialValueKind(name, type, initial_value);
         }
         this.name = name;
         this.type = type;
@@ -36,6 +38,20 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
         this.hiddenapi_flags = Preconditions.checkHiddenApiFlags(hiddenapi_flags);
         this.initial_value = initial_value; // may be null
         this.annotations = annotations;
+    }
+
+    /**
+     * The kind of a static field's initial value must match the field type.
+     * Decided by the shorty alone, without walking the type
+     */
+    private static void checkInitialValueKind(String name, TypeId type, EncodedValue value) {
+        char field_shorty = type.getShorty();
+        char value_shorty = value.getShorty();
+        if (field_shorty != value_shorty) {
+            throw new IllegalArgumentException(String.format(
+                    "Unexpected initial value type for field %s: %s vs %s",
+                    name, value.getClass().getSimpleName(), type));
+        }
     }
 
     @Internal

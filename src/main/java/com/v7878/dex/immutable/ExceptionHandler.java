@@ -13,6 +13,11 @@ public final class ExceptionHandler {
         this.address = Preconditions.checkCodeAddress(address);
     }
 
+    /**
+     * Creates a handler for {@code exception_type}. The model keeps the type
+     * as-is: ART accepts a primitive, array or other non-throwable reference
+     * type as long as the handler does not execute {@code move-exception}.
+     */
     public static ExceptionHandler of(TypeId exception_type, int address) {
         return new ExceptionHandler(exception_type, address);
     }

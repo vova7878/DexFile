@@ -51,8 +51,14 @@ public interface RandomInput extends RandomAccess {
         return readByte() != 0;
     }
 
+    /**
+     * Reads one byte, advancing the position by one.
+     */
     byte readByte();
 
+    /**
+     * Reads one byte as an unsigned value in 0..255.
+     */
     default int readUByte() {
         return readByte() & 0xff;
     }
@@ -108,10 +114,18 @@ public interface RandomInput extends RandomAccess {
         return Double.longBitsToDouble(readLong());
     }
 
+    /**
+     * Reads a uleb128 value; all 32 bits are returned, so a value with bit
+     * 31 set is negative as an int.
+     */
     default int readULeb128() {
         return Leb128.readUnsignedLeb128(this);
     }
 
+    /**
+     * Reads a uleb128 value that must fit in 31 bits, that is a
+     * non-negative int.
+     */
     default int readSmallULeb128() {
         int pos = position();
         int out = readULeb128();
@@ -122,26 +136,43 @@ public interface RandomInput extends RandomAccess {
         return out;
     }
 
+    /**
+     * Reads an sleb128 value.
+     */
     default int readSLeb128() {
         return Leb128.readSignedLeb128(this);
     }
 
+    /**
+     * Reads a dex string item: a uleb128 utf16_size, MUTF-8 data and a zero
+     * terminator.
+     */
     default String readMUTF8() {
         return MUTF8.readMUTF8(this);
     }
 
+    /**
+     * Reads MUTF-8 data and a zero terminator, checking them against the
+     * given utf16_size.
+     */
     default String readMUTF8(int expected_length) {
         return MUTF8.readMUTF8(this, expected_length);
     }
 
+    /**
+     * Copies length bytes to out.
+     */
     default void writeTo(RandomOutput out, long length) {
         for (int i = 0; i < length; i++) {
             out.writeByte(readByte());
         }
     }
 
+    /**
+     * Copies all remaining bytes to out.
+     */
     default void writeTo(RandomOutput out) {
-        writeTo(out, size() - position());
+        writeTo(out, available());
     }
 
     @Override
