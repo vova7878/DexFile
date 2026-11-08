@@ -1,12 +1,6 @@
 package com.v7878.dex.analysis;
 
 import static com.v7878.dex.DexConstants.ACC_STATIC;
-import static com.v7878.dex.Opcode.AGET;
-import static com.v7878.dex.Opcode.AGET_BOOLEAN;
-import static com.v7878.dex.Opcode.AGET_BYTE;
-import static com.v7878.dex.Opcode.AGET_CHAR;
-import static com.v7878.dex.Opcode.AGET_SHORT;
-import static com.v7878.dex.Opcode.AGET_WIDE;
 import static com.v7878.dex.Opcode.APUT_WIDE;
 import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
 import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY;
@@ -85,23 +79,17 @@ import com.v7878.dex.immutable.bytecode.InstructionNrcc;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
 import com.v7878.dex.immutable.bytecode.SwitchPayload;
-import com.v7878.dex.immutable.bytecode.iface.LiteralInstruction;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.VariableFiveRegisterInstruction;
-import com.v7878.dex.immutable.bytecode.iface.WideLiteralInstruction;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Formatter;
 
-import java.util.ArrayDeque;
 import java.util.BitSet;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
-import java.util.function.BiConsumer;
 import java.util.function.ToIntFunction;
 
 public final class AnalyzedMethod {
@@ -188,139 +176,62 @@ public final class AnalyzedMethod {
         return out;
     }
 
-    private void iterate_sources(Register reg, BiConsumer<Position, Register> action) {
-        Objects.requireNonNull(reg);
-        Objects.requireNonNull(action);
-        if (reg.isUndefined()) {
-            // An undefined value has no origin to walk back to
-            throw new IllegalArgumentException("The register is undefined");
-        }
-
-        var todo = new ArrayDeque<Register>();
-        var done = new HashSet<Register>();
-
-        todo.add(reg);
-        while (!todo.isEmpty()) {
-            var tmp = todo.poll();
-            if (done.contains(tmp)) {
-                continue;
-            }
-            done.add(tmp);
-
-            // Only the value passed in by the caller can be undefined: a
-            // value reachable through register sources always has an origin
-            assert !tmp.isUndefined();
-
-            var ident = tmp.getSource();
-
-            if (ident.isParameter()) {
-                action.accept(null, tmp);
-                continue;
-            }
-
-            var pos = position(ident.address());
-            if (ident.produced() && pos.outputs().contains(ident.slot())) {
-                // The instruction at this address produced the value
-                action.accept(pos, tmp);
-            } else if (pos.isFirst()) {
-                // The entry position has no predecessors: a value that is
-                // not produced there flows in from the parameter line
-                todo.add(pos.before().at(ident.slot()));
-            } else {
-                // The value was joined here or the instruction only refined
-                // the value flowing into it; before() is exactly the merge
-                // of the incoming edges, so those edges are all that is left
-                for (var trans : pos.predecessors()) {
-                    var parent = position(trans.address());
-                    var line = trans.isNormal() ? parent.after() : parent.before();
-                    todo.add(line.at(ident.slot()));
-                }
-            }
-        }
-    }
 
     public Set<Register> value_sources(Register reg) {
-        var values = new LinkedHashSet<Register>();
-        iterate_sources(reg, (pos, target) -> values.add(target));
-        return Collections.unmodifiableSet(values);
+        return AnalysisUtils.value_sources(this::position, reg);
     }
 
     public IntSet constant_values(Register reg) {
-        var kind = reg.getConstantKind();
-        if (kind == null) {
-            throw new IllegalArgumentException("Not a constant register " + reg);
-        }
-        if (!kind.isInt()) {
-            throw new IllegalArgumentException(String.format(
-                    "Unexpected register type %s, expected integral constant", reg));
-        }
-
-        var values = new IntSet();
-        iterate_sources(reg, (pos, target) -> {
-            var insn = pos.instruction();
-            if (insn instanceof LiteralInstruction src) {
-                values.add(src.getLiteral());
-            } else {
-                // The value is unknown here
-                assert insn.getOpcode() == AGET
-                        || insn.getOpcode() == AGET_BOOLEAN
-                        || insn.getOpcode() == AGET_BYTE
-                        || insn.getOpcode() == AGET_CHAR
-                        || insn.getOpcode() == AGET_SHORT;
-            }
-        });
-
-        return values.freeze();
+        return AnalysisUtils.constant_values(this::position, reg);
     }
 
     public LongSet wide_constant_values(Register reg) {
-        var kind = reg.getConstantKind();
-        if (kind == null) {
-            throw new IllegalArgumentException("Not a constant register " + reg);
-        }
-        if (!kind.isWide()) {
-            throw new IllegalArgumentException(String.format(
-                    "Unexpected register type %s, expected wide constant", reg));
-        }
-
-        var values = new LongSet();
-        iterate_sources(reg, (pos, target) -> {
-            Instruction insn = pos.instruction();
-            if (insn instanceof WideLiteralInstruction src) {
-                values.add(src.getWideLiteral());
-            } else if (insn instanceof LiteralInstruction src) {
-                // const-wide/16 and const-wide/32
-                values.add(src.getLiteral());
-            } else {
-                // The value is unknown here
-                assert insn.getOpcode() == AGET_WIDE;
-            }
-        });
-
-        return values.freeze();
+        return AnalysisUtils.wide_constant_values(this::position, reg);
     }
 
     public Set<Object> ref_constant_values(Register reg) {
-        var kind = reg.getConstantKind();
-        if (kind == null) {
-            throw new IllegalArgumentException("Not a constant register " + reg);
-        }
-        if (!kind.isRef()) {
-            throw new IllegalArgumentException(String.format(
-                    "Unexpected register type %s, expected reference constant", reg));
-        }
+        return AnalysisUtils.ref_constant_values(this::position, reg);
+    }
 
-        var values = new LinkedHashSet<>();
-        iterate_sources(reg, (pos, target) -> {
-            if (target.isZeroOrNull()) {
-                values.add(null);
-            } else {
-                InstructionN1c src = pos.instruction();
-                values.add(src.getReference1());
-            }
-        });
+    /**
+     * One usage of a tracked value: the position reading it and the
+     * register read.
+     */
+    public record ValueUsage(Position position, int slot) {
 
-        return Collections.unmodifiableSet(values);
+        /**
+         * The value read at this usage.
+         */
+        public Register value() {
+            return position.before().at(slot);
+        }
+    }
+
+    /**
+     * All usages of the value held in register {@code slot} when the
+     * instruction at address {@code start} is reached, sorted by
+     * instruction address, then register. The start instruction
+     * itself counts when it reads the register; moves are followed
+     * to their destination; merges are passed by register; catch
+     * edges carry the state before the instruction.
+     *
+     * @throws AnalysisException              if there is no instruction at {@code start}
+     * @throws ArrayIndexOutOfBoundsException if {@code slot} is not a valid register index
+     */
+    public List<ValueUsage> value_usages(int start, int slot) {
+        return AnalysisUtils.value_usages(this::position, start, slot);
+    }
+
+    /**
+     * Checks whether register {@code slot} is read on some execution
+     * path starting at the instruction at address {@code start}; a
+     * move counts as a use, value copies are not followed.
+     *
+     * @throws AnalysisException              if there is no instruction at {@code start}
+     * @throws ArrayIndexOutOfBoundsException if {@code slot} is not a valid register index
+     */
+    public boolean is_used_in_branch(int start, int slot) {
+        return AnalysisUtils.is_used_in_branch(this::position, start, slot);
     }
 
     public static AnalyzedMethod analyze(
@@ -1749,6 +1660,8 @@ public final class AnalyzedMethod {
             case NOP, GOTO, GOTO_16, GOTO_32 -> {
                 // No effect on or use of registers
             }
+            // Move kind checks are unconditional: they are what keeps
+            // wide pairs unbreakable when verification is disabled
             case MOVE, MOVE_FROM16, MOVE_16 -> {
                 var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
@@ -1756,7 +1669,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);
 
-                if (verify) if (!src.isIntOrFloat() && !src.isConflict()) {
+                if (!src.isIntOrFloat()) {
                     throw unexpectedReg(current, isrc, src);
                 }
                 is_strict_nop = (isrc == idst) || Objects.equals(src, dst);
@@ -1770,7 +1683,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().pairAt(isrc);
 
-                if (verify) if (!src.isWidePair()) {
+                if (!src.isWidePair()) {
                     throw unexpectedRegPair(current, isrc, src);
                 }
                 is_strict_nop = (isrc == idst) || Objects.equals(src, dst);
@@ -1784,7 +1697,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);
 
-                if (verify) if (!src.isRef() && !src.isConflict()) {
+                if (!src.isRef()) {
                     throw unexpectedReg(current, isrc, src);
                 }
                 is_strict_nop = (isrc == idst) || Objects.equals(src, dst);
@@ -2236,7 +2149,11 @@ public final class AnalyzedMethod {
                 int reg2t = classifier.applyAsInt(reg2);
                 int argt = reg1t | reg2t;
 
-                if (verify) if (argt == 0b11) {
+                // The null constant is comparable with references and zero
+                // only: a non-zero integral, float or wide value mismatches
+                if (verify) if (argt == 0b11
+                        || (reg1.isNull() && !reg2.isRef())
+                        || (reg2.isNull() && !reg1.isRef())) {
                     throw new AnalysisException(
                             "Register v" + ireg1 + " of type " + reg1 + " and register v" +
                                     ireg2 + " of type " + reg2 + " can`t be args to " + describe(current)
@@ -2306,10 +2223,17 @@ public final class AnalyzedMethod {
                 }
 
                 if (arr.isZeroOrNull()) {
+                    // The read fails at runtime; infer a merge-able result
+                    // from the instruction type. The untyped aget cannot use
+                    // the int type (the array may hold floats), so an integer
+                    // constant is used; a non-zero constant distinguishes the
+                    // dead value from null
                     switch (opcode) {
-                        // Pick a non-zero constant (to distinguish with null) that can fit in any primitive
-                        case AGET, AGET_BOOLEAN, AGET_BYTE, AGET_CHAR,
-                             AGET_SHORT -> constantInt(current, ival, 1);
+                        case AGET -> constant(current, ival, ConstantKind.INT);
+                        case AGET_BOOLEAN -> constant(current, ival, ConstantKind.BOOL);
+                        case AGET_BYTE -> constant(current, ival, ConstantKind.BYTE);
+                        case AGET_CHAR -> constant(current, ival, ConstantKind.CHAR);
+                        case AGET_SHORT -> constant(current, ival, ConstantKind.SHORT);
                         case AGET_WIDE -> wideConstant(current, ival);
                         case AGET_OBJECT -> constant(current, ival, ConstantKind.NULL);
                         default -> throw shouldNotReachHere();

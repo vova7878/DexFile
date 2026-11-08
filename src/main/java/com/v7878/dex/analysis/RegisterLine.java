@@ -104,6 +104,9 @@ public final class RegisterLine {
     /* package */ void copyWide(int address, int index_lo, Register lo, Register hi) {
         assert lo.isWideLo();
         assert hi.isWideHi();
+        // A wide pair is category-matched by construction;
+        // a constant half matches either category
+        assert (lo.isLong() && hi.isLong()) || (lo.isDouble() && hi.isDouble());
         int index_hi = index_lo + 1;
         var tmp_lo = registers[index_lo];
         var tmp_hi = registers[index_hi];
