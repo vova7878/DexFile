@@ -110,6 +110,7 @@ correspondence.
 
 | Format                                                 | ID   | Syntax                                                                                                                                                                                                                                                                                                                                                                 | Notable Opcodes Covered                                                                         |
 |--------------------------------------------------------|------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| *N/A*                                                  | 00x  | *`N/A`*                                                                                                                                                                                                                                                                                                                                                                | *suggested for use as the nominal format for a breakpoint opcode*                               |
 | ØØ\|*op*                                               | 10x  | *`op`*                                                                                                                                                                                                                                                                                                                                                                 |                                                                                                 |
 | B\|A\|*op*                                             | 12x  | *`op`* vA, vB                                                                                                                                                                                                                                                                                                                                                          |                                                                                                 |
 |                                                        | 11n  | *`op`* vA, #+B                                                                                                                                                                                                                                                                                                                                                         |                                                                                                 |
@@ -153,27 +154,27 @@ correspondence.
 |                                                        | 41c  | *`exop`* vAAAA, type@BBBBBBBB<br>*`exop`* vAAAA, field@BBBBBBBB                                                                                                                                                                                                                                                                                                        | `const-class/jumbo`<br>`sget-object/jumbo`                                                      |
 | NN\|ff CCCC<sub>lo</sub> CCCC<sub>hi</sub> AAAA BBBB   | 52c  | *`exop`* vAAAA, vBBBB, type@CCCCCCCC<br>*`exop`* vAAAA, vBBBB, field@CCCCCCCC                                                                                                                                                                                                                                                                                          | `instance-of/jumbo`<br>`iget-object/jumbo`                                                      |
 | NN\|ff BBBB<sub>lo</sub> BBBB<sub>hi</sub> AAAA CCCC   | 5rc  | *`exop`* {vCCCC .. vNNNN}, meth@BBBBBBBB<br>*`exop`* {vCCCC .. vNNNN}, type@BBBBBBBB<br>*where `NNNN = CCCC+AAAA-1`, that is `A` determines the count `0..65535`, and `C` determines the first register*                                                                                                                                                               | `invoke-virtual/jumbo`<br>`filled-new-array/jumbo`                                              |
-| A\|G\|*op* BBBB F\|E\|D\|C HHHH                        | 45cc | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, meth@BBBB, proto@HHHH<br>*[`A=4`] `op`* {vC, vD, vE, vF}, meth@BBBB, proto@HHHH<br>*[`A=3`] `op`* {vC, vD, vE}, meth@BBBB, proto@HHHH<br>*[`A=2`] `op`* {vC, vD}, meth@BBBB, proto@HHHH<br>*[`A=1`] `op`* {vC}, meth@BBBB, proto@HHHH                                                                                             | invoke-polymorphic                                                                              |
-| AA\|*op* BBBB CCCC HHHH                                | 4rcc | *`op`* {vCCCC .. vNNNN}, meth@BBBB, proto@HHHH<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                         | invoke-polymorphic/range                                                                        |
-| AA\|*op* BBBB<sub>lo</sub> BBBB BBBB BBBB<sub>hi</sub> | 51l  | *`op`* vAA, #+BBBBBBBBBBBBBBBB                                                                                                                                                                                                                                                                                                                                         | const-wide                                                                                      |
+| A\|G\|*op* BBBB F\|E\|D\|C HHHH                        | 45cc | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, meth@BBBB, proto@HHHH<br>*[`A=4`] `op`* {vC, vD, vE, vF}, meth@BBBB, proto@HHHH<br>*[`A=3`] `op`* {vC, vD, vE}, meth@BBBB, proto@HHHH<br>*[`A=2`] `op`* {vC, vD}, meth@BBBB, proto@HHHH<br>*[`A=1`] `op`* {vC}, meth@BBBB, proto@HHHH                                                                                             | `invoke-polymorphic`                                                                            |
+| AA\|*op* BBBB CCCC HHHH                                | 4rcc | *`op`* {vCCCC .. vNNNN}, meth@BBBB, proto@HHHH<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                         | `invoke-polymorphic/range`                                                                      |
+| AA\|*op* BBBB<sub>lo</sub> BBBB BBBB BBBB<sub>hi</sub> | 51l  | *`op`* vAA, #+BBBBBBBBBBBBBBBB                                                                                                                                                                                                                                                                                                                                         | `const-wide`                                                                                    |
 
 ## Format 10x (All API)
 
-`ØØ|op` — one code unit: the opcode alone, with every other bit zero.
+`ØØ|op` – one code unit: the opcode alone, with every other bit zero.
 
 ## Format 12x (All API)
 
-`B|A|op` — one code unit: the opcode plus two 4-bit register fields, `A` and `B`, each in the range
-`v0`—`v15`.
+`B|A|op` – one code unit: the opcode plus two 4-bit register fields, `A` and `B`, each in the range
+`v0`–`v15`.
 
 ## Format 11n (All API)
 
-`B|A|op` — one code unit: a 4-bit register field `A` (`v0`—`v15`) and a 4-bit signed literal `B`,
+`B|A|op` – one code unit: a 4-bit register field `A` (`v0`–`v15`) and a 4-bit signed literal `B`,
 sign-extended to 32 bits.
 
 ## Format 11p (API m3, m5)
 
-`B|A|op` — one code unit: a 4-bit register field `A` (`v0`—`v15`) and a 4-bit index `B` into a fixed
+`B|A|op` – one code unit: a 4-bit register field `A` (`v0`–`v15`) and a 4-bit index `B` into a fixed
 table of sixteen predefined constants. The table holds each value in 32-bit (IEEE 754 single)
 and 64-bit (IEEE 754 double) form:
 
@@ -198,134 +199,134 @@ and 64-bit (IEEE 754 double) form:
 
 ## Format 11x (All API)
 
-`AA|op` — one code unit: the opcode plus one 8-bit register field `A` (`v0`—`v255`).
+`AA|op` – one code unit: the opcode plus one 8-bit register field `A` (`v0`–`v255`).
 
 ## Format 10t (All API)
 
-`AA|op` — one code unit: the opcode plus an 8-bit signed branch offset in code units, relative to
+`AA|op` – one code unit: the opcode plus an 8-bit signed branch offset in code units, relative to
 the address of the instruction. The offset must not be `0`.
 
 ## Format 20t (API 1+)
 
-`ØØ|op` `AAAA` — two code units: the opcode and a 16-bit signed branch offset in code units,
+`ØØ|op` `AAAA` – two code units: the opcode and a 16-bit signed branch offset in code units,
 relative to the address of the instruction. The offset must not be `0`.
 
 ## Format 20t (API m3, m5)
 
-`AA`<sub>hi</sub>`|op` `AAAA`<sub>lo</sub> — two code units: the high eight bits of a 24-bit signed
+`AA`<sub>hi</sub>`|op` `AAAA`<sub>lo</sub> – two code units: the high eight bits of a 24-bit signed
 branch offset in the high byte of the first unit alongside the opcode, and the offset's low 16 bits
 in the second unit. The offset is in code units, relative to the address of the instruction, and
 must fit in 24 signed bits.
 
 Dex `009` / `013` only form of 20t.
 
-## Format 20bc (Dalvik-only, API 5—20)
+## Format 20bc (Dalvik-only, API 5–20)
 
-`AA|op` `BBBB` — two code units: a 6-bit verification-failure code and a 2-bit reference kind in
-`AA` (failure code in bits 0—5, kind in bits 6—7: `0` class, `1` field, `2` method), then the 16-bit
+`AA|op` `BBBB` – two code units: a 6-bit verification-failure code and a 2-bit reference kind in
+`AA` (failure code in bits 0–5, kind in bits 6–7: `0` class, `1` field, `2` method), then the 16-bit
 index of the reference whose handling failed.
 
 ## Format 22x (All API)
 
-`AA|op` `BBBB` — two code units: an 8-bit register field `A` (`v0`—`v255`) and a 16-bit register
-field `B` (`v0`—`v65535`).
+`AA|op` `BBBB` – two code units: an 8-bit register field `A` (`v0`–`v255`) and a 16-bit register
+field `B` (`v0`–`v65535`).
 
 ## Format 21t (All API)
 
-`AA|op` `BBBB` — two code units: an 8-bit register field (`v0`—`v255`) and a 16-bit signed branch
+`AA|op` `BBBB` – two code units: an 8-bit register field (`v0`–`v255`) and a 16-bit signed branch
 offset. The offset must not be `0`.
 
 ## Format 21s (All API)
 
-`AA|op` `BBBB` — two code units: an 8-bit register field and a 16-bit signed literal, sign-extended
+`AA|op` `BBBB` – two code units: an 8-bit register field and a 16-bit signed literal, sign-extended
 to 32 bits.
 
 ## Format 21h (API 1+)
 
-`AA|op` `BBBB` — two code units: an 8-bit register field and the high-order 16 signed bits of a
+`AA|op` `BBBB` – two code units: an 8-bit register field and the high-order 16 signed bits of a
 literal whose low-order 16 bits (32-bit value) or 48 bits (64-bit value) are all `0`.
 
 ## Format 21c (All API)
 
-`AA|op` `BBBB` — two code units: an 8-bit register field and a 16-bit constant pool index `B`.
+`AA|op` `BBBB` – two code units: an 8-bit register field and a 16-bit constant pool index `B`.
 
 ## Format 23x (All API)
 
-`AA|op` `CC|BB` — two code units: an 8-bit register field, then two more 8-bit register fields in
-the second unit (`B` in its low byte, `C` in its high byte). All three are in `v0`—`v255`.
+`AA|op` `CC|BB` – two code units: an 8-bit register field, then two more 8-bit register fields in
+the second unit (`B` in its low byte, `C` in its high byte). All three are in `v0`–`v255`.
 
 ## Format 22b (All API)
 
-`AA|op` `CC|BB` — two code units: an 8-bit destination register, then an 8-bit source register in
+`AA|op` `CC|BB` – two code units: an 8-bit destination register, then an 8-bit source register in
 the low byte of the second unit and an 8-bit signed literal in its high byte.
 
 ## Format 22t (All API)
 
-`B|A|op` `CCCC` — two code units: two 4-bit register fields (`v0`—`v15`) and a 16-bit signed branch
+`B|A|op` `CCCC` – two code units: two 4-bit register fields (`v0`–`v15`) and a 16-bit signed branch
 offset. The offset must not be `0`.
 
 ## Format 22s (All API)
 
-`B|A|op` `CCCC` — two code units: two 4-bit register fields and a 16-bit signed literal.
+`B|A|op` `CCCC` – two code units: two 4-bit register fields and a 16-bit signed literal.
 
 ## Format 22c (All API)
 
-`B|A|op` `CCCC` — two code units: two 4-bit register fields and a 16-bit constant pool index `C`.
+`B|A|op` `CCCC` – two code units: two 4-bit register fields and a 16-bit constant pool index `C`.
 
-## Format 22cs (API m3, m5, 1—30)
+## Format 22cs (API m3, m5, 1–30)
 
-`B|A|op` `CCCC` — the `22c` layout with `CCCC` holding the byte offset of an instance field from the
+`B|A|op` `CCCC` – the `22c` layout with `CCCC` holding the byte offset of an instance field from the
 start of the object instead of a field index. The offset must fit 16 bits.
 
-## Format 25x (API 24—25)
+## Format 25x (API 24–25)
 
-`G|B|op` `F|E|D|C` — two code units: a 4-bit argument-word count `B` (`0`—`4`), the closure register
-`C` and up to four argument registers `D` .. `G`, all in `v0`—`v15`. The closure occupies a register
+`G|B|op` `F|E|D|C` – two code units: a 4-bit argument-word count `B` (`0`–`4`), the closure register
+`C` and up to four argument registers `D` .. `G`, all in `v0`–`v15`. The closure occupies a register
 pair and is not counted by `B`.
 
 ## Format 30t (API 1+)
 
-`ØØ|op` `AAAA`<sub>lo</sub> `AAAA`<sub>hi</sub> — three code units: the opcode and a 32-bit signed
+`ØØ|op` `AAAA`<sub>lo</sub> `AAAA`<sub>hi</sub> – three code units: the opcode and a 32-bit signed
 branch offset, low-order unit first.
 
 ## Format 32x (All API)
 
-`ØØ|op` `AAAA` `BBBB` — three code units: the opcode and two 16-bit register fields (`v0`—`v65535`).
+`ØØ|op` `AAAA` `BBBB` – three code units: the opcode and two 16-bit register fields (`v0`–`v65535`).
 
 ## Format 31i (All API)
 
-`AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> — three code units: an 8-bit register field and a
+`AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> – three code units: an 8-bit register field and a
 32-bit literal, low-order unit first.
 
 ## Format 31t (API 1+)
 
-`AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> — three code units: an 8-bit register field and a
+`AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> – three code units: an 8-bit register field and a
 32-bit signed branch offset, low-order unit first.
 
 ## Format 31c (API 1+)
 
-`AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> — three code units: an 8-bit register field and a
+`AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> – three code units: an 8-bit register field and a
 32-bit constant pool index `B`, low-order unit first.
 
-## Format 32s (API 11—15)
+## Format 32s (API 11–15)
 
-`NN|ff` `BB|AA` `CCCC` — three code units: the `exop` field, then two 8-bit registers in the second
-unit (`A` in its low byte, `B` in its high byte, both `v0`—`v255`) and a signed 16-bit literal `C`.
+`NN|ff` `BB|AA` `CCCC` – three code units: the `exop` field, then two 8-bit registers in the second
+unit (`A` in its low byte, `B` in its high byte, both `v0`–`v255`) and a signed 16-bit literal `C`.
 
 No instruction uses this format.
 
-## Format 33x (API 11—15)
+## Format 33x (API 11–15)
 
-`NN|ff` `BB|AA` `CCCC` — three code units: the `exop` field, then two 8-bit registers in the second
-unit (`A` in its low byte, `B` in its high byte, both `v0`—`v255`) and a 16-bit register `C`
-(`v0`—`v65535`).
+`NN|ff` `BB|AA` `CCCC` – three code units: the `exop` field, then two 8-bit registers in the second
+unit (`A` in its low byte, `B` in its high byte, both `v0`–`v255`) and a 16-bit register `C`
+(`v0`–`v65535`).
 
 No instruction uses this format.
 
 ## Format 34c (API m3, m5)
 
-`AA|op` `BBBB` `F|E|D|C` — three code units: an 8-bit argument-word count `A` (`0`—`4`), 16-bit
-constant pool index `B`, and four 4-bit argument registers `C` .. `F` (`v0`—`v15`, `C` in the lowest
+`AA|op` `BBBB` `F|E|D|C` – three code units: an 8-bit argument-word count `A` (`0`–`4`), 16-bit
+constant pool index `B`, and four 4-bit argument registers `C` .. `F` (`v0`–`v15`, `C` in the lowest
 nibble). A wide argument takes two consecutive registers, so the count is the number of argument
 words; no more than four argument words fit.
 
@@ -340,21 +341,21 @@ The `34c` layout with `BBBB` holding a vtable index.
 
 ## Format 35c (API 1+)
 
-`A|G|op` `BBBB` `F|E|D|C` — three code units: a 4-bit argument-word count `A` (`0`—`5`), a 16-bit
+`A|G|op` `BBBB` `F|E|D|C` – three code units: a 4-bit argument-word count `A` (`0`–`5`), a 16-bit
 constant pool index `B`, and the argument registers in `C` .. `G`
-(`v0`—`v15`, `C` in the lowest nibble). A wide argument takes two consecutive registers, so the
+(`v0`–`v15`, `C` in the lowest nibble). A wide argument takes two consecutive registers, so the
 count is the number of argument words.
 
-## Format 35ms (API 1—30)
+## Format 35ms (API 1–30)
 
 The `35c` layout with `BBBB` holding a vtable index.
 
-## Format 35mi (Dalvik-only, API 1—20)
+## Format 35mi (Dalvik-only, API 1–20)
 
 The `35c` layout with `BBBB` indexing the inline-method table; `A` counts at most four argument
 words.
 
-## Format 35fs (API 1—10)
+## Format 35fs (API 1–10)
 
 The `35c` layout with `BBBB` indexing statically linked interface constants.
 
@@ -362,68 +363,68 @@ No instruction uses this format.
 
 ## Format 3rc (All API)
 
-`AA|op` `BBBB` `CCCC` — three code units: an 8-bit argument-word count `A` (`0`—`255`), a 16-bit
-constant pool index `B` and the 16-bit first argument register `C` (`v0`—`v65535`); the arguments
+`AA|op` `BBBB` `CCCC` – three code units: an 8-bit argument-word count `A` (`0`–`255`), a 16-bit
+constant pool index `B` and the 16-bit first argument register `C` (`v0`–`v65535`); the arguments
 occupy the consecutive registers `C` .. `C+A-1`.
 
-## Format 3rms (API m3, m5, 1—30)
+## Format 3rms (API m3, m5, 1–30)
 
 The `3rc` layout with `BBBB` holding a vtable index.
 
-## Format 3rmi (Dalvik-only, API 8—20)
+## Format 3rmi (Dalvik-only, API 8–20)
 
 The `3rc` layout with `BBBB` indexing the inline-method table; `A` counts at most four argument
 words.
 
-## Format 3rfs (API 1—10)
+## Format 3rfs (API 1–10)
 
 The `3rc` layout with `BBBB` indexing statically linked interface constants.
 
 No instruction uses this format.
 
-## Format 40sc (API 14—15)
+## Format 40sc (API 14–15)
 
-`NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` — four code units: the `exop` field, a 32-bit
-reference index in code units 1—2 (low-order unit first), then a 16-bit field holding the 6-bit
+`NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` – four code units: the `exop` field, a 32-bit
+reference index in code units 1–2 (low-order unit first), then a 16-bit field holding the 6-bit
 failure code and 2-bit reference kind of format `20bc` in its low byte, with its high byte zero.
 
-## Format 41c (API 11—15)
+## Format 41c (API 11–15)
 
-`NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` — four code units: the `exop` field, a 32-bit
+`NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` – four code units: the `exop` field, a 32-bit
 constant pool index `B`, low-order unit first and a 16-bit register field `AAAA`
-(`v0`—`v65535`).
+(`v0`–`v65535`).
 
-Used only by the expanded instructions of dalvik API 14—15.
+Used only by the expanded instructions of dalvik API 14–15.
 
-## Format 52c (API 11—15)
+## Format 52c (API 11–15)
 
-`NN|ff` `CCCC`<sub>lo</sub> `CCCC`<sub>hi</sub> `AAAA` `BBBB` — five code units: the `exop` field, a
-32-bit constant pool index `C`, low-order unit first, then the register fields `AAAA` (`v0`—
+`NN|ff` `CCCC`<sub>lo</sub> `CCCC`<sub>hi</sub> `AAAA` `BBBB` – five code units: the `exop` field, a
+32-bit constant pool index `C`, low-order unit first, then the register fields `AAAA` (`v0`–
 `v65535`) and
-`BBBB` (`v0`—`v65535`).
+`BBBB` (`v0`–`v65535`).
 
-Used only by the expanded instructions of dalvik API 14—15.
+Used only by the expanded instructions of dalvik API 14–15.
 
-## Format 5rc (API 11—15)
+## Format 5rc (API 11–15)
 
-`NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` `CCCC` — five code units: the `exop` field, a
+`NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` `CCCC` – five code units: the `exop` field, a
 32-bit constant pool index `B`, low-order unit first, a 16-bit argument-word count `AAAA` and the
-16-bit first argument register `CCCC` (`v0`—`v65535`); the arguments occupy `CCCC` .. `CCCC+AAAA-1`.
+16-bit first argument register `CCCC` (`v0`–`v65535`); the arguments occupy `CCCC` .. `CCCC+AAAA-1`.
 
-Used only by the expanded instructions of dalvik API 14—15.
+Used only by the expanded instructions of dalvik API 14–15.
 
 ## Format 45cc (API 26+)
 
-`A|G|op` `BBBB` `F|E|D|C` `HHHH` — four code units: a 4-bit argument-word count, a 16-bit method
+`A|G|op` `BBBB` `F|E|D|C` `HHHH` – four code units: a 4-bit argument-word count, a 16-bit method
 index, the argument registers `C` .. `G` and a 16-bit prototype index.
 
 ## Format 4rcc (API 26+)
 
-`AA|op` `BBBB` `CCCC` `HHHH` — four code units: an 8-bit argument-word count, a 16-bit method index,
+`AA|op` `BBBB` `CCCC` `HHHH` – four code units: an 8-bit argument-word count, a 16-bit method index,
 the 16-bit first argument register and a 16-bit prototype index; the arguments occupy
 `CCCC` .. `CCCC+AA-1`.
 
 ## Format 51l (All API)
 
-`AA|op` `BBBB`<sub>lo</sub> `BBBB` `BBBB` `BBBB`<sub>hi</sub> — five code units: an 8-bit register
+`AA|op` `BBBB`<sub>lo</sub> `BBBB` `BBBB` `BBBB`<sub>hi</sub> – five code units: an 8-bit register
 field and a 64-bit literal, low-order unit first.

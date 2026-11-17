@@ -4,7 +4,7 @@ This document specifies the layout and contents of `.dex` files, which hold a se
 definitions and their associated adjunct data.
 
 Two container variants are specified. The standard container, defined by format versions `035` and
-later, is one flat file. The compact container — compact dex, `cdex` — keeps the wire format of
+later, is one flat file. The compact container – compact dex, `cdex` – keeps the wire format of
 every item and the sorting and uniqueness rules of the id and definition tables, and changes only
 the container: it splits the file into a main section and a separately placed data section with a
 different offset base for the items that live there, enlarges the header, packs the code item header
@@ -38,8 +38,8 @@ The instruction set and its encodings are specified by the companion documents
 
 ### LEB128
 
-LEB128 ("**L**ittle- **E**ndian **B**ase **128**") is a variable-length encoding for arbitrary
-signed or unsigned integer quantities. The format was borrowed from the
+LEB128 ("**L**ittle **E**ndian **B**ase **128**") is a variable-length encoding for arbitrary signed
+or unsigned integer quantities. The format was borrowed from the
 [DWARF3](http://dwarfstd.org/Dwarf3Std.php) specification. In a `.dex` file, LEB128 is only ever
 used to encode 32-bit quantities.
 
@@ -51,10 +51,10 @@ and so on. In the case of a signed LEB128 (`sleb128`), the most significant payl
 byte in the sequence is sign-extended to produce the final value. In the unsigned case (`uleb128`),
 any bits not explicitly represented are interpreted as `0`.
 
-| Bitwise diagram of a two-byte LEB128 value |        |        |        |        |        |        |        |             |         |         |         |         |        |        |        |
-|--------------------------------------------|--------|--------|--------|--------|--------|--------|--------|-------------|---------|---------|---------|---------|--------|--------|--------|
-| First byte                                 |        |        |        |        |        |        |        | Second byte |         |         |         |         |        |        |        |
-| `1`                                        | bit~6~ | bit~5~ | bit~4~ | bit~3~ | bit~2~ | bit~1~ | bit~0~ | `0`         | bit~13~ | bit~12~ | bit~11~ | bit~10~ | bit~9~ | bit~8~ | bit~7~ |
+| Bitwise diagram of a two-byte LEB128 value |                 |                 |                 |                 |                 |                 |                 |             |                  |                  |                  |                  |                 |                 |                 |
+|--------------------------------------------|-----------------|-----------------|-----------------|-----------------|-----------------|-----------------|-----------------|-------------|------------------|------------------|------------------|------------------|-----------------|-----------------|-----------------|
+| First byte                                 |                 |                 |                 |                 |                 |                 |                 | Second byte |                  |                  |                  |                  |                 |                 |                 |
+| `1`                                        | bit<sub>6</sub> | bit<sub>5</sub> | bit<sub>4</sub> | bit<sub>3</sub> | bit<sub>2</sub> | bit<sub>1</sub> | bit<sub>0</sub> | `0`         | bit<sub>13</sub> | bit<sub>12</sub> | bit<sub>11</sub> | bit<sub>10</sub> | bit<sub>9</sub> | bit<sub>8</sub> | bit<sub>7</sub> |
 
 The variant `uleb128p1` is used to represent a signed value, where the representation is of the
 value *plus one* encoded as a `uleb128`. This makes the encoding of `-1` (alternatively thought of
@@ -212,7 +212,8 @@ from; it is not recomputed from the compact contents.
 #### Embedded in header_item
 
 The constant array/string `DEX_FILE_MAGIC` is the list of bytes that must appear at the beginning of
-a `.dex` file in order for it to be recognized as such. The value intentionally contains a newline (`"\n"` or `0x0a`) and a null byte (`"\0"` or `0x00`) in order to help in the detection of certain
+a `.dex` file in order for it to be recognized as such. The value intentionally contains a newline
+(`"\n"` or `0x0a`) and a null byte (`"\0"` or `0x00`) in order to help in the detection of certain
 forms of corruption. The value also encodes a format version number as three decimal digits, which
 is expected to increase monotonically over time as the format evolves.
 
@@ -239,20 +240,21 @@ Android 7.0. Prior to version `037`, most versions of Android used version `035`
 only difference between versions `035` and `037` is the addition of default methods and the
 adjustment of the `invoke` bytecode.
 
-**Note:** Version `036` existed in Android 4.0--4.4W (API 14--20) and is specific to the dalvik
+**Note:** Version `036` existed in Android 4.0–4.4W (API 14–20) and is specific to the dalvik
 runtime; ART, shipped from Android 4.4 (API 19), rejects it. The version was planned as a public
-format whose expanded opcodes allowed more than 65535 elements in some sections. In Android 4.1 (API
-
-16) all expanded opcodes were removed, and in API 16--20 the format is completely identical to
-    `035`.
+format whose expanded opcodes allowed more than 65535 elements in some sections. In Android 4.1
+\(API 16\) all expanded opcodes were removed, and in API 16–20 the format is completely identical to
+`035`.
 
 **Note:** At least a couple earlier versions of the format have been used in widely available public
-software releases. For example, version `009` was used for the M3 releases of the Android platform (November--December 2007), and version `013` was used for the M5 releases of the Android platform (February--March 2008). In several respects, these earlier versions of the format differ
+software releases. For example, version `009` was used for the M3 releases of the Android platform
+(November–December 2007), and version `013` was used for the M5 releases of the Android platform
+(February–March 2008). In several respects, these earlier versions of the format differ
 significantly from the version described in this document; they are specified here, under "Legacy
 file layout" and the legacy items below.
 
 **Note:** Compact dex is an internal ART format that exists from Android 9 through Android 15 (API
-28--35).
+28–35).
 
 #### Embedded in legacy header_item
 
@@ -1146,7 +1148,7 @@ The parameter types of any additional arguments are determined from their consta
 
 #### Appears in the word_data section
 
-#### Alignment: max (4, element alignment)
+#### Alignment: max\(4, element alignment\)
 
 #### Size: 4 + (count × element size) bytes, plus optional padding
 
@@ -1302,13 +1304,13 @@ handler data after the instructions.
 
 Bit layout of `fields_`:
 
-| bit~15~                 | bit~14~          | bit~13~          | bit~12~          | bit~11~           | bit~10~    | bit~9~     | bit~8~     | bit~7~             | bit~6~      | bit~5~      | bit~4~      | bit~3~              | bit~2~       | bit~1~       | bit~0~       |
-|-------------------------|------------------|------------------|------------------|-------------------|------------|------------|------------|--------------------|-------------|-------------|-------------|---------------------|--------------|--------------|--------------|
-| `registers_size` (high) | `registers_size` | `registers_size` | `registers_size` | `ins_size` (high) | `ins_size` | `ins_size` | `ins_size` | `outs_size` (high) | `outs_size` | `outs_size` | `outs_size` | `tries_size` (high) | `tries_size` | `tries_size` | `tries_size` |
+| bit<sub>15</sub>        | bit<sub>14</sub> | bit<sub>13</sub> | bit<sub>12</sub> | bit<sub>11</sub>  | bit<sub>10</sub> | bit<sub>9</sub> | bit<sub>8</sub> | bit<sub>7</sub>    | bit<sub>6</sub> | bit<sub>5</sub> | bit<sub>4</sub> | bit<sub>3</sub>     | bit<sub>2</sub> | bit<sub>1</sub> | bit<sub>0</sub> |
+|-------------------------|------------------|------------------|------------------|-------------------|------------------|-----------------|-----------------|--------------------|-----------------|-----------------|-----------------|---------------------|-----------------|-----------------|-----------------|
+| `registers_size` (high) | `registers_size` | `registers_size` | `registers_size` | `ins_size` (high) | `ins_size`       | `ins_size`      | `ins_size`      | `outs_size` (high) | `outs_size`     | `outs_size`     | `outs_size`     | `tries_size` (high) | `tries_size`    | `tries_size`    | `tries_size`    |
 
 Bit layout of `insns_count_and_flags_`:
 
-| bit~15~                          | ... | bit~5~             | bit~4~                        | bit~3~                  | bit~2~                 | bit~1~                | bit~0~                      |
+| bit<sub>15</sub>                 | ... | bit<sub>5</sub>    | bit<sub>4</sub>               | bit<sub>3</sub>         | bit<sub>2</sub>        | bit<sub>1</sub>       | bit<sub>0</sub>             |
 |----------------------------------|-----|--------------------|-------------------------------|-------------------------|------------------------|-----------------------|-----------------------------|
 | `insns_size` (low 11 bits, high) | ... | `insns_size` (low) | preheader: `insns_size`, high | preheader: `tries_size` | preheader: `outs_size` | preheader: `ins_size` | preheader: `registers_size` |
 
@@ -1634,7 +1636,8 @@ and `header.debug_info_base` is the smallest non-zero offset in the table. The p
 blocks and of the lookup array are not fixed relative to each other:
 `debug_info_offsets_table_offset` locates the lookup array wherever the table writes it.
 
-To look up method `m`, read `lookup[m / 16]`, seek to that block, test bit `m % 16` of its bitmask (bit clear yields offset `0`), decode the number of `uleb128` values equal to the count of set bits
+To look up method `m`, read `lookup[m / 16]`, seek to that block, test bit `m % 16` of its bitmask
+(bit clear yields offset `0`), decode the number of `uleb128` values equal to the count of set bits
 at or below that bit, and accumulate their deltas onto `header.debug_info_base`.
 
 Because the table has exactly one entry per method index, the format cannot carry different debug
@@ -1861,9 +1864,9 @@ No offset in the file points to this item: `annotations_off` of every `legacy cl
 
 ### legacy annotation_set_item
 
-#### Referenced from `legacy annotations_directory_item`, `legacy field_annotations_item`,
+#### Referenced from `legacy annotations_directory_item`\, `legacy field_annotations_item`\,
 
-`legacy method_annotations_item`, and `legacy annotation_set_ref_item`
+`legacy method_annotations_item`\, and `legacy annotation_set_ref_item`
 
 #### Appears in the word_data section
 
@@ -1995,7 +1998,7 @@ A non-zero stream holds `static_fields_size` + `instance_fields_size` + `direct_
 
 The item appeared in Android 10 (API 29) as a section of version `039` files without a dex version
 bump. The restriction data itself is older: Android 9 (API 28) carries it in a simplified form
-inside the class data, also without a version bump — two bits of the `access_flags` of a member, bit
+inside the class data, also without a version bump – two bits of the `access_flags` of a member, bit
 0 as an inversion of the visibility flags and bit 1 at `0x20` (at `0x200` for a `native`
 method), which select `whitelist` (`0`), light greylist (`1`), dark greylist (`2`), and `blacklist`
 (`3`), the predecessors of `sdk`, `unsupported`, `max-target-o`, and `blocked`.
@@ -2009,7 +2012,7 @@ A value is the unsigned LEB128 encoding of a 32-bit word:
 | 0–3  | restriction list    | `0x0f` | one of the eight values below                       |
 | 4    | `core-platform-api` | `0x10` | the member belongs to the core platform API surface |
 | 5    | `test-api`          | `0x20` | the member belongs to the test API surface          |
-| 6–31 | —                   | —      | reserved                                            |
+| 6–31 | –                   | –      | reserved                                            |
 
 | Value | Former name    | Meaning                                                                 |
 |-------|----------------|-------------------------------------------------------------------------|
@@ -2024,7 +2027,8 @@ A value is the unsigned LEB128 encoding of a 32-bit word:
 
 list fields `0x8`–`0xE` are unassigned and `0xF` is invalid.
 
-v1 (up to Android 11 / API 30): three-bit list, `core-platform-api` = `0x8`, `test-api` = `0x10`; v2 (from Android 12 / API 31): four-bit list, `core-platform-api` = `0x10`, `test-api` = `0x20`.
+v1 (up to Android 11 / API 30): three-bit list, `core-platform-api` = `0x8`, `test-api` = `0x10`; v2
+(from Android 12 / API 31): four-bit list, `core-platform-api` = `0x10`, `test-api` = `0x20`.
 
 ## System annotations
 
@@ -2032,32 +2036,61 @@ System annotations are used to represent various pieces of reflective informatio
 methods and fields). This information is generally only accessed indirectly by client (non-system)
 code.
 
-System annotations are represented in `.dex` files as annotations with visibility set to
-`VISIBILITY_SYSTEM`.
+A system annotation is an `annotation_item` whose `visibility` byte is `VISIBILITY_SYSTEM`. It is an
+ordinary `encoded_annotation` reached from the class, field, or method annotation set of an
+`annotations_directory_item`; the format has no separate section for these items and no
+`encoded_value` types of their own. There is no form for parameters: an item with this visibility in
+a parameter annotation set has no meaning, and no runtime reads one.
+
+Annotation lookup reads `VISIBILITY_RUNTIME`, so no system annotation appears in the result of
+`getAnnotations()` or `getDeclaredAnnotations()`. The runtime consumes these items to reconstruct
+the class-file model of the class, field, or method.
+
+The set spans API 1 through API 37 and every format version from `035` on: version `009` has no
+annotation structures, and version `013` records runtime visibility only.
+
+The `dalvik.annotation` package also holds members that no runtime reads as system annotations, such
+as test markers and compiler directives; those carry build or runtime visibility, and they are
+outside this section.
 
 ### dalvik.annotation.AnnotationDefault
 
-#### Appears on methods in annotation interfaces
+#### Appears on annotation interfaces
 
 An `AnnotationDefault` annotation is attached to each annotation interface which wishes to indicate
-default bindings.
+default bindings. The item sits in the class annotation set of the annotation interface rather than
+on its members, although its content is keyed by member name: the single element is a nested
+annotation of the interface's own type, whose elements name members of the interface and hold their
+defaults.
 
-| Name  | Format     | Description                                                                                                                                                                                          |
-|-------|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| value | Annotation | the default bindings for this annotation, represented as an annotation of this type. The annotation need not include all names defined by the annotation; missing names simply do not have defaults. |
+A member without a default is simply absent from the nested annotation, and an annotation interface
+without any default carries no `AnnotationDefault` item. `Method.getDefaultValue()` returns the
+element value coerced to the member's return type, or null for a member that is not present.
+
+| Name  | Format           | Description                                                                                                                                                                                       |
+|-------|------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| value | VALUE_ANNOTATION | the default bindings for the interface, represented as an annotation of this type. The annotation need not include all names defined by the interface; missing names simply do not have defaults. |
+
+Present in API 1 through API 37.
 
 ### dalvik.annotation.EnclosingClass
 
 #### Appears on classes
 
 An `EnclosingClass` annotation is attached to each class which is either defined as a member of
-another class, per se, or is anonymous but not defined within a method body (e.g., a synthetic inner
-class). Every class that has this annotation must also have an `InnerClass` annotation.
-Additionally, a class must not have both an `EnclosingClass` and an `EnclosingMethod` annotation.
+another class, or is anonymous but not defined within a method body (e.g., a synthetic inner class).
+Every class that has this annotation must also have an `InnerClass` annotation. Additionally, a
+class must not have both an `EnclosingClass` and an `EnclosingMethod` annotation.
 
-| Name  | Format | Description                                              |
-|-------|--------|----------------------------------------------------------|
-| value | Class  | the class which most closely lexically scopes this class |
+`Class.getDeclaringClass()` returns the named class, and `Class.getEnclosingClass()` uses this value
+in preference to `EnclosingMethod`. An unresolvable `value` propagates as `NoClassDefFoundError`; a
+missing annotation means that the class has no declaring class.
+
+| Name  | Format     | Description                                              |
+|-------|------------|----------------------------------------------------------|
+| value | VALUE_TYPE | the class which most closely lexically scopes this class |
+
+Present in API 1 through API 37.
 
 ### dalvik.annotation.EnclosingMethod
 
@@ -2067,9 +2100,15 @@ An `EnclosingMethod` annotation is attached to each class which is defined insid
 Every class that has this annotation must also have an `InnerClass` annotation. Additionally, a
 class must not have both an `EnclosingClass` and an `EnclosingMethod` annotation.
 
-| Name  | Format | Description                                               |
-|-------|--------|-----------------------------------------------------------|
-| value | Method | the method which most closely lexically scopes this class |
+`Class.getEnclosingMethod()` and `Class.getEnclosingConstructor()` return the resolved member only
+when it is of the requested kind, so a constructor is never reported as a method, and
+`Class.getEnclosingClass()` falls back to the declaring class of the named method.
+
+| Name  | Format       | Description                                               |
+|-------|--------------|-----------------------------------------------------------|
+| value | VALUE_METHOD | the method which most closely lexically scopes this class |
+
+Present in API 1 through API 37.
 
 ### dalvik.annotation.InnerClass
 
@@ -2079,21 +2118,37 @@ An `InnerClass` annotation is attached to each class which is defined in the lex
 another class's definition. Any class which has this annotation must also have *either* an
 `EnclosingClass` annotation *or* an `EnclosingMethod` annotation.
 
-| Name        | Format | Description                                                                                                                                                                                        |
-|-------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| name        | String | the originally declared simple name of this class (not including any package prefix). If this class is anonymous, then the name is `null`.                                                         |
-| accessFlags | int    | the originally declared access flags of the class (which may differ from the effective flags because of a mismatch between the execution models of the source language and target virtual machine) |
+The runtime takes the source-level identity of the class from it. `Class.getSimpleName()` returns
+`name` for a member or local class and the empty string when `name` is `VALUE_NULL`;
+`Class.isAnonymousClass()` is true exactly when the annotation is present with a `VALUE_NULL` name.
+`Class.getModifiers()` uses `accessFlags` in place of the class definition's flags, masked to the
+Java modifier bits, because `class_def_item.access_flags` cannot express `private`, `protected`, or
+`static` for a nested class. Whether the class is a member or a local class follows from the
+presence of `EnclosingClass` or `EnclosingMethod`.
+
+| Name        | Format       | Description                                                                                                                                                                                        |
+|-------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| name        | VALUE_STRING | the originally declared simple name of this class (not including any package prefix); `VALUE_NULL` if this class is anonymous.                                                                     |
+| accessFlags | VALUE_INT    | the originally declared access flags of the class (which may differ from the effective flags because of a mismatch between the execution models of the source language and target virtual machine) |
+
+Present in API 1 through API 37.
 
 ### dalvik.annotation.MemberClasses
 
 #### Appears on classes
 
 A `MemberClasses` annotation is attached to each class which declares member classes. (A member
-class is a direct inner class that has a name.)
+class is a direct inner class that has a name.) Anonymous classes and local classes are never
+listed.
 
-| Name  | Format  | Description                 |
-|-------|---------|-----------------------------|
-| value | Class[] | array of the member classes |
+`Class.getDeclaredClasses()` returns the array in recorded order; a missing annotation yields an
+empty array.
+
+| Name  | Format                    | Description                 |
+|-------|---------------------------|-----------------------------|
+| value | VALUE_ARRAY of VALUE_TYPE | array of the member classes |
+
+Present in API 1 through API 37.
 
 ### dalvik.annotation.MethodParameters
 
@@ -2103,18 +2158,116 @@ A `MethodParameters` annotation is optional and provides parameter metadata such
 and modifiers. It may be omitted when that metadata is not needed, and it describes only the
 individual parameters, so a constructor or method without parameters needs none.
 
-A `MethodParameters` annotation describes all formal method parameters, including those not
-explicitly or implicitly declared in source code, so its arrays may be longer than the parameter
-list of a signature and it carries no type annotation receiver parameters.
+A `MethodParameters` annotation describes all formal method parameters, including those that are not
+declared in source, so its arrays cover the full parameter list of the method prototype. The arrays
+must match the parameter list of the associated method: `method_id_item.proto_idx` →
+`proto_id_item.parameters_off` → `type_list.size` must equal `names.length` and
+`accessFlags.length`.
 
-The arrays must be the same size as the parameter list of the associated method, that is
-`method_id_item.proto_idx` → `proto_id_item.parameters_off` → `type_list.size` must equal
-`names().length` and `accessFlags().length`.
+| Name        | Format                      | Description                                                                                                                                                                                                                                                                                                           |
+|-------------|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| names       | VALUE_ARRAY of VALUE_STRING | the names of formal parameters for the associated method. The array must not be null but must be empty if there are no formal parameters. A value in the array must be `VALUE_NULL` if the formal parameter with that index has no name. A name must not be empty and must not contain `'.'`, `';'`, `'['`, or `'/'`. |
+| accessFlags | VALUE_ARRAY of VALUE_INT    | the access flags of the formal parameters for the associated method. The array must not be null but must be empty if there are no formal parameters. Each value is a bit mask of the flags below, and no other bits may be set.                                                                                       |
 
-| Name        | Format   | Description                                                                                                                                                                                                                                                                                                                                                                                                                           |
-|-------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| names       | String[] | the names of formal parameters for the associated method. The array must not be null but must be empty if there are no formal parameters. A value in the array must be null if the formal parameter with that index has no name. A name must not be empty and must not contain `'.'`, `';'`, `'['`, or `'/'`.                                                                                                                         |
-| accessFlags | int[]    | the access flags of the formal parameters for the associated method. The array must not be null but must be empty if there are no formal parameters. The value is a bit mask of `0x0010` (final: the parameter was declared final), `0x1000` (synthetic: the parameter was introduced by the compiler), and `0x8000` (mandated: the parameter is synthetic but also implied by the language specification). No other bits may be set. |
+| Flag   | Meaning                                                           |
+|--------|-------------------------------------------------------------------|
+| 0x0010 | the parameter was declared `final`                                |
+| 0x1000 | the parameter was introduced by the compiler (synthetic)          |
+| 0x8000 | the parameter is synthetic and implied by the language (mandated) |
+
+`Executable.getParameters()` builds the `Parameter` array from the two arrays.
+`Parameter.isNamePresent()` is true only when the annotation supplied the name; without the
+annotation, or for a `VALUE_NULL` name, the name is synthesized and no real parameter data is
+reported. `Parameter.getModifiers()` reports the flag mask.
+
+A length mismatch between the two arrays or against the parameter count, and any flag bit outside
+the table, fail with `MalformedParametersException`.
+
+Present in API 26 through API 37.
+
+### dalvik.annotation.NestHost
+
+#### Appears on classes
+
+A `NestHost` annotation is attached to each class that belongs to a nest. A nest is a set of classes
+which may access each other's private members at the source level, and the annotation names the
+class that hosts it. A class without this annotation is its own host.
+
+The named host is honoured only when it lists this class in its `NestMembers`; otherwise the class
+is its own host. `Class.getNestHost()` returns the resolved host, and `Class.isNestmateOf()`
+compares the hosts of the two classes. The annotation grants no access: a private member of another
+nest member is not made accessible by its presence.
+
+| Name | Format     | Description                                         |
+|------|------------|-----------------------------------------------------|
+| host | VALUE_TYPE | the class that hosts the nest this class belongs to |
+
+Present in API 34 through API 37.
+
+### dalvik.annotation.NestMembers
+
+#### Appears on classes
+
+A `NestMembers` annotation is attached to each class that hosts a nest. It lists the classes whose
+nest host is this class, in recorded order. Each listed class must name this class as its
+`NestHost`.
+
+`Class.getNestMembers()` returns this class first, followed by the listed classes that name it back
+as their host; a class that names a host which does not list it back is treated as its own host. A
+missing annotation yields an array holding only the class itself.
+
+| Name    | Format                    | Description                                                     |
+|---------|---------------------------|-----------------------------------------------------------------|
+| classes | VALUE_ARRAY of VALUE_TYPE | array of the classes that make up the nest hosted by this class |
+
+Present in API 34 through API 37.
+
+### dalvik.annotation.PermittedSubclasses
+
+#### Appears on classes
+
+A `PermittedSubclasses` annotation is attached to each sealed class and lists the classes and
+interfaces that may directly extend or implement it.
+
+`Class.getPermittedSubclasses()` returns the array, or null when the annotation is absent, and
+`Class.isSealed()` reports whether the array exists. The list records the declaration only; loading
+a subclass that is not listed is not rejected.
+
+| Name  | Format                    | Description                                                                              |
+|-------|---------------------------|------------------------------------------------------------------------------------------|
+| value | VALUE_ARRAY of VALUE_TYPE | array of the classes and interfaces permitted to directly extend or implement this class |
+
+Present in API 34 through API 37.
+
+### dalvik.annotation.Record
+
+#### Appears on classes
+
+A `Record` annotation is attached to each record class and describes its record components. A class
+is a record only when it is `final`, directly extends `java.lang.Record`, and carries exactly one
+`Record` annotation whose required elements are present and of equal length; a duplicate item, a
+missing required element, or an outer length that differs from the component count raises
+`ClassFormatError` while the class is linked.
+
+The outer length of every array equals the component count, and the inner arrays of the last two
+elements have one entry per annotation recorded for that component. A successful check sets a class
+flag, which makes `Class.isRecord()` true and lets `Class.getRecordComponents()` build the component
+objects.
+
+| Element                         | Format                                         | Required | Description                                                                                                                              |
+|---------------------------------|------------------------------------------------|----------|------------------------------------------------------------------------------------------------------------------------------------------|
+| componentNames                  | VALUE_ARRAY of VALUE_STRING                    | yes      | one name per component, in declaration order                                                                                             |
+| componentTypes                  | VALUE_ARRAY of VALUE_TYPE                      | yes      | the declared type of each component, in declaration order                                                                                |
+| componentSignatures             | VALUE_ARRAY                                    | no       | one element per component: a `VALUE_ANNOTATION` holding a `Signature` value, or `VALUE_NULL` when the component has no generic signature |
+| componentAnnotationVisibilities | VALUE_ARRAY of VALUE_ARRAY of VALUE_BYTE       | no       | for each component, the visibility byte of each recorded annotation, in order                                                            |
+| componentAnnotations            | VALUE_ARRAY of VALUE_ARRAY of VALUE_ANNOTATION | no       | for each component, the annotations of that component, in the order of its visibility bytes                                              |
+
+A `RecordComponent` reports the name, the type, the generic signature obtained by concatenating the
+nested `Signature` strings, and the annotations whose recorded visibility is `VISIBILITY_RUNTIME`.
+Build-visibility and system-visibility entries inside `componentAnnotations` are not exposed to
+application code.
+
+Present in API 34 through API 37.
 
 ### dalvik.annotation.Signature
 
@@ -2132,17 +2285,45 @@ data, and the signature is taken to be the concatenation of all the strings in t
 no rules about how to pull apart a signature into separate strings; that is entirely up to the tools
 that generate `.dex` files.
 
-| Name  | Format   | Description                                                                                       |
-|-------|----------|---------------------------------------------------------------------------------------------------|
-| value | String[] | the signature of this class or member, as an array of strings that is to be concatenated together |
+The runtime concatenates the elements and parses the result as a generic signature, which supplies
+the generic superclass, the generic interfaces, the type parameters, the generic member types, and
+the generic form of a throws clause. A missing annotation means that the element has no generic
+information, and its non-generic view remains available.
+
+| Name  | Format                      | Description                                                                                       |
+|-------|-----------------------------|---------------------------------------------------------------------------------------------------|
+| value | VALUE_ARRAY of VALUE_STRING | the signature of this class or member, as an array of strings that is to be concatenated together |
+
+Present in API 1 through API 37.
+
+### dalvik.annotation.SourceDebugExtension
+
+#### Appears on classes
+
+A `SourceDebugExtension` annotation is attached to each class that carries source debug extension
+text, a source map for languages whose source files do not correspond one-to-one with the class.
+
+Only the debugger interface consumes the text, returning the string or reporting that the class has
+none; core reflection has no accessor for it. A missing annotation means that no such text exists.
+
+| Name  | Format       | Description                                   |
+|-------|--------------|-----------------------------------------------|
+| value | VALUE_STRING | the source debug extension text of this class |
+
+Present in API 26 through API 37.
 
 ### dalvik.annotation.Throws
 
 #### Appears on methods
 
 A `Throws` annotation is attached to each method which is declared to throw one or more exception
-types.
+types. The array is in declaration order.
 
-| Name  | Format  | Description                         |
-|-------|---------|-------------------------------------|
-| value | Class[] | the array of exception types thrown |
+`Executable.getExceptionTypes()` returns the array; a missing annotation yields an empty array. A
+generic throws clause, when present, comes from `Signature` rather than from this annotation.
+
+| Name  | Format                    | Description                         |
+|-------|---------------------------|-------------------------------------|
+| value | VALUE_ARRAY of VALUE_TYPE | the array of exception types thrown |
+
+Present in API 1 through API 37.
