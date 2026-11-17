@@ -108,468 +108,323 @@ correspondence.
 
 ## Formats
 
-| Format                                                 | ID   | Syntax                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Notable Opcodes Covered                                                                         |
-|--------------------------------------------------------|------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
-| ØØ\|*op*                                               | 10x  | *`op`*                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |                                                                                                 |
-| B\|A\|*op*                                             | 12x  | *`op`* vA, vB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |                                                                                                 |
-|                                                        | 11n  | *`op`* vA, #+B                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |                                                                                                 |
-|                                                        | 11p  | *`op`* vA, #B                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `const/special`, `const-wide/special`                                                           |
-| AA\|*op*                                               | 11x  | *`op`* vAA                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |                                                                                                 |
-|                                                        | 10t  | *`op`* +AA                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `goto`                                                                                          |
-| ØØ\|*op* AAAA                                          | 20t  | *`op`* +AAAA                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `goto/16`                                                                                       |
-| AA<sub>hi</sub>\|*op* AAAA<sub>lo</sub>                | 20t  | *`op`* +AAAAAAAA                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `goto/24` (dex `009` / `013`)                                                                   |
-| AA\|*op* BBBB                                          | 20bc | *`op`* AA, kind@BBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `throw-verification-error`                                                                      |
-| AA\|*op* BBBB                                          | 22x  | *`op`* vAA, vBBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |                                                                                                 |
-|                                                        | 21t  | *`op`* vAA, +BBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |                                                                                                 |
-|                                                        | 21s  | *`op`* vAA, #+BBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |                                                                                                 |
-|                                                        | 21h  | *`op`* vAA, #+BBBB0000<br>*`op`* vAA, #+BBBB000000000000                                                                                                                                                                                                                                                                                                                                                                                                                                                           |                                                                                                 |
-|                                                        | 21c  | *`op`* vAA, type@BBBB<br>*`op`* vAA, field@BBBB<br>*`op`* vAA, method_handle@BBBB<br>*`op`* vAA, proto@BBBB<br>*`op`* vAA, string@BBBB                                                                                                                                                                                                                                                                                                                                                                             | `check-cast`<br>`sget-object`<br>`const-method-handle`<br>`const-method-type`<br>`const-string` |
-| AA\|*op* CC\|BB                                        | 23x  | *`op`* vAA, vBB, vCC                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |                                                                                                 |
-|                                                        | 22b  | *`op`* vAA, vBB, #+CC                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |                                                                                                 |
-| B\|A\|*op* CCCC                                        | 22t  | *`op`* vA, vB, +CCCC                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |                                                                                                 |
-|                                                        | 22s  | *`op`* vA, vB, #+CCCC                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |                                                                                                 |
-|                                                        | 22c  | *`op`* vA, vB, type@CCCC<br>*`op`* vA, vB, field@CCCC                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `instance-of`<br>`iget-object`                                                                  |
-|                                                        | 22cs | *`op`* vA, vB, fieldoff@CCCC                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `iget-quick`, `iput-quick`                                                                      |
-| G\|B\|*op* F\|E\|D\|C                                  | 25x  | *[`B=4`] `op`* vC, {vD, vE, vF, vG}<br>*[`B=3`] `op`* vC, {vD, vE, vF}<br>*[`B=2`] `op`* vC, {vD, vE}<br>*[`B=1`] `op`* vC, {vD}<br>*[`B=0`] `op`* vC, {}                                                                                                                                                                                                                                                                                                                                                          | `invoke-lambda`                                                                                 |
-| ØØ\|*op* AAAA<sub>lo</sub> AAAA<sub>hi</sub>           | 30t  | *`op`* +AAAAAAAA                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `goto/32`                                                                                       |
-| ØØ\|*op* AAAA BBBB                                     | 32x  | *`op`* vAAAA, vBBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |                                                                                                 |
-| AA\|*op* BBBB<sub>lo</sub> BBBB<sub>hi</sub>           | 31i  | *`op`* vAA, #+BBBBBBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |                                                                                                 |
-|                                                        | 31t  | *`op`* vAA, +BBBBBBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |                                                                                                 |
-|                                                        | 31c  | *`op`* vAA, string@BBBBBBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `const-string/jumbo`                                                                            |
-| NN\|ff BB\|AA CCCC                                     | 32s  | *`exop`* vAA, vBB, #+CCCC                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | *(unused)*                                                                                      |
-|                                                        | 33x  | *`exop`* vAA, vBB, vCCCC                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | *(unused)*                                                                                      |
-| AA\|*op* BBBB F\|E\|D\|C                               | 34c  | *[`A=4`] `op`* {vC, vD, vE, vF}, meth@BBBB<br>*[`A=4`] `op`* {vC, vD, vE, vF}, type@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, *`kind`*@BBBB<br>*[`A=2`] `op`* {vC, vD}, *`kind`*@BBBB<br>*[`A=1`] `op`* {vC}, *`kind`*@BBBB<br>*[`A=0`] `op`* {}, *`kind`*@BBBB                                                                                                                                                                                                                                                         | `invoke-virtual`<br>`filled-new-array`                                                          |
-|                                                        | 34mi | *[`A=4`] `op`* {vC, vD, vE, vF}, inline@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, inline@BBBB<br>*[`A=2`] `op`* {vC, vD}, inline@BBBB<br>*[`A=1`] `op`* {vC}, inline@BBBB<br>*[`A=0`] `op`* {}, inline@BBBB                                                                                                                                                                                                                                                                                                             | `execute-inline`                                                                                |
-|                                                        | 34ms | *[`A=4`] `op`* {vC, vD, vE, vF}, vtaboff@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, vtaboff@BBBB<br>*[`A=2`] `op`* {vC, vD}, vtaboff@BBBB<br>*[`A=1`] `op`* {vC}, vtaboff@BBBB<br>*[`A=0`] `op`* {}, vtaboff@BBBB                                                                                                                                                                                                                                                                                                        | `invoke-virtual-quick`, `invoke-super-quick`                                                    |
-| A\|G\|*op* BBBB F\|E\|D\|C                             | 35c  | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, meth@BBBB<br>*[`A=5`] `op`* {vC, vD, vE, vF, vG}, site@BBBB<br>*[`A=5`] `op`* {vC, vD, vE, vF, vG}, type@BBBB<br>*[`A=4`] `op`* {vC, vD, vE, vF}, *`kind`*@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, *`kind`*@BBBB<br>*[`A=2`] `op`* {vC, vD}, *`kind`*@BBBB<br>*[`A=1`] `op`* {vC}, *`kind`*@BBBB<br>*[`A=0`] `op`* {}, *`kind`*@BBBB<br>*The unusual choice in lettering here reflects a desire to make the count and the reference index have the same label as in format 3rc.* |                                                                                                 |
-|                                                        | 35ms | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, vtaboff@BBBB<br>*[`A=4`] `op`* {vC, vD, vE, vF}, vtaboff@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, vtaboff@BBBB<br>*[`A=2`] `op`* {vC, vD}, vtaboff@BBBB<br>*[`A=1`] `op`* {vC}, vtaboff@BBBB<br>*The unusual choice in lettering here reflects a desire to make the count and the reference index have the same label as in format 3rms.*                                                                                                                                         | `invoke-virtual-quick`, `invoke-super-quick`                                                    |
-|                                                        | 35mi | *[`A=4`] `op`* {vC, vD, vE, vF}, inline@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, inline@BBBB<br>*[`A=2`] `op`* {vC, vD}, inline@BBBB<br>*[`A=1`] `op`* {vC}, inline@BBBB<br>*[`A=0`] `op`* {}, inline@BBBB<br>*The unusual choice in lettering here reflects a desire to make the count and the reference index have the same label as in format 3rmi.*                                                                                                                                                                | `execute-inline`                                                                                |
-|                                                        | 35fs | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, iface@BBBB<br>*[`A=4`] `op`* {vC, vD, vE, vF}, iface@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, iface@BBBB<br>*[`A=2`] `op`* {vC, vD}, iface@BBBB<br>*[`A=1`] `op`* {vC}, iface@BBBB<br>*[`A=0`] `op`* {}, iface@BBBB                                                                                                                                                                                                                                                               | *(unused)*                                                                                      |
-| AA\|*op* BBBB CCCC                                     | 3rc  | *`op`* {vCCCC .. vNNNN}, meth@BBBB<br>*`op`* {vCCCC .. vNNNN}, site@BBBB<br>*`op`* {vCCCC .. vNNNN}, type@BBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                                                                                                     | `invoke-virtual/range`<br>`invoke-custom/range`<br>`filled-new-array/range`                     |
-|                                                        | 3rms | *`op`* {vCCCC .. vNNNN}, vtaboff@BBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                                                                                                                                                                              | `invoke-virtual-quick/range`, `invoke-super-quick/range`                                        |
-|                                                        | 3rmi | *`op`* {vCCCC .. vNNNN}, inline@BBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                                                                                                                                                                               | `execute-inline/range`                                                                          |
-|                                                        | 3rfs | *`op`* {vCCCC .. vNNNN}, iface@BBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                                                                                                                                                                                | *(unused)*                                                                                      |
-| NN\|ff BBBB<sub>lo</sub> BBBB<sub>hi</sub> AAAA        | 40sc | *`exop`* AAAA, kind@BBBBBBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `throw-verification-error/jumbo`                                                                |
-|                                                        | 41c  | *`exop`* vAAAA, *`kind`*@BBBBBBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `const-class/jumbo` `check-cast/jumbo` `new-instance/jumbo` `sget`/`sput` `/jumbo`              |
-|                                                        | 52c  | *`exop`* vAAAA, vBBBB, *`kind`*@CCCCCCCC                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `instance-of/jumbo` `new-array/jumbo` `iget`/`iput` `/jumbo`                                    |
-|                                                        | 5rc  | *`exop`* {vCCCC .. vNNNN}, *`kind`*@BBBBBBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                                                                                                                                                                       | `filled-new-array/jumbo` `invoke-*` `/jumbo` `invoke-object-init/jumbo`                         |
-| A\|G\|*op* BBBB F\|E\|D\|C HHHH                        | 45cc | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, meth@BBBB, proto@HHHH<br>*[`A=4`] `op`* {vC, vD, vE, vF}, meth@BBBB, proto@HHHH<br>*[`A=3`] `op`* {vC, vD, vE}, meth@BBBB, proto@HHHH<br>*[`A=2`] `op`* {vC, vD}, meth@BBBB, proto@HHHH<br>*[`A=1`] `op`* {vC}, meth@BBBB, proto@HHHH                                                                                                                                                                                                                                         | invoke-polymorphic                                                                              |
-| AA\|*op* BBBB CCCC HHHH                                | 4rcc | *`op`* {vCCCC .. vNNNN}, meth@BBBB, proto@HHHH<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                                                                                                                                                                     | invoke-polymorphic/range                                                                        |
-| AA\|*op* BBBB<sub>lo</sub> BBBB BBBB BBBB<sub>hi</sub> | 51l  | *`op`* vAA, #+BBBBBBBBBBBBBBBB                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | const-wide                                                                                      |
+| Format                                                 | ID   | Syntax                                                                                                                                                                                                                                                                                                                                                                 | Notable Opcodes Covered                                                                         |
+|--------------------------------------------------------|------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
+| ØØ\|*op*                                               | 10x  | *`op`*                                                                                                                                                                                                                                                                                                                                                                 |                                                                                                 |
+| B\|A\|*op*                                             | 12x  | *`op`* vA, vB                                                                                                                                                                                                                                                                                                                                                          |                                                                                                 |
+|                                                        | 11n  | *`op`* vA, #+B                                                                                                                                                                                                                                                                                                                                                         |                                                                                                 |
+|                                                        | 11p  | *`op`* vA, #B                                                                                                                                                                                                                                                                                                                                                          | `const/special`, `const-wide/special`                                                           |
+| AA\|*op*                                               | 11x  | *`op`* vAA                                                                                                                                                                                                                                                                                                                                                             |                                                                                                 |
+|                                                        | 10t  | *`op`* +AA                                                                                                                                                                                                                                                                                                                                                             | `goto`                                                                                          |
+| ØØ\|*op* AAAA                                          | 20t  | *`op`* +AAAA                                                                                                                                                                                                                                                                                                                                                           | `goto/16`                                                                                       |
+| AA<sub>hi</sub>\|*op* AAAA<sub>lo</sub>                | 20t  | *`op`* +AAAAAA                                                                                                                                                                                                                                                                                                                                                         | `goto/24` (dex `009` / `013`)                                                                   |
+| AA\|*op* BBBB                                          | 20bc | *`op`* AA, kind@BBBB                                                                                                                                                                                                                                                                                                                                                   | `throw-verification-error`                                                                      |
+| AA\|*op* BBBB                                          | 22x  | *`op`* vAA, vBBBB                                                                                                                                                                                                                                                                                                                                                      |                                                                                                 |
+|                                                        | 21t  | *`op`* vAA, +BBBB                                                                                                                                                                                                                                                                                                                                                      |                                                                                                 |
+|                                                        | 21s  | *`op`* vAA, #+BBBB                                                                                                                                                                                                                                                                                                                                                     |                                                                                                 |
+|                                                        | 21h  | *`op`* vAA, #+BBBB0000<br>*`op`* vAA, #+BBBB000000000000                                                                                                                                                                                                                                                                                                               |                                                                                                 |
+|                                                        | 21c  | *`op`* vAA, type@BBBB<br>*`op`* vAA, field@BBBB<br>*`op`* vAA, method_handle@BBBB<br>*`op`* vAA, proto@BBBB<br>*`op`* vAA, string@BBBB                                                                                                                                                                                                                                 | `check-cast`<br>`sget-object`<br>`const-method-handle`<br>`const-method-type`<br>`const-string` |
+| AA\|*op* CC\|BB                                        | 23x  | *`op`* vAA, vBB, vCC                                                                                                                                                                                                                                                                                                                                                   |                                                                                                 |
+|                                                        | 22b  | *`op`* vAA, vBB, #+CC                                                                                                                                                                                                                                                                                                                                                  |                                                                                                 |
+| B\|A\|*op* CCCC                                        | 22t  | *`op`* vA, vB, +CCCC                                                                                                                                                                                                                                                                                                                                                   |                                                                                                 |
+|                                                        | 22s  | *`op`* vA, vB, #+CCCC                                                                                                                                                                                                                                                                                                                                                  |                                                                                                 |
+|                                                        | 22c  | *`op`* vA, vB, type@CCCC<br>*`op`* vA, vB, field@CCCC                                                                                                                                                                                                                                                                                                                  | `instance-of`<br>`iget-object`                                                                  |
+|                                                        | 22cs | *`op`* vA, vB, fieldoff@CCCC                                                                                                                                                                                                                                                                                                                                           | `iget-quick`, `iput-quick`                                                                      |
+| G\|B\|*op* F\|E\|D\|C                                  | 25x  | *[`B=4`] `op`* vC, {vD, vE, vF, vG}<br>*[`B=3`] `op`* vC, {vD, vE, vF}<br>*[`B=2`] `op`* vC, {vD, vE}<br>*[`B=1`] `op`* vC, {vD}<br>*[`B=0`] `op`* vC, {}                                                                                                                                                                                                              | `invoke-lambda`                                                                                 |
+| ØØ\|*op* AAAA<sub>lo</sub> AAAA<sub>hi</sub>           | 30t  | *`op`* +AAAAAAAA                                                                                                                                                                                                                                                                                                                                                       | `goto/32`                                                                                       |
+| ØØ\|*op* AAAA BBBB                                     | 32x  | *`op`* vAAAA, vBBBB                                                                                                                                                                                                                                                                                                                                                    |                                                                                                 |
+| AA\|*op* BBBB<sub>lo</sub> BBBB<sub>hi</sub>           | 31i  | *`op`* vAA, #+BBBBBBBB                                                                                                                                                                                                                                                                                                                                                 |                                                                                                 |
+|                                                        | 31t  | *`op`* vAA, +BBBBBBBB                                                                                                                                                                                                                                                                                                                                                  |                                                                                                 |
+|                                                        | 31c  | *`op`* vAA, string@BBBBBBBB                                                                                                                                                                                                                                                                                                                                            | `const-string/jumbo`                                                                            |
+| NN\|ff BB\|AA CCCC                                     | 32s  | *`exop`* vAA, vBB, #+CCCC                                                                                                                                                                                                                                                                                                                                              | *(unused)*                                                                                      |
+|                                                        | 33x  | *`exop`* vAA, vBB, vCCCC                                                                                                                                                                                                                                                                                                                                               | *(unused)*                                                                                      |
+| AA\|*op* BBBB F\|E\|D\|C                               | 34c  | *[`A=4`] `op`* {vC, vD, vE, vF}, meth@BBBB<br>*[`A=4`] `op`* {vC, vD, vE, vF}, type@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, *`kind`*@BBBB<br>*[`A=2`] `op`* {vC, vD}, *`kind`*@BBBB<br>*[`A=1`] `op`* {vC}, *`kind`*@BBBB<br>*[`A=0`] `op`* {}, *`kind`*@BBBB                                                                                                             | `invoke-virtual`<br>`filled-new-array`                                                          |
+|                                                        | 34mi | *[`A=4`] `op`* {vC, vD, vE, vF}, inline@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, inline@BBBB<br>*[`A=2`] `op`* {vC, vD}, inline@BBBB<br>*[`A=1`] `op`* {vC}, inline@BBBB<br>*[`A=0`] `op`* {}, inline@BBBB                                                                                                                                                                 | `execute-inline`                                                                                |
+|                                                        | 34ms | *[`A=4`] `op`* {vC, vD, vE, vF}, vtaboff@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, vtaboff@BBBB<br>*[`A=2`] `op`* {vC, vD}, vtaboff@BBBB<br>*[`A=1`] `op`* {vC}, vtaboff@BBBB<br>*[`A=0`] `op`* {}, vtaboff@BBBB                                                                                                                                                            | `invoke-virtual-quick`, `invoke-super-quick`                                                    |
+| A\|G\|*op* BBBB F\|E\|D\|C                             | 35c  | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, meth@BBBB<br>*[`A=5`] `op`* {vC, vD, vE, vF, vG}, site@BBBB<br>*[`A=5`] `op`* {vC, vD, vE, vF, vG}, type@BBBB<br>*[`A=4`] `op`* {vC, vD, vE, vF}, *`kind`*@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, *`kind`*@BBBB<br>*[`A=2`] `op`* {vC, vD}, *`kind`*@BBBB<br>*[`A=1`] `op`* {vC}, *`kind`*@BBBB<br>*[`A=0`] `op`* {}, *`kind`*@BBBB | `invoke-virtual`<br>`invoke-custom`<br>`filled-new-array`                                       |
+|                                                        | 35ms | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, vtaboff@BBBB<br>*[`A=4`] `op`* {vC, vD, vE, vF}, vtaboff@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, vtaboff@BBBB<br>*[`A=2`] `op`* {vC, vD}, vtaboff@BBBB<br>*[`A=1`] `op`* {vC}, vtaboff@BBBB                                                                                                                                          | `invoke-virtual-quick`, `invoke-super-quick`                                                    |
+|                                                        | 35mi | *[`A=4`] `op`* {vC, vD, vE, vF}, inline@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, inline@BBBB<br>*[`A=2`] `op`* {vC, vD}, inline@BBBB<br>*[`A=1`] `op`* {vC}, inline@BBBB<br>*[`A=0`] `op`* {}, inline@BBBB                                                                                                                                                                 | `execute-inline`                                                                                |
+|                                                        | 35fs | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, iface@BBBB<br>*[`A=4`] `op`* {vC, vD, vE, vF}, iface@BBBB<br>*[`A=3`] `op`* {vC, vD, vE}, iface@BBBB<br>*[`A=2`] `op`* {vC, vD}, iface@BBBB<br>*[`A=1`] `op`* {vC}, iface@BBBB                                                                                                                                                    | *(unused)*                                                                                      |
+| AA\|*op* BBBB CCCC                                     | 3rc  | *`op`* {vCCCC .. vNNNN}, meth@BBBB<br>*`op`* {vCCCC .. vNNNN}, site@BBBB<br>*`op`* {vCCCC .. vNNNN}, type@BBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                         | `invoke-virtual/range`<br>`invoke-custom/range`<br>`filled-new-array/range`                     |
+|                                                        | 3rms | *`op`* {vCCCC .. vNNNN}, vtaboff@BBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                                  | `invoke-virtual-quick/range`, `invoke-super-quick/range`                                        |
+|                                                        | 3rmi | *`op`* {vCCCC .. vNNNN}, inline@BBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                                   | `execute-inline/range`                                                                          |
+|                                                        | 3rfs | *`op`* {vCCCC .. vNNNN}, iface@BBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                                    | *(unused)*                                                                                      |
+| NN\|ff BBBB<sub>lo</sub> BBBB<sub>hi</sub> AAAA        | 40sc | *`exop`* AAAA, kind@BBBBBBBB                                                                                                                                                                                                                                                                                                                                           | `throw-verification-error/jumbo`                                                                |
+|                                                        | 41c  | *`exop`* vAAAA, type@BBBBBBBB<br>*`exop`* vAAAA, field@BBBBBBBB                                                                                                                                                                                                                                                                                                        | `const-class/jumbo`<br>`sget-object/jumbo`                                                      |
+|                                                        | 52c  | *`exop`* vAAAA, vBBBB, type@CCCCCCCC<br>*`exop`* vAAAA, vBBBB, field@CCCCCCCC                                                                                                                                                                                                                                                                                          | `instance-of/jumbo`<br>`iget-object/jumbo`                                                      |
+|                                                        | 5rc  | *`exop`* {vCCCC .. vNNNN}, meth@BBBBBBBB<br>*`exop`* {vCCCC .. vNNNN}, type@BBBBBBBB<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                   | `invoke-virtual/jumbo`<br>`filled-new-array/jumbo`                                              |
+| A\|G\|*op* BBBB F\|E\|D\|C HHHH                        | 45cc | *[`A=5`] `op`* {vC, vD, vE, vF, vG}, meth@BBBB, proto@HHHH<br>*[`A=4`] `op`* {vC, vD, vE, vF}, meth@BBBB, proto@HHHH<br>*[`A=3`] `op`* {vC, vD, vE}, meth@BBBB, proto@HHHH<br>*[`A=2`] `op`* {vC, vD}, meth@BBBB, proto@HHHH<br>*[`A=1`] `op`* {vC}, meth@BBBB, proto@HHHH                                                                                             | invoke-polymorphic                                                                              |
+| AA\|*op* BBBB CCCC HHHH                                | 4rcc | *`op`* {vCCCC .. vNNNN}, meth@BBBB, proto@HHHH<br>*where `NNNN = CCCC+AA-1`, that is `A` determines the count `0..255`, and `C` determines the first register*                                                                                                                                                                                                         | invoke-polymorphic/range                                                                        |
+| AA\|*op* BBBB<sub>lo</sub> BBBB BBBB BBBB<sub>hi</sub> | 51l  | *`op`* vAA, #+BBBBBBBBBBBBBBBB                                                                                                                                                                                                                                                                                                                                         | const-wide                                                                                      |
 
-## Format 10x
+## Format 10x (All API)
 
 `ØØ|op` — one code unit: the opcode alone, with every other bit zero.
 
-Instructions: `nop`, `return-void`, the dalvik `return-void-barrier` and the ART
-`return-void-barrier` / `return-void-no-barrier`.
-
-## Format 12x
+## Format 12x (All API)
 
 `B|A|op` — one code unit: the opcode plus two 4-bit register fields, `A` and `B`, each in the range
 `v0`—`v15`.
 
-Instructions: `move`, `move-wide`, `move-object`, `array-length`, the 21 unary operations
-(`neg-int` .. `int-to-short`) and the 32 `/2addr` binary operations.
-
-Dex `009` / `013`: `new-array-boolean`, `new-array-byte`, `new-array-char`, `new-array-short`,
-`new-array-int`, `new-array-long`, `new-array-float`, `new-array-double`.
-
-## Format 11n
+## Format 11n (All API)
 
 `B|A|op` — one code unit: a 4-bit register field `A` (`v0`—`v15`) and a 4-bit signed literal `B`,
 sign-extended to 32 bits.
 
-Instructions: `const/4`.
-
-## Format 11p
+## Format 11p (API m3, m5)
 
 `B|A|op` — one code unit: a 4-bit register field `A` (`v0`—`v15`) and a 4-bit index `B` into a fixed
 table of sixteen predefined constants. The table holds each value in 32-bit (IEEE 754 single)
 and 64-bit (IEEE 754 double) form:
 
-| Index | 32-bit bits  | Value  | 64-bit bits          | Value  |
-|-------|--------------|--------|----------------------|--------|
-| 0     | `0xc0000000` | -2.0   | `0xc000000000000000` | -2.0   |
-| 1     | `0xbf800000` | -1.0   | `0xbff0000000000000` | -1.0   |
-| 2     | `0xbf000000` | -0.5   | `0xbfe0000000000000` | -0.5   |
-| 3     | `0xbe800000` | -0.25  | `0xbfd0000000000000` | -0.25  |
-| 4     | `0xbdcccccd` | -0.1   | `0xbfb999999999999a` | -0.1   |
-| 5     | `0x3dcccccd` | 0.1    | `0x3fb999999999999a` | 0.1    |
-| 6     | `0x3e800000` | 0.25   | `0x3fc0000000000000` | 0.25   |
-| 7     | `0x3f000000` | 0.5    | `0x3fd0000000000000` | 0.5    |
-| 8     | `0x3f800000` | 1.0    | `0x3fe0000000000000` | 1.0    |
-| 9     | `0x40000000` | 2.0    | `0x4000000000000000` | 2.0    |
-| 10    | `0x40400000` | 3.0    | `0x4008000000000000` | 3.0    |
-| 11    | `0x40800000` | 4.0    | `0x4010000000000000` | 4.0    |
-| 12    | `0x40a00000` | 5.0    | `0x4014000000000000` | 5.0    |
-| 13    | `0x41200000` | 10.0   | `0x4024000000000000` | 10.0   |
-| 14    | `0x42c80000` | 100.0  | `0x4059000000000000` | 100.0  |
-| 15    | `0x447a0000` | 1000.0 | `0x408f400000000000` | 1000.0 |
+| Index | 32-bit bits  | 64-bit bits          | Value  |
+|-------|--------------|----------------------|--------|
+| 0     | `0xc0000000` | `0xc000000000000000` | -2.0   |
+| 1     | `0xbf800000` | `0xbff0000000000000` | -1.0   |
+| 2     | `0xbf000000` | `0xbfe0000000000000` | -0.5   |
+| 3     | `0xbe800000` | `0xbfd0000000000000` | -0.25  |
+| 4     | `0xbdcccccd` | `0xbfb999999999999a` | -0.1   |
+| 5     | `0x3dcccccd` | `0x3fb999999999999a` | 0.1    |
+| 6     | `0x3e800000` | `0x3fc0000000000000` | 0.25   |
+| 7     | `0x3f000000` | `0x3fd0000000000000` | 0.5    |
+| 8     | `0x3f800000` | `0x3fe0000000000000` | 1.0    |
+| 9     | `0x40000000` | `0x4000000000000000` | 2.0    |
+| 10    | `0x40400000` | `0x4008000000000000` | 3.0    |
+| 11    | `0x40800000` | `0x4010000000000000` | 4.0    |
+| 12    | `0x40a00000` | `0x4014000000000000` | 5.0    |
+| 13    | `0x41200000` | `0x4024000000000000` | 10.0   |
+| 14    | `0x42c80000` | `0x4059000000000000` | 100.0  |
+| 15    | `0x447a0000` | `0x408f400000000000` | 1000.0 |
 
-Dex `009` / `013` only.
-
-Instructions: `const/special` (loads the 32-bit entry into one register) and `const-wide/special`
-(loads the 64-bit entry into a register pair).
-
-## Format 11x
+## Format 11x (All API)
 
 `AA|op` — one code unit: the opcode plus one 8-bit register field `A` (`v0`—`v255`).
 
-Instructions: `move-result`, `move-result-wide`, `move-result-object`, `move-exception`, `return`,
-`return-wide`, `return-object`, `monitor-enter`, `monitor-exit`, `throw`.
-
-## Format 10t
+## Format 10t (All API)
 
 `AA|op` — one code unit: the opcode plus an 8-bit signed branch offset in code units, relative to
 the address of the instruction. The offset must not be `0`.
 
-Instructions: `goto`.
-
-## Format 20t
+## Format 20t (API 1+)
 
 `ØØ|op` `AAAA` — two code units: the opcode and a 16-bit signed branch offset in code units,
 relative to the address of the instruction. The offset must not be `0`.
 
-Instructions: `goto/16`.
-
-## Format 20t (dex `009` / `013`)
+## Format 20t (API m3, m5)
 
 `AA`<sub>hi</sub>`|op` `AAAA`<sub>lo</sub> — two code units: the high eight bits of a 24-bit signed
 branch offset in the high byte of the first unit alongside the opcode, and the offset's low 16 bits
 in the second unit. The offset is in code units, relative to the address of the instruction, and
 must fit in 24 signed bits.
 
-Dex `009` / `013` only.
+Dex `009` / `013` only form of 20t.
 
-Instructions: `goto/24` — the only wide unconditional branch of the set.
-
-## Format 20bc
+## Format 20bc (Dalvik-only, API 5—20)
 
 `AA|op` `BBBB` — two code units: a 6-bit verification-failure code and a 2-bit reference kind in
 `AA` (failure code in bits 0—5, kind in bits 6—7: `0` class, `1` field, `2` method), then the 16-bit
 index of the reference whose handling failed.
 
-Dalvik only, from API 5.
-
-Instructions: `throw-verification-error`.
-
-## Format 22x
+## Format 22x (All API)
 
 `AA|op` `BBBB` — two code units: an 8-bit register field `A` (`v0`—`v255`) and a 16-bit register
 field `B` (`v0`—`v65535`).
 
-Instructions: `move/from16`, `move-wide/from16`, `move-object/from16`, and the ART lambda
-`box-lambda`.
-
-## Format 21t
+## Format 21t (All API)
 
 `AA|op` `BBBB` — two code units: an 8-bit register field (`v0`—`v255`) and a 16-bit signed branch
 offset. The offset must not be `0`.
 
-Instructions: `if-eqz`, `if-nez`, `if-ltz`, `if-gez`, `if-gtz`, `if-lez`.
-
-Dex `009` / `013`: `packed-switch` and `sparse-switch` carry the 16-bit offset of their payload
-table in this format.
-
-## Format 21s
+## Format 21s (All API)
 
 `AA|op` `BBBB` — two code units: an 8-bit register field and a 16-bit signed literal, sign-extended
 to 32 bits.
 
-Instructions: `const/16`, `const-wide/16`.
-
-## Format 21h
+## Format 21h (API 1+)
 
 `AA|op` `BBBB` — two code units: an 8-bit register field and the high-order 16 signed bits of a
 literal whose low-order 16 bits (32-bit value) or 48 bits (64-bit value) are all `0`.
 
-Instructions: `const/high16`, `const-wide/high16`.
-
-## Format 21c
+## Format 21c (All API)
 
 `AA|op` `BBBB` — two code units: an 8-bit register field and a 16-bit constant pool index of kind
 `type`, `field`, `meth`, `method_handle`, `proto` or `string`.
 
-Instructions: `check-cast`, `const-class`, `const-method-handle`, `const-method-type`,
-`const-string`, `new-instance`, the fourteen `sget` / `sput` variants, the six dalvik volatile
-`sget` / `sput` variants (`sget-volatile`, `sput-volatile`, `sget-wide-volatile`,
-`sput-wide-volatile`, `sget-object-volatile`, `sput-object-volatile`) and the ART lambda
-`capture-variable` / `create-lambda`.
-
-## Format 23x
+## Format 23x (All API)
 
 `AA|op` `CC|BB` — two code units: an 8-bit register field, then two more 8-bit register fields in
 the second unit (`B` in its low byte, `C` in its high byte). All three are in `v0`—`v255`.
 
-Instructions: the five `cmp`*`kind`* operations, the fourteen *`arrayop`* operations and the 32
-three-operand binary operations.
-
-## Format 22b
+## Format 22b (All API)
 
 `AA|op` `CC|BB` — two code units: an 8-bit destination register, then an 8-bit source register in
 the low byte of the second unit and an 8-bit signed literal in its high byte.
 
-Instructions: the eleven `binop/lit8` variants (`add-int/lit8` .. `ushr-int/lit8`).
-
-## Format 22t
+## Format 22t (All API)
 
 `B|A|op` `CCCC` — two code units: two 4-bit register fields (`v0`—`v15`) and a 16-bit signed branch
 offset. The offset must not be `0`.
 
-Instructions: `if-eq`, `if-ne`, `if-lt`, `if-ge`, `if-gt`, `if-le`.
-
-## Format 22s
+## Format 22s (All API)
 
 `B|A|op` `CCCC` — two code units: two 4-bit register fields and a 16-bit signed literal.
 
-Instructions: the eight `binop/lit16` variants (`add-int/lit16` .. `xor-int/lit16`, including
-`rsub-int`).
-
-## Format 22c
+## Format 22c (All API)
 
 `B|A|op` `CCCC` — two code units: two 4-bit register fields and a 16-bit constant pool index of kind
 `type` or `field`.
 
-Instructions: `instance-of`, `new-array`, the fourteen `iget` / `iput` variants, the six dalvik
-volatile instance-field variants (`iget-volatile`, `iput-volatile`, `iget-object-volatile`,
-`iget-wide-volatile`, `iput-wide-volatile`, `iput-object-volatile`), the fourteen ART quickened
-field accesses (`iget-quick`, `iput-quick` and their typed variants) and the ART lambda
-`liberate-variable` / `unbox-lambda`.
-
-Dex `009` / `013`: the `new-array` index refers to the array's component type, and the six quick
-field accesses (`iget-quick`, `iget-wide-quick`, `iget-object-quick`, `iput-quick`,
-`iput-wide-quick`, `iput-object-quick`) carry the field's byte offset in `CCCC`.
-
-## Format 22cs
+## Format 22cs (API m3, m5, 1—30)
 
 `B|A|op` `CCCC` — the `22c` layout with `CCCC` holding the byte offset of an instance field from the
 start of the object instead of a field index. The offset must fit 16 bits.
 
-Dalvik only.
-
-Instructions: `iget-quick`, `iget-wide-quick`, `iget-object-quick`, `iput-quick`,
-`iput-wide-quick`, `iput-object-quick`.
-
-## Format 25x
+## Format 25x (API 24—25)
 
 `G|B|op` `F|E|D|C` — two code units: a 4-bit argument-word count `B` (`0`—`4`), the closure register
 `C` and up to four argument registers `D` .. `G`, all in `v0`—`v15`. The closure occupies a register
 pair and is not counted by `B`.
 
-ART only, API 24—25.
-
-Instructions: `invoke-lambda`.
-
-## Format 30t
+## Format 30t (API 1+)
 
 `ØØ|op` `AAAA`<sub>lo</sub> `AAAA`<sub>hi</sub> — three code units: the opcode and a 32-bit signed
 branch offset, low-order unit first.
 
-Instructions: `goto/32`.
-
-## Format 32x
+## Format 32x (All API)
 
 `ØØ|op` `AAAA` `BBBB` — three code units: the opcode and two 16-bit register fields (`v0`—`v65535`).
 
-Instructions: `move/16`, `move-wide/16`, `move-object/16`.
-
-## Format 31i
+## Format 31i (All API)
 
 `AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> — three code units: an 8-bit register field and a
 32-bit literal, low-order unit first.
 
-Instructions: `const`, `const-wide/32`.
-
-## Format 31t
+## Format 31t (API 1+)
 
 `AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> — three code units: an 8-bit register field and a
 32-bit signed branch offset, low-order unit first.
 
-Instructions: `fill-array-data`, `packed-switch`, `sparse-switch`.
-
-## Format 31c
+## Format 31c (API 1+)
 
 `AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> — three code units: an 8-bit register field and a
 32-bit string index, low-order unit first.
 
-Instructions: `const-string/jumbo`.
-
-## Format 32s
+## Format 32s (API 11—15)
 
 `NN|ff` `BB|AA` `CCCC` — three code units: the `exop` field, then two 8-bit registers in the second
 unit (`A` in its low byte, `B` in its high byte, both `v0`—`v255`) and a signed 16-bit literal `C`.
 
-Dalvik only, API 11—15. No instruction uses this format.
+No instruction uses this format.
 
-## Format 33x
+## Format 33x (API 11—15)
 
 `NN|ff` `BB|AA` `CCCC` — three code units: the `exop` field, then two 8-bit registers in the second
 unit (`A` in its low byte, `B` in its high byte, both `v0`—`v255`) and a 16-bit register `C`
 (`v0`—`v65535`).
 
-Dalvik only, API 11—15. No instruction uses this format.
+No instruction uses this format.
 
-## Format 34c
+## Format 34c (API m3, m5)
 
 `AA|op` `BBBB` `F|E|D|C` — three code units: an 8-bit argument-word count `A` (`0`—`4`), a 16-bit
 method or type index `B`, and four 4-bit argument registers `C` .. `F` (`v0`—`v15`, `C` in the
 lowest nibble). A wide argument takes two consecutive registers, so the count is the number of
 argument words; no more than four argument words fit.
 
-Dex `009` / `013` only.
-
-Instructions: `invoke-virtual`, `invoke-super`, `invoke-direct`, `invoke-static`,
-`invoke-interface` and `invoke-direct-empty` (method index), `filled-new-array` (type index).
-
-## Format 34mi
+## Format 34mi (API m3, m5)
 
 The `34c` layout with `BBBB` indexing the inline-method table; `A` counts at most four argument
 words.
 
-Dex `009` / `013` only.
-
-Instructions: `execute-inline`.
-
-## Format 34ms
+## Format 34ms (API m3, m5)
 
 The `34c` layout with `BBBB` holding a vtable index.
 
-Dex `009` / `013` only.
-
-Instructions: `invoke-virtual-quick`, `invoke-super-quick`.
-
-## Format 35c
+## Format 35c (API 1+)
 
 `A|G|op` `BBBB` `F|E|D|C` — three code units: a 4-bit argument-word count `A` (`0`—`5`), a 16-bit
 constant pool index `B` of kind `meth`, `site` or `type`, and the argument registers in `C` .. `G`
 (`v0`—`v15`, `C` in the lowest nibble). A wide argument takes two consecutive registers, so the
 count is the number of argument words.
 
-Instructions: `invoke-virtual`, `invoke-super`, `invoke-direct`, `invoke-static`,
-`invoke-interface`, `filled-new-array`, `invoke-custom`, the dalvik `invoke-direct-empty` and the
-ART `invoke-virtual-quick`.
-
-## Format 35ms
+## Format 35ms (API 1—30)
 
 The `35c` layout with `BBBB` holding a vtable index.
 
-Dalvik only.
-
-Instructions: `invoke-virtual-quick`, `invoke-super-quick`.
-
-## Format 35mi
+## Format 35mi (Dalvik-only, API 1—20)
 
 The `35c` layout with `BBBB` indexing the inline-method table; `A` counts at most four argument
 words.
 
-Dalvik only. In API 1—10 the pair is named `3inline` / `3rinline`.
-
-Instructions: `execute-inline`.
-
-## Format 35fs
+## Format 35fs (API 1—10)
 
 The `35c` layout with `BBBB` indexing statically linked interface constants.
 
-Dalvik only, API 1—10. No instruction uses this format.
+No instruction uses this format.
 
-## Format 3rc
+## Format 3rc (All API)
 
 `AA|op` `BBBB` `CCCC` — three code units: an 8-bit argument-word count `A` (`0`—`255`), a 16-bit
 constant pool index `B` and the 16-bit first argument register `C` (`v0`—`v65535`); the arguments
 occupy the consecutive registers `C` .. `C+A-1`.
 
-Instructions: the five `invoke-*` `/range` variants, `filled-new-array/range`,
-`invoke-custom/range`, the dalvik `invoke-object-init/range` and the ART
-`invoke-virtual/range-quick`.
-
-Dex `009` / `013`: `invoke-virtual-quick/range` and `invoke-super-quick/range` carry a vtable index
-in `BBBB`.
-
-## Format 3rms
+## Format 3rms (API m3, m5, 1—30)
 
 The `3rc` layout with `BBBB` holding a vtable index.
 
-Dalvik only.
+## Format 3rmi (Dalvik-only, API 8—20)
 
-Instructions: `invoke-virtual-quick/range`, `invoke-super-quick/range`.
+The `3rc` layout with `BBBB` indexing the inline-method table; `A` counts at most four argument
+words.
 
-## Format 3rmi
-
-The `3rc` layout with `BBBB` indexing the inline-method table.
-
-Dalvik only, from API 8. Its API 1—10 name is `3rinline`.
-
-Instructions: `execute-inline/range`.
-
-## Format 3rfs
+## Format 3rfs (API 1—10)
 
 The `3rc` layout with `BBBB` indexing statically linked interface constants.
 
-Dalvik only, API 1—10. No instruction uses this format.
+No instruction uses this format.
 
-## Format 40sc
+## Format 40sc (API 14—15)
 
 `NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` — four code units: the `exop` field, a 32-bit
 reference index in code units 1—2 (low-order unit first), then a 16-bit field holding the 6-bit
 failure code and 2-bit reference kind of format `20bc` in its low byte, with its high byte zero.
 
-Used only by the expanded instructions of dex version `036` (dalvik API 14—15).
-
-Instructions: `throw-verification-error/jumbo`.
-
-## Format 41c
+## Format 41c (API 11—15)
 
 `NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` — four code units: the `exop` field, a 32-bit
 constant pool index in code units 1—2 (low-order unit first) and a 16-bit register field `AAAA`
 (`v0`—`v65535`).
 
-Used only by the expanded instructions of dex version `036` (dalvik API 14—15).
+Used only by the expanded instructions of dalvik API 14—15.
 
-Instructions: `const-class/jumbo`, `check-cast/jumbo`, `new-instance/jumbo`, the fourteen
-`sget` / `sput` `/jumbo` variants and the six volatile `sget` / `sput` `/jumbo` variants.
-
-## Format 52c
+## Format 52c (API 11—15)
 
 `NN|ff` `CCCC`<sub>lo</sub> `CCCC`<sub>hi</sub> `AAAA` `BBBB` — five code units: the `exop` field, a
 32-bit constant pool index in code units 1—2, then the register fields `AAAA` (`v0`—`v65535`) and
 `BBBB` (`v0`—`v65535`).
 
-Used only by the expanded instructions of dex version `036` (dalvik API 14—15).
+Used only by the expanded instructions of dalvik API 14—15.
 
-Instructions: `instance-of/jumbo`, `new-array/jumbo`, the fourteen `iget` / `iput` `/jumbo`
-variants and the six volatile `iget` / `iput` `/jumbo` variants.
-
-## Format 5rc
+## Format 5rc (API 11—15)
 
 `NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` `CCCC` — five code units: the `exop` field, a
 32-bit constant pool index in code units 1—2, a 16-bit argument-word count `AAAA` and the 16-bit
 first argument register `CCCC` (`v0`—`v65535`); the arguments occupy `CCCC` .. `CCCC+AAAA-1`.
 
-Used only by the expanded instructions of dex version `036` (dalvik API 14—15).
+Used only by the expanded instructions of dalvik API 14—15.
 
-Instructions: `filled-new-array/jumbo`, the five `invoke-*` `/jumbo` variants and the dalvik
-`invoke-object-init/jumbo`.
-
-## Format 45cc
+## Format 45cc (API 26+)
 
 `A|G|op` `BBBB` `F|E|D|C` `HHHH` — four code units: a 4-bit argument-word count, a 16-bit method
 index, the argument registers `C` .. `G` and a 16-bit prototype index.
 
-Instructions: `invoke-polymorphic`.
-
-## Format 4rcc
+## Format 4rcc (API 26+)
 
 `AA|op` `BBBB` `CCCC` `HHHH` — four code units: an 8-bit argument-word count, a 16-bit method index,
 the 16-bit first argument register and a 16-bit prototype index; the arguments occupy
 `CCCC` .. `CCCC+AA-1`.
 
-Instructions: `invoke-polymorphic/range`.
-
-## Format 51l
+## Format 51l (All API)
 
 `AA|op` `BBBB`<sub>lo</sub> `BBBB` `BBBB` `BBBB`<sub>hi</sub> — five code units: an 8-bit register
 field and a 64-bit literal, low-order unit first.
-
-Instructions: `const-wide`.
-
