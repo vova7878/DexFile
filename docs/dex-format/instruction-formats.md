@@ -247,8 +247,7 @@ literal whose low-order 16 bits (32-bit value) or 48 bits (64-bit value) are all
 
 ## Format 21c (All API)
 
-`AA|op` `BBBB` — two code units: an 8-bit register field and a 16-bit constant pool index of kind
-`type`, `field`, `meth`, `method_handle`, `proto` or `string`.
+`AA|op` `BBBB` — two code units: an 8-bit register field and a 16-bit constant pool index `B`.
 
 ## Format 23x (All API)
 
@@ -271,8 +270,7 @@ offset. The offset must not be `0`.
 
 ## Format 22c (All API)
 
-`B|A|op` `CCCC` — two code units: two 4-bit register fields and a 16-bit constant pool index of kind
-`type` or `field`.
+`B|A|op` `CCCC` — two code units: two 4-bit register fields and a 16-bit constant pool index `C`.
 
 ## Format 22cs (API m3, m5, 1—30)
 
@@ -307,7 +305,7 @@ branch offset, low-order unit first.
 ## Format 31c (API 1+)
 
 `AA|op` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> — three code units: an 8-bit register field and a
-32-bit string index, low-order unit first.
+32-bit constant pool index `B`, low-order unit first.
 
 ## Format 32s (API 11—15)
 
@@ -326,10 +324,10 @@ No instruction uses this format.
 
 ## Format 34c (API m3, m5)
 
-`AA|op` `BBBB` `F|E|D|C` — three code units: an 8-bit argument-word count `A` (`0`—`4`), a 16-bit
-method or type index `B`, and four 4-bit argument registers `C` .. `F` (`v0`—`v15`, `C` in the
-lowest nibble). A wide argument takes two consecutive registers, so the count is the number of
-argument words; no more than four argument words fit.
+`AA|op` `BBBB` `F|E|D|C` — three code units: an 8-bit argument-word count `A` (`0`—`4`), 16-bit
+constant pool index `B`, and four 4-bit argument registers `C` .. `F` (`v0`—`v15`, `C` in the lowest
+nibble). A wide argument takes two consecutive registers, so the count is the number of argument
+words; no more than four argument words fit.
 
 ## Format 34mi (API m3, m5)
 
@@ -343,7 +341,7 @@ The `34c` layout with `BBBB` holding a vtable index.
 ## Format 35c (API 1+)
 
 `A|G|op` `BBBB` `F|E|D|C` — three code units: a 4-bit argument-word count `A` (`0`—`5`), a 16-bit
-constant pool index `B` of kind `meth`, `site` or `type`, and the argument registers in `C` .. `G`
+constant pool index `B`, and the argument registers in `C` .. `G`
 (`v0`—`v15`, `C` in the lowest nibble). A wide argument takes two consecutive registers, so the
 count is the number of argument words.
 
@@ -392,7 +390,7 @@ failure code and 2-bit reference kind of format `20bc` in its low byte, with its
 ## Format 41c (API 11—15)
 
 `NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` — four code units: the `exop` field, a 32-bit
-constant pool index in code units 1—2 (low-order unit first) and a 16-bit register field `AAAA`
+constant pool index `B`, low-order unit first and a 16-bit register field `AAAA`
 (`v0`—`v65535`).
 
 Used only by the expanded instructions of dalvik API 14—15.
@@ -400,7 +398,8 @@ Used only by the expanded instructions of dalvik API 14—15.
 ## Format 52c (API 11—15)
 
 `NN|ff` `CCCC`<sub>lo</sub> `CCCC`<sub>hi</sub> `AAAA` `BBBB` — five code units: the `exop` field, a
-32-bit constant pool index in code units 1—2, then the register fields `AAAA` (`v0`—`v65535`) and
+32-bit constant pool index `C`, low-order unit first, then the register fields `AAAA` (`v0`—
+`v65535`) and
 `BBBB` (`v0`—`v65535`).
 
 Used only by the expanded instructions of dalvik API 14—15.
@@ -408,8 +407,8 @@ Used only by the expanded instructions of dalvik API 14—15.
 ## Format 5rc (API 11—15)
 
 `NN|ff` `BBBB`<sub>lo</sub> `BBBB`<sub>hi</sub> `AAAA` `CCCC` — five code units: the `exop` field, a
-32-bit constant pool index in code units 1—2, a 16-bit argument-word count `AAAA` and the 16-bit
-first argument register `CCCC` (`v0`—`v65535`); the arguments occupy `CCCC` .. `CCCC+AAAA-1`.
+32-bit constant pool index `B`, low-order unit first, a 16-bit argument-word count `AAAA` and the
+16-bit first argument register `CCCC` (`v0`—`v65535`); the arguments occupy `CCCC` .. `CCCC+AAAA-1`.
 
 Used only by the expanded instructions of dalvik API 14—15.
 
