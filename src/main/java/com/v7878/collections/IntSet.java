@@ -129,19 +129,48 @@ public final class IntSet implements Iterable<Integer> {
         removeAtRaw(index);
     }
 
-    // TODO: public void removeRange(int from_value, int to_value)
+    /**
+     * Removes every value in {@code [from_value, to_value)}.
+     * An empty or inverted range removes nothing.
+     *
+     * @return {@code true} if at least one value was removed
+     */
+    public boolean removeRange(int from_value, int to_value) {
+        checkWritable();
+        if (to_value <= from_value) {
+            return false;
+        }
+        // each search result is the first index of a value >= the bound
+        int from = indexOf(from_value);
+        from = from >= 0 ? from : ~from;
+        int to = indexOf(to_value);
+        to = to >= 0 ? to : ~to;
+        if (from >= to) {
+            return false;
+        }
+        if (to < size) {
+            // Here the meaning of 'to' and 'from' is reversed
+            System.arraycopy(array, to, array, from, size - to);
+        }
+        size -= to - from;
+        return true;
+    }
 
-    public void removeAtRange(int from_index, int to_index) {
+    /**
+     * @return {@code true} if at least one value was removed
+     */
+    public boolean removeAtRange(int from_index, int to_index) {
         checkWritable();
         Objects.checkFromToIndex(from_index, to_index, size);
         if (to_index <= from_index) {
-            return;
+            return false;
         }
         if (to_index < size) {
             // Here the meaning of 'to' and 'from' is reversed
             System.arraycopy(array, to_index, array, from_index, size - to_index);
         }
         size -= to_index - from_index;
+        return true;
     }
 
     /**
@@ -159,33 +188,87 @@ public final class IntSet implements Iterable<Integer> {
         return true;
     }
 
-    // TODO: public void addRange(int from_value, int to_value)
+    /**
+     * Adds every value in {@code [from_value, to_value)}.
+     * An empty or inverted range adds nothing.
+     *
+     * @return {@code true} if at least one value was inserted
+     */
+    public boolean addRange(int from_value, int to_value) {
+        checkWritable();
+        if (to_value <= from_value) {
+            return false;
+        }
+        // each search result is the first index of a value >= the bound
+        int from = indexOf(from_value);
+        from = from >= 0 ? from : ~from;
+        int to = indexOf(to_value);
+        to = to >= 0 ? to : ~to;
+        long missed = (long) to_value - from_value - (to - from);
+        if (missed == 0) {
+            return false;
+        }
+        // a range wider than any possible array cannot be merged
+        if (missed > Integer.MAX_VALUE - size) {
+            throw new OutOfMemoryError();
+        }
+        int added = (int) missed;
+        ensureCapacity(size + added);
+        if (to < size) {
+            // Here the meaning of 'to' and 'from' is reversed
+            System.arraycopy(array, to, array, to + added, size - to);
+        }
+        // merge the range with the present values, largest first
+        int i = to;
+        int value = to_value;
+        for (int write = to + added; write > from; write--) {
+            if (i > from && array[i - 1] == value - 1) {
+                array[write - 1] = array[i - 1];
+                i--;
+            } else {
+                array[write - 1] = value - 1;
+            }
+            value--;
+        }
+        size += added;
+        return true;
+    }
 
-    public void addAll(IntSet other) {
+    /**
+     * @return {@code true} if at least one value was inserted
+     */
+    public boolean addAll(IntSet other) {
         checkWritable();
         Objects.requireNonNull(other);
         int length = other.size;
         if (length == 0) {
-            return;
+            return false;
         }
         ensureCapacity(size + length);
         int[] other_array = other.array;
+        boolean changed = false;
         for (int i = 0; i < length; i++) {
-            add(other_array[i]);
+            changed |= add(other_array[i]);
         }
+        return changed;
     }
 
-    public void addAll(int[] other) {
+    /**
+     * @return {@code true} if at least one value was inserted
+     */
+    public boolean addAll(int[] other) {
         checkWritable();
         Objects.requireNonNull(other);
         int length = other.length;
         if (length == 0) {
-            return;
+            return false;
         }
         ensureCapacity(size + length);
+        boolean changed = false;
         for (int v : other) {
-            add(v);
+            changed |= add(v);
         }
+        return changed;
     }
 
     public int size() {

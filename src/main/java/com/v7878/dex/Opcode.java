@@ -32,7 +32,7 @@ import static com.v7878.dex.Format.Format32x;
 import static com.v7878.dex.Format.Format34c;
 import static com.v7878.dex.Format.Format35c;
 import static com.v7878.dex.Format.Format3rc;
-import static com.v7878.dex.Format.Format40cs;
+import static com.v7878.dex.Format.Format40sc;
 import static com.v7878.dex.Format.Format41c;
 import static com.v7878.dex.Format.Format45cc;
 import static com.v7878.dex.Format.Format4rcc;
@@ -427,9 +427,10 @@ public enum Opcode {
     // legacy android 7.x lambda opcodes
 
     // TODO INVOKE_LAMBDA(betweenApi(0xf3, 24, 25), "invoke-lambda", Format25x, EXPERIMENTAL_LAMBDA),
+    // 0xf4 was planned as invoke-lambda/range, but it was never implemented
     // TODO CAPTURE_VARIABLE(betweenApi(0xf5, 24, 25), "capture-variable", Format21c(string), EXPERIMENTAL_LAMBDA),
     // TODO CREATE_LAMBDA(betweenApi(0xf6, 24, 25), "create-lambda", Format21c(method), EXPERIMENTAL_LAMBDA),
-    // TODO LIBERATE_LAMBDA(betweenApi(0xf7, 24, 25), "liberate-lambda", Format22c(string), EXPERIMENTAL_LAMBDA),
+    // TODO LIBERATE_VARIABLE(betweenApi(0xf7, 24, 25), "liberate-variable", Format22c(string), EXPERIMENTAL_LAMBDA),
     // TODO BOX_LAMBDA(betweenApi(0xf8, 24, 25), "box-lambda", Format22x, EXPERIMENTAL_LAMBDA),
     // TODO UNBOX_LAMBDA(betweenApi(0xf9, 24, 25), "unbox-lambda", Format22c(type), EXPERIMENTAL_LAMBDA),
 
@@ -497,7 +498,7 @@ public enum Opcode {
     SPUT_WIDE_VOLATILE_JUMBO(betweenApi(0xfdff, 14, 15), "sput-wide-volatile/jumbo", Format41c, regs(false), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
     SPUT_OBJECT_VOLATILE_JUMBO(betweenApi(0xfeff, 14, 15), "sput-object-volatile/jumbo", Format41c, regs(true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
 
-    THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40cs, regs(), EXPANDED | ODEX_ONLY | CAN_THROW | ENDS_FLOW),
+    THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40sc, regs(), EXPANDED | ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
     // Special opcodes
     RAW(raw(), "raw", FormatRaw10x, regs(), RAW_OP),

@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Objects;
 import java.util.TreeSet;
 
 public class TryBlocksMerger {
@@ -128,27 +129,64 @@ public class TryBlocksMerger {
         }
 
         var out = new TreeSet<TryBlock>();
-        for (int i = 0; i < elements_size; i++) {
+        for (int i = 0; i < elements_size; ) {
             var container = elements.valueAt(i);
-            if (container.catch_all_address != null || !container.handlers.isEmpty()) {
-                var handlers = new ArrayList<ExceptionHandler>(container.handlers.size());
-                for (var e : container.handlers.entrySet()) {
-                    handlers.add(ExceptionHandler.of(e.getKey(), e.getValue()));
-                }
-                var fixed_handlers = Collections.unmodifiableList(handlers);
-                int start = borders[i];
-                int count = borders[i + 1] - start;
-                // A range longer than the try_item.insn_count ushort limit
-                // is split into consecutive parts with the same handlers
-                while (count > 0) {
-                    int part = Math.min(count, MAX_TRY_UNIT_COUNT);
-                    out.add(TryBlock.raw(start, part,
-                            container.catch_all_address, fixed_handlers));
-                    start += part;
-                    count -= part;
-                }
+            if (container.catch_all_address == null && container.handlers.isEmpty()) {
+                // A stretch without any handler breaks the run
+                i++;
+                continue;
             }
+            // Adjacent elements with a fully equal composition coalesce
+            // into one block spanning the whole run
+            int end_index = i + 1;
+            while (end_index < elements_size) {
+                var next = elements.valueAt(end_index);
+                if (!sameComposition(container.handlers, container.catch_all_address,
+                        next.handlers, next.catch_all_address)) {
+                    break;
+                }
+                end_index++;
+            }
+            var handlers = new ArrayList<ExceptionHandler>(container.handlers.size());
+            for (var e : container.handlers.entrySet()) {
+                handlers.add(ExceptionHandler.of(e.getKey(), e.getValue()));
+            }
+            var fixed_handlers = Collections.unmodifiableList(handlers);
+            int start = borders[i];
+            int count = borders[end_index] - start;
+            // A range longer than the try_item.insn_count ushort limit
+            // is split into consecutive parts with the same handlers
+            while (count > 0) {
+                int part = Math.min(count, MAX_TRY_UNIT_COUNT);
+                out.add(TryBlock.raw(start, part,
+                        container.catch_all_address, fixed_handlers));
+                start += part;
+                count -= part;
+            }
+            i = end_index;
         }
         return Collections.unmodifiableNavigableSet(out);
+    }
+
+    // Equal compositions: the same handler types in the same insertion
+    // order with the same addresses, and the same catch-all address
+    // (both absent or equal). Map.equals is not enough here: it ignores
+    // the order, while the order defines which handler wins at runtime.
+    private static boolean sameComposition(
+            Map<TypeId, Integer> handlers, Integer catch_all_address,
+            Map<TypeId, Integer> other_handlers, Integer other_catch_all_address) {
+        if (!Objects.equals(catch_all_address, other_catch_all_address)
+                || handlers.size() != other_handlers.size()) {
+            return false;
+        }
+        var other_iterator = other_handlers.entrySet().iterator();
+        for (var entry : handlers.entrySet()) {
+            var other_entry = other_iterator.next();
+            if (!entry.getKey().equals(other_entry.getKey())
+                    || !entry.getValue().equals(other_entry.getValue())) {
+                return false;
+            }
+        }
+        return true;
     }
 }

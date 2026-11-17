@@ -146,4 +146,17 @@ public final class DexConstants {
     public static final int M5_DBG_LAST_SPECIAL = 0xff;
     public static final int M5_DBG_LINE_BASE = -4;
     public static final int M5_DBG_LINE_RANGE = 15;
+
+    // dalvik verification error codes
+
+    public static final int VERIFY_ERROR_NONE = 0; // no error; must be zero
+    public static final int VERIFY_ERROR_GENERIC = 1; // VerifyError
+    public static final int VERIFY_ERROR_NO_CLASS = 2; // NoClassDefFoundError
+    public static final int VERIFY_ERROR_NO_FIELD = 3; // NoSuchFieldError
+    public static final int VERIFY_ERROR_NO_METHOD = 4; // NoSuchMethodError
+    public static final int VERIFY_ERROR_ACCESS_CLASS = 5; // IllegalAccessError
+    public static final int VERIFY_ERROR_ACCESS_FIELD = 6; // IllegalAccessError
+    public static final int VERIFY_ERROR_ACCESS_METHOD = 7; // IllegalAccessError
+    public static final int VERIFY_ERROR_CLASS_CHANGE = 8; // IncompatibleClassChangeError
+    public static final int VERIFY_ERROR_INSTANTIATION = 9; // InstantiationError
 }

@@ -113,7 +113,6 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
     }
 
     private int indexOfKeyRaw(int key) {
-        gcIfNeeded();
         return ArraySupport.binarySearch(keys, 0, size, key);
     }
 
@@ -123,7 +122,8 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
     }
 
     public boolean contains(int key) {
-        return indexOfKey(key) >= 0;
+        int i = indexOfKeyRaw(key);
+        return i >= 0 && values[i] != DELETED;
     }
 
     public E get(int key) {
@@ -151,27 +151,63 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
         return null;
     }
 
-    public void removeAt(int index) {
+    /**
+     * @return the previous value at {@code index}; {@code null} when
+     * the removed value was {@code null}
+     */
+    @SuppressWarnings("unchecked")
+    public E removeAt(int index) {
         checkWritable();
         Objects.checkIndex(index, size());
         // size() call above took care about gc() compaction
-        if (values[index] != DELETED) {
-            values[index] = DELETED;
-            garbage = true;
-        }
+        Object last = values[index];
+        values[index] = DELETED;
+        garbage = true;
+        return (E) last;
     }
 
-    // TODO: public void removeRange(int from_key, int to_key)
+    /**
+     * Removes every entry with a key in {@code [from_key, to_key)}.
+     * An empty or inverted range removes nothing.
+     *
+     * @return {@code true} if at least one entry was removed
+     */
+    public boolean removeRange(int from_key, int to_key) {
+        checkWritable();
+        if (to_key <= from_key) {
+            return false;
+        }
+        // each search result is the first index of a key >= the bound
+        int from = indexOfKeyRaw(from_key);
+        from = from >= 0 ? from : ~from;
+        int to = indexOfKeyRaw(to_key);
+        to = to >= 0 ? to : ~to;
+        boolean changed = false;
+        for (int i = from; i < to; i++) {
+            if (values[i] != DELETED) {
+                values[i] = DELETED;
+                changed = true;
+            }
+        }
+        if (changed) {
+            garbage = true;
+        }
+        return changed;
+    }
 
-    public void removeAtRange(int from_index, int to_index) {
+    /**
+     * @return {@code true} if at least one entry was removed
+     */
+    public boolean removeAtRange(int from_index, int to_index) {
         checkWritable();
         Objects.checkFromToIndex(from_index, to_index, size());
         if (to_index <= from_index) {
-            return;
+            return false;
         }
         // size() call above took care about gc() compaction
         Arrays.fill(values, from_index, to_index, DELETED);
         garbage = true;
+        return true;
     }
 
     private void gc() {
@@ -198,6 +234,12 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
         }
     }
 
+    /**
+     * @return the previous value associated with {@code key}, or
+     * {@code null} if there was no mapping for {@code key}.
+     * (A {@code null} return can also indicate that the map
+     * previously associated {@code null} with {@code key})
+     */
     @SuppressWarnings("unchecked")
     public E put(int key, E value) {
         checkWritable();
@@ -225,13 +267,21 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
     }
 
     /**
-     * Puts a key/value pair into the array, optimizing for the case
+     * Puts a key/value pair into the map, optimizing for the case
      * where the key is greater than all existing keys in the array
      */
     public E append(int key, E value) {
         checkWritable();
-        //TODO: optimize
-        return put(key, value);
+        if (size != 0 && key <= keys[size - 1]) {
+            return put(key, value);
+        }
+        if (garbage && size >= keys.length) {
+            gc();
+        }
+        keys = ArraySupport.insert(keys, size, size, key);
+        values = ArraySupport.insert(values, size, size, value);
+        size++;
+        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -250,6 +300,108 @@ public final class IntMap<E> implements Iterable<IntMap.Entry<E>> {
                 put(other_keys[i], (E) value);
             }
         }
+    }
+
+    /**
+     * Replaces the entry for the specified key only if it is
+     * currently mapped to some value.
+     *
+     * @return the previous value associated with the specified key, or
+     * {@code null} if there was no mapping for the key.
+     * (A {@code null} return can also indicate that the map
+     * previously associated {@code null} with the key)
+     */
+    @SuppressWarnings("unchecked")
+    public E replace(int key, E value) {
+        checkWritable();
+        int i = indexOfKeyRaw(key);
+        if (i >= 0) {
+            Object last = values[i];
+            if (last != DELETED) {
+                values[i] = value;
+                return (E) last;
+            }
+            return null;
+        }
+        return null;
+    }
+
+    /**
+     * If the specified key is not already associated with a value associates
+     * it with the given value and returns {@code null}, else returns the current value.
+     *
+     * @return the previous value associated with the specified key, or
+     * {@code null} if there was no mapping for the key.
+     * (A {@code null} return can also indicate that the map
+     * previously associated {@code null} with the key)
+     */
+    @SuppressWarnings("unchecked")
+    public E putIfAbsent(int key, E value) {
+        checkWritable();
+        int i = indexOfKeyRaw(key);
+        if (i >= 0) {
+            Object last = values[i];
+            if (last == DELETED) {
+                values[i] = value;
+                return null;
+            }
+            return (E) last;
+        }
+        i = ~i;
+        if (i < size && values[i] == DELETED) {
+            keys[i] = key;
+            values[i] = value;
+            return null;
+        }
+        if (garbage && size >= keys.length) {
+            gc();
+            // Search again because indices may have changed
+            i = ~indexOfKeyRaw(key);
+        }
+        keys = ArraySupport.insert(keys, size, i, key);
+        values = ArraySupport.insert(values, size, i, value);
+        size++;
+        return null;
+    }
+
+    /**
+     * If the specified key is not already associated with a value,
+     * attempts to compute its value using the given mapping
+     * function and enters it into this map.
+     *
+     * @return the current (existing or computed) value associated with
+     * the specified key, or null if the computed value is null
+     */
+    @SuppressWarnings("unchecked")
+    public E computeIfAbsent(int key, IntFunction<? extends E> mapper) {
+        checkWritable();
+        int i = indexOfKeyRaw(key);
+        if (i >= 0) {
+            Object last = values[i];
+            if (last == DELETED) {
+                E new_value = mapper.apply(key);
+                values[i] = new_value;
+                return new_value;
+            }
+            return (E) last;
+        }
+        i = ~i;
+        if (i < size && values[i] == DELETED) {
+            E new_value = mapper.apply(key);
+            keys[i] = key;
+            values[i] = new_value;
+            return new_value;
+        }
+        if (garbage && size >= keys.length) {
+            gc();
+            // Search again because indices may have changed
+            i = ~indexOfKeyRaw(key);
+        }
+        E new_value = mapper.apply(key);
+        keys = ArraySupport.insert(keys, size, i, key);
+        values = ArraySupport.insert(values, size, i, new_value);
+        size++;
+        return new_value;
     }
 
     public int size() {

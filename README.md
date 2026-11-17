@@ -65,7 +65,7 @@ public static byte[] compile(int tape_length, String bf) {
     var read_byte_id = MethodId.of(impl_id, "read", TypeId.B);
 
     var impl_def = ClassBuilder.build(impl_id, cb -> cb
-            .withSuperClass(TypeId.OBJECT)
+            .withSuperclass(TypeId.OBJECT)
             .withFlags(ACC_PUBLIC | ACC_FINAL)
             .withMethod(mb -> mb
                     .of(write_byte_id)

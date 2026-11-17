@@ -286,10 +286,7 @@ public final class Position {
 
     /* package */ void rangeInput(int start_reg, int count) {
         checkRegs(start_reg, count);
-        for (int i = 0; i < count; i++) {
-            // TODO: add range
-            input(start_reg + i);
-        }
+        inputs.addRange(start_reg, start_reg + count);
     }
 
     public IntSet outputs() {

@@ -5,8 +5,10 @@ import static com.v7878.dex.util.MathUtils.extend_sign32;
 
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
+import com.v7878.dex.VerificationError;
 import com.v7878.dex.immutable.bytecode.ArrayPayload;
 import com.v7878.dex.immutable.bytecode.Instruction;
+import com.v7878.dex.immutable.bytecode.InstructionN0ci;
 import com.v7878.dex.immutable.bytecode.InstructionN0t;
 import com.v7878.dex.immutable.bytecode.InstructionN0x;
 import com.v7878.dex.immutable.bytecode.InstructionN1c;
@@ -61,8 +63,7 @@ public class InstructionReader {
             case Format11p -> read_11p(opcode, arg);
             case Format11x -> read_11x(opcode, arg);
             case Format12x -> read_12x(opcode, arg);
-            // TODO
-            case Format20bc -> throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format20bc -> read_20bc(opcode, in, reader, arg);
             case Format20t -> read_20t_16(opcode, in, arg);
             case Format20t_24 -> read_20t_24(opcode, in, arg);
             case Format21c -> read_21c(opcode, in, reader, arg);
@@ -84,9 +85,7 @@ public class InstructionReader {
             case Format34c -> read_34c(opcode, in, reader, arg);
             case Format35c -> read_35c(opcode, in, reader, arg);
             case Format3rc -> read_3rc(opcode, in, reader, arg);
-            // TODO
-            case Format40cs -> //noinspection DuplicateBranchesInSwitch
-                    throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format40sc -> read_40sc(opcode, in, reader);
             case Format41c -> read_41c(opcode, in, reader);
             case Format45cc -> read_45cc(opcode, in, reader, arg);
             case Format4rcc -> read_4rcc(opcode, in, reader, arg);
@@ -185,6 +184,25 @@ public class InstructionReader {
         int AAAAl = in.readUShort();
         int AAAAAA = AAAAl | (AAh << 16);
         return InstructionN0t.of(opcode, extend_sign32(AAAAAA, 24));
+    }
+
+    private static ReferenceType verification_error_ref_type(int bits) {
+        return switch (bits) {
+            case 0 -> ReferenceType.TYPE;
+            case 1 -> ReferenceType.FIELD;
+            case 2 -> ReferenceType.METHOD;
+            default -> throw new IllegalStateException(
+                    "Invalid verification error reference type bits: " + bits);
+        };
+    }
+
+    public static InstructionN0ci read_20bc(
+            Opcode opcode, RandomInput in, DexReader context, int AA) {
+        int BBBB = in.readUShort();
+        var error = VerificationError.of(AA & 0x3f);
+        var type = verification_error_ref_type(AA >>> 6);
+        return InstructionN0ci.of(opcode, error, type,
+                indexToRef(type, context, BBBB));
     }
 
     public static InstructionN2x read_22x(Opcode opcode, RandomInput in, int AA) {
@@ -314,6 +332,22 @@ public class InstructionReader {
         int CCCC = in.readUShort();
         return InstructionNrc.of(opcode, AA, CCCC,
                 indexToRef(opcode.getReferenceType1(), context, BBBB));
+    }
+
+    public static InstructionN0ci read_40sc(
+            Opcode opcode, RandomInput in, DexReader context) {
+        int BBBBlo = in.readUShort();
+        int BBBBhi = in.readUShort();
+        int BBBBBBBB = BBBBlo | (BBBBhi << 16);
+        int AAAA = in.readUShort();
+        if ((AAAA >>> 8) != 0) {
+            throw new IllegalStateException(
+                    "arg should fit in one byte, but actual value is " + AAAA);
+        }
+        var error = VerificationError.of(AAAA & 0x3f);
+        var type = verification_error_ref_type(AAAA >>> 6);
+        return InstructionN0ci.of(opcode, error, type,
+                indexToRef(type, context, BBBBBBBB));
     }
 
     public static InstructionN1c read_41c(

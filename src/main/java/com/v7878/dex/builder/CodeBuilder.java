@@ -22,6 +22,7 @@ import com.v7878.collections.IntMap;
 import com.v7878.dex.Format;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
+import com.v7878.dex.VerificationError;
 import com.v7878.dex.immutable.CallSiteId;
 import com.v7878.dex.immutable.FieldId;
 import com.v7878.dex.immutable.MethodHandleId;
@@ -32,6 +33,7 @@ import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.ArrayPayload;
 import com.v7878.dex.immutable.bytecode.Instruction;
+import com.v7878.dex.immutable.bytecode.InstructionN0ci;
 import com.v7878.dex.immutable.bytecode.InstructionN0t;
 import com.v7878.dex.immutable.bytecode.InstructionN0x;
 import com.v7878.dex.immutable.bytecode.InstructionN1c;
@@ -1386,6 +1388,13 @@ public final class CodeBuilder {
         return this;
     }
 
+    // <AA|op BBBB> op AA, kind@BBBB
+    public CodeBuilder f20bc(Opcode op, VerificationError error,
+                             ReferenceType type, Object reference) {
+        add(InstructionN0ci.of(op, error, type, reference));
+        return this;
+    }
+
     // <ØØ|op AAAA> op +AAAA
     public CodeBuilder f20t(Opcode op, Object target) {
         add(op.format(), position -> InstructionN0t.of(op, branchOffset(position, target)));
@@ -1581,7 +1590,14 @@ public final class CodeBuilder {
         return this;
     }
 
-    // <exop BBBBlo BBBBhi> exop vAAAA, @BBBBBBBB
+    // <exop BBBBlo BBBBhi AAAA> exop AAAA, kind@BBBBBBBB
+    public CodeBuilder f40sc(Opcode op, VerificationError error,
+                             ReferenceType type, Object reference) {
+        add(InstructionN0ci.of(op, error, type, reference));
+        return this;
+    }
+
+    // <exop BBBBlo BBBBhi AAAA> exop vAAAA, @BBBBBBBB
     public CodeBuilder f41c(Opcode op, int reg_or_pair, Object constant) {
         add(InstructionN1c.of(op,
                 check_reg_or_pair(reg_or_pair, op.isRegPair(0)),

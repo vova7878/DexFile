@@ -7,6 +7,8 @@ import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.smali.parser.SmaliLexer;
 import com.v7878.dex.smali.parser.SmaliParser;
+import com.v7878.dex.smali.printer.SmaliEmitter;
+import com.v7878.dex.smali.printer.SmaliPrinter;
 
 import org.antlr.v4.runtime.BailErrorStrategy;
 import org.antlr.v4.runtime.CharStreams;
@@ -15,6 +17,7 @@ import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class SmaliIO {
@@ -82,5 +85,75 @@ public class SmaliIO {
 
     public static MethodDef parseMethod(String smali) {
         return parseRule(smali, parser -> parser.full_method().method().value);
+    }
+
+    // ------------------------- printing -------------------------
+
+    private static String print(Consumer<SmaliPrinter> action,
+                                SmaliOptions options) {
+        var sb = new StringBuilder();
+        action.accept(new SmaliPrinter(new SmaliEmitter(sb), options));
+        return sb.toString();
+    }
+
+    /**
+     * Prints every class of the dex with the default options; the result
+     * re-parses with {@link #parse(String)} to an equal dex for models the
+     * library itself produces.
+     */
+    public static String print(Dex dex) {
+        return print(dex, SmaliOptions.defaultOptions());
+    }
+
+    /**
+     * Prints every class of the dex with the given options; classes are
+     * separated by a blank line. See the {@code print} overloads for the
+     * round-trip contract.
+     */
+    public static String print(Dex dex, SmaliOptions options) {
+        return print(printer -> printer.print(dex), options);
+    }
+
+    /**
+     * Prints one class block with the default options; the result re-parses
+     * with {@link #parseClass(String)} to an equal class definition for
+     * models the library itself produces.
+     */
+    public static String printClass(ClassDef cls) {
+        return printClass(cls, SmaliOptions.defaultOptions());
+    }
+
+    /**
+     * Prints one class block with the given options. A round trip through
+     * {@link #parseClass(String)} preserves the model when the method bodies
+     * are in the canonical layout this library emits (payloads at the end
+     * behind an alignment {@code nop}, debug items on instruction
+     * boundaries, try ranges on instruction boundaries) and the text holds
+     * no unprintable content; code the label grammar cannot express is
+     * printed commented out with a {@code nop} and does not round-trip.
+     */
+    public static String printClass(ClassDef cls, SmaliOptions options) {
+        return print(printer -> printer.print(cls), options);
+    }
+
+    /**
+     * Prints one method block with the default options; the result
+     * re-parses with {@link #parseMethod(String)} to an equal method
+     * definition for models the library itself produces. Member references
+     * always use the long form: a lone method has no enclosing class to
+     * resolve a short reference against.
+     */
+    public static String printMethod(MethodDef method) {
+        return printMethod(method, SmaliOptions.defaultOptions());
+    }
+
+    /**
+     * Prints one method block with the given options; see
+     * {@link #printMethod(MethodDef)} for the round-trip contract. The
+     * {@link SmaliOptions#hasImplicitReferences()} option has no effect
+     * here.
+     */
+    public static String printMethod(MethodDef method, SmaliOptions options) {
+        return print(printer -> printer.print(method), options);
     }
 }
