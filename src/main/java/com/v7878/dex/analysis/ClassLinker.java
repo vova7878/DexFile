@@ -37,8 +37,8 @@ import java.util.function.Function;
  * vtable, iftable (with implementation method arrays), and the kind of copied
  * entries (miranda / default copy / default conflict). Sources and deviations
  * are documented per element.
- *
- * <p>Invariants:
+ * <p>
+ * Invariants:
  * <ul>
  *   <li>iterative building (explicit stacks/deques); hierarchy cycles (a
  *       broken dex) do not hang but become a class link error;</li>
@@ -1079,8 +1079,8 @@ final class ClassLinker {
      * flags (methods and fields). Used for the vtable-entry override gate and
      * for the referrer's access to a resolved member in
      * ResolveMethodWithChecks / ResolvedFieldAccessTest.
-     *
-     * <p>Returns Boolean: null — the answer is non-determinable. The
+     * <p>
+     * Returns Boolean: null — the answer is non-determinable. The
      * public/private and package-private branches are determined by type
      * descriptors and flags (the package — TypeId.isInSamePackage, the model
      * has a single class loader); only the protected branch is
@@ -1296,8 +1296,8 @@ final class ClassLinker {
      * declared → the superclass chain (the first candidate: inherited —
      * return, otherwise stop and end_klass) → copied methods below
      * end_klass → the uninherited candidate.
-     *
-     * <p>Answer exactness: a hit among start's declared methods or in the
+     * <p>
+     * Answer exactness: a hit among start's declared methods or in the
      * known part of the chain is EXACT (the search consults them first, and
      * the unknown part of the hierarchy — superclasses above and interfaces
      * — cannot shadow such an answer). The copied layer, the uninherited

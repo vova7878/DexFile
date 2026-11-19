@@ -18,8 +18,8 @@ import java.util.function.Function;
 /**
  * Answers type relation queries for {@link TypeInfo} values: assignability
  * and least common supertypes, with array and unresolved-type handling.
- *
- * <p>Implementations supply raw class relations through the protected
+ * <p>
+ * Implementations supply raw class relations through the protected
  * {@code resolve*} methods; {@code null} means unknown. Two implementations
  * are provided: {@link #DEFAULT} knows nothing, {@link #simple} derives
  * relations from class headers.
@@ -120,8 +120,8 @@ public abstract sealed class TypeResolver {
 
     /**
      * Checks whether a value of type a is assignable to type b.
-     *
-     * <p>Deeper reference arrays are assignable to {@code Object[]},
+     * <p>
+     * Deeper reference arrays are assignable to {@code Object[]},
      * {@code Serializable[]} and {@code Cloneable[]}.
      *
      * @param unknownMatches result used when the relation cannot be resolved
@@ -214,8 +214,8 @@ public abstract sealed class TypeResolver {
 
     /**
      * Checks whether the type is a final class, i.e. has no proper subtypes.
-     *
-     * <p>An array type is final exactly when its component type is final:
+     * <p>
+     * An array type is final exactly when its component type is final:
      * an array is a subtype of another array exactly when its component is a
      * subtype of that component, so an array whose component has no proper
      * subtypes has none either. An array of a primitive has no array subtype

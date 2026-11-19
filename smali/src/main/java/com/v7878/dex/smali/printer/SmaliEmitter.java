@@ -1,26 +1,20 @@
 package com.v7878.dex.smali.printer;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Objects;
 
 /**
  * Mechanical text layer of the smali printer: an {@link Appendable} with
  * four-space indentation, line-start handling, a comment mode that prefixes
  * every written line, and the literal, quoting and hex forms the smali
- * grammar accepts. Knows no model types beyond primitives and strings.
- *
- * <p>Methods never return a failed write: an {@link IOException} of the
- * backend is rethrown as an {@link UncheckedIOException} at the point it
- * occurs.</p>
+ * grammar accepts. Knows no model types beyond primitives and strings
  */
 public final class SmaliEmitter {
-    private final Appendable out;
+    private final StringBuilder out;
     private int indent;
     private boolean lineStart = true;
     private boolean commenting;
 
-    public SmaliEmitter(Appendable out) {
+    public SmaliEmitter(StringBuilder out) {
         this.out = Objects.requireNonNull(out);
     }
 
@@ -44,11 +38,7 @@ public final class SmaliEmitter {
      * Ends the current line.
      */
     public SmaliEmitter newline() {
-        try {
-            out.append('\n');
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        out.append('\n');
         lineStart = true;
         return this;
     }
@@ -76,11 +66,7 @@ public final class SmaliEmitter {
     public SmaliEmitter append(CharSequence text) {
         Objects.requireNonNull(text);
         writeIndent();
-        try {
-            out.append(text);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        out.append(text);
         return this;
     }
 
@@ -89,11 +75,7 @@ public final class SmaliEmitter {
      */
     public SmaliEmitter append(char c) {
         writeIndent();
-        try {
-            out.append(c);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        out.append(c);
         return this;
     }
 
@@ -142,24 +124,20 @@ public final class SmaliEmitter {
      */
     public SmaliEmitter hex(long value) {
         writeIndent();
-        try {
-            if (value == 0) {
-                out.append('0');
-                return this;
-            }
-            // written back to front into the smallest buffer that fits
-            char[] buffer = new char[16];
-            int index = buffer.length;
-            while (value != 0) {
-                int digit = (int) (value & 0xf);
-                buffer[--index] = (char) (digit < 10
-                        ? '0' + digit : 'a' + digit - 10);
-                value >>>= 4;
-            }
-            out.append(new String(buffer, index, buffer.length - index));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        if (value == 0) {
+            out.append('0');
+            return this;
         }
+        // written back to front into the smallest buffer that fits
+        char[] buffer = new char[16];
+        int index = buffer.length;
+        while (value != 0) {
+            int digit = (int) (value & 0xf);
+            buffer[--index] = (char) (digit < 10
+                    ? '0' + digit : 'a' + digit - 10);
+            value >>>= 4;
+        }
+        out.append(new String(buffer, index, buffer.length - index));
         return this;
     }
 
@@ -240,15 +218,9 @@ public final class SmaliEmitter {
             return;
         }
         lineStart = false;
-        try {
-            for (int i = 0; i < indent; i++) {
-                out.append(' ');
-            }
-            if (commenting) {
-                out.append("# ");
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+        out.append(" ".repeat(Math.max(0, indent)));
+        if (commenting) {
+            out.append("# ");
         }
     }
 

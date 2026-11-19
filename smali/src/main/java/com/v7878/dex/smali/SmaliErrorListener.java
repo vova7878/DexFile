@@ -6,8 +6,8 @@ import org.antlr.v4.runtime.Recognizer;
 
 /**
  * Converts an ANTLR syntax error into a {@link SmaliSyntaxException}.
- *
- * <p>Stateless: one instance is shared by every parse.
+ * <p>
+ * Stateless: one instance is shared by every parse.
  */
 final class SmaliErrorListener extends BaseErrorListener {
     static final SmaliErrorListener INSTANCE = new SmaliErrorListener();

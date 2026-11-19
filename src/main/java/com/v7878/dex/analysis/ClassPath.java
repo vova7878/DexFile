@@ -28,16 +28,16 @@ import java.util.function.Function;
  * Static field/method resolution and invoke dispatch — ports of the ART
  * mechanics, branch <a href="https://android.googlesource.com/platform/art/+/refs/heads/android17-release">android17-release</a>.
  * Sources and deviations are documented per element.
- *
- * <p>Hierarchy linking (vtable/iftable, copied methods) is {@link ClassLinker};
+ * <p>
+ * Hierarchy linking (vtable/iftable, copied methods) is {@link ClassLinker};
  * results are cached. Classes outside the classpath: an unknown reference-id
  * class or dispatch receiver makes the answer non-determinable
  * (Result.unknown()); the referrer affects only access checks — for an
  * unknown referrer they are computed from flags and descriptors
  * (public/private/package-private — exact answer/IAE; protected needs
  * referrer hierarchy assignability — fail-open access with exact == false).
- *
- * <p>Deviations from ART: hiddenapi is treated as allowed; IMT is skipped
+ * <p>
+ * Deviations from ART: hiddenapi is treated as allowed; IMT is skipped
  * (dispatch semantics is the itable lookup); dex-cache fast paths
  * (FindMethodFast, the NterpGetMethod cache) are not modeled — resolution
  * always takes the full path; the verifier is out of scope.
@@ -355,15 +355,15 @@ public class ClassPath {
      * (runtime/entrypoints/entrypoint_utils-inl.h) for iget/sget/iput/sput.
      * {@code referrer} — the class containing the access; {@code access} —
      * the instruction kind (read/write × instance/static).
-     *
-     * <p>Order as in ART: ResolveFieldJLS (NoSuchFieldError on miss) → field
+     * <p>
+     * Order as in ART: ResolveFieldJLS (NoSuchFieldError on miss) → field
      * kind (IsStatic != isStatic → ICCE, before access checks — the reverse
      * of the method order) → ResolvedFieldAccessTest (CanAccess(declarer)
      * with an escape hatch to the FieldId class → IAE; CanAccessMember(flags)
      * → IAE) → CanBeChangedBy (a write to a final field of another declarer
      * → IAE).
-     *
-     * <p>An unknown referrer does not make the result unknown: CanBeChangedBy
+     * <p>
+     * An unknown referrer does not make the result unknown: CanBeChangedBy
      * and the public/private/package-private branches depend only on
      * descriptors and flags — exact answer/IAE; the indeterminate protected
      * branch (referrer hierarchy assignability) and CanAccess on an unknown
@@ -497,16 +497,16 @@ public class ClassPath {
      * (runtime/class_linker-inl.h) — the full checking path.
      * {@code referrer} — the class containing the call; {@code type} — the
      * invoke instruction kind.
-     *
-     * <p>Order: ThrowIfInvokeClassMismatch (ICCE before the search; only
+     * <p>
+     * Order: ThrowIfInvokeClassMismatch (ICCE before the search; only
      * VIRTUAL/INTERFACE are checked — SUPER/STATIC are not, DIRECT is legal
      * on modern-dex interfaces) → search (FindClassMethod /
      * FindInterfaceMethodWithSignature) → CanAccess(declarer class) with the
      * CanAccess(MethodId reference class) escape hatch (IAE) → CanAccessMember
      * (IAE) → CheckIncompatibleClassChange (ICCE) → FindIncompatibleMethod
      * (ICCE) → NoSuchMethodError.
-     *
-     * <p>An unknown referrer does not make the result unknown: it affects
+     * <p>
+     * An unknown referrer does not make the result unknown: it affects
      * only the access checks — the public/private/package-private branches of
      * CanAccessMember depend only on descriptors and flags — exact
      * answer/IAE; the indeterminate protected branch (referrer hierarchy
@@ -616,8 +616,8 @@ public class ClassPath {
      * invoke-interface (resolution — ResolveMethodWithChecks from the
      * referrer). {@code receiver} — the receiver class (the runtime analog
      * of this.getClass()); {@code referrer} — the class containing the call.
-     *
-     * <p>Dispatch: VIRTUAL — the receiver vtable at the resolved method's
+     * <p>
+     * Dispatch: VIRTUAL — the receiver vtable at the resolved method's
      * index; INTERFACE — the itable (FindVirtualMethodForInterface), except a
      * j.l.Object method — the vtable (kInvokeInterfaceOnObjectMethodFlag in
      * NterpGetMethod). An array receiver dispatches as j.l.Object (the array
@@ -688,8 +688,8 @@ public class ClassPath {
      * class containing the call; {@code receiver} — the receiver class (this):
      * it does not affect the dispatch, it is needed only for the execution
      * error (the miranda walk goes along the receiver chain).
-     *
-     * <p>Class branch: the referrer superclass vtable at the resolved
+     * <p>
+     * Class branch: the referrer superclass vtable at the resolved
      * method's vtable index; interface branch —
      * FindVirtualMethodForInterfaceSuper. A referrer outside the instruction
      * class hierarchy, the referrer being j.l.Object itself (no superclass),

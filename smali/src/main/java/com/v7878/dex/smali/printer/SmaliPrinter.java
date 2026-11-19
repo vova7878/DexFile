@@ -1,5 +1,7 @@
 package com.v7878.dex.smali.printer;
 
+import static com.v7878.dex.DexConstants.ACC_FINAL;
+import static com.v7878.dex.DexConstants.ACC_PRIVATE;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
@@ -8,6 +10,21 @@ import com.v7878.collections.IntSet;
 import com.v7878.dex.AccessFlag;
 import com.v7878.dex.Opcode;
 import com.v7878.dex.ReferenceType;
+import com.v7878.dex.analysis.AnalysisOptions;
+import com.v7878.dex.analysis.AnalyzedMethod;
+import com.v7878.dex.analysis.ClassPath;
+import com.v7878.dex.analysis.ClassPath.CallTarget;
+import com.v7878.dex.analysis.ClassPath.FieldAccess;
+import com.v7878.dex.analysis.ClassPath.InvocationError;
+import com.v7878.dex.analysis.ClassPath.InvokeType;
+import com.v7878.dex.analysis.ClassPath.ResolutionError;
+import com.v7878.dex.analysis.ClassPath.ResolvedField;
+import com.v7878.dex.analysis.ClassPath.ResolvedMethod;
+import com.v7878.dex.analysis.ClassPath.Result;
+import com.v7878.dex.analysis.Position;
+import com.v7878.dex.analysis.Register;
+import com.v7878.dex.analysis.RegisterLine;
+import com.v7878.dex.analysis.TypeResolver;
 import com.v7878.dex.immutable.Annotation;
 import com.v7878.dex.immutable.AnnotationElement;
 import com.v7878.dex.immutable.CallSiteId;
@@ -16,6 +33,7 @@ import com.v7878.dex.immutable.CommonAnnotation;
 import com.v7878.dex.immutable.Dex;
 import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.FieldId;
+import com.v7878.dex.immutable.MemberId;
 import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.MethodHandleId;
 import com.v7878.dex.immutable.MethodId;
@@ -78,20 +96,24 @@ import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.smali.SmaliOptions;
+import com.v7878.dex.util.Formatter;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.StringJoiner;
 import java.util.TreeMap;
 
 /**
  * The model-to-text printer behind the {@code SmaliIO.print} methods. One
  * instance may print any number of dexes, classes and methods; it holds no
  * state between top-level {@code print} calls.
- *
- * <p>A method body is printed in two passes. The first computes instruction
+ * <p>
+ * A method body is printed in two passes. The first computes instruction
  * addresses, drops the alignment {@code nop} in front of a payload at an odd
  * address, claims each payload for the first switch instruction pointing at
  * it (further references get a duplicated copy at a virtual address),
@@ -99,42 +121,66 @@ import java.util.TreeMap;
  * labels, try directives and debug items per address. The second emits the
  * address groups in the baksmali order - offset comment, debug directives,
  * labels, instruction, try-end labels, {@code .catch} directives - with the
- * payload directives last, each behind its label.</p>
- *
- * <p>Raw instructions print live as {@code raw 0xN} and
+ * payload directives last, each behind its label.
+ * <p>
+ * Raw instructions print live as {@code raw 0xN} and
  * {@code raw-ref ...} and re-parse. The instructions the label
  * grammar cannot express - legacy {@code m-packed-switch} and
  * {@code m-sparse-switch}, off-boundary or out-of-range targets, orphan
  * payloads - are printed commented out
  * with a {@code nop} appended, so the output always re-parses. With
  * {@link SmaliOptions#hasRelativeOffsets()} everything prints live with raw
- * offsets instead, which is faithful for any code but not re-parseable.</p>
+ * offsets instead, which is faithful for any code but not re-parseable.
+ * <p>
+ * The information options add comments in one namespace: the analysis
+ * block of a body and the resolution answer of every reference print
+ * {@code #@key value}, so the text still re-parses and the answer is
+ * visible next to the code it describes. Fields and methods resolve
+ * against the class path of the options, or against the printed model when
+ * the options carry none.
  */
 public final class SmaliPrinter {
+    private static final TypeId UNKNOWN_CLASS = TypeId.of("Lunknown;");
+
     private final SmaliEmitter out;
     private final SmaliOptions options;
     private TypeId classContext;
 
+    // the class path and the resolver of the current top-level print call:
+    // the option source, or the printed model as the fallback
+    private ClassPath classPath;
+    private TypeResolver resolver;
+
     // per-method-body state, valid only inside printBody
     private final IntMap<TreeMap<String, Label>> labels = new IntMap<>();
     private final List<Label> numbering = new ArrayList<>();
+    private AnalyzedMethod analysis;
+    private Throwable analysisFailure;
+
+    // the first resolvable operand of the instruction being printed; its
+    // resolution comment trails the instruction line
+    private ReferenceType commentType;
+    private Object commentReference;
+    private boolean commentSuppressed;
 
     public SmaliPrinter(SmaliEmitter out, SmaliOptions options) {
         this.out = out;
         this.options = options;
+        options.verify();
     }
 
     /**
      * Prints every class of the dex in order, separated by a blank line.
      */
     public void print(Dex dex) {
+        start(new ClassPath(dex::findClass));
         boolean first = true;
         for (ClassDef cls : dex.getClasses()) {
             if (!first) {
                 out.newline();
             }
             first = false;
-            print(cls);
+            printClassDef(cls);
         }
     }
 
@@ -142,6 +188,43 @@ public final class SmaliPrinter {
      * Prints one class block.
      */
     public void print(ClassDef cls) {
+        start(new ClassPath(type -> type.equals(cls.getType()) ? cls : null));
+        printClassDef(cls);
+    }
+
+    /**
+     * Prints one method block without an enclosing class, so member
+     * references always use the long form.
+     */
+    public void print(MethodDef method) {
+        classContext = null;
+        start(null);
+        printMethodDef(method);
+    }
+
+    /**
+     * Selects the class path of the options, or the printed model as the
+     * fallback; a bare type resolver leaves the resolution without class
+     * definitions. Called once per top-level {@code print} call.
+     */
+    private void start(ClassPath fallback) {
+        ClassPath cp = options.getClassPath();
+        if (cp != null) {
+            classPath = cp;
+            resolver = cp.getTypeResolver();
+            return;
+        }
+        TypeResolver tr = options.getTypeResolver();
+        if (tr != null) {
+            classPath = new ClassPath(type -> null);
+            resolver = tr;
+            return;
+        }
+        classPath = fallback != null ? fallback : new ClassPath(type -> null);
+        resolver = classPath.getTypeResolver();
+    }
+
+    private void printClassDef(ClassDef cls) {
         classContext = cls.getType();
 
         out.append(".class ");
@@ -178,15 +261,6 @@ public final class SmaliPrinter {
         printFieldSection("# instance fields", cls.getInstanceFields());
         printMethodSection("# direct methods", cls.getDirectMethods());
         printMethodSection("# virtual methods", cls.getVirtualMethods());
-    }
-
-    /**
-     * Prints one method block without an enclosing class, so member
-     * references always use the long form.
-     */
-    public void print(MethodDef method) {
-        classContext = null;
-        printMethodDef(method);
     }
 
     // ------------------------- class level -------------------------
@@ -226,6 +300,7 @@ public final class SmaliPrinter {
         if (field.getInitialValue() != null) {
             out.append(" = ");
             printValue(field.getInitialValue());
+            printTrailingComment(constantComment(field.getInitialValue()));
         }
         out.newline();
 
@@ -280,6 +355,7 @@ public final class SmaliPrinter {
             out.simpleName(element.getName());
             out.append(" = ");
             printValue(element.getValue());
+            printTrailingComment(constantComment(element.getValue()));
             out.newline();
         }
     }
@@ -339,15 +415,15 @@ public final class SmaliPrinter {
         }
         out.newline();
         out.indent();
-        boolean first = true;
-        for (EncodedValue item : values) {
-            if (!first) {
-                out.append(',').newline();
-            }
-            first = false;
+        for (int i = 0; i < values.size(); i++) {
+            EncodedValue item = values.get(i);
             printValue(item);
+            if (i + 1 < values.size()) {
+                out.append(',');
+            }
+            printTrailingComment(constantComment(item));
+            out.newline();
         }
-        out.newline();
         out.deindent();
         out.append('}');
     }
@@ -402,12 +478,35 @@ public final class SmaliPrinter {
         out.quoted(id.getMethodName());
         out.append(", ");
         printProto(id.getMethodProto());
-        for (EncodedValue extra : id.getExtraArguments()) {
-            out.append(", ");
-            printValue(extra);
+        var extras = id.getExtraArguments();
+        // with resolution info every handle gets its own line and comment;
+        // the grammar allows whitespace and comments between the tokens
+        boolean detailed = options.hasResolutionInfo() && !extras.isEmpty();
+        if (detailed) {
+            out.append(',');
+            out.newline();
+            out.indent();
+            for (int i = 0; i < extras.size(); i++) {
+                EncodedValue extra = extras.get(i);
+                printValue(extra);
+                if (i + 1 < extras.size()) {
+                    out.append(',');
+                }
+                printTrailingComment(callSiteComment(extra));
+                out.newline();
+            }
+            out.deindent();
+        } else {
+            for (EncodedValue extra : extras) {
+                out.append(", ");
+                printValue(extra);
+            }
         }
         out.append(")@");
         printMethodId((MethodId) id.getMethodHandle().getMember());
+        if (options.hasResolutionInfo()) {
+            printTrailingComment(handleComment(id.getMethodHandle(), true));
+        }
     }
 
     private boolean implicitRefs() {
@@ -444,6 +543,12 @@ public final class SmaliPrinter {
     }
 
     private void printReference(ReferenceType type, Object reference, Opcode op) {
+        if (!commentSuppressed && commentType == null
+                && (type == ReferenceType.FIELD || type == ReferenceType.METHOD
+                || type == ReferenceType.METHOD_HANDLE)) {
+            commentType = type;
+            commentReference = reference;
+        }
         switch (type) {
             case STRING -> out.quoted((String) reference);
             case TYPE -> printType((TypeId) reference);
@@ -477,6 +582,8 @@ public final class SmaliPrinter {
     // ------------------------- method level -------------------------
 
     private void printMethodDef(MethodDef method) {
+        analysis = null;
+        analysisFailure = null;
         out.append(".method ");
         printFlags(AccessFlag.getAccessFlagsForMethod(method.getAccessFlags()));
         out.simpleName(method.getName());
@@ -584,6 +691,8 @@ public final class SmaliPrinter {
     }
 
     private void printBody(MethodDef method, MethodImplementation impl) {
+        analyze(method);
+        boolean instance = (method.getAccessFlags() & ACC_STATIC) == 0;
         var insns = impl.getInstructions();
         int count = insns.size();
 
@@ -803,6 +912,13 @@ public final class SmaliPrinter {
 
         printParameters(method, false);
         printAnnotations(method.getAnnotations());
+        if (options.hasAnalysisInfo()) {
+            if (analysis != null) {
+                printStateLine("entry", analysis.firstLine(), instance);
+            } else {
+                printAnalysisFailure(analysisFailure);
+            }
+        }
         out.newline();
 
         boolean payloadSection = !duplicates.isEmpty();
@@ -844,8 +960,17 @@ public final class SmaliPrinter {
                     break;
                 }
             }
-            if (insnIndex >= 0 && options.hasCodeOffsets()) {
-                out.append("#@0x").hex(a).newline();
+            Position position = null;
+            if (insnIndex >= 0) {
+                if (options.hasAnalysisInfo() || options.hasCodeOffsets()) {
+                    out.append("#@0x").hex(a).newline();
+                }
+                if (analysis != null) {
+                    position = analysis.getPositions().get(a);
+                }
+                if (options.hasAnalysisInfo() && position != null) {
+                    printAnalysisBlock(position, instance);
+                }
             }
             if (debugAt.contains(a)) {
                 printDebugItems(debugAt.get(a), totalRegs, fullParams);
@@ -857,7 +982,7 @@ public final class SmaliPrinter {
             }
             if (insnIndex >= 0) {
                 printInstructionEntry(insns, address, fallback, payloadRef,
-                        insnIndex, totalRegs, fullParams);
+                        insnIndex, totalRegs, fullParams, position);
             }
             if (tryEndsAt.contains(a)) {
                 for (Label label : tryEndsAt.get(a)) {
@@ -1111,26 +1236,35 @@ public final class SmaliPrinter {
     private void printInstructionEntry(List<Instruction> insns, int[] address,
                                        boolean[] fallback, Label[] payloadRef,
                                        int index, int totalRegs,
-                                       int fullParams) {
+                                       int fullParams, Position position) {
         Instruction insn = insns.get(index);
         boolean relative = options.hasRelativeOffsets();
         if (fallback[index]) {
             out.startComment();
             printInstruction(insn, index, address[index], true, payloadRef,
-                    totalRegs, fullParams);
+                    totalRegs, fullParams, position);
             out.endComment().newline();
             out.append("nop");
         } else {
             printInstruction(insn, index, address[index], relative,
-                    payloadRef, totalRegs, fullParams);
+                    payloadRef, totalRegs, fullParams, position);
         }
         out.newline();
     }
 
     private void printInstruction(Instruction insn, int index, int addr,
                                   boolean relative, Label[] payloadRef,
-                                  int totalRegs, int fullParams) {
+                                  int totalRegs, int fullParams,
+                                  Position position) {
         Opcode op = insn.getOpcode();
+        commentType = null;
+        commentReference = null;
+        // no answer exists for these operands: a polymorphic call site has
+        // no ClassPath kind, a verification error is not a reference use
+        commentSuppressed = op == Opcode.INVOKE_POLYMORPHIC
+                || op == Opcode.INVOKE_POLYMORPHIC_RANGE
+                || op == Opcode.THROW_VERIFICATION_ERROR
+                || op == Opcode.THROW_VERIFICATION_ERROR_JUMBO;
         out.append(op.opname());
         switch (op.format()) {
             case Format10t, Format20t, Format20t_24, Format30t -> {
@@ -1301,6 +1435,9 @@ public final class SmaliPrinter {
             // payloads
             default -> throw shouldNotReachHere();
         }
+        if (options.hasResolutionInfo() && !commentSuppressed) {
+            printTrailingComment(instructionComment(position, op));
+        }
     }
 
     private void printBranch(int addr, int offset, boolean unconditional,
@@ -1469,5 +1606,415 @@ public final class SmaliPrinter {
             return null;
         }
         return set.at(index);
+    }
+
+    // ------------------------- information options -------------------------
+
+    /**
+     * Runs the body analysis when an information option needs it; a failure
+     * is kept for the {@code analysisInfo} comment, so the code still prints
+     * and the resolution comments fall back to the static answers.
+     */
+    private void analyze(MethodDef method) {
+        analysis = null;
+        analysisFailure = null;
+        if (!options.hasAnalysisInfo() && !options.hasResolutionInfo()) {
+            return;
+        }
+        TypeId declaringClass = classContext != null ? classContext : UNKNOWN_CLASS;
+        var analysisOptions = AnalysisOptions.defaultOptions()
+                .withVerification(options.hasAnalysisVerification());
+        try {
+            analysis = AnalyzedMethod.analyze(resolver, declaringClass,
+                    method, analysisOptions);
+        } catch (RuntimeException e) {
+            analysisFailure = e;
+        }
+    }
+
+    private void printAnalysisFailure(Throwable failure) {
+        if (failure == null) {
+            return;
+        }
+        var buffer = new StringWriter();
+        failure.printStackTrace(new PrintWriter(buffer));
+        boolean first = true;
+        for (String line : buffer.toString().split("\n")) {
+            String text = line.strip();
+            if (text.isEmpty()) {
+                continue;
+            }
+            if (first) {
+                out.append("#@analysis-failed ").append(text).newline();
+                first = false;
+            } else {
+                out.append("#@ ").append(text).newline();
+            }
+        }
+    }
+
+    private void printStateLine(String key, RegisterLine line, boolean instance) {
+        out.append("#@").append(key).append(' ');
+        out.append(line.describe());
+        if (instance && !line.isThisInitialized()) {
+            out.append(" this-uninitialized");
+        }
+        out.newline();
+    }
+
+    /**
+     * The block of one instruction: the register states, the consumed result
+     * or exception, the touched registers and the flags; a line that carries
+     * nothing is omitted, {@code #@flags} is unconditional.
+     */
+    private void printAnalysisBlock(Position position, boolean instance) {
+        if (position.isBranchTarget()) {
+            printStateLine("before", position.before(), instance);
+        }
+        Opcode op = position.opcode();
+        if (op != Opcode.THROW && !op.isReturn()) {
+            printStateLine("after", position.after(), instance);
+        }
+        if (position.resultType() != null) {
+            out.append("#@result ").append(position.resultType().getName()).newline();
+        }
+        if (position.exceptionType() != null) {
+            out.append("#@exception ").append(position.exceptionType().toString()).newline();
+        }
+        if (!position.inputs().isEmpty()) {
+            out.append("#@reads ").append(Formatter.registers(position.inputs())).newline();
+        }
+        if (!position.outputs().isEmpty()) {
+            out.append("#@writes ").append(Formatter.registers(position.outputs())).newline();
+        }
+        out.append("#@flags ").append(runtimeFlags(position)).newline();
+    }
+
+    private static String runtimeFlags(Position position) {
+        String state;
+        if (position.isRuntimeReachable()) {
+            state = "runtime-reachable";
+        } else if (position.isStructurallyReachable()) {
+            state = "structurally-reachable";
+        } else {
+            state = "unreachable";
+        }
+        if (position.isStrictNop()) {
+            return state + ", strict-nop";
+        }
+        if (position.isLossyNop()) {
+            return state + ", lossy-nop";
+        }
+        return state;
+    }
+
+    private void printTrailingComment(String comment) {
+        if (comment == null) {
+            return;
+        }
+        out.append("    #@").append(comment);
+    }
+
+    private String instructionComment(Position position, Opcode op) {
+        if (commentType == null) {
+            return null;
+        }
+        return switch (commentType) {
+            case FIELD -> fieldComment((FieldId) commentReference, fieldAccess(op));
+            case METHOD -> methodComment((MethodId) commentReference, op, position);
+            case METHOD_HANDLE -> handleComment((MethodHandleId) commentReference, true);
+            default -> null;
+        };
+    }
+
+    /**
+     * The resolution comment of a constant reference value (an annotation or
+     * field value): a constant has no referrer, so the no-check overloads
+     * answer.
+     */
+    private String constantComment(EncodedValue value) {
+        if (!options.hasResolutionInfo()) {
+            return null;
+        }
+        if (value instanceof EncodedField field) {
+            return fieldResult(classPath.resolveField(field.getValue()));
+        }
+        if (value instanceof EncodedEnum constant) {
+            return fieldResult(classPath.resolveField(constant.getValue()));
+        }
+        if (value instanceof EncodedMethod method) {
+            return methodResult(classPath.resolveMethod(method.getValue()));
+        }
+        if (value instanceof EncodedMethodHandle handle) {
+            return handleComment(handle.getValue(), false);
+        }
+        return null;
+    }
+
+    /**
+     * The resolution comment of a call-site extra argument: only a method
+     * handle carries a reference, and the containing class is the referrer.
+     */
+    private String callSiteComment(EncodedValue value) {
+        if (!options.hasResolutionInfo() || !(value instanceof EncodedMethodHandle handle)) {
+            return null;
+        }
+        return handleComment(handle.getValue(), true);
+    }
+
+    private String fieldComment(FieldId id, FieldAccess access) {
+        return fieldResult(classContext == null
+                ? classPath.resolveField(id)
+                : classPath.resolveField(id, classContext, access));
+    }
+
+    private String methodComment(MethodId id, Opcode op, Position position) {
+        InvokeType type = classContext == null ? null : invokeType(op);
+        if (type == null) {
+            return methodResult(classPath.resolveMethod(id));
+        }
+        return switch (type) {
+            case STATIC -> dispatchResult(classPath.findNonVirtualMethodToCall(
+                    id, classContext, InvokeType.STATIC));
+            case DIRECT -> dispatchResult(classPath.findNonVirtualMethodToCall(
+                    id, classContext, InvokeType.DIRECT));
+            case SUPER -> dispatchResult(classPath.findSuperMethodToCall(
+                    id, classContext, classContext));
+            case VIRTUAL, INTERFACE -> virtualComment(id, type, position);
+        };
+    }
+
+    private String virtualComment(MethodId id, InvokeType type, Position position) {
+        Result<ResolvedMethod> resolution = classPath.resolveMethod(id, classContext, type);
+        if (resolution.value() == null) {
+            return failureComment(resolution);
+        }
+        TypeId receiver = dispatchReceiver(position, id, resolution.value());
+        if (receiver == null) {
+            return methodResult(resolution);
+        }
+        return dispatchResult(classPath.findMethodToCall(id, classContext, type, receiver));
+    }
+
+    /**
+     * The runtime class of a virtual call receiver: the exact analysis type
+     * of the receiver register, or the declarer of a final method, or an
+     * array reference class. Null means only the static answer is known.
+     */
+    private static TypeId dispatchReceiver(Position position, MethodId id,
+                                           ResolvedMethod resolved) {
+        if (position != null) {
+            int reg = receiverRegister(position.instruction());
+            if (reg >= 0 && reg < position.getRegisterCount()) {
+                Register value = position.before().at(reg);
+                if (value.isExactRef() && value.getTypeInfo() != null) {
+                    return value.getTypeInfo().exactType();
+                }
+            }
+        }
+        if ((resolved.declaringClass().getAccessFlags() & ACC_FINAL) != 0) {
+            return resolved.declaringClass().getType();
+        }
+        if (id.getDeclaringClass().isArray()) {
+            return id.getDeclaringClass();
+        }
+        return null;
+    }
+
+    private static int receiverRegister(Instruction insn) {
+        if (insn instanceof InstructionNv5c five) {
+            return five.getRegister1();
+        }
+        if (insn instanceof InstructionNv4c four) {
+            return four.getRegister1();
+        }
+        if (insn instanceof InstructionNrc range) {
+            return range.getStartRegister();
+        }
+        if (insn instanceof InstructionNrcc range) {
+            return range.getStartRegister();
+        }
+        return -1;
+    }
+
+    /**
+     * The resolution answer of a method handle. A handle is resolved, never
+     * dispatched, with the one exception ART makes: the super branch of a
+     * non-private invoke-direct handle asks the super path.
+     */
+    private String handleComment(MethodHandleId handle, boolean withChecks) {
+        TypeId referrer = withChecks ? classContext : null;
+        MemberId member = handle.getMember();
+        return switch (handle.getHandleType()) {
+            case STATIC_GET -> fieldHandleComment((FieldId) member, referrer, FieldAccess.SGET);
+            case STATIC_PUT -> fieldHandleComment((FieldId) member, referrer, FieldAccess.SPUT);
+            case INSTANCE_GET -> fieldHandleComment((FieldId) member, referrer, FieldAccess.IGET);
+            case INSTANCE_PUT -> fieldHandleComment((FieldId) member, referrer, FieldAccess.IPUT);
+            case INVOKE_STATIC ->
+                    methodHandleComment((MethodId) member, referrer, InvokeType.STATIC);
+            case INVOKE_CONSTRUCTOR ->
+                    methodHandleComment((MethodId) member, referrer, InvokeType.DIRECT);
+            case INVOKE_INSTANCE ->
+                    methodHandleComment((MethodId) member, referrer, InvokeType.VIRTUAL);
+            case INVOKE_INTERFACE ->
+                    methodHandleComment((MethodId) member, referrer, InvokeType.INTERFACE);
+            case INVOKE_DIRECT -> directHandleComment((MethodId) member, referrer);
+        };
+    }
+
+    private String fieldHandleComment(FieldId id, TypeId referrer, FieldAccess access) {
+        return fieldResult(referrer == null
+                ? classPath.resolveField(id)
+                : classPath.resolveField(id, referrer, access));
+    }
+
+    private String methodHandleComment(MethodId id, TypeId referrer, InvokeType type) {
+        return methodResult(referrer == null
+                ? classPath.resolveMethod(id)
+                : classPath.resolveMethod(id, referrer, type));
+    }
+
+    /**
+     * The two-step invoke-direct handle: ART resolves the method once
+     * ignoring the invocation type to detect private, then resolves a
+     * private method with the direct checks or dispatches a non-private
+     * superclass method through the super path.
+     */
+    private String directHandleComment(MethodId id, TypeId referrer) {
+        Result<ResolvedMethod> first = classPath.resolveMethod(id);
+        if (first.value() == null) {
+            return failureComment(first);
+        }
+        boolean isPrivate = (first.value().method().getAccessFlags() & ACC_PRIVATE) != 0;
+        if (referrer == null) {
+            return "resolve " + first.value()
+                    + (isPrivate ? " direct" : " super") + inexact(first);
+        }
+        if (isPrivate) {
+            Result<ResolvedMethod> second = classPath.resolveMethod(
+                    id, referrer, InvokeType.DIRECT);
+            if (second.value() == null) {
+                return failureComment(second);
+            }
+            return "resolve " + second.value() + " direct" + inexact(second);
+        }
+        return dispatchResult(classPath.findSuperMethodToCall(
+                id, referrer, referrer), " super");
+    }
+
+    private static String fieldResult(Result<ResolvedField> result) {
+        if (result.value() == null) {
+            return failureComment(result);
+        }
+        return "resolve " + result.value() + inexact(result);
+    }
+
+    private static String methodResult(Result<ResolvedMethod> result) {
+        if (result.value() == null) {
+            return failureComment(result);
+        }
+        return "resolve " + result.value() + inexact(result);
+    }
+
+    private static String dispatchResult(Result<CallTarget> result) {
+        return dispatchResult(result, "");
+    }
+
+    private static String dispatchResult(Result<CallTarget> result, String word) {
+        if (result.value() == null) {
+            return failureComment(result);
+        }
+        CallTarget target = result.value();
+        if (target instanceof CallTarget.DefaultConflict conflict) {
+            var text = new StringJoiner(", ", "dispatch default-conflict ",
+                    " throws IncompatibleClassChangeError");
+            for (ResolvedMethod candidate : conflict.candidates()) {
+                text.add(candidate.toString());
+            }
+            return text.toString();
+        }
+        var method = (CallTarget.Method) target;
+        var text = new StringBuilder("dispatch ");
+        text.append(method.method()).append(word);
+        if (method.invocationError() != InvocationError.NONE) {
+            text.append(" throws ").append(exceptionName(method.invocationError()));
+        }
+        if (!result.exact()) {
+            text.append(" inexact");
+        }
+        return text.toString();
+    }
+
+    private static String failureComment(Result<?> result) {
+        if (result.error() == ResolutionError.NONE) {
+            return "unknown";
+        }
+        String text = "error " + exceptionName(result.error());
+        String message = result.message();
+        return message == null ? text : text + ": " + message;
+    }
+
+    private static String inexact(Result<?> result) {
+        return result.exact() ? "" : " inexact";
+    }
+
+    private static String exceptionName(ResolutionError error) {
+        return switch (error) {
+            case NONE -> throw new IllegalArgumentException("No resolution error");
+            case NO_SUCH_METHOD -> "NoSuchMethodError";
+            case NO_SUCH_FIELD -> "NoSuchFieldError";
+            case NO_CLASS_DEF -> "NoClassDefFoundError";
+            case ILLEGAL_ACCESS -> "IllegalAccessError";
+            case INCOMPATIBLE_CLASS_CHANGE -> "IncompatibleClassChangeError";
+        };
+    }
+
+    private static String exceptionName(InvocationError error) {
+        return switch (error) {
+            case NONE -> throw new IllegalArgumentException("No invocation error");
+            case ABSTRACT_METHOD -> "AbstractMethodError";
+            case ILLEGAL_ACCESS -> "IllegalAccessError";
+            case INCOMPATIBLE_CLASS_CHANGE -> "IncompatibleClassChangeError";
+        };
+    }
+
+    private static FieldAccess fieldAccess(Opcode op) {
+        String name = op.opname();
+        boolean isStatic = name.startsWith("sget") || name.startsWith("sput");
+        boolean isPut = name.startsWith("iput") || name.startsWith("sput");
+        if (isStatic) {
+            return isPut ? FieldAccess.SPUT : FieldAccess.SGET;
+        }
+        return isPut ? FieldAccess.IPUT : FieldAccess.IGET;
+    }
+
+    /**
+     * The invoke kind of an instruction, or null for a non-invoke opcode and
+     * for the kinds the class path does not model.
+     */
+    private static InvokeType invokeType(Opcode op) {
+        String name = op.opname();
+        if (name.startsWith("m-")) {
+            name = name.substring(2);
+        }
+        if (!name.startsWith("invoke-")) {
+            return null;
+        }
+        if (name.startsWith("invoke-static")) {
+            return InvokeType.STATIC;
+        }
+        if (name.startsWith("invoke-direct")) {
+            return InvokeType.DIRECT;
+        }
+        if (name.startsWith("invoke-virtual")) {
+            return InvokeType.VIRTUAL;
+        }
+        if (name.startsWith("invoke-interface")) {
+            return InvokeType.INTERFACE;
+        }
+        if (name.startsWith("invoke-super")) {
+            return InvokeType.SUPER;
+        }
+        return null;
     }
 }

@@ -102,6 +102,7 @@ public final class AnalyzedMethod {
     private final int register_count;
 
     private final boolean verify;
+    private final RegisterLine firstLine;
 
     private AnalyzedMethod(TypeId declaring_class, MethodDef method,
                            MethodImplementation implementation,
@@ -115,6 +116,7 @@ public final class AnalyzedMethod {
         this.call_proto = call_proto;
         this.register_count = register_count;
         this.verify = verify;
+        this.firstLine = buildFirstLine();
     }
 
     public TypeId getDeclaringClass() {
@@ -280,7 +282,7 @@ public final class AnalyzedMethod {
         }
     }
 
-    private RegisterLine firstLine() {
+    public RegisterLine buildFirstLine() {
         final int address = -1;
         var line = new RegisterLine(register_count);
         var params = method.getParameterTypes();
@@ -295,7 +297,12 @@ public final class AnalyzedMethod {
                 outputPrim(line, address, pos, type);
             }
         }
-        if ((method.getAccessFlags() & ACC_STATIC) == 0) {
+        if ((method.getAccessFlags() & ACC_STATIC) != 0) {
+            // Static methods don't have "this", but we still set the initialization flag.
+            // Then isThisInitialized() has a nice property: it returns false only
+            // for constructors and only when "this" is truly uninitialized
+            line.markThisInitialized();
+        } else {
             pos -= 1;
             var ident = new Identifier(address, pos);
             Register value;
@@ -308,6 +315,15 @@ public final class AnalyzedMethod {
             line.copy(address, pos, value);
         }
         return line;
+    }
+
+    /**
+     * The register state at method entry - the incoming parameters and
+     * {@code this}, every other slot undefined; the line the analysis seeds
+     * the first position with.
+     */
+    public RegisterLine firstLine() {
+        return firstLine;
     }
 
     /**
@@ -1343,8 +1359,8 @@ public final class AnalyzedMethod {
      * Answers whether a check-cast of a value statically typed {@code source}
      * to {@code target} can never succeed: no runtime class is a subtype of
      * both types.
-     *
-     * <p>A final class has no subclasses, so a value statically typed as it
+     * <p>
+     * A final class has no subclasses, so a value statically typed as it
      * can only be an instance of that very class; the same holds for an
      * exactly typed value. Two classes meet only when one extends the
      * other, and an array fits a shallower type only through Object,
