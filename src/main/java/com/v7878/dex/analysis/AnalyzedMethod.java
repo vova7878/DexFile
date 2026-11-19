@@ -282,7 +282,7 @@ public final class AnalyzedMethod {
         }
     }
 
-    public RegisterLine buildFirstLine() {
+    private RegisterLine buildFirstLine() {
         final int address = -1;
         var line = new RegisterLine(register_count);
         var params = method.getParameterTypes();
