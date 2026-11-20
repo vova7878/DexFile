@@ -93,6 +93,9 @@ separately placed data section; the two are specified below.
 | data           | ubyte[]              | data area, containing all the support data for the tables listed above. Different items have different alignment requirements, and padding bytes are inserted before each item if necessary to achieve proper alignment.                                                                                                                                                                              |
 | link_data      | ubyte[]              | data used in statically linked files. The format of the data in this section is left unspecified by this document. This section is empty in unlinked files, and runtime implementations may use it as they see fit.                                                                                                                                                                                   |
 
+**Note:** The `class_defs` ordering requirement holds from version `037`; a `035` file is not
+checked for it during dex verification.
+
 ### Container format
 
 Version 41, which appeared in Android 16, introduces a new container format for DEX data with the
@@ -222,6 +225,13 @@ ubyte[8] DEX_FILE_MAGIC = { 0x64 0x65 0x78 0x0a 0x30 0x33 0x39 0x00 }
                         = "dex\n039\0"
 ```
 
+The runtime accepts every instruction and every pool section it implements in every format version
+it supports: the version number does not restrict which instructions or sections a file may use. A
+`035` file may therefore carry `invoke-custom` and the `call_site_ids` and `method_handles` sections
+that version `038` introduced, because the `map_list` locates those sections and no header field
+depends on them. Beyond the header layout described for version `041`, the version number gates only
+the verification rules described for version `037`.
+
 **Note:** Version `041` adds the [container format](#container-format) described under File layout.
 It appeared in Android 16 and is *experimental*, so it should not be used for production code.
 
@@ -237,8 +247,14 @@ the `call_site_ids` and `method_handles` sections; it appeared in Android 8.0.
 
 **Note:** Version `037` adds default methods and adjusts the `invoke` bytecode; it appeared in
 Android 7.0. Prior to version `037`, most versions of Android used version `035` of the format. The
-only difference between versions `035` and `037` is the addition of default methods and the
-adjustment of the `invoke` bytecode.
+rules that `037` introduced are not applied to a `035` file. An interface method with code is
+accepted and linked as a default method; dex verification only warns about the violations that `037`
+rejects: the link fails with `ClassFormatError` for a `native` interface method, and an
+`invoke-direct` call to an interface method fails with `IncompatibleClassChangeError`. A
+`class_defs` list that defines a class before its superclass or interfaces is accepted as well: the
+runtime resolves those types independently of the list order, so an acyclic list links normally, and
+a hierarchy that refers back to the class being loaded fails at that point with
+`ClassCircularityError`.
 
 **Note:** Version `036` existed in Android 4.0–4.4W (API 14–20) and is specific to the dalvik
 runtime; ART, shipped from Android 4.4 (API 19), rejects it. The version was planned as a public
@@ -250,8 +266,7 @@ format whose expanded opcodes allowed more than 65535 elements in some sections.
 software releases. For example, version `009` was used for the M3 releases of the Android platform
 (November–December 2007), and version `013` was used for the M5 releases of the Android platform
 (February–March 2008). In several respects, these earlier versions of the format differ
-significantly from the version described in this document; they are specified here, under "Legacy
-file layout" and the legacy items below.
+significantly from the later versions.
 
 **Note:** Compact dex is an internal ART format that exists from Android 9 through Android 15 (API
 28–35).
@@ -288,9 +303,9 @@ ubyte[8] CDEX_FILE_MAGIC = { 0x63 0x64 0x65 0x78 0x30 0x30 0x31 0x00 }
 Bitfields of this word describe properties that a standard file expresses through its version
 number.
 
-| Name            | Value | Meaning                                                                                                           |
-|-----------------|-------|-------------------------------------------------------------------------------------------------------------------|
-| kDefaultMethods | 0x1   | the file uses default (interface) methods, which a standard file expresses through format version `037` and later |
+| Name            | Value | Meaning                                                                         |
+|-----------------|-------|---------------------------------------------------------------------------------|
+| kDefaultMethods | 0x1   | `0` when the source standard file is version `035`; `1` for every later version |
 
 No other bits are defined.
 
@@ -330,33 +345,59 @@ uint NO_INDEX = 0xffffffff;    // == -1 if treated as a signed int
 Bitfields of these flags are used to indicate the accessibility and overall properties of classes
 and class members.
 
-| Name                      | Value   | For Classes (and `InnerClass` annotations)                   | For Fields                                                  | For Methods                                                                                                                                           |
-|---------------------------|---------|--------------------------------------------------------------|-------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| ACC_PUBLIC                | 0x1     | `public`: visible everywhere                                 | `public`: visible everywhere                                | `public`: visible everywhere                                                                                                                          |
-| ACC_PRIVATE               | 0x2     | *`private`: only visible to defining class                   | `private`: only visible to defining class                   | `private`: only visible to defining class                                                                                                             |
-| ACC_PROTECTED             | 0x4     | *`protected`: visible to package and subclasses              | `protected`: visible to package and subclasses              | `protected`: visible to package and subclasses                                                                                                        |
-| ACC_STATIC                | 0x8     | *`static`: is not constructed with an outer `this` reference | `static`: global to defining class                          | `static`: does not take a `this` argument                                                                                                             |
-| ACC_FINAL                 | 0x10    | `final`: not subclassable                                    | `final`: immutable after construction                       | `final`: not overridable                                                                                                                              |
-| ACC_SYNCHRONIZED          | 0x20    |                                                              |                                                             | `synchronized`: associated lock automatically acquired around call to this method. **Note:** This is only valid to set when `ACC_NATIVE` is also set. |
-| ACC_VOLATILE              | 0x40    |                                                              | `volatile`: special access rules to help with thread safety |                                                                                                                                                       |
-| ACC_BRIDGE                | 0x40    |                                                              |                                                             | bridge method, added automatically by compiler as a type-safe bridge                                                                                  |
-| ACC_TRANSIENT             | 0x80    |                                                              | `transient`: not to be saved by default serialization       |                                                                                                                                                       |
-| ACC_VARARGS               | 0x80    |                                                              |                                                             | last argument should be treated as a "rest" argument by compiler                                                                                      |
-| ACC_NATIVE                | 0x100   |                                                              |                                                             | `native`: implemented in native code                                                                                                                  |
-| ACC_INTERFACE             | 0x200   | `interface`: multiply-implementable abstract class           |                                                             |                                                                                                                                                       |
-| ACC_ABSTRACT              | 0x400   | `abstract`: not directly instantiable                        |                                                             | `abstract`: unimplemented by this class                                                                                                               |
-| ACC_STRICT                | 0x800   |                                                              |                                                             | `strictfp`: strict rules for floating-point arithmetic                                                                                                |
-| ACC_SYNTHETIC             | 0x1000  | not directly defined in source code                          | not directly defined in source code                         | not directly defined in source code                                                                                                                   |
-| ACC_ANNOTATION            | 0x2000  | declared as an annotation class                              |                                                             |                                                                                                                                                       |
-| ACC_ENUM                  | 0x4000  | declared as an enumerated type                               | declared as an enumerated value                             |                                                                                                                                                       |
-| *(unused)*                | 0x8000  |                                                              |                                                             |                                                                                                                                                       |
-| ACC_CONSTRUCTOR           | 0x10000 |                                                              |                                                             | constructor method (class or instance initializer)                                                                                                    |
-| ACC_DECLARED_SYNCHRONIZED | 0x20000 |                                                              |                                                             | declared `synchronized`. **Note:** This has no effect on execution (other than in reflection of this flag, per se).                                   |
+| Name                      | Value   | For Classes (and `InnerClass` annotations)                   | For Fields                                                  | For Methods                                                                                                                                       |
+|---------------------------|---------|--------------------------------------------------------------|-------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| ACC_PUBLIC                | 0x1     | `public`: visible everywhere                                 | `public`: visible everywhere                                | `public`: visible everywhere                                                                                                                      |
+| ACC_PRIVATE               | 0x2     | *`private`: only visible to defining class                   | `private`: only visible to defining class                   | `private`: only visible to defining class                                                                                                         |
+| ACC_PROTECTED             | 0x4     | *`protected`: visible to package and subclasses              | `protected`: visible to package and subclasses              | `protected`: visible to package and subclasses                                                                                                    |
+| ACC_STATIC                | 0x8     | *`static`: is not constructed with an outer `this` reference | `static`: global to defining class                          | `static`: does not take a `this` argument                                                                                                         |
+| ACC_FINAL                 | 0x10    | `final`: not subclassable                                    | `final`: immutable after construction                       | `final`: not overridable                                                                                                                          |
+| ACC_SUPER                 | 0x20    | present in every runtime, ignored, has no function           |                                                             |                                                                                                                                                   |
+| ACC_SYNCHRONIZED          | 0x20    |                                                              |                                                             | `synchronized`: the associated lock is automatically acquired around the call. **Note:** `035`+ only with `ACC_NATIVE`; no effect in `009`/`013`. |
+| ACC_VOLATILE              | 0x40    |                                                              | `volatile`: special access rules to help with thread safety |                                                                                                                                                   |
+| ACC_BRIDGE                | 0x40    |                                                              |                                                             | bridge method, added automatically by compiler as a type-safe bridge                                                                              |
+| ACC_TRANSIENT             | 0x80    |                                                              | `transient`: not to be saved by default serialization       |                                                                                                                                                   |
+| ACC_VARARGS               | 0x80    |                                                              |                                                             | last argument should be treated as a "rest" argument by compiler                                                                                  |
+| ACC_NATIVE                | 0x100   |                                                              |                                                             | `native`: implemented in native code                                                                                                              |
+| ACC_INTERFACE             | 0x200   | `interface`: multiply-implementable abstract class           |                                                             |                                                                                                                                                   |
+| ACC_ABSTRACT              | 0x400   | `abstract`: not directly instantiable                        |                                                             | `abstract`: unimplemented by this class                                                                                                           |
+| ACC_STRICT                | 0x800   |                                                              |                                                             | `strictfp`: strict rules for floating-point arithmetic                                                                                            |
+| ACC_SYNTHETIC             | 0x1000  | not directly defined in source code                          | not directly defined in source code                         | not directly defined in source code                                                                                                               |
+| ACC_ANNOTATION            | 0x2000  | declared as an annotation class                              |                                                             |                                                                                                                                                   |
+| ACC_ENUM                  | 0x4000  | declared as an enumerated type                               | declared as an enumerated value                             |                                                                                                                                                   |
+| ACC_MANDATED              | 0x8000  |                                                              |                                                             |                                                                                                                                                   |
+| ACC_CONSTRUCTOR           | 0x10000 |                                                              |                                                             | constructor method (class or instance initializer); `035`+ only                                                                                   |
+| ACC_VERIFIED              | 0x10000 | dalvik and odex only                                         |                                                             |                                                                                                                                                   |
+| ACC_DECLARED_SYNCHRONIZED | 0x20000 |                                                              |                                                             | declared `synchronized`, recorded for reflection only, no effect on execution. `035`+ only                                                        |
+| ACC_OPTIMIZED             | 0x20000 | dalvik and odex only                                         |                                                             |                                                                                                                                                   |
 
-\* Only allowed on for `InnerClass` annotations, and must not ever be on in a `class_def_item`.
+\* Only allowed on `InnerClass` annotations, and must never be set in a `class_def_item`.
 
-**Note:** In versions `009` and `013` no flag above `0x4000` is defined, and `0x20` is
-`ACC_SUPER` in class definitions and `ACC_SYNCHRONIZED` in method entries.
+**Note:** `ACC_SUPER` has no function: the runtime accepts the bit in class definitions and ignores it.
+
+**Note:** `ACC_SYNCHRONIZED` is valid only on a `native` method in `035`+, where the runtime acquires
+the associated lock around the native call; in `009`/`013` the bit has no effect: the era's compiler
+clears the flag, and the milestone runtimes have no native-sync bridge.
+
+**Note:** `ACC_DECLARED_SYNCHRONIZED` is a reflection-only record introduced with the `035` era: the
+compiler sets it on a non-native method whose `synchronized` modifier it compiled into monitor
+instructions, so that reflection can report the modifier. It has no execution effect.
+
+**Note:** `ACC_MANDATED` marks a parameter that is synthetic and implied by the language. A
+parameter has no `access_flags` of its own: the bit is carried by the `accessFlags` array of the
+`dalvik.annotation.MethodParameters` annotation.
+
+**Note:** `ACC_CONSTRUCTOR` belongs to the `035`+ formats. It is optional and not enforced: a method
+named `<init>` or `<clinit>` is a constructor whether or not the flag is set; the flag is invalid on
+any other method.
+
+**Note:** `ACC_VERIFIED` and `ACC_OPTIMIZED` are class flags of a dalvik optimized file (odex) and
+mean nothing in a standard file. `ACC_VERIFIED` marks a class that passed pre-verification,
+`ACC_OPTIMIZED` one whose instructions the optimizer has rewritten. Both are class-only. ART has no
+such class flags.
+
+**Note:** In versions `009` and `013` no flag above `0x4000` is defined by the format. The milestone
+runtimes name and accept `ACC_VERIFIED` and `ACC_OPTIMIZED` class flags.
 
 ### Modified UTF-8 encoding
 
@@ -2169,11 +2210,11 @@ must match the parameter list of the associated method: `method_id_item.proto_id
 | names       | VALUE_ARRAY of VALUE_STRING | the names of formal parameters for the associated method. The array must not be null but must be empty if there are no formal parameters. A value in the array must be `VALUE_NULL` if the formal parameter with that index has no name. A name must not be empty and must not contain `'.'`, `';'`, `'['`, or `'/'`. |
 | accessFlags | VALUE_ARRAY of VALUE_INT    | the access flags of the formal parameters for the associated method. The array must not be null but must be empty if there are no formal parameters. Each value is a bit mask of the flags below, and no other bits may be set.                                                                                       |
 
-| Flag   | Meaning                                                           |
-|--------|-------------------------------------------------------------------|
-| 0x0010 | the parameter was declared `final`                                |
-| 0x1000 | the parameter was introduced by the compiler (synthetic)          |
-| 0x8000 | the parameter is synthetic and implied by the language (mandated) |
+| Flag   | Meaning                                                                |
+|--------|------------------------------------------------------------------------|
+| 0x0010 | `ACC_FINAL`: the parameter was declared `final`                        |
+| 0x1000 | `ACC_SYNTHETIC`: the parameter was introduced by the compiler          |
+| 0x8000 | `ACC_MANDATED`: the parameter is synthetic and implied by the language |
 
 `Executable.getParameters()` builds the `Parameter` array from the two arrays.
 `Parameter.isNamePresent()` is true only when the annotation supplied the name; without the
