@@ -99,12 +99,13 @@ import java.util.function.Supplier;
  * past each added instruction. The current position starts before the first
  * instruction, and {@link #append_position} moves it to an arbitrary position.
  * <p>
- * Next to the main sequence, the builder can hold <i>detached code blocks</i>.
- * A new block is started with {@link #append_position} on a fresh label, or cut out
- * of an existing block with {@link #split_block_before} or {@link #split_block_after}.
- * A detached block is placed into the code with {@link #insert_block} or
- * {@link #attach_block}; blocks still detached when the code is finished are appended
- * at the end, in the order they became detached.
+ * The code consists of <i>blocks</i>: the first block exists from the builder's
+ * creation, and a new block is started with {@link #append_position} on a fresh
+ * label, or cut out of an existing block with {@link #split_block_before} or
+ * {@link #split_block_after}. A block is placed into the code with
+ * {@link #insert_block} or {@link #attach_block}, and the head of any block can be
+ * a target; blocks not inserted explicitly when the code is finished are appended
+ * at the end, in the order they appeared.
  * <p>
  * Exception handlers are registered for the code between two labels (either
  * order of the labels means the same range) with {@link #try_catch} or
@@ -117,10 +118,6 @@ import java.util.function.Supplier;
  * The methods only queue the handlers: ranges and handlers are resolved when
  * the code is finished, and conflicting registrations fail only then; a removal
  * registered after a conflicting registration comes too late to cancel it.
- * <p>
- * Note on internals: a few operations may leave empty internal positions so that
- * existing labels stay valid. They are invisible to the user: label resolution and
- * position navigation transparently skip them.
  */
 public final class CodeBuilder {
     private static class Label {
@@ -253,19 +250,29 @@ public final class CodeBuilder {
     // Each position is located between two nodes (semantic content, such as an instruction)
     private static class BuilderPosition {
         private int units, position;
-        private BuilderPosition head, prev, next;
+        private BuilderPosition prev, next;
         // Each position contains a pointer to the node following it.
         // The position preceding the first node is called "head";
         // The position after the last node is called the "tail"
         // It points to the null node (there is nothing after it).
         //
-        // There is a special placeholder node. It indicates that its position
-        // is not independent and that the actual content is located in the next node.
-        // There can be a chain of placeholder nodes.
+        // There is a special placeholder node. Such a position is a label: it holds
+        // no units, is not part of the chain and only points to the position it names.
         private BuilderNode node;
 
-        public BuilderPosition(BuilderPosition head) {
-            this.head = head == null ? this : head;
+        public BuilderPosition() {
+        }
+
+        public boolean is_label() {
+            return node == BuilderNode.PLACEHOLDER;
+        }
+
+        public boolean is_head() {
+            return prev == null && !is_label();
+        }
+
+        public boolean is_tail() {
+            return next == null && !is_label();
         }
 
         public BuilderNode node() {
@@ -277,42 +284,28 @@ public final class CodeBuilder {
             this.units = units;
         }
 
-        public void erase() {
+        public void label_to(BuilderPosition to) {
             node(BuilderNode.PLACEHOLDER, 0);
-        }
-
-        public boolean isPlaceholder() {
-            return node == BuilderNode.PLACEHOLDER;
+            this.position = 0;
+            this.prev = null;
+            this.next = to;
         }
 
         public void copy_node(BuilderPosition pos) {
             node(pos.node(), pos.units());
         }
 
-        public BuilderPosition head() {
-            return head;
-        }
-
-        public void head(BuilderPosition head) {
-            this.head = head;
-        }
-
         public BuilderPosition prev() {
             return prev;
-        }
-
-        public void prev(BuilderPosition pos) {
-            prev = pos;
-            if (pos != null) pos.next = this;
         }
 
         public BuilderPosition next() {
             return next;
         }
 
-        public void next(BuilderPosition pos) {
-            next = pos;
-            if (pos != null) pos.prev = this;
+        public static void link(BuilderPosition prev, BuilderPosition next) {
+            if (prev != null) prev.next = next;
+            if (next != null) next.prev = prev;
         }
 
         public int units() {
@@ -336,37 +329,18 @@ public final class CodeBuilder {
         }
     }
 
+    private static BuilderPosition head(BuilderPosition pos) {
+        BuilderPosition prev;
+        while ((prev = pos.prev()) != null) {
+            pos = prev;
+        }
+        return pos;
+    }
+
     private static BuilderPosition tail(BuilderPosition pos) {
         BuilderPosition next;
         while ((next = pos.next()) != null) {
             pos = next;
-        }
-        return pos;
-    }
-
-    // There is at least one non-placeholder position after the placeholder
-    private static BuilderPosition exact_forwards(BuilderPosition pos) {
-        while (pos != null && pos.isPlaceholder()) {
-            // Not a real position
-            pos = pos.next();
-        }
-        return pos;
-    }
-
-    // The placeholder can be the first position
-    private static BuilderPosition exact_backwards(BuilderPosition pos) {
-        while (pos != null && pos.isPlaceholder()) {
-            // Not a real position
-            pos = pos.prev();
-        }
-        return pos;
-    }
-
-    // The leftmost position, which points to selected
-    private static BuilderPosition left_edge(BuilderPosition pos) {
-        Objects.requireNonNull(pos);
-        while (pos.prev() != null && pos.prev().isPlaceholder()) {
-            pos = pos.prev();
         }
         return pos;
     }
@@ -385,8 +359,10 @@ public final class CodeBuilder {
     private final List<BuilderTryItem> try_items;
     private final List<BuilderDebugItem> debug_items;
     private final Map<Object, BuilderPosition> labels;
-    private final Set<BuilderPosition> detached;
-    private final BuilderPosition root, payloads;
+    private final Set<BuilderPosition> heads;
+    // TODO: deferred generation
+    private final BuilderPosition payloads;
+    // Could be a label
     private BuilderPosition current;
 
     private boolean generate_lines;
@@ -400,21 +376,20 @@ public final class CodeBuilder {
         this.try_items = new ArrayList<>();
         this.debug_items = new ArrayList<>();
         this.labels = new LinkedHashMap<>();
-        this.detached = new LinkedHashSet<>();
-        this.root = this.current = new BuilderPosition(null);
-        this.payloads = new BuilderPosition(null);
+        this.heads = new LinkedHashSet<>();
+        heads.add(this.current = new BuilderPosition());
+        this.payloads = new BuilderPosition();
         this.generate_lines = false;
         this.synthetic_line = 0;
     }
 
-    private List<Instruction> mergeInstructions() {
-        var begin = root;
+    private List<Instruction> mergeInstructions(BuilderPosition root) {
 
         boolean changed;
         do {
             changed = false;
             BuilderNode node;
-            for (var tmp = begin; (node = tmp.node()) != null; tmp = tmp.next()) {
+            for (var tmp = root; (node = tmp.node()) != null; tmp = tmp.next()) {
                 var node_units = node.units();
                 var pos_units = tmp.units();
                 if (pos_units != node_units) {
@@ -447,25 +422,28 @@ public final class CodeBuilder {
         } while (changed);
 
         var out = new ArrayList<Instruction>();
-        for (var tmp = begin; tmp.node() != null; tmp = tmp.next()) {
+        for (var tmp = root; tmp.node() != null; tmp = tmp.next()) {
             out.addAll(tmp.node().generate());
         }
         return Collections.unmodifiableList(out);
     }
 
     /**
-     * Builds the method implementation. Blocks that are still detached are
-     * appended at the end of the code in the order they became detached.
+     * Builds the method implementation. Blocks that are not inserted explicitly
+     * are appended at the end of the code in the order they appeared.
      */
     public MethodImplementation finish() {
+        var root = new BuilderPosition();
         {
-            var end = tail(root);
-            for (var iter = detached.iterator(); iter.hasNext(); ) {
+            var end = root;
+            for (var iter = heads.iterator(); iter.hasNext(); ) {
                 var pos = iter.next();
                 iter.remove();
                 end = attach(end, pos);
             }
             attach(end, payloads);
+
+            root = exact_position(root);
 
             int offset = 0;
             for (var tmp = root; tmp != null; tmp = tmp.next()) {
@@ -478,7 +456,7 @@ public final class CodeBuilder {
             }
         }
 
-        List<Instruction> insns = mergeInstructions();
+        List<Instruction> insns = mergeInstructions(root);
         NavigableSet<TryBlock> try_blocks = TryBlocksMerger.mergeTryItems(try_items);
         List<DebugItem> debug_info = DebugInfoMerger.mergeDebugItems(debug_items);
 
@@ -672,29 +650,6 @@ public final class CodeBuilder {
         return check_reg(first_reg);
     }
 
-    private static BuilderPosition attach(BuilderPosition a, BuilderPosition b) {
-        assert a != null && b != null && a.head() != b.head();
-
-        var a_head = a.head();
-        var b_tail = b;
-
-        while (true) {
-            b_tail.head(a_head);
-            var next = b_tail.next();
-            if (next == null) break;
-            b_tail = next;
-        }
-
-        if (a.node() != null) {
-            b_tail.copy_node(a);
-            b_tail.next(a.next());
-        }
-        a.erase();
-        a.next(b);
-
-        return b_tail;
-    }
-
     private void add(int initial_units, BuilderNode node) {
         assert node != null && node != BuilderNode.PLACEHOLDER;
 
@@ -703,14 +658,14 @@ public final class CodeBuilder {
             line(++synthetic_line);
         }
 
-        var c = current;
-        var n = new BuilderPosition(c.head());
+        var c = current_();
+        var n = new BuilderPosition();
 
         n.copy_node(c);
-        n.next(c.next());
+        BuilderPosition.link(n, c.next());
 
         c.node(node, initial_units);
-        c.next(n);
+        BuilderPosition.link(c, n);
 
         current = n;
     }
@@ -773,18 +728,27 @@ public final class CodeBuilder {
         });
     }
 
+    // There is at least one non-placeholder position after the placeholder
+    private static BuilderPosition exact_position(BuilderPosition pos) {
+        while (pos != null && pos.is_label()) {
+            // Not a real position
+            pos = pos.next();
+        }
+        return pos;
+    }
+
     private BuilderPosition positionOrNull(Object label) {
         var pos = label instanceof BuilderPosition bp ? bp : labels.get(label);
         if (pos == null) {
             return null;
         }
-        return exact_forwards(pos);
+        return exact_position(pos);
     }
 
     private BuilderPosition position(Object label) {
         var pos = positionOrNull(label);
         if (pos == null) {
-            throw new IllegalStateException("Can`t find label: " + label);
+            throw new IllegalStateException("Can't find label: " + label);
         }
         return pos;
     }
@@ -817,47 +781,64 @@ public final class CodeBuilder {
         return new Label();
     }
 
+    private BuilderPosition current_() {
+        return exact_position(current);
+    }
+
     /**
      * Returns the current position as a label.
      */
     public Object current_label() {
-        return current;
+        return current_();
+    }
+
+    private BuilderPosition attach(BuilderPosition a, BuilderPosition b) {
+        assert a != null && b != null && head(a) != head(b);
+
+        var b_tail = tail(b);
+
+        if (!a.is_tail()) {
+            b_tail.copy_node(a);
+            BuilderPosition.link(b_tail, a.next());
+        }
+
+        BuilderPosition.link(a.prev(), b);
+        if (a.is_head() && heads.remove(a)) {
+            heads.add(b);
+        }
+        a.label_to(b);
+
+        return b_tail;
     }
 
     private void insert_block(Object target, boolean move_to_target) {
         BuilderPosition pos = position(target);
-        var cur = current;
-        if (pos.head() == root) {
-            throw new IllegalArgumentException(
-                    "Attempt to attach root code block to leaf");
-        }
-        if (cur.head() == pos.head()) {
+        var cur = current_();
+        if (head(cur) == head(pos)) {
             throw new IllegalArgumentException(
                     "Attempt to attach '" + target + "' code block to itself");
         }
-        pos = left_edge(pos);
-        if (!detached.remove(pos)) {
+        if (!heads.remove(pos)) {
             throw new IllegalArgumentException(
                     "Attempt to attach non-head block of code '" + target + "'");
         }
         var new_current = attach(cur, pos);
         if (move_to_target) new_current = pos;
-        current = exact_forwards(new_current);
+        current = new_current;
     }
 
     /**
-     * Places the detached block of {@code target} right after the current position.
+     * Places the block of {@code target} right after the current position.
      * After the call, the current position is right after the inserted block.
      *
      * <pre>
      * A->B-[current]>C->D->#  [target]>E->F->G->#
      *                    ↓
-     * A->B->\-[target]>E->F->G-[current]>C->D->#
+     * A->B-[target]>E->F->G-[current]>C->D->#
      * </pre>
      *
-     * @throws IllegalArgumentException if the target block belongs to the main sequence,
-     *                                  is not detached, or is part of the same block as the
-     *                                  current position
+     * @throws IllegalArgumentException if the target is not a block head or is part
+     *                                  of the same block as the current position
      */
     public CodeBuilder insert_block(Object target) {
         insert_block(target, false);
@@ -865,19 +846,18 @@ public final class CodeBuilder {
     }
 
     /**
-     * Places the detached block of {@code target} right after the current position
+     * Places the block of {@code target} right after the current position
      * and moves the current position to the start of the moved block, so that the
      * next instructions are inserted inside it, before its content.
      *
      * <pre>
      * A->B-[current]>C->D->#  [target]>E->F->G->#
      *                    ↓
-     * A->B->\-[current][target]>E->F->G->C->D->#
+     * A->B-[current][target]>E->F->G->C->D->#
      * </pre>
      *
-     * @throws IllegalArgumentException if the target block belongs to the main sequence,
-     *                                  is not detached, or is part of the same block as the
-     *                                  current position
+     * @throws IllegalArgumentException if the target is not a block head or is part
+     *                                  of the same block as the current position
      */
     public CodeBuilder attach_block(Object target) {
         insert_block(target, true);
@@ -886,52 +866,42 @@ public final class CodeBuilder {
 
     private Object split_block(Object target, boolean before) {
         BuilderPosition pos = position(target);
-        if (pos.node() == null) {
+        if (pos.is_tail()) {
             throw new IllegalArgumentException(
                     "Attempt to split a block after the last position");
         }
-        var prev = exact_backwards(pos.prev());
+        var prev = pos.prev();
         if (prev == null) {
             throw new IllegalArgumentException(
                     "Attempt to split a block before the first position");
         }
 
         if (before) {
-            var right_head = prev.next();
-            assert right_head != null;
+            var right_head = pos;
+            BuilderPosition.link(null, right_head);
 
-            for (var tmp = right_head; tmp != null; tmp = tmp.next()) {
-                tmp.head(right_head);
-            }
-            right_head.prev(null);
+            var left_tail = new BuilderPosition();
+            BuilderPosition.link(prev, left_tail);
 
-            var left_tail = new BuilderPosition(prev.head());
-            prev.next(left_tail);
-
-            detached.add(right_head);
+            heads.add(right_head);
             return left_tail;
         } else {
-            var right_head = new BuilderPosition(null);
-
-            for (var tmp = pos.next(); tmp != null; tmp = tmp.next()) {
-                tmp.head(right_head);
-            }
+            var right_head = new BuilderPosition();
             right_head.copy_node(pos);
-            right_head.next(pos.next());
+            BuilderPosition.link(right_head, pos.next());
 
-            @SuppressWarnings("UnnecessaryLocalVariable")
             var left_tail = pos;
-            left_tail.next(null);
+            BuilderPosition.link(left_tail, null);
             left_tail.node(null, 0);
 
-            detached.add(right_head);
+            heads.add(right_head);
             return right_head;
         }
     }
 
     /**
      * Splits the block of {@code target} in two at the label: the code after the
-     * label becomes a detached block that starts with {@code target}. Returns the
+     * label becomes a new block that starts with {@code target}. Returns the
      * position after the last instruction of the left part: instructions inserted
      * after it extend the left part. The current position is not affected.
      *
@@ -950,7 +920,7 @@ public final class CodeBuilder {
 
     /**
      * Splits the block of {@code target} in two after the label: the code after
-     * the label becomes a detached block, while {@code target} stays on the
+     * the label becomes a new block, while {@code target} stays on the
      * position after the last instruction of the left part. Returns the position
      * before the first instruction of the right part: instructions inserted after
      * it go before its content. The current position is not affected.
@@ -969,41 +939,72 @@ public final class CodeBuilder {
     }
 
     /**
-     * Removes the instruction following the current position.
+     * Removes the node following the position of {@code target}. A label bound to
+     * that position stays valid and points to the node that followed the removed one.
+     * The current position is not moved.
      *
-     * @throws IllegalArgumentException if no instruction follows the current position
+     * @throws IllegalArgumentException if nothing follows the position of {@code target}
      */
-    public CodeBuilder remove_next_node() {
-        var cur = current;
-        if (cur.node() == null) {
+    public CodeBuilder remove_node_after(Object target) {
+        var pos = position(target);
+        var next = pos.next();
+        if (next == null) {
             throw new IllegalArgumentException(
-                    "The next node doesn`t exist");
+                    "The next node doesn't exist");
         }
-        cur.erase();
-        current = exact_forwards(cur);
+        BuilderPosition.link(pos.prev(), next);
+        if (pos.is_head() && heads.remove(pos)) {
+            heads.add(next);
+        }
+        pos.label_to(next);
         return this;
     }
 
     /**
-     * Removes the instruction preceding the current position.
+     * Removes the node following the current position.
      *
-     * @throws IllegalArgumentException if no instruction precedes the current position
+     * @throws IllegalArgumentException if nothing follows the current position
      */
-    public CodeBuilder remove_prev_node() {
-        var prev = exact_backwards(current.prev());
+    public CodeBuilder remove_next_node() {
+        return remove_node_after(current_());
+    }
+
+    /**
+     * Removes the node preceding the position of {@code target}. A label bound to
+     * the preceding position stays valid and points to the position of {@code target}.
+     * The current position is not moved.
+     *
+     * @throws IllegalArgumentException if nothing precedes the position of {@code target}
+     */
+    public CodeBuilder remove_node_before(Object target) {
+        var pos = position(target);
+        var prev = pos.prev();
         if (prev == null) {
             throw new IllegalArgumentException(
-                    "The previous node doesn`t exist");
+                    "The previous node doesn't exist");
         }
-        prev.erase();
+        BuilderPosition.link(prev.prev(), pos);
+        if (prev.is_head() && heads.remove(prev)) {
+            heads.add(pos);
+        }
+        prev.label_to(pos);
         return this;
+    }
+
+    /**
+     * Removes the node preceding the current position.
+     *
+     * @throws IllegalArgumentException if nothing precedes the current position
+     */
+    public CodeBuilder remove_prev_node() {
+        return remove_node_before(current_());
     }
 
     /**
      * Returns the position before the first instruction of the block containing {@code label}.
      */
     public Object head_of_block(Object label) {
-        return exact_forwards(position(label).head());
+        return head(position(label));
     }
 
     /**
@@ -1019,10 +1020,10 @@ public final class CodeBuilder {
      * @throws IllegalArgumentException if there is no instruction following {@code label}
      */
     public Object next_position(Object label) {
-        var pos = exact_forwards(position(label).next());
+        var pos = position(label).next();
         if (pos == null) {
             throw new IllegalArgumentException(
-                    "The next position doesn`t exist");
+                    "The next position doesn't exist");
         }
         return pos;
     }
@@ -1033,10 +1034,10 @@ public final class CodeBuilder {
      * @throws IllegalArgumentException if there is no instruction preceding {@code label}
      */
     public Object prev_position(Object label) {
-        var pos = exact_backwards(position(label).prev());
+        var pos = position(label).prev();
         if (pos == null) {
             throw new IllegalArgumentException(
-                    "The previous position doesn`t exist");
+                    "The previous position doesn't exist");
         }
         return pos;
     }
@@ -1045,7 +1046,7 @@ public final class CodeBuilder {
 
     /**
      * Moves the current position to {@code label}. If the label is unknown, starts
-     * a new detached block, attaches the label to its start and moves the current
+     * a new block, attaches the label to its start and moves the current
      * position there.
      *
      * @throws NullPointerException if the label is null
@@ -1055,8 +1056,8 @@ public final class CodeBuilder {
 
         var pos = positionOrNull(label);
         if (pos == null) {
-            pos = new BuilderPosition(null);
-            detached.add(pos);
+            pos = new BuilderPosition();
+            heads.add(pos);
             labels.put(label, pos);
         }
 
@@ -1073,7 +1074,7 @@ public final class CodeBuilder {
         Objects.requireNonNull(label);
 
         if (label instanceof BuilderPosition ||
-                labels.putIfAbsent(label, current) != null) {
+                labels.putIfAbsent(label, current_()) != null) {
             throw new IllegalArgumentException(
                     "Label " + label + " already exists");
         }
@@ -1092,7 +1093,7 @@ public final class CodeBuilder {
 
         if (label instanceof BuilderPosition) {
             throw new IllegalArgumentException(
-                    "Label " + label + " can`t be removed");
+                    "Label " + label + " can't be removed");
         }
         labels.remove(label);
 
@@ -1111,9 +1112,9 @@ public final class CodeBuilder {
 
         if (label instanceof BuilderPosition) {
             throw new IllegalArgumentException(
-                    "Label " + label + " can`t be replaced");
+                    "Label " + label + " can't be replaced");
         }
-        labels.put(label, current);
+        labels.put(label, current_());
 
         return this;
     }
@@ -1310,7 +1311,7 @@ public final class CodeBuilder {
     }
 
     public Object get_metadata(Object label) {
-        var node = position(label).node;
+        var node = position(label).node();
         return node == null ? null : node.metadata();
     }
 
