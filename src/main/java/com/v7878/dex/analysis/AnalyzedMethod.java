@@ -49,6 +49,7 @@ import com.v7878.dex.analysis.Position.Transition;
 import com.v7878.dex.analysis.Register.Constant;
 import com.v7878.dex.analysis.Register.ConstantKind;
 import com.v7878.dex.analysis.Register.Identifier;
+import com.v7878.dex.analysis.Register.Lock;
 import com.v7878.dex.analysis.Register.Primitive;
 import com.v7878.dex.analysis.Register.Reference;
 import com.v7878.dex.analysis.Register.UninitializedRef;
@@ -60,6 +61,7 @@ import com.v7878.dex.immutable.MethodDef;
 import com.v7878.dex.immutable.MethodId;
 import com.v7878.dex.immutable.MethodImplementation;
 import com.v7878.dex.immutable.ProtoId;
+import com.v7878.dex.immutable.TryBlock;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.ArrayPayload;
 import com.v7878.dex.immutable.bytecode.Instruction;
@@ -1189,6 +1191,126 @@ public final class AnalyzedMethod {
         );
     }
 
+    private static RuntimeException missingCatchAll(Position current) {
+        throw new AnalysisException(
+                "Throwing while a monitor is held requires a catch-all handler in "
+                        + describe(current)
+        );
+    }
+
+    /**
+     * A throwing instruction that executes with a definitely held
+     * monitor must have a catch-all or {@code Throwable} handler. Reading
+     * before() exempts the monitor-enter that acquires the first monitor,
+     * because its exception is raised before acquisition. A monitor-exit
+     * is excluded: its own throw leaves the monitor held and does not
+     * change the requirement.
+     * <p>
+     * An orphaned monitor does not count. It is a frame-exit fact, not an
+     * instruction fact: no register holds it, so a catch-all could not
+     * release it, and the runtime error happens when the frame exits, not
+     * at the throwing instruction. The verifier has no such state and
+     * accepts the code.
+     */
+    private void checkCatchAll(Position current) {
+        if (!verify) {
+            return;
+        }
+        var opcode = current.opcode();
+        if (opcode == Opcode.MONITOR_EXIT || !opcode.canThrow()
+                || !current.isInsideTryBlock()
+                || !current.before().hasHeldLocks()) {
+            return;
+        }
+        var block = implementation.getTryBlock(current.address());
+        assert block != null;
+        if (!hasCatchAll(block)) {
+            throw missingCatchAll(current);
+        }
+    }
+
+    private static boolean hasCatchAll(TryBlock block) {
+        if (block.getCatchAllAddress() != null) {
+            return true;
+        }
+        for (var handler : block.getHandlers()) {
+            if (THROWABLE.equals(handler.getExceptionType())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether a return with the current monitor state throws at the method
+     * exit: a monitor definitely held, or an orphaned monitor that no
+     * register can release. A monitor that is held only on some path may
+     * have been released there.
+     */
+    private static boolean heldReturn(Position current) {
+        // A return never completes normally
+        var line = current.before();
+        return line.hasHeldLocks() || line.hasOrphanedLock();
+    }
+
+    /**
+     * A write that removes the last register holding a definitely held
+     * monitor leaves it owned by the frame, unreleasable: a later return
+     * throws at the method exit.
+     * <p>
+     * Removing the holder is a change of the value, not of the monitor:
+     * a cast, a refinement or a merge produces another value that still
+     * denotes the same object, so any register carrying the monitor keeps
+     * it. Only a monitor that no register carries any more is abandoned.
+     */
+    private static void markAbandonedMonitor(Position current) {
+        var before = current.before();
+        var after = current.after();
+        var outputs = current.outputs();
+        for (int i = 0; i < outputs.size(); i++) {
+            int slot = outputs.at(i);
+            if (slot < 0) {
+                // A pseudo-register holds no value
+                continue;
+            }
+            var value = before.at(slot);
+            var lock = value.lock();
+            if (!lock.isHeld()) {
+                continue;
+            }
+            boolean survives = lock.monitor() != null
+                    ? carriesMonitor(after, lock.monitor())
+                    : contains(after, value);
+            if (survives) {
+                continue;
+            }
+            after.markOrphanedLock();
+            return;
+        }
+    }
+
+    /**
+     * Whether some register still carries the given monitor, whatever
+     * value currently denotes it.
+     */
+    private static boolean carriesMonitor(RegisterLine line, Identifier monitor) {
+        for (int i = 0; i < line.registerCount(); i++) {
+            if (Objects.equals(monitor, line.at(i).lock().monitor())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean contains(RegisterLine line, Register value) {
+        for (int i = 0; i < line.registerCount(); i++) {
+            if (Objects.equals(line.at(i), value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static void merge(TypeResolver resolver, BitSet touched, BitSet todo,
                               Position current, Position target,
                               RegisterLine line, boolean reachable_from_current) {
@@ -1309,8 +1431,10 @@ public final class AnalyzedMethod {
         assert type_info.base() != null;
         var type = type_info.base();
         var ident = introduced(current.address(), ithis_reg);
-        // The exactness of the allocated value survives initialization
-        var new_value = Reference.of(ident, type, true, this_reg.isExactRef());
+        // The exactness of the allocated value and its monitor survive
+        // initialization
+        var new_value = Reference.of(ident, type, true,
+                this_reg.isExactRef(), this_reg.lock());
         var line = current.after();
         // Every alias of the receiver is initialized by the same call
         for (int i = 0; i < line.registerCount(); i++) {
@@ -1330,14 +1454,15 @@ public final class AnalyzedMethod {
         Register new_value;
         if (reg instanceof Reference ref) {
             var ident = introduced(address, ireg);
-            new_value = Reference.of(ident, ref.typeInfo(), true, ref.isExact());
+            new_value = Reference.of(ident, ref.typeInfo(),
+                    true, ref.isExact(), reg.lock());
         } else if (reg instanceof Constant constant) {
             var kind = constant.classify();
             if (!kind.isNullable()) {
                 return;
             }
             var ident = introduced(address, ireg);
-            new_value = Constant.of(ident, kind.withoutNull());
+            new_value = Constant.of(ident, kind.withoutNull(), reg.lock());
         } else {
             return;
         }
@@ -1467,6 +1592,17 @@ public final class AnalyzedMethod {
     private static void outputRef(Position current, int slot, TypeId type,
                                   boolean non_null, boolean exact) {
         outputRef(current.after(), current.address(), slot, type, non_null, exact);
+    }
+
+    /**
+     * A cast result: the new static type, never exactly typed, with the
+     * monitor of the original object.
+     */
+    private static void outputCastedRef(Position current, int slot, TypeId type,
+                                        boolean non_null, Lock lock) {
+        var ident = new Identifier(current.address(), slot);
+        var value = Reference.of(ident, type, non_null, false, lock);
+        current.after().copy(current.address(), slot, value);
     }
 
     private static void outputPrim(Position current, int slot, TypeInfo type) {
@@ -1669,7 +1805,7 @@ public final class AnalyzedMethod {
         } else {
             current.passRegs();
         }
-        boolean next_reachable = true;
+        boolean always_throws = opcode == THROW;
         boolean is_strict_nop = current.isStrictNop();
         boolean is_lossy_nop = current.isLossyNop();
         switch (opcode) {
@@ -1776,10 +1912,12 @@ public final class AnalyzedMethod {
                         }
                     }
                 }
+                always_throws = heldReturn(current);
             }
             case RETURN, RETURN_WIDE, RETURN_OBJECT -> {
                 var ireg = ((InstructionN1x) insn).getRegister1();
                 if (verify) verifyReg(resolver, current, ireg, method.getReturnType());
+                always_throws = heldReturn(current);
             }
             // Could be boolean, int, float, or a null reference
             case CONST_4, CONST_16, CONST, CONST_HIGH16 -> {
@@ -1815,17 +1953,68 @@ public final class AnalyzedMethod {
                 var ireg = ((InstructionN1c) insn).getRegister1();
                 constant(current, ireg, ConstantKind.METHOD_HANDLE);
             }
-            case MONITOR_ENTER, MONITOR_EXIT -> {
-                var tmp = (InstructionN1x) insn;
-
-                var ireg = tmp.getRegister1();
+            case MONITOR_ENTER -> {
+                var ireg = ((InstructionN1x) insn).getRegister1();
                 var reg = current.before().at(ireg);
                 if (verify) if (!reg.isRef()) {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
-                if (reg.isZeroOrNull()) next_reachable = false;
-                markNonNull(current, ireg, reg);
+                if (reg.isZeroOrNull()) {
+                    // A null dereference: nothing is acquired
+                    always_throws = true;
+                } else {
+                    // Success proves the object non-null and adds one depth
+                    // level; every alias and every other copy of the same
+                    // monitor is one level deeper
+                    var lock = reg.lock();
+                    var monitor = lock.monitor() != null ? lock.monitor() : reg.getSource();
+                    var refined = reg.refineNonNull(introduced(address, ireg),
+                            lock.enter().withMonitor(monitor));
+                    var after = current.after();
+                    for (int i = 0; i < after.registerCount(); i++) {
+                        var value = after.at(i);
+                        if (Objects.equals(value, reg)) {
+                            after.replace(i, refined);
+                        } else if (value.lock().isSameMonitor(refined.lock())) {
+                            after.replace(i, value.withLock(value.lock().enter()));
+                        }
+                    }
+                }
+            }
+            case MONITOR_EXIT -> {
+                var ireg = ((InstructionN1x) insn).getRegister1();
+                var reg = current.before().at(ireg);
+                if (verify) if (!reg.isRef()) {
+                    throw unexpectedReg(current, ireg, reg);
+                }
+
+                if (reg.isZeroOrNull()) {
+                    // A null dereference: no monitor state changes
+                    always_throws = true;
+                } else {
+                    var lock = reg.lock();
+                    if (!lock.isPossiblyHeld()) {
+                        // IllegalMonitorStateException on every path
+                        always_throws = true;
+                        markNonNull(current, ireg, reg);
+                    } else {
+                        // Owned only on some path: the fall-through is
+                        // reachable on the paths where it is owned. The
+                        // release follows the monitor into every copy.
+                        var refined = reg.refineNonNull(
+                                introduced(address, ireg), lock.exit());
+                        var after = current.after();
+                        for (int i = 0; i < after.registerCount(); i++) {
+                            var value = after.at(i);
+                            if (Objects.equals(value, reg)) {
+                                after.replace(i, refined);
+                            } else if (value.lock().isSameMonitor(lock)) {
+                                after.replace(i, value.withLock(value.lock().exit()));
+                            }
+                        }
+                    }
+                }
             }
             case CHECK_CAST -> {
                 var tmp = (InstructionN1c) insn;
@@ -1859,7 +2048,7 @@ public final class AnalyzedMethod {
                         // No runtime class can be a subtype of both types
                         is_lossy_nop = false;
                         is_strict_nop = false;
-                        next_reachable = false;
+                        always_throws = true;
                     } else if (isWideningCast(resolver, type, TypeInfo.of(ref))) {
                         is_lossy_nop = true;
                         is_strict_nop = false;
@@ -1871,8 +2060,9 @@ public final class AnalyzedMethod {
 
                 // A cast changes the register state (even conditionally),
                 // so it produces the value of the slot instead of tightening
-                // the value that flows into it
-                outputRef(current, ireg, ref, reg.isRuntimeNonNullRef(), false);
+                // the value that flows into it; the object and its monitor
+                // stay the same
+                outputCastedRef(current, ireg, ref, reg.isRuntimeNonNullRef(), reg.lock());
             }
             case INSTANCE_OF -> {
                 var tmp = (InstructionN2c) insn;
@@ -1896,7 +2086,7 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, iarr, arr);
                 }
 
-                if (arr.isZeroOrNull()) next_reachable = false;
+                if (arr.isZeroOrNull()) always_throws = true;
 
                 outputPrim(current, idst, I);
 
@@ -1939,7 +2129,7 @@ public final class AnalyzedMethod {
                 var reg = current.before().at(ireg);
                 if (reg.isZeroOrNull()) {
                     // Runtime exception
-                    next_reachable = false;
+                    always_throws = true;
                 } else {
                     var info = reg.getTypeInfo();
                     if (info == null || !info.isComponentPrimitive()) {
@@ -2254,7 +2444,7 @@ public final class AnalyzedMethod {
                         case AGET_OBJECT -> constant(current, ival, ConstantKind.NULL);
                         default -> throw shouldNotReachHere();
                     }
-                    next_reachable = false;
+                    always_throws = true;
                 } else {
                     var info = arr.getTypeInfo();
                     if (info == null || !info.isArray()) {
@@ -2316,7 +2506,7 @@ public final class AnalyzedMethod {
                             }
                         }
                     }
-                    next_reachable = false;
+                    always_throws = true;
                 } else {
                     var info = arr.getTypeInfo();
                     if (info == null || !info.isArray()) {
@@ -2370,7 +2560,7 @@ public final class AnalyzedMethod {
                     outputPrim(current, ival, type);
                 }
 
-                if (obj.isZeroOrNull()) next_reachable = false;
+                if (obj.isZeroOrNull()) always_throws = true;
                 // The object operand is dereferenced; the field value may be null
                 markNonNull(current, iobj, obj);
             }
@@ -2383,7 +2573,8 @@ public final class AnalyzedMethod {
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) {
-                    if (!obj.isAssignable(resolver, ref.getDeclaringClass(), true, true, false)) {
+                    if (!obj.isAssignable(resolver, ref.getDeclaringClass(),
+                            true, true, false)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
 
@@ -2398,7 +2589,7 @@ public final class AnalyzedMethod {
                     verifyReg(resolver, current, ival, ref.getType());
                 }
 
-                if (obj.isZeroOrNull()) next_reachable = false;
+                if (obj.isZeroOrNull()) always_throws = true;
                 // The object operand is dereferenced; the stored value may be null
                 markNonNull(current, iobj, obj);
             }
@@ -2442,7 +2633,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, check_this);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 // A constructor receiver is an UninitializedRef, hence already non-null
                 markNonNull(current, ithis_reg, this_reg);
             }
@@ -2465,7 +2656,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, check_this);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 // A constructor receiver is an UninitializedRef, hence already non-null
                 markNonNull(current, ithis_reg, this_reg);
             }
@@ -2478,7 +2669,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_POLYMORPHIC -> {
@@ -2490,7 +2681,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE, INVOKE_INTERFACE_RANGE -> {
@@ -2502,7 +2693,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_POLYMORPHIC_RANGE -> {
@@ -2514,7 +2705,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_STATIC, INVOKE_CUSTOM -> {
@@ -2525,7 +2716,7 @@ public final class AnalyzedMethod {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getRegister1();
                         var obj_reg = current.before().at(iobj_reg);
-                        if (obj_reg.isZeroOrNull()) next_reachable = false;
+                        if (obj_reg.isZeroOrNull()) always_throws = true;
                         // requireNonNull rejects a null first argument
                         markNonNull(current, iobj_reg, obj_reg);
                     }
@@ -2539,7 +2730,7 @@ public final class AnalyzedMethod {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getStartRegister();
                         var obj_reg = current.before().at(iobj_reg);
-                        if (obj_reg.isZeroOrNull()) next_reachable = false;
+                        if (obj_reg.isZeroOrNull()) always_throws = true;
                         // requireNonNull rejects a null first argument
                         markNonNull(current, iobj_reg, obj_reg);
                     }
@@ -2620,6 +2811,15 @@ public final class AnalyzedMethod {
         }
         current.setStrictNop(is_strict_nop);
         current.setLossyNop(is_lossy_nop);
+        // Recomputed on every visit: a later incoming edge can turn a
+        // definite proof into a "maybe" and restore the fall-through
+        current.setAlwaysThrowing(always_throws);
+        checkCatchAll(current);
+        if (opcode != THROW && !opcode.isReturn()) {
+            // throw and return never complete normally: after() is not
+            // the state at exit
+            markAbandonedMonitor(current);
+        }
         if (opcode.isConditionalBranch() || opcode.isSwitch()) {
             // 'if' and 'switch' instructions have special handling because they
             // provide information about the state of the register in different branches
@@ -2630,7 +2830,8 @@ public final class AnalyzedMethod {
                 // If this is a transition to catch handler, then registers in the
                 // state before execution of the current instruction are placed there
                 var line = transition.isCatch() ? current.before() : current.after();
-                var reachable = transition.isCatch() || next_reachable;
+                // An always-throwing instruction has no reachable fall-through
+                var reachable = transition.isCatch() || !always_throws;
                 merge(resolver, touched, todo, current, target, line, reachable);
             }
         }

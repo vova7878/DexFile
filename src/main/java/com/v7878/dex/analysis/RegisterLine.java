@@ -17,10 +17,13 @@ import java.util.stream.Collectors;
 public final class RegisterLine {
     private final Register[] registers;
     private boolean this_initialized;
+    private boolean orphaned_lock;
 
-    private RegisterLine(Register[] registers, boolean this_initialized) {
+    private RegisterLine(Register[] registers, boolean this_initialized,
+                         boolean orphaned_lock) {
         this.registers = registers;
         this.this_initialized = this_initialized;
+        this.orphaned_lock = orphaned_lock;
     }
 
     /* package */ RegisterLine(int count) {
@@ -49,8 +52,34 @@ public final class RegisterLine {
         return this_initialized;
     }
 
+    /**
+     * Whether some register holds a monitor that is definitely
+     * acquired (on every incoming path) at this line.
+     */
+    public boolean hasHeldLocks() {
+        for (var reg : registers) {
+            if (reg.lock().isHeld()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /* package */ void markThisInitialized() {
         this_initialized = true;
+    }
+
+    /**
+     * Whether, on every incoming path, the frame owns a monitor that no
+     * register can release: the last holder was overwritten, so a return
+     * from here throws at the method exit.
+     */
+    public boolean hasOrphanedLock() {
+        return orphaned_lock;
+    }
+
+    /* package */ void markOrphanedLock() {
+        orphaned_lock = true;
     }
 
     /**
@@ -134,6 +163,7 @@ public final class RegisterLine {
         int length = assertSame(registers.length, line.registers.length);
         System.arraycopy(line.registers, 0, registers, 0, length);
         this_initialized = line.this_initialized;
+        orphaned_lock = line.orphaned_lock;
     }
 
     /* package */ boolean merge(TypeResolver resolver, int address, RegisterLine line) {
@@ -152,6 +182,11 @@ public final class RegisterLine {
             this_initialized = false;
             changed = true;
         }
+        // The orphaned lock is a fact about every incoming path
+        if (orphaned_lock && !line.orphaned_lock) {
+            orphaned_lock = false;
+            changed = true;
+        }
         return changed;
     }
 
@@ -161,6 +196,6 @@ public final class RegisterLine {
     }
 
     /* package */ RegisterLine duplicate() {
-        return new RegisterLine(registers.clone(), this_initialized);
+        return new RegisterLine(registers.clone(), this_initialized, orphaned_lock);
     }
 }

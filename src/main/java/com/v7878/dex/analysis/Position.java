@@ -77,8 +77,8 @@ public final class Position {
 
         @Override
         public String toString() {
-            return Formatter.unsignedHex(address)
-                    + (fallthrough ? " (fallthrough)" : "")
+            return (fallthrough ? "*" : "") +
+                    Formatter.unsignedHex(address)
                     + (exception == null ? "" : " -> " + exception);
         }
 
@@ -101,6 +101,7 @@ public final class Position {
     private static final int NOP_STRICT = 0b10;
     private static final int NOP_LOSSY = 0b100;
     private static final int INSIDE_TRY_BLOCK = 0b1000;
+    private static final int ALWAYS_THROWING = 0b10000;
 
     private final Instruction instruction;
     private int flags;
@@ -158,6 +159,8 @@ public final class Position {
         assert opcode.isVariableRegister() == (proto != null);
         assert result_type == null || isMoveResult();
         assert exception_type == null || opcode == MOVE_EXCEPTION;
+        // A return may throw at the method exit although the opcode cannot
+        assert !isAlwaysThrowing() || opcode.canThrow() || opcode.isReturn();
         inputs.freeze();
         outputs.freeze();
     }
@@ -340,6 +343,24 @@ public final class Position {
         return (flags & REACHABLE) != 0;
     }
 
+    /**
+     * Whether every execution of this instruction ends with an exception.
+     * The following code is then not runtime reachable.
+     * <p>
+     * A return whose monitor is still held answers true too: the method
+     * exit raises IllegalMonitorStateException after the return reads its
+     * value, so the throw belongs to the exit, not to the opcode.
+     * <p>
+     * A failure that happens only on some path is not marked.
+     */
+    public boolean isAlwaysThrowing() {
+        return (flags & ALWAYS_THROWING) != 0;
+    }
+
+    /* package */ void setAlwaysThrowing(boolean value) {
+        flags = (flags & ~ALWAYS_THROWING) | (value ? ALWAYS_THROWING : 0);
+    }
+
     /* package */ void setStrictNop(boolean value) {
         flags = (flags & ~NOP_STRICT) | (value ? NOP_STRICT : 0);
     }
@@ -405,8 +426,7 @@ public final class Position {
                         state before: %s
                         state after: %s
                         predecessors: %s
-                        successors: %s
-                        """.trim(),
+                        successors: %s""",
                 address, instruction, printFlags(),
                 Formatter.registers(inputs), Formatter.registers(outputs),
                 before.describe(), after.describe(), predecessors, successors);
