@@ -61,9 +61,8 @@ public sealed abstract class Register {
 
         @Override
         public String toString() {
-            return (address < 0 ? "<p>" :
-                    (produced ? "" : "<i>") + Integer.toHexString(address))
-                    + "[" + slot + "]";
+            return (address < 0 ? "parameter" : Integer.toHexString(address)) + "[" + slot + "]"
+                    + (produced ? "" : "<incoming>");
         }
     }
 
@@ -419,129 +418,19 @@ public sealed abstract class Register {
                 case INT -> "int";
                 case WIDE_LO -> "<wide";
                 case WIDE_HI -> ">wide";
-                case STRING -> "string!";
-                case STRING_OR_NULL -> "string";
-                case CLASS -> "class!";
-                case CLASS_OR_NULL -> "class";
-                case METHOD_TYPE -> "method type!";
-                case METHOD_TYPE_OR_NULL -> "method type";
-                case METHOD_HANDLE -> "method handle!";
-                case METHOD_HANDLE_OR_NULL -> "method handle";
-                case REFERENCE -> "reference!";
-                case REFERENCE_OR_NULL -> "reference";
+                case STRING -> "string";
+                case STRING_OR_NULL -> "string|null";
+                case CLASS -> "class";
+                case CLASS_OR_NULL -> "class|null";
+                case METHOD_TYPE -> "method type";
+                case METHOD_TYPE_OR_NULL -> "method type|null";
+                case METHOD_HANDLE -> "method handle";
+                case METHOD_HANDLE_OR_NULL -> "method handle|null";
+                case REFERENCE -> "reference";
+                case REFERENCE_OR_NULL -> "reference|null";
                 case NULL -> "null";
             };
         }
-    }
-
-    /**
-     * The monitor a reference value holds: the depth guaranteed on every
-     * incoming path, the maximum possible on some path, and the object the
-     * depth belongs to. The identity follows the object, not the value
-     * copy, so a cast, a refinement or a merge keeps the same monitor.
-     * <p>
-     * A released lock names no monitor.
-     */
-    public record Lock(int min, int max, Identifier monitor) {
-        /**
-         * No monitor is held on any path.
-         */
-        public static final Lock NONE = new Lock(0, 0, null);
-
-        public Lock {
-            if (min < 0 || max < min) {
-                throw new IllegalArgumentException(
-                        "Invalid lock depth: " + min + "~" + max);
-            }
-            if (max == 0) {
-                monitor = null;
-            }
-        }
-
-        public Lock(int min, int max) {
-            this(min, max, null);
-        }
-
-        /**
-         * The lock after one more monitor-enter of the same object.
-         */
-        public Lock enter() {
-            return new Lock(min + 1, max + 1, monitor);
-        }
-
-        /**
-         * The lock after one monitor-exit; a lock that may not be held
-         * at all is returned unchanged.
-         */
-        public Lock exit() {
-            if (max == 0) {
-                return NONE;
-            }
-            return new Lock(Math.max(min - 1, 0), max - 1, monitor);
-        }
-
-        /**
-         * The same depth under the given monitor; the identity is dropped
-         * when the lock is not possibly held.
-         */
-        public Lock withMonitor(Identifier monitor) {
-            return new Lock(min, max, monitor);
-        }
-
-        /**
-         * Whether both locks name the same monitor object.
-         */
-        public boolean isSameMonitor(Lock other) {
-            return monitor != null && monitor.equals(other.monitor());
-        }
-
-        /**
-         * Whether the monitor is definitely held.
-         */
-        public boolean isHeld() {
-            return min > 0;
-        }
-
-        /**
-         * Whether the monitor may be held on some path.
-         */
-        public boolean isPossiblyHeld() {
-            return max > 0;
-        }
-
-        /**
-         * The join of two incoming locks: the guaranteed minimum, the
-         * possible maximum and the monitor both paths agree on. A path
-         * that holds no monitor has no say in the identity, and differing
-         * monitors leave it unknown.
-         */
-        public static Lock join(Lock a, Lock b) {
-            Objects.requireNonNull(a);
-            Objects.requireNonNull(b);
-            int min = Math.min(a.min(), b.min());
-            int max = Math.max(a.max(), b.max());
-            Identifier monitor;
-            if (a.max() == 0) {
-                monitor = b.monitor();
-            } else if (b.max() == 0) {
-                monitor = a.monitor();
-            } else {
-                monitor = Objects.equals(a.monitor(), b.monitor()) ? a.monitor() : null;
-            }
-            return new Lock(min, max, monitor);
-        }
-
-        /**
-         * The depth, or the {@code min~max} range when the paths disagree.
-         */
-        @Override
-        public String toString() {
-            return min == max ? Integer.toString(min) : min + "~" + max;
-        }
-    }
-
-    private static String lockSuffix(Lock lock) {
-        return lock.isPossiblyHeld() ? "^" + lock : "";
     }
 
     /**
@@ -602,34 +491,18 @@ public sealed abstract class Register {
     }
 
     /**
-     * A constant value, classified by {@link ConstantKind}; a non-null
-     * reference constant may carry a monitor lock.
+     * A constant value, classified by {@link ConstantKind}.
      */
     public static final class Constant extends DynamicRegister {
         private final ConstantKind kind;
-        private final Lock lock;
 
-        private Constant(Identifier source, ConstantKind kind, Lock lock) {
+        private Constant(Identifier source, ConstantKind kind) {
             super(source);
             this.kind = Objects.requireNonNull(kind);
-            this.lock = Objects.requireNonNull(lock);
-            if (!Lock.NONE.equals(lock)
-                    && (!kind.isRef() || kind.isZeroOrNull())) {
-                throw new IllegalArgumentException(
-                        "Only a non-null reference can carry a lock: " + kind);
-            }
         }
 
         public static Constant of(Identifier source, ConstantKind kind) {
-            return new Constant(source, kind, Lock.NONE);
-        }
-
-        /**
-         * A constant carrying a monitor lock; only a non-null reference
-         * kind can hold one.
-         */
-        public static Constant of(Identifier source, ConstantKind kind, Lock lock) {
-            return new Constant(source, kind, lock);
+            return new Constant(source, kind);
         }
 
         public static Constant of(Identifier source, int value) {
@@ -645,35 +518,21 @@ public sealed abstract class Register {
         }
 
         @Override
-        public Lock lock() {
-            return lock;
-        }
-
-        /**
-         * The same constant with the given monitor lock.
-         */
-        @Override
-        public Constant withLock(Lock lock) {
-            return new Constant(getSource(), kind, lock);
-        }
-
-        @Override
         public boolean equals(Object obj) {
             if (obj == this) return true;
             if (!super.equals(obj)) return false;
             return obj instanceof Constant other
-                    && Objects.equals(kind, other.kind)
-                    && Objects.equals(lock, other.lock);
+                    && Objects.equals(kind, other.kind);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), kind, lock);
+            return Objects.hash(super.hashCode(), kind);
         }
 
         @Override
         public String toString() {
-            return toString("~" + classify()) + lockSuffix(lock);
+            return toString("~" + classify());
         }
     }
 
@@ -762,16 +621,13 @@ public sealed abstract class Register {
     }
 
     /**
-     * A reference value with a possibly unresolved type and an optional
-     * monitor lock.
+     * A reference value with a possibly unresolved type.
      */
     public static sealed class Reference extends TypedRegister {
         private final boolean non_null;
         private final boolean exact;
-        private final Lock lock;
 
-        private Reference(Identifier source, TypeInfo type,
-                          boolean non_null, boolean exact, Lock lock) {
+        private Reference(Identifier source, TypeInfo type, boolean non_null, boolean exact) {
             super(source, type);
             if (type.isPrimitive()) {
                 throw new IllegalArgumentException(
@@ -783,7 +639,6 @@ public sealed abstract class Register {
             }
             this.non_null = non_null;
             this.exact = exact;
-            this.lock = Objects.requireNonNull(lock);
         }
 
         /**
@@ -792,17 +647,7 @@ public sealed abstract class Register {
          */
         public static Reference of(Identifier source, TypeInfo type,
                                    boolean non_null, boolean exact) {
-            return new Reference(source, type, non_null, exact, Lock.NONE);
-        }
-
-        /**
-         * @param exact whether a non-null value is exactly of the type, not
-         *              of a subtype of it
-         * @param lock  the monitor lock the value carries
-         */
-        public static Reference of(Identifier source, TypeInfo type,
-                                   boolean non_null, boolean exact, Lock lock) {
-            return new Reference(source, type, non_null, exact, lock);
+            return new Reference(source, type, non_null, exact);
         }
 
         public static Reference of(Identifier source, TypeInfo type, boolean non_null) {
@@ -812,13 +657,7 @@ public sealed abstract class Register {
         // type is null if exact is unknown
         public static Reference of(Identifier source, TypeId type,
                                    boolean non_null, boolean exact) {
-            return of(source, TypeInfo.of(type), non_null, exact, Lock.NONE);
-        }
-
-        // type is null if exact is unknown
-        public static Reference of(Identifier source, TypeId type,
-                                   boolean non_null, boolean exact, Lock lock) {
-            return of(source, TypeInfo.of(type), non_null, exact, lock);
+            return of(source, TypeInfo.of(type), non_null, exact);
         }
 
         // type is null if exact is unknown
@@ -835,24 +674,10 @@ public sealed abstract class Register {
         }
 
         @Override
-        public Lock lock() {
-            return lock;
-        }
-
-        /**
-         * The same reference with the given monitor lock.
-         */
-        @Override
-        public Reference withLock(Lock lock) {
-            return new Reference(getSource(), typeInfo(), non_null, exact, lock);
-        }
-
-        @Override
         public String toString() {
             return toString(typeInfo().toString())
                     + (non_null ? "!" : "")
-                    + (exact ? "*" : "")
-                    + lockSuffix(lock);
+                    + (exact ? "*" : "");
         }
 
         @Override
@@ -864,13 +689,12 @@ public sealed abstract class Register {
             if (!super.equals(obj)) return false;
             var other = (Reference) obj;
             return non_null == other.non_null
-                    && exact == other.exact
-                    && Objects.equals(lock, other.lock);
+                    && exact == other.exact;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), non_null, exact, lock);
+            return Objects.hash(super.hashCode(), non_null, exact);
         }
     }
 
@@ -881,13 +705,12 @@ public sealed abstract class Register {
     public static final class UninitializedRef extends Reference {
         private final boolean thiz;
 
-        private UninitializedRef(Identifier source, TypeId type,
-                                 boolean thiz, boolean exact, Lock lock) {
+        private UninitializedRef(Identifier source, TypeId type, boolean thiz, boolean exact) {
             // Uninitialized ref type must always be known and non-null.
             // Exactness is independent of the initialization state: a
             // new-instance value is exactly its class, while the receiver
             // of a constructor may be an instance of a subclass.
-            super(source, checkType(type, exact), true, exact, lock);
+            super(source, checkType(type, exact), true, exact);
             assert !type.isArray();
             this.thiz = thiz;
         }
@@ -901,7 +724,7 @@ public sealed abstract class Register {
         }
 
         public static UninitializedRef of(Identifier source, TypeId type, boolean thiz) {
-            return new UninitializedRef(source, type, thiz, false, Lock.NONE);
+            return new UninitializedRef(source, type, thiz, false);
         }
 
         /**
@@ -910,27 +733,11 @@ public sealed abstract class Register {
          */
         public static UninitializedRef of(Identifier source, TypeId type,
                                           boolean thiz, boolean exact) {
-            return new UninitializedRef(source, type, thiz, exact, Lock.NONE);
-        }
-
-        /**
-         * @param exact whether the allocated value is exactly of the type,
-         *              not of a subtype of it
-         * @param lock  the monitor lock the value carries
-         */
-        public static UninitializedRef of(Identifier source, TypeId type,
-                                          boolean thiz, boolean exact, Lock lock) {
-            return new UninitializedRef(source, type, thiz, exact, lock);
+            return new UninitializedRef(source, type, thiz, exact);
         }
 
         /* package */ boolean isThis() {
             return thiz;
-        }
-
-        @Override
-        public UninitializedRef withLock(Lock lock) {
-            return new UninitializedRef(getSource(), typeInfo().base(),
-                    thiz, isExact(), lock);
         }
 
         @Override
@@ -1007,9 +814,6 @@ public sealed abstract class Register {
         // A joined value is identified by the merge point itself, never by
         // the instruction that happens to follow it
         var ident = new Identifier(address, slot, false);
-        // Only reference values carry locks; a non-reference side
-        // contributes NONE
-        var lock = Lock.join(a.lock(), b.lock());
         if (a.isConflict() || b.isConflict()) {
             return Conflict.of(ident);
         }
@@ -1028,7 +832,7 @@ public sealed abstract class Register {
             var ak = ac.classify();
             var bk = bc.classify();
             if (ak == bk) {
-                return Constant.of(ident, ak, lock);
+                return Constant.of(ident, ak);
             }
             if (ak.isWide() || bk.isWide()) {
                 if (ak.isWide() && bk.isWide()) {
@@ -1040,24 +844,24 @@ public sealed abstract class Register {
             assert !ak.isWide() && !bk.isWide();
             // Zero is both the integer 0 and the null reference, so it
             // adopts the other kind together with its nullability
-            if (ak == ZERO) return Constant.of(ident, bk.withNull(), lock);
-            if (bk == ZERO) return Constant.of(ident, ak.withNull(), lock);
+            if (ak == ZERO) return Constant.of(ident, bk.withNull());
+            if (bk == ZERO) return Constant.of(ident, ak.withNull());
             if (ak == NULL || bk == NULL) {
                 // Merging null with a reference keeps that reference
                 // nullable; a nullable kind keeps its nullability
                 var other = ak == NULL ? bk : ak;
-                if (other.isRef()) return Constant.of(ident, other.withNull(), lock);
+                if (other.isRef()) return Constant.of(ident, other.withNull());
                 // Merge NULL with a primitive type
                 return Conflict.of(ident);
             }
             if (ak.isRef() || bk.isRef()) {
                 if (ak.isRef() && bk.isRef()) {
-                    return Constant.of(ident, mergeRefKinds(ak, bk), lock);
+                    return Constant.of(ident, mergeRefKinds(ak, bk));
                 }
                 // Merge ref constant with a primitive type
                 return Conflict.of(ident);
             }
-            return Constant.of(ident, mergeInt(ak, bk), lock);
+            return Constant.of(ident, mergeInt(ak, bk));
         }
         if (a.isInt() && b.isInt()) {
             if (a.isBool() && b.isBool()) return Primitive.of(ident, TypeId.Z);
@@ -1077,73 +881,24 @@ public sealed abstract class Register {
             var b_type = b.getTypeInfo();
             if (a_type == null) {
                 assert a.isZeroOrNull();
-                return Reference.of(ident, b_type, non_null, false, lock);
+                return Reference.of(ident, b_type, non_null);
             }
             if (b_type == null) {
                 assert b.isZeroOrNull();
-                return Reference.of(ident, a_type, non_null, false, lock);
+                return Reference.of(ident, a_type, non_null);
             }
             assert a_type.isReference() && b_type.isReference();
             // The join is exactly typed only when both sides are exactly
             // the same class
             var exact = a.isExactRef() && b.isExactRef()
                     && Objects.equals(a_type, b_type);
-            return Reference.of(ident, resolver.join(a_type, b_type), non_null, exact, lock);
+            return Reference.of(ident, resolver.join(a_type, b_type), non_null, exact);
         }
         if ((a.isWideLo() && b.isWideHi()) || (a.isWideHi() && b.isWideLo())) {
             // lo | hi
             return WidePiece.of(ident);
         }
         return Conflict.of(ident);
-    }
-
-    /**
-     * The monitor lock carried by this value: {@link Lock#NONE} for a
-     * non-reference value or an unlocked reference.
-     */
-    public Lock lock() {
-        return Lock.NONE;
-    }
-
-    /**
-     * The same value with the given monitor lock; only reference values
-     * can carry a lock.
-     */
-    public Register withLock(Lock lock) {
-        Objects.requireNonNull(lock);
-        if (Lock.NONE.equals(lock)) {
-            return this;
-        }
-        throw new IllegalArgumentException(
-                "Only a reference can carry a lock: " + this);
-    }
-
-    /**
-     * The same reference made non-null, with a new origin and lock; the
-     * caller replaces every equal alias. A constant loses its nullability,
-     * an uninitialized value keeps its initialization state.
-     */
-    /* package */ Register refineNonNull(Identifier source, Lock lock) {
-        Objects.requireNonNull(source);
-        Objects.requireNonNull(lock);
-        if (this instanceof UninitializedRef ref) {
-            // Already non-null; the initialization marker must survive
-            return UninitializedRef.of(source, ref.typeInfo().base(),
-                    ref.isThis(), ref.isExact(), lock);
-        }
-        if (this instanceof Reference ref) {
-            return Reference.of(source, ref.typeInfo(), true, ref.isExact(), lock);
-        }
-        if (this instanceof Constant constant) {
-            var kind = constant.classify();
-            if (!kind.isRef() || kind.isZeroOrNull()) {
-                throw new IllegalArgumentException(
-                        "A null or non-reference value cannot carry a lock: " + this);
-            }
-            return Constant.of(source, kind.withoutNull(), lock);
-        }
-        throw new IllegalArgumentException(
-                "Only a reference can carry a lock: " + this);
     }
 
     public final boolean isUndefined() {

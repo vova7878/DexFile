@@ -111,6 +111,6 @@ public record TypeInfo(TypeId base, int array_depth) {
 
     @Override
     public String toString() {
-        return "[".repeat(array_depth) + (base == null ? "<ref>" : base.getDescriptor());
+        return (base == null ? "<unresolved reference>" : base.getName()) + "[]".repeat(array_depth);
     }
 }
