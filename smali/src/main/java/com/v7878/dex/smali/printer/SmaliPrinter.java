@@ -960,6 +960,14 @@ public final class SmaliPrinter {
                     break;
                 }
             }
+            if (debugAt.contains(a)) {
+                printDebugItems(debugAt.get(a), totalRegs, fullParams);
+            }
+            if (labels.contains(a)) {
+                for (Label label : labels.get(a).values()) {
+                    printLabelLine(label);
+                }
+            }
             Position position = null;
             if (insnIndex >= 0) {
                 if (options.hasAnalysisInfo() || options.hasCodeOffsets()) {
@@ -970,14 +978,6 @@ public final class SmaliPrinter {
                 }
                 if (options.hasAnalysisInfo() && position != null) {
                     printAnalysisBlock(position, instance);
-                }
-            }
-            if (debugAt.contains(a)) {
-                printDebugItems(debugAt.get(a), totalRegs, fullParams);
-            }
-            if (labels.contains(a)) {
-                for (Label label : labels.get(a).values()) {
-                    printLabelLine(label);
                 }
             }
             if (insnIndex >= 0) {
@@ -1672,11 +1672,12 @@ public final class SmaliPrinter {
             printStateLine("before", position.before(), instance);
         }
         Opcode op = position.opcode();
-        if (op != Opcode.THROW && !op.isReturn()) {
+        boolean completesNormally = op != Opcode.THROW && !op.isReturn();
+        if (completesNormally) {
             printStateLine("after", position.after(), instance);
         }
         if (position.resultType() != null) {
-            out.append("#@result ").append(position.resultType().getName()).newline();
+            out.append("#@result ").append(position.resultType().getDescriptor()).newline();
         }
         if (position.exceptionType() != null) {
             out.append("#@exception ").append(position.exceptionType().toString()).newline();
@@ -1686,6 +1687,12 @@ public final class SmaliPrinter {
         }
         if (!position.outputs().isEmpty()) {
             out.append("#@writes ").append(Formatter.registers(position.outputs())).newline();
+        }
+        if (!position.predecessors().isEmpty()) {
+            out.append("#@predecessors ").append(position.predecessors().toString()).newline();
+        }
+        if (!position.successors().isEmpty()) {
+            out.append("#@successors ").append(position.successors().toString()).newline();
         }
         out.append("#@flags ").append(runtimeFlags(position)).newline();
     }
@@ -1699,10 +1706,12 @@ public final class SmaliPrinter {
         } else {
             state = "unreachable";
         }
+        if (position.isAlwaysThrowing()) {
+            state += ", always-throws";
+        }
         if (position.isStrictNop()) {
             return state + ", strict-nop";
-        }
-        if (position.isLossyNop()) {
+        } else if (position.isLossyNop()) {
             return state + ", lossy-nop";
         }
         return state;

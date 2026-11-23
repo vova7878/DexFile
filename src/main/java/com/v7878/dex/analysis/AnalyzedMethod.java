@@ -656,6 +656,8 @@ public final class AnalyzedMethod {
                 }
 
                 current.input(ireg);
+                // Fake output register - the instruction replaces the value with a new one,
+                // changing the type, and does not affect any other registers — even if content is same.
                 current.output(ireg);
             }
             case INSTANCE_OF -> {
@@ -1310,7 +1312,8 @@ public final class AnalyzedMethod {
         var type = type_info.base();
         var ident = introduced(current.address(), ithis_reg);
         // The exactness of the allocated value survives initialization
-        var new_value = Reference.of(ident, type, true, this_reg.isExactRef());
+        var new_value = Reference.of(ident, type,
+                true, this_reg.isExactRef());
         var line = current.after();
         // Every alias of the receiver is initialized by the same call
         for (int i = 0; i < line.registerCount(); i++) {
@@ -1330,7 +1333,8 @@ public final class AnalyzedMethod {
         Register new_value;
         if (reg instanceof Reference ref) {
             var ident = introduced(address, ireg);
-            new_value = Reference.of(ident, ref.typeInfo(), true, ref.isExact());
+            new_value = Reference.of(ident, ref.typeInfo(),
+                    true, ref.isExact());
         } else if (reg instanceof Constant constant) {
             var kind = constant.classify();
             if (!kind.isNullable()) {
@@ -1669,7 +1673,7 @@ public final class AnalyzedMethod {
         } else {
             current.passRegs();
         }
-        boolean next_reachable = true;
+        boolean always_throws = opcode == THROW;
         boolean is_strict_nop = current.isStrictNop();
         boolean is_lossy_nop = current.isLossyNop();
         switch (opcode) {
@@ -1824,7 +1828,7 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
-                if (reg.isZeroOrNull()) next_reachable = false;
+                if (reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ireg, reg);
             }
             case CHECK_CAST -> {
@@ -1859,7 +1863,7 @@ public final class AnalyzedMethod {
                         // No runtime class can be a subtype of both types
                         is_lossy_nop = false;
                         is_strict_nop = false;
-                        next_reachable = false;
+                        always_throws = true;
                     } else if (isWideningCast(resolver, type, TypeInfo.of(ref))) {
                         is_lossy_nop = true;
                         is_strict_nop = false;
@@ -1896,7 +1900,7 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, iarr, arr);
                 }
 
-                if (arr.isZeroOrNull()) next_reachable = false;
+                if (arr.isZeroOrNull()) always_throws = true;
 
                 outputPrim(current, idst, I);
 
@@ -1939,7 +1943,7 @@ public final class AnalyzedMethod {
                 var reg = current.before().at(ireg);
                 if (reg.isZeroOrNull()) {
                     // Runtime exception
-                    next_reachable = false;
+                    always_throws = true;
                 } else {
                     var info = reg.getTypeInfo();
                     if (info == null || !info.isComponentPrimitive()) {
@@ -2254,7 +2258,7 @@ public final class AnalyzedMethod {
                         case AGET_OBJECT -> constant(current, ival, ConstantKind.NULL);
                         default -> throw shouldNotReachHere();
                     }
-                    next_reachable = false;
+                    always_throws = true;
                 } else {
                     var info = arr.getTypeInfo();
                     if (info == null || !info.isArray()) {
@@ -2316,7 +2320,7 @@ public final class AnalyzedMethod {
                             }
                         }
                     }
-                    next_reachable = false;
+                    always_throws = true;
                 } else {
                     var info = arr.getTypeInfo();
                     if (info == null || !info.isArray()) {
@@ -2370,7 +2374,7 @@ public final class AnalyzedMethod {
                     outputPrim(current, ival, type);
                 }
 
-                if (obj.isZeroOrNull()) next_reachable = false;
+                if (obj.isZeroOrNull()) always_throws = true;
                 // The object operand is dereferenced; the field value may be null
                 markNonNull(current, iobj, obj);
             }
@@ -2383,7 +2387,8 @@ public final class AnalyzedMethod {
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) {
-                    if (!obj.isAssignable(resolver, ref.getDeclaringClass(), true, true, false)) {
+                    if (!obj.isAssignable(resolver, ref.getDeclaringClass(),
+                            true, true, false)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
 
@@ -2398,7 +2403,7 @@ public final class AnalyzedMethod {
                     verifyReg(resolver, current, ival, ref.getType());
                 }
 
-                if (obj.isZeroOrNull()) next_reachable = false;
+                if (obj.isZeroOrNull()) always_throws = true;
                 // The object operand is dereferenced; the stored value may be null
                 markNonNull(current, iobj, obj);
             }
@@ -2442,7 +2447,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, check_this);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 // A constructor receiver is an UninitializedRef, hence already non-null
                 markNonNull(current, ithis_reg, this_reg);
             }
@@ -2465,7 +2470,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, check_this);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 // A constructor receiver is an UninitializedRef, hence already non-null
                 markNonNull(current, ithis_reg, this_reg);
             }
@@ -2478,7 +2483,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_POLYMORPHIC -> {
@@ -2490,7 +2495,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE, INVOKE_INTERFACE_RANGE -> {
@@ -2502,7 +2507,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_POLYMORPHIC_RANGE -> {
@@ -2514,7 +2519,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_STATIC, INVOKE_CUSTOM -> {
@@ -2525,7 +2530,7 @@ public final class AnalyzedMethod {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getRegister1();
                         var obj_reg = current.before().at(iobj_reg);
-                        if (obj_reg.isZeroOrNull()) next_reachable = false;
+                        if (obj_reg.isZeroOrNull()) always_throws = true;
                         // requireNonNull rejects a null first argument
                         markNonNull(current, iobj_reg, obj_reg);
                     }
@@ -2539,7 +2544,7 @@ public final class AnalyzedMethod {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getStartRegister();
                         var obj_reg = current.before().at(iobj_reg);
-                        if (obj_reg.isZeroOrNull()) next_reachable = false;
+                        if (obj_reg.isZeroOrNull()) always_throws = true;
                         // requireNonNull rejects a null first argument
                         markNonNull(current, iobj_reg, obj_reg);
                     }
@@ -2620,6 +2625,9 @@ public final class AnalyzedMethod {
         }
         current.setStrictNop(is_strict_nop);
         current.setLossyNop(is_lossy_nop);
+        // Recomputed on every visit: a later incoming edge can turn a
+        // definite proof into a "maybe" and restore the fall-through
+        current.setAlwaysThrowing(always_throws);
         if (opcode.isConditionalBranch() || opcode.isSwitch()) {
             // 'if' and 'switch' instructions have special handling because they
             // provide information about the state of the register in different branches
@@ -2630,7 +2638,8 @@ public final class AnalyzedMethod {
                 // If this is a transition to catch handler, then registers in the
                 // state before execution of the current instruction are placed there
                 var line = transition.isCatch() ? current.before() : current.after();
-                var reachable = transition.isCatch() || next_reachable;
+                // An always-throwing instruction has no reachable fall-through
+                var reachable = transition.isCatch() || !always_throws;
                 merge(resolver, touched, todo, current, target, line, reachable);
             }
         }

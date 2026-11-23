@@ -61,8 +61,9 @@ public sealed abstract class Register {
 
         @Override
         public String toString() {
-            return (address < 0 ? "parameter" : Integer.toHexString(address)) + "[" + slot + "]"
-                    + (produced ? "" : "<incoming>");
+            return (address < 0 ? "<p>" :
+                    (produced ? "" : "<i>") + Integer.toHexString(address))
+                    + "[" + slot + "]";
         }
     }
 
@@ -418,16 +419,16 @@ public sealed abstract class Register {
                 case INT -> "int";
                 case WIDE_LO -> "<wide";
                 case WIDE_HI -> ">wide";
-                case STRING -> "string";
-                case STRING_OR_NULL -> "string|null";
-                case CLASS -> "class";
-                case CLASS_OR_NULL -> "class|null";
-                case METHOD_TYPE -> "method type";
-                case METHOD_TYPE_OR_NULL -> "method type|null";
-                case METHOD_HANDLE -> "method handle";
-                case METHOD_HANDLE_OR_NULL -> "method handle|null";
-                case REFERENCE -> "reference";
-                case REFERENCE_OR_NULL -> "reference|null";
+                case STRING -> "string!";
+                case STRING_OR_NULL -> "string";
+                case CLASS -> "class!";
+                case CLASS_OR_NULL -> "class";
+                case METHOD_TYPE -> "method type!";
+                case METHOD_TYPE_OR_NULL -> "method type";
+                case METHOD_HANDLE -> "method handle!";
+                case METHOD_HANDLE_OR_NULL -> "method handle";
+                case REFERENCE -> "reference!";
+                case REFERENCE_OR_NULL -> "reference";
                 case NULL -> "null";
             };
         }
@@ -627,7 +628,8 @@ public sealed abstract class Register {
         private final boolean non_null;
         private final boolean exact;
 
-        private Reference(Identifier source, TypeInfo type, boolean non_null, boolean exact) {
+        private Reference(Identifier source, TypeInfo type,
+                          boolean non_null, boolean exact) {
             super(source, type);
             if (type.isPrimitive()) {
                 throw new IllegalArgumentException(
@@ -705,7 +707,8 @@ public sealed abstract class Register {
     public static final class UninitializedRef extends Reference {
         private final boolean thiz;
 
-        private UninitializedRef(Identifier source, TypeId type, boolean thiz, boolean exact) {
+        private UninitializedRef(Identifier source, TypeId type,
+                                 boolean thiz, boolean exact) {
             // Uninitialized ref type must always be known and non-null.
             // Exactness is independent of the initialization state: a
             // new-instance value is exactly its class, while the receiver
