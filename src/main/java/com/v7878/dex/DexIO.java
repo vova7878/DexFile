@@ -190,8 +190,8 @@ public final class DexIO {
     }
 
     /**
-     * Wraps the raw error of a file-content failure into an InvalidDexFile
-     * carrying the raw message; an already wrapped error passes through.
+     * Wraps a raw file-content error into an {@link InvalidDexFile} that carries
+     * the raw message; an error that is already wrapped passes through.
      */
     private static RuntimeException wrapInvalidDexFile(RuntimeException e) {
         if (e instanceof NotADexFile || e instanceof InvalidDexFile) {
@@ -201,7 +201,7 @@ public final class DexIO {
     }
 
     // The content_offset parameter should always be 0.
-    // Other values can be used to read obfuscated dex files
+    // Other values can be used to read obfuscated dex files.
     public static DexReaderCache readCache(ReadOptions options, byte[] data, int data_offset,
                                            int header_offset, int content_offset) {
         Objects.requireNonNull(options);
@@ -293,7 +293,7 @@ public final class DexIO {
         }
     }
 
-    //TODO: public static Dex[] readDexContainer(ReadOptions options, byte[] data, int[][] ids) {}
+    // TODO: public static Dex[] readDexContainer(ReadOptions options, byte[] data, int[][] ids) {}
 
     public static Dex[] readDexContainer(ReadOptions options, byte[] data, int data_offset) {
         var readers = readDexContainerCache(options, data, data_offset);

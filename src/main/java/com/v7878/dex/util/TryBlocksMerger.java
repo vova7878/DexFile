@@ -41,7 +41,7 @@ public class TryBlocksMerger {
     //             v
     // /--------|/---|/---|/---|
     //             |
-    //             | (Cut at begin of each range)
+    //             | (Cut at the beginning of each range)
     //             v
     // <--------//--->
     //           <--->
@@ -49,7 +49,7 @@ public class TryBlocksMerger {
     // <--------//---//--->
     //           <---//--->
     //             |
-    //             | (merge elements with same start)
+    //             | (Merge elements with the same start)
     //             v
     // <========><***><+++><--->
     public static NavigableSet<TryBlock> mergeTryItems(List<? extends TryItem> try_items) {

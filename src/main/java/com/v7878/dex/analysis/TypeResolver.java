@@ -40,22 +40,22 @@ public abstract sealed class TypeResolver {
     }
 
     /**
-     * Least common supertype of two classes; null means unknown.
+     * Least common supertype of two classes; {@code null} means unknown.
      */
     protected abstract TypeId resolveJoin(TypeId a, TypeId b);
 
     /**
-     * Whether a is a subtype of b; null means unknown.
+     * Whether a is a subtype of b; {@code null} means unknown.
      */
     protected abstract Boolean resolveInstanceOf(TypeId a, TypeId b);
 
     /**
-     * Whether the class is an interface; null means unknown.
+     * Whether the class is an interface; {@code null} means unknown.
      */
     protected abstract Boolean resolveIsInterface(TypeId type);
 
     /**
-     * Whether the class is final, i.e. has no subclasses; null means
+     * Whether the class is final, i.e. has no subclasses; {@code null} means
      * unknown.
      */
     protected abstract Boolean resolveIsFinal(TypeId type);
@@ -127,8 +127,9 @@ public abstract sealed class TypeResolver {
      * @param unknownMatches result used when the relation cannot be resolved
      * @param strict         {@code false} mirrors Android verification: any reference
      *                       (but no primitive) is assignable to an interface type, because
-     *                       join loses interface information and the exact check happens at
-     *                       runtime; {@code true} requires the target to be implemented
+     *                       {@link #join(TypeInfo, TypeInfo)} loses interface information and
+     *                       the exact check happens at runtime; {@code true} requires the
+     *                       target to be implemented
      * @throws IllegalArgumentException if either type is primitive
      */
     public boolean isAssignable(TypeInfo a, TypeInfo b, boolean unknownMatches, boolean strict) {
@@ -229,7 +230,7 @@ public abstract sealed class TypeResolver {
             // Array finality is the finality of the base class at every
             // depth: T[]...[] has a proper array subtype exactly when T
             // has a proper subtype. A primitive base means an array of a
-            // primitive, which has no array subtype at all
+            // primitive, which has no array subtype at all.
             if (type.isBasePrimitive()) {
                 return true;
             }
@@ -384,7 +385,7 @@ public abstract sealed class TypeResolver {
         // (but valid) hierarchies cannot overflow the stack. The same type
         // may be queued more than once (diamond inheritance, interfaces
         // sharing the Object superclass), so each type is processed at
-        // most once; this also makes cyclic (invalid) hierarchies terminate
+        // most once; this also makes cyclic (invalid) hierarchies terminate.
         @Override
         protected Boolean resolveInstanceOf(TypeId a, TypeId b) {
             var visited = new LinkedHashSet<TypeId>();
@@ -396,7 +397,7 @@ public abstract sealed class TypeResolver {
                 if (type.equals(b)) return true;
                 if (!visited.add(type)) {
                     // Already processed: a diamond ancestor, a shared Object
-                    // superclass, or a cycle — nothing new to explore
+                    // superclass, or a cycle – nothing new to explore
                     continue;
                 }
                 var info = mapper.apply(type);

@@ -23,8 +23,8 @@ public final class ClassDef implements Annotatable, ClassHeader {
     private final TypeId type;
     private final int access_flags;
     private final TypeId superclass;
-    // In some cases, the order of interfaces may be
-    //  important (for example when redefining classes)
+    // The order of interfaces can matter, for example when classes are
+    // redefined
     private final List<TypeId> interfaces;
     private final String source_file;
     private final NavigableSet<FieldDef> fields;

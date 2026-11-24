@@ -4,7 +4,7 @@ import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
 import java.util.regex.Pattern;
 
-// Note: The string that gets here is already validated
+// Note: the string passed here is already validated
 public class LiteralUtils {
     public static char parseChar(String value) {
         value = value.substring(1, value.length() - 1);

@@ -208,7 +208,7 @@ public final class LongSet implements Iterable<Long> {
         if (missed == 0) {
             return false;
         }
-        // a negative result means the range spans more than a long,
+        // a negative result means the range spans more than Long.MAX_VALUE,
         // and anything above the array bound cannot be allocated
         if (missed < 0 || missed > Integer.MAX_VALUE - size) {
             throw new OutOfMemoryError();

@@ -103,7 +103,8 @@ public class InstructionReader {
         };
     }
 
-    //TODO: find a way to read code with incorrect instructions (which used to protect dex from reading)
+    // TODO: find a way to read code with incorrect instructions
+    // (which used to protect dex from reading)
     public static List<Instruction> readArray(DexReader reader, RandomInput in, int insns_count) {
         var insns = new ArrayList<Instruction>(insns_count);
 

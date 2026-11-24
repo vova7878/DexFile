@@ -236,7 +236,7 @@ public final class SmaliOptions {
     /**
      * Returns whether the analysis runs with verification: the value-type
      * checks (return types, invoke arguments, field kinds, the super-call
-     * rule, cast operand kinds) are on. Off runs the structural checks only.
+     * rule, cast operand kinds) are on. When off, only the structural checks run.
      */
     public boolean hasAnalysisVerification() {
         return analysisVerification;

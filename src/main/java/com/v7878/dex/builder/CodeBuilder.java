@@ -252,9 +252,9 @@ public final class CodeBuilder {
         private int units, position;
         private BuilderPosition prev, next;
         // Each position contains a pointer to the node following it.
-        // The position preceding the first node is called "head";
-        // The position after the last node is called the "tail"
-        // It points to the null node (there is nothing after it).
+        // The position preceding the first node is called the "head"; the
+        // position after the last node is called the "tail", which points
+        // to the null node (there is nothing after it).
         //
         // There is a special placeholder node. Such a position is a label: it holds
         // no units, is not part of the chain and only points to the position it names.
@@ -398,22 +398,22 @@ public final class CodeBuilder {
                     // The difference can be negative only for two types of corrections:
                     //
                     // 1) If the payload position becomes even
-                    // 2) If a zero-size instruction 'expands' and this turns the nearest
+                    // 2) If a zero-size instruction 'expands' and turns the nearest
                     // branch 0 into a non-zero branch (branch 0 is usually large)
                     //
-                    // Both situations should not lead to an infinite correction loop
+                    // Neither situation should lead to an infinite correction loop
                     //
-                    // In the first case, the finiteness of iterations is ensured
-                    // by the fact that the payloads are located separately and
-                    // are pointed to only by fixed-size instructions
+                    // In the first case, the iterations are finite because the
+                    // payloads are located separately and are pointed to only by
+                    // fixed-size instructions
                     //
-                    // In the second case, the acquisition of a non-zero
-                    // size by the instruction is irreversible
+                    // In the second case, an instruction that acquires a
+                    // non-zero size never shrinks again
                     int diff = node_units - pos_units;
                     tmp.update(node_units);
 
-                    // We correct positions for all nodes, including the last one
-                    // (despite the fact that it does not contain any instructions)
+                    // Positions are corrected for all nodes, including the last
+                    // one (although it contains no instructions)
                     for (var tmp2 = tmp.next(); tmp2 != null; tmp2 = tmp2.next()) {
                         tmp2.add_position(diff);
                     }
@@ -920,7 +920,7 @@ public final class CodeBuilder {
 
     /**
      * Splits the block of {@code target} in two after the label: the code after
-     * the label becomes a new block, while {@code target} stays on the
+     * the label becomes a new block, while {@code target} stays at the
      * position after the last instruction of the left part. Returns the position
      * before the first instruction of the right part: instructions inserted after
      * it go before its content. The current position is not affected.
@@ -2591,7 +2591,8 @@ public final class CodeBuilder {
         if (table.size() == 1 && table.firstKey() == 0) {
             return if_testz(Test.EQ, reg_to_test, table.firstValue());
         }
-        // TODO: what if all targets is next instruction? Can we generate nothing?
+        // TODO: what if all targets are the next instruction? Can nothing
+        //  be generated?
         if (table.size() <= 1 || (table.lastKey() - table.firstKey()) == (table.size() - 1)) {
             return packed_switch_internal(reg_to_test, table.firstKey(), table.valuesArray());
         }

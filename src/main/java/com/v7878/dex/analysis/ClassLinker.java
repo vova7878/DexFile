@@ -9,6 +9,7 @@ import static com.v7878.dex.DexConstants.ACC_STATIC;
 import static com.v7878.dex.DexConstants.NO_INDEX;
 
 import com.v7878.collections.IntMap;
+import com.v7878.dex.DexConstants;
 import com.v7878.dex.analysis.ClassPath.InvocationError;
 import com.v7878.dex.immutable.ClassDef;
 import com.v7878.dex.immutable.MethodDef;
@@ -31,7 +32,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 
 /**
- * Static class-linking model — a port of ClassLinker/LinkMethodsHelper
+ * A static class-linking model – a port of ClassLinker/LinkMethodsHelper
  * (runtime/class_linker.cc), branch <a href="https://android.googlesource.com/platform/art/+/refs/heads/android17-release">android17-release</a>.
  * Builds, per class, the methods array ([direct | declared virtual | copied]),
  * vtable, iftable (with implementation method arrays), and the kind of copied
@@ -44,12 +45,12 @@ import java.util.function.Function;
  *       broken dex) do not hang but become a class link error;</li>
  *   <li>vtable indexes are self-consistent: with an unknown (outside the
  *       classpath) superclass, numbering is relative to the known part (the
- *       prefix is assumed length 0) — the "resolved index → receiver vtable"
- *       dispatch stays correct, the class is marked exact=false;</li>
+ *       prefix is assumed length 0) – the "resolved index → receiver vtable"
+ *       dispatch stays correct, the class is marked {@code exact == false};</li>
  *   <li>link errors (final-override, abstract+final class, final interface,
  *       implements non-interface, cycles, too many methods) are reported as
  *       linkError and propagated to subclasses
- *       (in ART the class fails to load, any use of it —
+ *       (in ART the class fails to load, any use of it –
  *       NoClassDefFoundError or VerifyError).</li>
  * </ul>
  */
@@ -69,10 +70,10 @@ final class ClassLinker {
     }
 
     /**
-     * Kind of a methods-array entry vs the ART flags (kAccCopied — "copied
-     * from an interface"): DECLARED — a method declared by the class;
-     * MIRANDA — a miranda copy (kAccCopied | kAccAbstract); DEFAULT — a
-     * default-method copy (kAccCopied | kAccDefault); DEFAULT_CONFLICT — a
+     * Kind of a methods-array entry vs the ART flags (kAccCopied – "copied
+     * from an interface"): DECLARED – a method declared by the class;
+     * MIRANDA – a miranda copy (kAccCopied | kAccAbstract); DEFAULT – a
+     * default-method copy (kAccCopied | kAccDefault); DEFAULT_CONFLICT – a
      * conflict copy (kAccCopied | kAccAbstract | kAccDefault, not invokable).
      */
     enum MethodKind {DECLARED, MIRANDA, DEFAULT, DEFAULT_CONFLICT}
@@ -82,10 +83,11 @@ final class ClassLinker {
     // =====================================================================
 
     /**
-     * A method in some class's methods array. For copies, declaring is the
-     * source interface (ART ArtMethod::CopyFrom keeps the declaring class);
-     * for declared methods — the class itself. The (declaring.def, def) pair
-     * is exactly a ResolvedMethod: the id is mapped to its def.
+     * A method in some class's methods array. For copies, {@link #declaring} is the
+     * source interface ({@code ArtMethod::CopyFrom} keeps the declaring class);
+     * for declared methods – the class itself. The ({@code declaring.def},
+     * {@link #def}) pair is exactly a {@link ClassPath.ResolvedMethod}: the id is
+     * mapped to its def.
      */
     static final class LinkedMethod {
         final LinkedClass declaring;
@@ -130,10 +132,10 @@ final class ClassLinker {
         }
 
         /**
-         * A port of ArtMethod::IsDefault (kAccDefault, runtime/art_method.h):
-         * an interface virtual with a body. Derived from declaring/kind/flags
-         * — DEFAULT/DEFAULT_CONFLICT copies always have such a source, a
-         * miranda source is abstract.
+         * A port of {@code ArtMethod::IsDefault} ({@code kAccDefault},
+         * runtime/art_method.h): an interface virtual with a body. Derived from
+         * {@link #declaring}, {@link #kind} and the flags – DEFAULT/DEFAULT_CONFLICT
+         * copies always have such a source, a miranda source is abstract.
          */
         boolean isDefault() {
             return declaring.isInterface() && isVirtual()
@@ -145,12 +147,14 @@ final class ClassLinker {
         }
 
         /**
-         * The ACC_ABSTRACT flag of the dex definition — equivalent to
-         * ArtMethod::IsAbstract (runtime/art_method.h). Model deviation: def
-         * carries the original flags (no runtime kAccCopied/kAccDefault — the
-         * entry kind lives in kind), while in ART default-conflict copies
-         * carry kAccAbstract as a marker and are excluded by the
-         * IsDefaultConflicting check. The kind correspondence — assert.
+         * The {@link DexConstants#ACC_ABSTRACT} flag of the dex definition – equivalent to
+         * {@code ArtMethod::IsAbstract} (runtime/art_method.h). Model deviation:
+         * {@link #def} carries the original flags (no runtime
+         * {@code kAccCopied}/{@code kAccDefault} – the entry kind lives in
+         * {@link #kind}), while in ART default-conflict copies carry
+         * {@code kAccAbstract} as a marker and are excluded by the
+         * {@code ArtMethod::IsDefaultConflicting} check. The kind correspondence is checked
+         * by an assert.
          */
         boolean isAbstract() {
             var is_abstract = (def.getAccessFlags() & ACC_ABSTRACT) != 0;
@@ -197,7 +201,7 @@ final class ClassLinker {
      * An iftable entry: an interface + the implementation method array
      * (index = the interface index of a virtual).
      *
-     * @param methodArray null — the interface has no declared virtuals
+     * @param methodArray {@code null} – the interface has no declared virtuals
      */
     record IfTableEntry(LinkedClass iface, List<LinkedMethod> methodArray) {
     }
@@ -208,15 +212,15 @@ final class ClassLinker {
         boolean exact = true;
         boolean hasDefaultMethods; // interfaces: kAccHasDefaultMethod
         String linkError;          // != null → the class fails to link (ART: load error)
-        LinkedClass superLC;       // superclass; null — Object and unknown classes
+        LinkedClass superLC;       // superclass; null – Object and unknown classes
         List<LinkedMethod> declaredDirect = List.of();
         List<LinkedMethod> declaredVirtual = List.of();
         List<LinkedMethod> copied = List.of();
         // USE_SUPER aliases: present in the vtable but not in the methods
-        // array — invisible to FindClassMethod (no kUseSuperMethod copy in
-        // the class). Deviation from ART: it reuses the superclass
-        // method object itself; here — a separate alias with the same
-        // def/declaring/kind/index
+        // array – invisible to FindClassMethod (no kUseSuperMethod copy in
+        // the class). Deviation from ART: ART reuses the superclass method
+        // object itself; here – a separate alias with the same
+        // def/declaring/kind/index.
         List<LinkedMethod> aliases = List.of();
         List<LinkedMethod> vtable = List.of(); // classes; unused for interfaces
         List<IfTableEntry> iftable = List.of();
@@ -227,19 +231,19 @@ final class ClassLinker {
         }
 
         /**
-         * A port of Class::IsInterface (the class kAccInterface). An unknown
-         * class (def == null) is not an interface.
+         * A port of {@code Class::IsInterface} (the class {@code kAccInterface}).
+         * An unknown class ({@code def == null}) is not an interface.
          */
         boolean isInterface() {
             return def != null && def.isInterface();
         }
 
         /**
-         * A class outside the classpath (def == null): linking is impossible,
-         * the hierarchy is entirely unknown. Derived from the final def — a
-         * desync with exact is structurally impossible; invariant:
-         * isUnknown() ⇒ !exact (the converse does not hold: a known
-         * hierarchy may be incomplete).
+         * A class outside the classpath ({@code def == null}): linking is
+         * impossible, the hierarchy is entirely unknown. Derived from the final
+         * {@code def} – a desync with {@code exact} is structurally
+         * impossible; invariant: {@link #isUnknown()} implies {@code !exact}
+         * (the converse does not hold: a known hierarchy may be incomplete).
          */
         boolean isUnknown() {
             return def == null;
@@ -279,16 +283,16 @@ final class ClassLinker {
     // =====================================================================
 
     /**
-     * Returns the LinkedClass for a type (cached). An iterative DFS over
-     * dependencies (superclass + direct interfaces); a dependency in the
-     * VISITING state means a cycle — it is not pushed, and the class closing
-     * the cycle gets a link error. link() calls from inside computations are
-     * allowed only for types outside the current stack (in the model —
-     * Object and array components during post-link checks).
+     * Returns the {@link LinkedClass} for a type (cached). An iterative DFS
+     * over dependencies (superclass + direct interfaces); a dependency in the
+     * VISITING state means a cycle – it is not pushed, and the class closing
+     * the cycle gets a link error. {@link #link} calls from inside
+     * computations are allowed only for types outside the current stack (in the
+     * model – Object and array components during post-link checks).
      */
     LinkedClass link(TypeId type) {
         // Classes being computed (computeLink): re-entrancy guard for the
-        // on-demand linking of dependencies missing from the cache — re-entering
+        // on-demand linking of dependencies missing from the cache – re-entering
         // a class being computed means a real hierarchy cycle.
         var computing = new LinkedHashSet<TypeId>();
         return link(type, computing);
@@ -312,7 +316,7 @@ final class ClassLinker {
                 continue;
             }
             if (!expanded.add(t)) {
-                // all dependencies processed — compute (t is still in
+                // all dependencies processed – compute (t is still in
                 // visiting: a dependency == t is recognized as a cycle)
                 var lc = computeLink(t, computing);
                 cache.put(t, lc);
@@ -322,7 +326,7 @@ final class ClassLinker {
             }
             var def = resolveClass(t);
             if (def == null) {
-                continue; // terminal UNKNOWN — no dependencies
+                continue; // terminal UNKNOWN – no dependencies
             }
             var deps = new ArrayList<TypeId>();
             if (!def.isInterface()) {
@@ -334,7 +338,7 @@ final class ClassLinker {
             deps.addAll(def.getInterfaces());
             for (var dep : deps) {
                 // computing-skip: a dependency being computed (nested
-                // on-demand linking) — re-entry would mean a cycle
+                // on-demand linking) – re-entry would mean a cycle
                 if (cache.containsKey(dep) || visiting.contains(dep) || computing.contains(dep)) {
                     continue;
                 }
@@ -403,7 +407,7 @@ final class ClassLinker {
                         return lc;
                     }
                     // not yet computed (deeper in the stack, owned by another
-                    // class) — linked on demand
+                    // class) – linked on demand
                     iLC = link(it, computing);
                 }
                 if (iLC.linkError != null) {
@@ -444,7 +448,7 @@ final class ClassLinker {
                     lc.linkError = "ClassCircularityError: cyclic superclass hierarchy at " + superType;
                     return lc;
                 }
-                // not yet computed — linked on demand (a class in another
+                // not yet computed – linked on demand (a class in another
                 // class's iface position is computed before its own superclass)
                 superLC = link(superType, computing);
             }
@@ -631,7 +635,7 @@ final class ClassLinker {
         int superVtableLen = superVtable.size();
         int numVirtual = lc.declaredVirtual.size();
 
-        // Fast path: no new virtuals and no new interfaces — the superclass
+        // Fast path: no new virtuals and no new interfaces – the superclass
         // vtable and method arrays are reused as is
         if (numVirtual == 0 && sameIftable) {
             lc.vtable = superVtable;
@@ -657,7 +661,7 @@ final class ClassLinker {
             var superMethod = superVtable.get(j);
             if (!canAccessMember(lc, superMethod, true)) {
                 // package-private from another package is not overridden
-                // (b/211854716); protected with an incomplete hierarchy —
+                // (b/211854716); protected with an incomplete hierarchy –
                 // fail-open (historical behavior)
                 continue;
             }
@@ -671,7 +675,7 @@ final class ClassLinker {
                 return;
             }
             if (!initialized.add(match)) {
-                // the method overrides several slots — a chain of former indexes
+                // the method overrides several slots – a chain of former indexes
                 sameSigLists[j] = match.methodIndex;
             }
             match.methodIndex = j; // the final index is the greatest j
@@ -715,7 +719,7 @@ final class ClassLinker {
                     vm = publicSuperBySig.get(sig(im));
                 }
                 if (vm != null && !vm.isOverridableByDefaultMethod()) {
-                    // a plain class method in the super vtable — a simple mapping, no copy
+                    // a plain class method in the super vtable – a simple mapping, no copy
                     raw[im.methodIndex] = vm.methodIndex;
                     continue;
                 }
@@ -776,7 +780,7 @@ final class ClassLinker {
             }
             copies.add(copy);
         }
-        // USE_SUPER — aliases (see LinkedClass.aliases); for conflicts,
+        // USE_SUPER – aliases (see LinkedClass.aliases); for conflicts,
         // the candidate lists are merged
         var useSuperAliases = new ArrayList<LinkedMethod>();
         for (var rec : records.values()) {
@@ -823,8 +827,8 @@ final class ClassLinker {
         var vtable = new ArrayList<>(Arrays.asList(vtableArr));
         lc.vtable = vtable;
 
-        // FinalizeIfTable: the method arrays (the super range — re-dispatch
-        // through the new vtable, the new range — stored vtable indexes
+        // FinalizeIfTable: the method arrays (the super range – re-dispatch
+        // through the new vtable, the new range – stored vtable indexes
         // converted to methods)
         for (int i = 0; i < superIfcount; i++) {
             var superEntry = superIftable.get(i);
@@ -859,9 +863,9 @@ final class ClassLinker {
     /**
      * A port of CopiedMethodRecord (runtime/class_linker.cc). Extension over
      * ART: in the DEFAULT_CONFLICT state, ART's UpdateStateImpl exits early;
-     * here unmasked defaults keep being collected into candidates — a
+     * here unmasked defaults keep being collected into candidates – a
      * DefaultConflict must carry all unmasked default candidates (masked
-     * ones — no).
+     * ones – no).
      */
     private final class CopiedMethodRecord {
         enum State {ABSTRACT_SINGLE, DEFAULT_SINGLE, ABSTRACT, DEFAULT, DEFAULT_CONFLICT, USE_SUPER}
@@ -890,7 +894,7 @@ final class ClassLinker {
         }
 
         /**
-         * ART UpdateState (the class's new interfaces; target — the record's vtable index).
+         * ART UpdateState (the class's new interfaces; target – the record's vtable index).
          */
         void updateState(LinkedClass iface, LinkedMethod im,
                          LinkedClass owner, int ifcount, int i, IntMap<int[]> rawArrays) {
@@ -900,14 +904,14 @@ final class ClassLinker {
         }
 
         /**
-         * ART FinalizeState (record + super-vtable entry — a copy from the superclass).
+         * ART FinalizeState (record + super-vtable entry – a copy from the superclass).
          */
         void finalizeState(LinkedMethod superMethod, LinkedClass owner, int ifcount,
                            List<IfTableEntry> superIftable, int superIfcount, IntMap<int[]> rawArrays) {
             if (superMethod.isDefault()) { // kAccDefault: DEFAULT or DEFAULT_CONFLICT
                 if (superMethod.isDefaultConflicting()) {
                     // some superclass conflict participants may be masked by
-                    // the new interfaces — walk the super iftable participants
+                    // the new interfaces – walk the super iftable participants
                     int i = superIfcount;
                     while (state != State.DEFAULT_CONFLICT && i != 0) {
                         --i;
@@ -929,7 +933,7 @@ final class ClassLinker {
                         }
                     }
                     if (state == State.DEFAULT_CONFLICT) {
-                        state = State.USE_SUPER; // the conflict is reproduced — the superclass copy is reused
+                        state = State.USE_SUPER; // the conflict is reproduced – the superclass copy is reused
                     }
                 } else {
                     // a single default of the superinterfaces, not masked by sub-interfaces
@@ -947,8 +951,8 @@ final class ClassLinker {
         }
 
         /**
-         * A port of UpdateStateImpl (runtime/class_linker.cc) — the state
-         * transitions verbatim; candidate collection — see the extension in
+         * A port of UpdateStateImpl (runtime/class_linker.cc) – the state
+         * transitions verbatim; candidate collection – see the extension in
          * the class doc.
          */
         private void updateStateImpl(LinkedClass iface, LinkedMethod im, BooleanSupplier slowIsMasked) {
@@ -962,7 +966,7 @@ final class ClassLinker {
                         state = haveDefault ? State.DEFAULT : State.ABSTRACT;
                         return;
                     }
-                    // default — falls through without the slow check (the *Single fast path)
+                    // default – falls through without the slow check (the *Single fast path)
                 }
                 case DEFAULT, ABSTRACT -> {
                     if (!im.isDefault()) {
@@ -974,7 +978,7 @@ final class ClassLinker {
                 }
                 case DEFAULT_CONFLICT -> {
                     // ART: the state does not change. Extension: an unmasked
-                    // default joins the conflict candidates
+                    // default joins the conflict candidates.
                     if (!im.isDefault()) {
                         return;
                     }
@@ -1075,18 +1079,19 @@ final class ClassLinker {
     }
 
     /**
-     * A port of Class::CanAccessMember (runtime/mirror/class-inl.h) by member
-     * flags (methods and fields). Used for the vtable-entry override gate and
-     * for the referrer's access to a resolved member in
-     * ResolveMethodWithChecks / ResolvedFieldAccessTest.
+     * A port of {@code Class::CanAccessMember} (runtime/mirror/class-inl.h) by
+     * member flags (methods and fields). Used for the vtable-entry override
+     * gate and for the referrer's access to a resolved member in
+     * {@code ClassLinker::ResolveMethodWithChecks} / {@code Class::ResolvedFieldAccessTest}.
      * <p>
-     * Returns Boolean: null — the answer is non-determinable. The
+     * Returns Boolean: {@code null} – the answer is non-determinable. The
      * public/private and package-private branches are determined by type
-     * descriptors and flags (the package — TypeId.isInSamePackage, the model
-     * has a single class loader); only the protected branch is
-     * non-determinable: it needs IsAssignableFrom(declarer, referrer), and
-     * the referrer hierarchy may be unknown (a class outside the classpath)
-     * or incomplete (exact == false).
+     * descriptors and flags (the package – {@link TypeId#isInSamePackage},
+     * the model has a single class loader); only the protected branch is
+     * non-determinable: it needs
+     * {@code IsAssignableFrom(declarer, referrer)}, and the referrer hierarchy
+     * may be unknown (a class outside the classpath) or incomplete
+     * ({@code exact == false}).
      */
     Boolean canAccessMember(LinkedClass accessFrom, LinkedClass accessTo, int flags) {
         if (accessFrom.type.equals(accessTo.type)) {
@@ -1110,9 +1115,10 @@ final class ClassLinker {
     }
 
     /**
-     * The defaultValue variant: a non-determinable answer (null) is shifted
-     * to the given side. The linking checks (the vtable override gate) are
-     * historically fail-open — defaultValue = true.
+     * The {@code defaultValue} variant: a non-determinable answer
+     * ({@code null}) is shifted to the given side. The linking checks (the
+     * vtable override gate) are historically fail-open –
+     * {@code defaultValue = true}.
      */
     @SuppressWarnings("SameParameterValue")
     boolean canAccessMember(LinkedClass accessFrom, LinkedClass accessTo, int flags,
@@ -1122,7 +1128,7 @@ final class ClassLinker {
     }
 
     /**
-     * Method access — the flags from def (see the main overload).
+     * Method access – the flags from def (see the main overload).
      */
     @SuppressWarnings("SameParameterValue")
     boolean canAccessMember(LinkedClass accessFrom, LinkedMethod member, boolean defaultValue) {
@@ -1131,15 +1137,15 @@ final class ClassLinker {
     }
 
     /**
-     * A port of Class::CanAccess (runtime/mirror/class-inl.h):
-     * this == that || that.IsPublic() || same package. Used from
-     * ResolveMethodWithChecks (referrer → the resolved method's declarer
-     * class, with the MethodId class escape hatch). Returns Boolean: null —
-     * the answer is non-determinable (the target is an unknown class: its
-     * publicity is invisible; the package is known from the descriptor and
-     * checked first). The check does not depend on the referrer hierarchy
-     * (only the target's descriptors and flags) — deterministic for an
-     * unknown referrer.
+     * A port of {@code Class::CanAccess} (runtime/mirror/class-inl.h):
+     * {@code this == that || that.IsPublic() || same package}. Used from
+     * {@code ClassLinker::ResolveMethodWithChecks} (referrer → the resolved method's
+     * declarer class, with the MethodId class escape hatch). Returns Boolean:
+     * {@code null} – the answer is non-determinable (the target is an
+     * unknown class: its publicity is invisible; the package is known from the
+     * descriptor and checked first). The check does not depend on the referrer
+     * hierarchy (only the target's descriptors and flags) – deterministic
+     * for an unknown referrer.
      */
     Boolean canAccess(TypeId from, LinkedClass to) {
         if (from.equals(to.type)) {
@@ -1149,14 +1155,14 @@ final class ClassLinker {
             return true;
         }
         if (to.def == null) {
-            return null; // an unknown class's publicity is invisible — non-determinable
+            return null; // an unknown class's publicity is invisible – non-determinable
         }
         return (to.def.getAccessFlags() & ACC_PUBLIC) != 0;
     }
 
     /**
-     * The defaultValue variant: a non-determinable answer (null) is shifted
-     * to the given side.
+     * The {@code defaultValue} variant: a non-determinable answer
+     * ({@code null}) is shifted to the given side.
      */
     @SuppressWarnings("unused")
     boolean canAccess(TypeId from, LinkedClass to, boolean defaultValue) {
@@ -1165,10 +1171,11 @@ final class ClassLinker {
     }
 
     /**
-     * A port of ArtMethod::ThrowInvocationTimeError (runtime/art_method.cc) —
-     * picking the execution error for a non-invokable target (the target is
-     * found; the error is not a resolution one and is returned with the
-     * method). receiver == null (a static call) — no miranda walk, as in ART.
+     * A port of {@code ArtMethod::ThrowInvocationTimeError}
+     * (runtime/art_method.cc) – picking the execution error for a
+     * non-invokable target (the target is found; the error is not a resolution
+     * one and is returned with the method). {@code receiver == null} (a static
+     * call) – no miranda walk, as in ART.
      */
     InvocationError throwInvocationTimeError(LinkedMethod called, LinkedClass receiver) {
         if (called.isDefaultConflicting()) {
@@ -1178,7 +1185,7 @@ final class ClassLinker {
             // miranda walk: the receiver chain's declared methods
             // (direct+virtual, no copied), non-static, same signature; the
             // first found decides: non-public → IAE, public abstract → AME;
-            // public concrete — looked past (no separate branch, as in ART)
+            // public concrete – looked past (no separate branch, as in ART)
             for (var current = receiver; current != null; current = current.superLC) {
                 for (var m : current.allDeclared()) {
                     if (!m.isStatic() && m.matches(called.name(), called.proto())) {
@@ -1196,8 +1203,8 @@ final class ClassLinker {
     }
 
     /**
-     * A port of Class::IsAssignableFrom (runtime/mirror/class-inl.h).
-     * Returns Boolean: null — the answer is non-determinable
+     * A port of {@code Class::IsAssignableFrom} (runtime/mirror/class-inl.h).
+     * Returns Boolean: {@code null} – the answer is non-determinable
      * (an unknown src superclass-chain node or its incomplete
      * iftable can neither confirm nor exclude assignability).
      * Arrays are not the linker's domain.
@@ -1227,9 +1234,9 @@ final class ClassLinker {
     }
 
     /**
-     * The defaultValue variant: a non-determinable answer (null) is shifted
-     * to the given side (the linking checks and JLS domination are
-     * historically fail-open, true).
+     * The {@code defaultValue} variant: a non-determinable answer
+     * ({@code null}) is shifted to the given side (the linking checks and JLS
+     * domination are historically fail-open, {@code true}).
      */
     @SuppressWarnings("SameParameterValue")
     boolean isAssignableFrom(LinkedClass target, LinkedClass src, boolean defaultValue) {
@@ -1238,14 +1245,15 @@ final class ClassLinker {
     }
 
     /**
-     * A port of Class::Implements (runtime/mirror/class-inl.h): a linear
-     * iftable scan. The iftable covers only the known part of the hierarchy:
-     * any unknown (an unknown ancestor — its iftable is empty, an unknown
-     * direct interface — the entry is skipped, an unknown deeper in the
-     * interface tree) transitively marks the class exact=false. Invariant:
-     * exact == false <=> the iftable is incomplete — hence on a miss with an
-     * incomplete iftable the answer is non-determinable (null), with a
-     * complete one — false.
+     * A port of {@code Class::Implements} (runtime/mirror/class-inl.h): a
+     * linear iftable scan. The iftable covers only the known part of the
+     * hierarchy: any unknown (an unknown ancestor – its iftable is empty, an
+     * unknown direct interface – the entry is skipped, an unknown deeper in
+     * the interface tree) transitively marks the class
+     * {@code exact == false}. Invariant: {@code exact == false} is equivalent
+     * to the iftable being incomplete – hence on a miss with an incomplete
+     * iftable the answer is non-determinable ({@code null}), with a complete
+     * one – {@code false}.
      */
     private Boolean implementsIface(LinkedClass src, LinkedClass iface) {
         for (var e : src.iftable) {
@@ -1253,13 +1261,13 @@ final class ClassLinker {
                 return true;
             }
         }
-        return src.exact ? false : null; // an incomplete iftable — cannot exclude
+        return src.exact ? false : null; // an incomplete iftable – cannot exclude
     }
 
     /**
-     * The defaultValue variant: a non-determinable answer (null) is shifted
-     * to the given side (masking during linking is historically fail-open,
-     * true).
+     * The {@code defaultValue} variant: a non-determinable answer
+     * ({@code null}) is shifted to the given side (masking during linking is
+     * historically fail-open, {@code true}).
      */
     @SuppressWarnings("SameParameterValue")
     private boolean implementsIface(LinkedClass src, LinkedClass iface, boolean defaultValue) {
@@ -1268,12 +1276,12 @@ final class ClassLinker {
     }
 
     /**
-     * A port of Class::IsSubClass (runtime/mirror/class-inl.h): a walk over
-     * the superclass chain. An unknown class in the chain (def == null)
-     * makes the answer non-determinable (null): the real hierarchy could
-     * continue down to target (an unknown ancestor marks the whole known
-     * prefix exact=false). null is always translated by the
-     * isAssignableFrom callers.
+     * A port of {@code Class::IsSubClass} (runtime/mirror/class-inl.h): a walk
+     * over the superclass chain. An unknown class in the chain
+     * ({@code def == null}) makes the answer non-determinable ({@code null}):
+     * the real hierarchy could continue down to target (an unknown ancestor
+     * marks the whole known prefix {@code exact == false}). {@code null} is
+     * always translated by the {@link #isAssignableFrom} callers.
      */
     private Boolean isSubClass(LinkedClass src, LinkedClass target) {
         for (var c = src; c != null; c = c.superLC) {
@@ -1281,7 +1289,7 @@ final class ClassLinker {
                 return true;
             }
             if (c.def == null) {
-                return null; // an unknown hierarchy part — can neither confirm nor exclude
+                return null; // an unknown hierarchy part – can neither confirm nor exclude
             }
         }
         return false;
@@ -1293,22 +1301,22 @@ final class ClassLinker {
 
     /**
      * A port of Class::FindClassMethodWithSignature (runtime/mirror/class.cc):
-     * declared → the superclass chain (the first candidate: inherited —
+     * declared → the superclass chain (the first candidate: inherited –
      * return, otherwise stop and end_klass) → copied methods below
      * end_klass → the uninherited candidate.
      * <p>
      * Answer exactness: a hit among start's declared methods or in the
      * known part of the chain is EXACT (the search consults them first, and
-     * the unknown part of the hierarchy — superclasses above and interfaces
-     * — cannot shadow such an answer). The copied layer, the uninherited
+     * the unknown part of the hierarchy – superclasses above and interfaces
+     * – cannot shadow such an answer). The copied layer, the uninherited
      * return and a miss depend on the completeness of start's hierarchy (an
-     * unknown interface could add a copy) — for them exact degrades to
+     * unknown interface could add a copy) – for them exact degrades to
      * start.exact.
      */
     LinkedMethod findClassMethod(LinkedClass start, String name, ProtoId proto, boolean[] exact) {
         for (var m : start.allDeclared()) {
             if (m.matches(name, proto)) {
-                return m; // own declaration — exact answer
+                return m; // own declaration – exact answer
             }
         }
         LinkedMethod uninherited = null;
@@ -1335,7 +1343,7 @@ final class ClassLinker {
             }
             if (candidate != null) {
                 if (isInheritedMethod(start, k, candidate)) {
-                    return candidate; // the chain up to the declarer is fully known — exact
+                    return candidate; // the chain up to the declarer is fully known – exact
                 }
                 uninherited = candidate;
                 endKlass = k;
@@ -1343,7 +1351,7 @@ final class ClassLinker {
             }
         }
         // the answers below depend on the copied layer (unknown interfaces
-        // could add/change copies) — conservative degradation
+        // could add/change copies) – conservative degradation
         exact[0] &= start.exact;
         for (var k = start; k != null && k != endKlass; k = k.superLC) {
             for (var m : k.copied) {
@@ -1357,7 +1365,7 @@ final class ClassLinker {
 
     /**
      * A port of Class::IsInheritedMethod (runtime/mirror/class.cc):
-     * public/protected are inherited, private — no, package-private — with
+     * public/protected are inherited, private – no, package-private – with
      * the same package along the whole chain.
      */
     private static boolean isInheritedMethod(LinkedClass klass,
@@ -1382,7 +1390,7 @@ final class ClassLinker {
     /**
      * A port of Class::FindInterfaceMethodWithSignature
      * (runtime/mirror/class.cc): the interface's declared methods without a
-     * kind filter (direct — private/static — are visible too), then the
+     * kind filter (direct – private/static – are visible too), then the
      * iftable (allMethods, the isVirtual filter), then j.l.Object's public
      * non-static methods.
      */
@@ -1391,11 +1399,11 @@ final class ClassLinker {
         if (klass.isInterface()) {
             for (var m : klass.allDeclared()) {
                 if (m.matches(name, proto)) {
-                    return m; // own declaration — exact answer
+                    return m; // own declaration – exact answer
                 }
             }
         }
-        // the iftable may be incomplete (unknown branches skipped at build) —
+        // the iftable may be incomplete (unknown branches skipped at build) –
         // hits in it and the later phases are conservatively inexact
         exact[0] &= klass.exact;
         for (var entry : klass.iftable) {
@@ -1427,7 +1435,7 @@ final class ClassLinker {
 
     /**
      * A port of Class::FindVirtualMethodForInterface
-     * (runtime/mirror/class-inl.h): itable dispatch — the receiver's iftable
+     * (runtime/mirror/class-inl.h): itable dispatch – the receiver's iftable
      * entry for the declaring interface, the method array at the index.
      */
     LinkedMethod findVirtualMethodForInterface(LinkedMethod method, LinkedClass receiver) {
@@ -1455,7 +1463,7 @@ final class ClassLinker {
                                                     boolean[] exact) {
         for (var m : ifaceLC.allDeclared()) {
             if (m.isVirtual() && m.matches(method.name(), method.proto())) {
-                return m; // own declaration — exact answer
+                return m; // own declaration – exact answer
             }
         }
         // conflict copies and the iftable walk depend on hierarchy completeness

@@ -141,7 +141,7 @@ public enum Opcode {
     IF_GTZ(common(0x41, 0x42, 0x3c), "if-gtz", Format21t, regs(true), TYPE_BRANCH),
     IF_LEZ(common(0x42, 0x43, 0x3d), "if-lez", Format21t, regs(true), TYPE_BRANCH),
 
-    // 3e - 43 unused
+    // 3e – 43 unused
 
     AGET(common(0x43, 0x44, 0x44), "aget", Format23x, regs(true, true, true), CAN_THROW),
     AGET_WIDE(common(0x44, 0x45, 0x45), "aget-wide", Format23x, regs(false, true, true), CAN_THROW),
@@ -202,7 +202,7 @@ public enum Opcode {
     INVOKE_STATIC_RANGE(common(0x75, 0x77, 0x77), "invoke-static/range", Format3rc, regsr(), METHOD, CAN_THROW | TYPE_INVOKE),
     INVOKE_INTERFACE_RANGE(common(0x76, 0x78, 0x78), "invoke-interface/range", Format3rc, regsr(), METHOD, CAN_THROW | TYPE_INVOKE),
 
-    // 79 - 7a unused
+    // 79 – 7a unused
 
     NEG_INT(common(0x7b), "neg-int", Format12x, regs(true, true), 0),
     NOT_INT(common(0x7c), "not-int", Format12x, regs(true, true), 0),
@@ -313,7 +313,7 @@ public enum Opcode {
     SHR_INT_LIT8(common(0xe1), "shr-int/lit8", Format22b, regs(true, true), 0),
     USHR_INT_LIT8(common(0xe2), "ushr-int/lit8", Format22b, regs(true, true), 0),
 
-    // e3 - f9 unused
+    // e3 – f9 unused
 
     INVOKE_POLYMORPHIC(firstApi(0xfa, 26), "invoke-polymorphic", Format45cc, regs5(), METHOD, PROTO, CAN_THROW | TYPE_INVOKE),
     INVOKE_POLYMORPHIC_RANGE(firstApi(0xfb, 26), "invoke-polymorphic/range", Format4rcc, regsr(), METHOD, PROTO, CAN_THROW | TYPE_INVOKE),
@@ -332,7 +332,7 @@ public enum Opcode {
     M_CONST_WIDE_SPECIAL(legacy(0x1b, 0x1b), "m-const-wide/special", Format11p, regs(false), LEGACY),
 
     // The semantics of the new-array instruction differ from newer versions of dex.
-    // The instruction takes the type of array component, not the type of the array itself
+    // The instruction takes the type of the array component, not the type of the array itself.
     M_NEW_ARRAY(legacy(0x22, 0x22), "m-new-array", Format22c, regs(true, true), TYPE, LEGACY | CAN_THROW),
     M_NEW_ARRAY_BOOLEAN(legacy(0x23, 0x23), "m-new-array-boolean", Format12x, regs(true, true), LEGACY | CAN_THROW),
     M_NEW_ARRAY_BYTE(legacy(0x24, 0x24), "m-new-array-byte", Format12x, regs(true, true), LEGACY | CAN_THROW),
@@ -390,7 +390,7 @@ public enum Opcode {
 
     THROW_VERIFICATION_ERROR(dalvik(firstApi(0xed, 5)), "throw-verification-error", Format20bc, regs(), ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
-    // Note: breakpoint replaces the original opcode and restores it back when executed (it only exists at runtime)
+    // Note: breakpoint replaces the original opcode and restores it when executed (it only exists at runtime)
     // BREAKPOINT(onlyDalvik(firstApi(0xec, 8)), "breakpoint", Format00x, regs(), RUNTIME_ONLY),
 
     IGET_VOLATILE(dalvik(firstApi(0xe3, 9)), "iget-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
@@ -424,7 +424,7 @@ public enum Opcode {
     IGET_CHAR_QUICK(betweenApi(0xf1, 23, 30), "iget-char-quick", Format22c, regs(true, true), RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IGET_SHORT_QUICK(betweenApi(0xf2, 23, 30), "iget-short-quick", Format22c, regs(true, true), RAW_INDEX, ODEX_ONLY | CAN_THROW),
 
-    // legacy android 7.x lambda opcodes
+    // legacy Android 7.x lambda opcodes
 
     // TODO INVOKE_LAMBDA(betweenApi(0xf3, 24, 25), "invoke-lambda", Format25x, EXPERIMENTAL_LAMBDA),
     // 0xf4 was planned as invoke-lambda/range, but it was never implemented

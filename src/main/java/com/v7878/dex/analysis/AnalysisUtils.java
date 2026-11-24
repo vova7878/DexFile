@@ -179,7 +179,7 @@ class AnalysisUtils {
      *
      * @param start address of the instruction the branch starts at
      * @param slot  index of the inspected register
-     * @return true if the register is read in some branch from start
+     * @return {@code true} if the register is read in some branch from start
      */
     public static boolean is_used_in_branch(IntFunction<Position> code_map, int start, int slot) {
         BitSet todo = new BitSet();
@@ -199,7 +199,7 @@ class AnalysisUtils {
                 // a move counts as usage
                 return true;
             }
-            // normal edges only: an overwritten register lost our value
+            // normal edges only: an overwritten register lost the tracked value
             var skip_normal = position.outputs().contains(slot);
             for (var branch : position.successors()) {
                 if (skip_normal && branch.isNormal()) {
@@ -218,8 +218,8 @@ class AnalysisUtils {
      * Finds all usages of the value held in register {@code slot}
      * when the instruction at address {@code start} is reached; the
      * start instruction itself counts when it reads the register.
-     * A move does not end the search — the value lives on in the
-     * destination — so to find the users of an instruction's output,
+     * A move does not end the search – the value lives on in the
+     * destination – so to find the users of an instruction's output,
      * search from every position it can jump to.
      * <p>
      * The search walks the successors tracking (instruction,
@@ -228,9 +228,9 @@ class AnalysisUtils {
      * ({@code src -> dst, src+1 -> dst+1}); every other instruction
      * writes a new value, so the un-overwritten register is the only
      * other continuation. A usage is the tracked register listed in
-     * {@code inputs()}. A merge is not a usage — the merged value
+     * {@link Position#inputs()}. A merge is not a usage – the merged value
      * contains the tracked contribution and the search passes it by
-     * register — and a branch refinement keeps the register. A
+     * register – and a branch refinement keeps the register. A
      * check-cast reads the original value (a usage) and writes a new
      * one, so usages of the cast result do not count. An overwritten
      * register ends the path on normal edges; catch edges carry the
@@ -308,7 +308,7 @@ class AnalysisUtils {
     }
 
     /**
-     * This position's move, or null for a non-move instruction:
+     * This position's move, or {@code null} for a non-move instruction:
      * only moves transfer the value to the written register.
      */
     private static Move move_of(Position position) {
@@ -323,8 +323,9 @@ class AnalysisUtils {
 
     /**
      * The move family: the only instructions that transfer the value
-     * to the written register — the analysis calls
-     * RegisterLine.copy/copyWide only for them.
+     * to the written register – the analysis calls
+     * {@link RegisterLine#copy RegisterLine.copy} and
+     * {@link RegisterLine#copyWide RegisterLine.copyWide} only for them.
      */
     private static boolean is_move(Opcode opcode) {
         return opcode == Opcode.MOVE

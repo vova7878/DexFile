@@ -97,8 +97,8 @@ public class CollectionUtils {
 
     public static <T> void removeAll(NavigableSet<T> set, Iterable<T> iterable) {
         if (iterable == null) return;
-        // You cannot use removeAll here because it
-        //  compares objects using equals() instead of compare()
+        // removeAll cannot be used here: it compares objects with
+        // equals() instead of compare()
         for (T tmp : iterable) {
             set.remove(tmp);
         }
@@ -200,7 +200,7 @@ public class CollectionUtils {
             else
                 return mid; // key found
         }
-        return -(low + 1);  // key not found.
+        return -(low + 1);  // key not found
     }
 
     public static <A, V> int binarySearch(A[] a, V key, ToIntBiFunction<? super A, ? super V> c) {
@@ -229,6 +229,6 @@ public class CollectionUtils {
             else
                 return mid; // key found
         }
-        return -(low + 1);  // key not found.
+        return -(low + 1);  // key not found
     }
 }

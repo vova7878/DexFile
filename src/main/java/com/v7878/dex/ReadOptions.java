@@ -60,5 +60,5 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
                 debug_info, annotations, field_values, method_bodies);
     }
 
-    //TODO: verify checksum/signature option
+    // TODO: verify checksum/signature option
 }

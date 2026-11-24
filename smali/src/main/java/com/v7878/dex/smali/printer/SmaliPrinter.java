@@ -95,6 +95,7 @@ import com.v7878.dex.immutable.value.EncodedShort;
 import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
+import com.v7878.dex.smali.SmaliIO;
 import com.v7878.dex.smali.SmaliOptions;
 import com.v7878.dex.util.Formatter;
 
@@ -109,9 +110,9 @@ import java.util.StringJoiner;
 import java.util.TreeMap;
 
 /**
- * The model-to-text printer behind the {@code SmaliIO.print} methods. One
- * instance may print any number of dexes, classes and methods; it holds no
- * state between top-level {@code print} calls.
+ * The model-to-text printer behind the {@link SmaliIO#print(Dex) SmaliIO.print}
+ * methods. One instance may print any number of dexes, classes and methods;
+ * it holds no state between top-level {@code print} calls.
  * <p>
  * A method body is printed in two passes. The first computes instruction
  * addresses, drops the alignment {@code nop} in front of a payload at an odd
@@ -119,15 +120,15 @@ import java.util.TreeMap;
  * it (further references get a duplicated copy at a virtual address),
  * validates every label target against instruction boundaries and collects
  * labels, try directives and debug items per address. The second emits the
- * address groups in the baksmali order - offset comment, debug directives,
- * labels, instruction, try-end labels, {@code .catch} directives - with the
+ * address groups in the baksmali order – offset comment, debug directives,
+ * labels, instruction, try-end labels, {@code .catch} directives – with the
  * payload directives last, each behind its label.
  * <p>
  * Raw instructions print live as {@code raw 0xN} and
  * {@code raw-ref ...} and re-parse. The instructions the label
- * grammar cannot express - legacy {@code m-packed-switch} and
+ * grammar cannot express – legacy {@code m-packed-switch} and
  * {@code m-sparse-switch}, off-boundary or out-of-range targets, orphan
- * payloads - are printed commented out
+ * payloads – are printed commented out
  * with a {@code nop} appended, so the output always re-parses. With
  * {@link SmaliOptions#hasRelativeOffsets()} everything prints live with raw
  * offsets instead, which is faithful for any code but not re-parseable.
@@ -609,7 +610,7 @@ public final class SmaliPrinter {
 
     /**
      * Prints the {@code .param} directives of the method. A bodiless method
-     * has no register file, so its parameters are printed commented out -
+     * has no register file, so its parameters are printed commented out –
      * the grammar rejects a live {@code .param} without a register
      * directive.
      */
@@ -759,8 +760,7 @@ public final class SmaliPrinter {
             Opcode op = insn.getOpcode();
 
             if (op.hasPayload()) {
-                // TODO
-                // the legacy m-packed/m-sparse switch has no parser support
+                // TODO: the legacy m-packed/m-sparse switch has no parser support
                 if (!anyMode && (op == Opcode.M_PACKED_SWITCH
                         || op == Opcode.M_SPARSE_SWITCH)) {
                     fallback[i] = true;
@@ -1808,7 +1808,7 @@ public final class SmaliPrinter {
     /**
      * The runtime class of a virtual call receiver: the exact analysis type
      * of the receiver register, or the declarer of a final method, or an
-     * array reference class. Null means only the static answer is known.
+     * array reference class. {@code null} means only the static answer is known.
      */
     private static TypeId dispatchReceiver(Position position, MethodId id,
                                            ResolvedMethod resolved) {
@@ -1998,7 +1998,7 @@ public final class SmaliPrinter {
     }
 
     /**
-     * The invoke kind of an instruction, or null for a non-invoke opcode and
+     * The invoke kind of an instruction, or {@code null} for a non-invoke opcode and
      * for the kinds the class path does not model.
      */
     private static InvokeType invokeType(Opcode op) {

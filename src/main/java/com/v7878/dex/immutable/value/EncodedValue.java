@@ -46,7 +46,7 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
             case 'F' -> EncodedFloat.of(0);
             case 'D' -> EncodedDouble.of(0);
             case 'L' -> EncodedNull.INSTANCE;
-            // V - void
+            // V (void) has no value
             default -> throw invalidShorty(shorty);
         };
     }
@@ -76,11 +76,11 @@ public abstract sealed class EncodedValue implements Comparable<EncodedValue>
         if (obj instanceof Field value) return EncodedField.of(FieldId.of(value));
         if (obj instanceof Enum<?> value) return EncodedEnum.of(FieldId.of(value));
         if (obj instanceof MethodHandle) {
-            //TODO
+            // TODO
             throw new UnsupportedOperationException("Not implemented yet");
         }
         if (obj.getClass().isAnnotation()) {
-            //TODO
+            // TODO
             throw new UnsupportedOperationException("Not implemented yet");
         }
         // TODO: use raw list constructor for arrays

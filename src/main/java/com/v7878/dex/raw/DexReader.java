@@ -313,8 +313,9 @@ public final class DexReader implements DexReaderCache {
             switch (endian_tag) {
                 case ENDIAN_CONSTANT -> { /* ok */ }
                 case REVERSE_ENDIAN_CONSTANT -> throw new InvalidDexFile(
-                        // The internet says that such dex`s never existed,
-                        // but I think that odex on BE machines contained exactly this format
+                        // Such dex files are reported never to have existed, but
+                        // an odex file on a BE machine is believed to have used
+                        // exactly this format
                         "Big endian dex files are not supported");
                 default -> throw new InvalidDexFile(String.format(
                         "Invalid endian tag: 0x%x", endian_tag));
@@ -360,7 +361,7 @@ public final class DexReader implements DexReaderCache {
                     mainAt(header_offset + LINK_START_OFFSET).readSmallUInt(),
                     mainAt(header_offset + LINK_SIZE_OFFSET).readSmallUInt(),
                     header_offset, header_size);
-            // TODO?: check link for dex009 / dex013
+            // TODO: check the link section for dex009 and dex013
         }
         if (!version.isCompact() && !version.isDexContainer()
                 && version != DEX013 && version != DEX009) {
@@ -542,7 +543,7 @@ public final class DexReader implements DexReaderCache {
     /**
      * Checks that a header-announced section is zero or in-bounds: a zero
      * size requires a zero offset, a non-zero offset must lie after the
-     * header, and the whole section must fit into the available data
+     * header, and the whole section must fit into the available data.
      */
     private void checkHeaderSection(String name, int offset, int size,
                                     int header_offset, int header_size) {
@@ -1235,7 +1236,7 @@ public final class DexReader implements DexReaderCache {
         int size = in.readSLeb128();
         // Each handler element takes at least two bytes, so the size of
         // either sign cannot exceed half of the remaining data. This also
-        // rejects Integer.MIN_VALUE, whose absolute value overflows
+        // rejects Integer.MIN_VALUE, whose absolute value overflows.
         int max_size = in.available() / 2;
         if (size > max_size || size < -max_size) {
             throw new IllegalStateException("Out of range catch handler size "
@@ -1330,7 +1331,7 @@ public final class DexReader implements DexReaderCache {
             tries_size = in.readUShort();
             int debug_info_off = in.readSmallUInt();
             insns_count = in.readSmallUInt();
-            // ins_size and outs_size are redundant.
+            // ins_size and outs_size are redundant
             if (options.hasDebugInfo() && debug_info_off != NO_OFFSET) {
                 if (debug_info_off >= data_buffer.size()) {
                     throw new IllegalStateException(String.format(

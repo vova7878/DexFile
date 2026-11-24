@@ -6,7 +6,7 @@ import java.util.Objects;
  * Mechanical text layer of the smali printer: an {@link Appendable} with
  * four-space indentation, line-start handling, a comment mode that prefixes
  * every written line, and the literal, quoting and hex forms the smali
- * grammar accepts. Knows no model types beyond primitives and strings
+ * grammar accepts. Knows no model types beyond primitives and strings.
  */
 public final class SmaliEmitter {
     private final StringBuilder out;
@@ -120,7 +120,7 @@ public final class SmaliEmitter {
     }
 
     /**
-     * Appends a value as unsigned lowercase hex, without the 0x prefix.
+     * Appends a value as unsigned lowercase hex, without the {@code 0x} prefix.
      */
     public SmaliEmitter hex(long value) {
         writeIndent();

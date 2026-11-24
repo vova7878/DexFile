@@ -4,10 +4,10 @@ import com.v7878.dex.immutable.TypeId;
 
 /**
  * A type with a known array depth: the non-array base type plus the
- * number of array dimensions around it. A null base means the exact
+ * number of array dimensions around it. A {@code null} base means the exact
  * reference type is unresolved.
  *
- * @param base        the non-array base type, or null if unknown
+ * @param base        the non-array base type, or {@code null} if unknown
  * @param array_depth the number of array dimensions
  */
 public record TypeInfo(TypeId base, int array_depth) {
@@ -23,7 +23,7 @@ public record TypeInfo(TypeId base, int array_depth) {
     }
 
     /**
-     * Splits the type into its base and array depth; null stays
+     * Splits the type into its base and array depth; {@code null} stays
      * unresolved.
      */
     public static TypeInfo of(TypeId type) {
@@ -32,7 +32,7 @@ public record TypeInfo(TypeId base, int array_depth) {
     }
 
     /**
-     * The full array type, or null if unresolved.
+     * The full array type, or {@code null} if unresolved.
      */
     public TypeId exactType() {
         return base == null ? null : base.array(array_depth);

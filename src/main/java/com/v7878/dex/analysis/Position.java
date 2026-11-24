@@ -192,7 +192,7 @@ public final class Position {
     }
 
     /**
-     * The type of the call result consumed by this instruction, or null
+     * The type of the call result consumed by this instruction, or {@code null}
      * for a non-applicable opcode or a position the analysis never
      * entered.
      */
@@ -207,7 +207,7 @@ public final class Position {
 
     /**
      * The joined type of the exception caught at this instruction, or
-     * null for a non-applicable opcode or a position the analysis never
+     * {@code null} for a non-applicable opcode or a position the analysis never
      * entered.
      */
     public TypeInfo exceptionType() {
@@ -359,10 +359,9 @@ public final class Position {
         flags = (flags & ~NOP_STRICT) | (value ? NOP_STRICT : 0);
     }
 
-    // for example const 0 to register with zero constant
-    // or move of any kind to self
-    // or goto/if/switch to next
-    // or cast to itself
+    // for example a const 0 into a register with the zero constant,
+    // a move of any kind to itself, a goto/if/switch to the next
+    // instruction or a cast to its own type
     // here neither the content nor the knowledge about it changes
     public boolean isStrictNop() {
         return (flags & NOP_STRICT) != 0;

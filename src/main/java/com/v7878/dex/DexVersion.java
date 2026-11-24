@@ -11,15 +11,15 @@ public enum DexVersion {
     DEX039(28, Integer.MAX_VALUE, 'd', 'e', 'x', '\n', '0', '3', '9', '\0'),
     DEX038(26, Integer.MAX_VALUE, 'd', 'e', 'x', '\n', '0', '3', '8', '\0'),
     DEX037(24, Integer.MAX_VALUE, 'd', 'e', 'x', '\n', '0', '3', '7', '\0'),
-    // dex036 was never completed. It included new set of 'jumbo' instructions,
+    // dex036 was never completed. It included a new set of 'jumbo' instructions,
     // but the rest of the format remained unchanged, making them unusable.
     // These instructions existed in API 14 and 15, but in API 16
     // all the differences between dex035 and dex036 disappeared.
-    // In API 21, the dex036 format was declared 'non-existent'
+    // In API 21, the dex036 format was declared 'non-existent'.
     DEX036(14, 20, 'd', 'e', 'x', '\n', '0', '3', '6', '\0'),
     DEX035(1, Integer.MAX_VALUE, 'd', 'e', 'x', '\n', '0', '3', '5', '\0'),
-    // These versions of dex were used before android 1.0 in
-    // milestone 3 and 5 and are the only known early versions of the dex format
+    // These versions of dex were used before Android 1.0 in
+    // milestones 3 and 5 and are the only known early versions of the dex format
     DEX013(API_M5, API_M5, 'd', 'e', 'x', '\n', '0', '1', '3', '\0'),
     DEX009(API_M3, API_M3, 'd', 'e', 'x', '\n', '0', '0', '9', '\0'),
     // cdex is an internal file format that existed between API 28 and 35 inclusive

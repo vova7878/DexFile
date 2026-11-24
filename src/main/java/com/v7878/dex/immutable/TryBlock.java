@@ -107,7 +107,7 @@ public final class TryBlock implements Comparable<TryBlock> {
     @Override
     public int compareTo(TryBlock other) {
         if (other == this) return 0;
-        // Note: TryBlocks should never intersect
+        // Note: try blocks should never intersect
         int out = CollectionUtils.compareNonNull(getStartAddress(), other.getStartAddress());
         if (out != 0) return out;
         // The longest ones come first. This is necessary for searching

@@ -147,7 +147,7 @@ public final class DexConstants {
     public static final int M5_DBG_LINE_BASE = -4;
     public static final int M5_DBG_LINE_RANGE = 15;
 
-    // dalvik verification error codes
+    // Dalvik verification error codes
 
     public static final int VERIFY_ERROR_NONE = 0; // no error; must be zero
     public static final int VERIFY_ERROR_GENERIC = 1; // VerifyError

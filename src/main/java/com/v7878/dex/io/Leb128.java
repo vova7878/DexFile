@@ -1,14 +1,14 @@
 package com.v7878.dex.io;
 
 /**
- * Reads and writes LEB128, the variable-length 7-bits-per-byte integer
+ * Reads and writes LEB128, the variable-length 7-bit-per-byte integer
  * encoding used for most dex counts and offsets.
  */
 class Leb128 {
 
     /**
      * Strict mode (default): the fifth byte must not carry value bits above
-     * bit 31, so every decoded value fits in an int.
+     * bit 31, so every decoded value fits in an {@code int}.
      * ART-tolerant mode: excess fifth-byte bits are silently truncated,
      * matching the ART 32-bit decoder.
      */

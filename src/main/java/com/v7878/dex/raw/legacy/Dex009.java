@@ -194,8 +194,8 @@ public class Dex009 {
                     null : reader.getString(name_id);
             String descriptor = descriptor_id == NO_INDEX ?
                     null : reader.getString(descriptor_id);
-            // Note: This version had an additional value
-            // for the register type that meant untyped null
+            // Note: this version had an additional register type value
+            // that meant untyped null
             var type = descriptor == null || "<null>".equals(descriptor) ?
                     null : TypeId.of(descriptor);
 

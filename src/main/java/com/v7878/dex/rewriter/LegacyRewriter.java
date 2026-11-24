@@ -42,7 +42,7 @@ import com.v7878.dex.immutable.debug.StartLocal;
 import java.util.TreeMap;
 import java.util.function.IntFunction;
 
-/// Converts DEX009 and DEX013 instructions to a modern format
+/// Converts DEX009 and DEX013 instructions to a modern format.
 public class LegacyRewriter extends DexRewriter {
     private static Integer label(int offset) {
         return offset;

@@ -38,7 +38,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             NavigableSet<Annotation> annotations) {
         this.name = Objects.requireNonNull(name);
         this.return_type = Objects.requireNonNull(return_type);
-        // The parameter constructor has already rejected void
+        // The Parameter constructor has already rejected void
         this.parameters = Objects.requireNonNull(parameters);
         this.access_flags = access_flags;
         this.hiddenapi_flags = hiddenapi_flags;
@@ -79,9 +79,9 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                         "Not enough registers for parameters. Required: %d, available: %d", ins, regs));
             }
         }
-        // Android determines that method is a constructor by one of two signs:
-        // either the 'constructor' flag or one of the special names (<init> or <clinit>)
-        // The special name is required, but the flag is optional
+        // Android decides that a method is a constructor by either the 'constructor'
+        // flag or one of the special names (<init> or <clinit>). The special name is
+        // required, but the flag is optional.
         switch (name) {
             case "<init>" -> {
                 if ((access_flags & ACC_STATIC) != 0) {
@@ -106,9 +106,9 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 access_flags |= ACC_CONSTRUCTOR;
             }
             case "<clinit>" -> {
-                // Note: <clinit> may not have the 'static' flag for dex035 and
-                // will behave like a regular non-static constructor. This is
-                // very weird behavior, so we reject it, even if Android allows it
+                // Note: without the 'static' flag, dex035 treats <clinit> as a
+                // regular non-static constructor. The model rejects that even
+                // though Android allows it
                 if ((access_flags & ACC_STATIC) == 0) {
                     throw new IllegalArgumentException(
                             "<clinit> must have the 'static' flag");

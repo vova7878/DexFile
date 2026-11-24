@@ -162,7 +162,7 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
                 AnnotationElement.of("value", arrayValue(exceptions)));
     }
 
-    // A null array/Iterable is an empty array value, not an EncodedNull value.
+    // A null array/Iterable is an empty array value, not an EncodedNull value
     private static EncodedValue arrayValue(Object value) {
         return value == null ? EncodedArray.EMPTY : EncodedValue.ofValue(value);
     }

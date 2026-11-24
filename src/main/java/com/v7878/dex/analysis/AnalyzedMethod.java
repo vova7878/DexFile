@@ -298,9 +298,9 @@ public final class AnalyzedMethod {
             }
         }
         if ((method.getAccessFlags() & ACC_STATIC) != 0) {
-            // Static methods don't have "this", but we still set the initialization flag.
-            // Then isThisInitialized() has a nice property: it returns false only
-            // for constructors and only when "this" is truly uninitialized
+            // Static methods do not have "this", but the initialization flag is
+            // still set. Then isThisInitialized() returns false only for
+            // constructors and only when "this" is truly uninitialized.
             line.markThisInitialized();
         } else {
             pos -= 1;
@@ -318,7 +318,7 @@ public final class AnalyzedMethod {
     }
 
     /**
-     * The register state at method entry - the incoming parameters and
+     * The register state at method entry – the incoming parameters and
      * {@code this}, every other slot undefined; the line the analysis seeds
      * the first position with.
      */
@@ -656,8 +656,9 @@ public final class AnalyzedMethod {
                 }
 
                 current.input(ireg);
-                // Fake output register - the instruction replaces the value with a new one,
-                // changing the type, and does not affect any other registers — even if content is same.
+                // Fake output register – the instruction replaces the value with a new
+                // one, changing the type, and does not affect any other registers,
+                // even if the content is the same
                 current.output(ireg);
             }
             case INSTANCE_OF -> {
@@ -1265,8 +1266,8 @@ public final class AnalyzedMethod {
     private static boolean isRequireNonNull(MethodId mid) {
         return OBJECTS.equals(mid.getDeclaringClass())
                 && "requireNonNull".equals(mid.getName())
-                // Methods without parameters don't exist,
-                // but no one stops bad code from existing
+                // Methods without parameters do not exist,
+                // but nothing stops bad code from existing
                 && !mid.getParameterTypes().isEmpty();
     }
 
@@ -1290,7 +1291,7 @@ public final class AnalyzedMethod {
             }
         }
         if (common == null) {
-            // How could this even happen?
+            // This is not expected to happen
             throw shouldNotReachHere();
         }
         return common;
@@ -1397,7 +1398,7 @@ public final class AnalyzedMethod {
             // Arrays are compatible exactly when their components are. The
             // depths are equal here and stripping one dimension from both
             // never changes the answer, so every level collapses into the
-            // bases at once
+            // bases at once.
             source = new TypeInfo(source.base(), 0);
             target = new TypeInfo(target.base(), 0);
         }
@@ -1419,7 +1420,7 @@ public final class AnalyzedMethod {
         }
         // An interface is involved. A subclass of a non-final class may
         // still implement it, so only a final class decides the answer;
-        // an unknown class is treated as an interface (fail-open)
+        // an unknown class is treated as an interface (fail-open).
         if (!source_interface && resolver.isFinal(source.base(), false)) {
             return !resolver.isAssignable(source, target, true, true);
         }
@@ -1668,7 +1669,7 @@ public final class AnalyzedMethod {
         var insn = current.instruction();
         var opcode = insn.getOpcode();
         if (opcode == THROW || opcode.isReturn()) {
-            // Note: We don't call current.passRegs() here because
+            // Note: current.passRegs() is not called here because
             // these instructions never complete execution 'normally'
         } else {
             current.passRegs();
@@ -1680,8 +1681,8 @@ public final class AnalyzedMethod {
             case NOP, GOTO, GOTO_16, GOTO_32 -> {
                 // No effect on or use of registers
             }
-            // Move kind checks are unconditional: they are what keeps
-            // wide pairs unbreakable when verification is disabled
+            // Move kind checks are unconditional: they keep wide
+            // pairs unbreakable when verification is disabled
             case MOVE, MOVE_FROM16, MOVE_16 -> {
                 var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
@@ -1851,8 +1852,9 @@ public final class AnalyzedMethod {
                     var type = reg.getTypeInfo();
                     assert type != null;
                     if (Objects.equals(type.exactType(), ref)) {
-                        // We don't use a constant check here because for ref values the
-                        // difference exists only for us, but not for the Android verifier
+                        // A constant check is not used here because for ref values
+                        // the difference matters only to this library, not to the
+                        // Android verifier
                         //
                         // is_lossy_nop = reg.isConstant();
                         // is_strict_nop = !reg.isConstant();
@@ -2243,11 +2245,11 @@ public final class AnalyzedMethod {
                 }
 
                 if (arr.isZeroOrNull()) {
-                    // The read fails at runtime; infer a merge-able result
+                    // The read fails at runtime; infer a mergeable result
                     // from the instruction type. The untyped aget cannot use
                     // the int type (the array may hold floats), so an integer
                     // constant is used; a non-zero constant distinguishes the
-                    // dead value from null
+                    // dead value from null.
                     switch (opcode) {
                         case AGET -> constant(current, ival, ConstantKind.INT);
                         case AGET_BOOLEAN -> constant(current, ival, ConstantKind.BOOL);
@@ -2635,8 +2637,9 @@ public final class AnalyzedMethod {
         } else {
             for (var transition : current.successors) {
                 var target = position(transition.address());
-                // If this is a transition to catch handler, then registers in the
-                // state before execution of the current instruction are placed there
+                // If this is a transition to a catch handler, then the registers in
+                // the state before execution of the current instruction are placed
+                // there
                 var line = transition.isCatch() ? current.before() : current.after();
                 // An always-throwing instruction has no reachable fall-through
                 var reachable = transition.isCatch() || !always_throws;

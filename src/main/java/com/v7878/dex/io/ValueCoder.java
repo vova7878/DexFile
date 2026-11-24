@@ -7,16 +7,15 @@ public class ValueCoder {
             RandomOutput out, ValueType type, long value) {
         /*
          * Figure out how many bits are needed to represent the value,
-         * including a sign bit: The bit count is subtracted from 65
+         * including a sign bit: the bit count is subtracted from 65
          * and not 64 to account for the sign bit. The xor operation
          * has the effect of leaving non-negative values alone and
-         * unary complementing negative values (so that a leading zero
-         * count always returns a useful number for our present
-         * purpose).
+         * complementing negative values (so that the leading zero
+         * count always returns a useful number for this purpose).
          */
         int requiredBits = 65 - Long.numberOfLeadingZeros(value ^ (value >> 63));
 
-        // Round up the requiredBits to a number of bytes.
+        // Round up the requiredBits to a number of bytes
         int requiredBytes = (requiredBits + 0x07) >> 3;
 
         /*
@@ -25,7 +24,7 @@ public class ValueCoder {
          */
         out.writeByte(type.value() | ((requiredBytes - 1) << 5));
 
-        // Write the value, per se.
+        // Write the value itself
         while (requiredBytes > 0) {
             out.writeByte((byte) value);
             value >>= 8;
@@ -35,13 +34,13 @@ public class ValueCoder {
 
     public static void writeUnsignedIntegralValue(
             RandomOutput out, ValueType type, long value) {
-        // Figure out how many bits are needed to represent the value.
+        // Figure out how many bits are needed to represent the value
         int requiredBits = 64 - Long.numberOfLeadingZeros(value);
         if (requiredBits == 0) {
             requiredBits = 1;
         }
 
-        // Round up the requiredBits to a number of bytes.
+        // Round up the requiredBits to a number of bytes
         int requiredBytes = (requiredBits + 0x07) >> 3;
 
         /*
@@ -50,7 +49,7 @@ public class ValueCoder {
          */
         out.writeByte(type.value() | ((requiredBytes - 1) << 5));
 
-        // Write the value, per se.
+        // Write the value itself
         while (requiredBytes > 0) {
             out.writeByte((byte) value);
             value >>= 8;
@@ -60,16 +59,16 @@ public class ValueCoder {
 
     public static void writeRightZeroExtendedValue(
             RandomOutput out, ValueType type, long value) {
-        // Figure out how many bits are needed to represent the value.
+        // Figure out how many bits are needed to represent the value
         int requiredBits = 64 - Long.numberOfTrailingZeros(value);
         if (requiredBits == 0) {
             requiredBits = 1;
         }
 
-        // Round up the requiredBits to a number of bytes.
+        // Round up the requiredBits to a number of bytes
         int requiredBytes = (requiredBits + 0x07) >> 3;
 
-        // Scootch the first bits to be written down to the low-order bits.
+        // Shift the first bits to be written down to the low-order bits
         value >>= 64 - (requiredBytes * 8);
 
         /*
@@ -78,7 +77,7 @@ public class ValueCoder {
          */
         out.writeByte(type.value() | ((requiredBytes - 1) << 5));
 
-        // Write the value, per se.
+        // Write the value itself
         while (requiredBytes > 0) {
             out.writeByte((byte) value);
             value >>= 8;

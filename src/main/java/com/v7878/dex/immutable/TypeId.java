@@ -90,9 +90,8 @@ public final class TypeId implements Comparable<TypeId> {
         }
 
         /*
-         * We are looking for a descriptor. Either validate it as a
-         * single-character primitive type, or continue on to check the
-         * embedded class name (bracketed by "L" and ";")
+         * The descriptor is either a single-character primitive type or an
+         * embedded class name bracketed by "L" and ";"
          */
         int position = array_depth;
         switch (descriptor.charAt(position)) {
@@ -101,28 +100,28 @@ public final class TypeId implements Comparable<TypeId> {
                 return (position + 1 == length) ? array_depth : -1;
             }
             case 'V' -> {
-                // Non-array void is valid, but you can't have an array of void
+                // Non-array void is valid, but an array of void is not
                 return (array_depth == 0 && length == 1) ? array_depth : -1;
             }
             case 'L' -> {
                 // Class name: continue below
             }
             default -> {
-                // Oddball descriptor character
+                // Unexpected descriptor character
                 return -1;
             }
         }
         position++;
 
-        // First character or just encountered a separator
+        // Set at the first character and after each separator
         boolean sep_or_first = true;
         for (; position < length; position++) {
             switch (descriptor.charAt(position)) {
                 case ';' -> {
                     /*
-                     * Legitimate end of a type descriptor. Make sure that this
-                     * is the end of the string and that it doesn't end with an
-                     * empty component (including the degenerate case of "L;")
+                     * Legitimate end of a type descriptor. It must be the end of
+                     * the string and must not end with an empty component
+                     * (including the degenerate case of "L;").
                      */
                     return (!sep_or_first && position + 1 == length) ? array_depth : -1;
                 }

@@ -23,7 +23,7 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
 
     private FieldDef(String name, TypeId type, int access_flags, int hiddenapi_flags,
                      EncodedValue initial_value, NavigableSet<Annotation> annotations) {
-        // Checked before the semantic rules, so a null argument is reported first.
+        // Checked before the semantic rules, so a null argument is reported first
         Objects.requireNonNull(name);
         Objects.requireNonNull(type);
         Objects.requireNonNull(annotations);
@@ -42,7 +42,7 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
 
     /**
      * The kind of a static field's initial value must match the field type.
-     * Decided by the shorty alone, without walking the type
+     * Decided by the shorty alone, without walking the type.
      */
     private static void checkInitialValueKind(String name, TypeId type, EncodedValue value) {
         char field_shorty = type.getShorty();

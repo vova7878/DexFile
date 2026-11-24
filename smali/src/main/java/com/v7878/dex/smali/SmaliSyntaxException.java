@@ -1,7 +1,7 @@
 package com.v7878.dex.smali;
 
 /**
- * Thrown when smali text is not grammatical
+ * Thrown when smali text is not grammatical.
  */
 public class SmaliSyntaxException extends IllegalArgumentException {
     private final int line;

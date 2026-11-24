@@ -9,8 +9,8 @@ import java.util.List;
 import java.util.Objects;
 
 public final class CallSiteId implements Comparable<CallSiteId> {
-    // Each CallSite is assigned a unique name based on its id,
-    //  this is necessary to distinguish elements with the same content
+    // The name is unique per index and keeps entries with the same content
+    // distinct
     private final String name;
     private final MethodHandleId method_handle;
     private final String method_name;
