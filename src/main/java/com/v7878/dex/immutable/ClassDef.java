@@ -61,7 +61,7 @@ public final class ClassDef implements Annotatable, ClassHeader {
     private ClassDef(TypeId type, int access_flags, TypeId superclass, List<TypeId> interfaces,
                      String source_file, NavigableSet<FieldDef> fields,
                      NavigableSet<MethodDef> methods, NavigableSet<Annotation> annotations) {
-        // null checks first, as in the other factories (P11)
+        // null checks first, as in the other factories
         this.type = Objects.requireNonNull(type);
         this.interfaces = Objects.requireNonNull(interfaces);
         this.fields = Objects.requireNonNull(fields);

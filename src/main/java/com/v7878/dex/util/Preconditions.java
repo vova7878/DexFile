@@ -68,10 +68,11 @@ public class Preconditions {
             );
         }
         // Note: private, protected and static never pass the class mask
-        // above, so the "one visibility flag at most" rule needs no
-        // separate check here. Abstract+final passes too: the dex definition
-        // is legal (dex verifier only rejects non-Java bits); the
-        // class fails to load, which is a ClassLinker concern.
+        // above, so the "one visibility flag at most" rule needs no separate
+        // check here. Abstract+final passes too: the dex verifier rejects
+        // only non-Java bits, and accepting the combination is a deliberate
+        // model choice – it lets us read a dex that the runtime also accepts;
+        // the class then fails to load, a ClassLinker concern.
         return access_flags;
     }
 
@@ -174,9 +175,10 @@ public class Preconditions {
     }
 
     public static int checkDebugLine(int line) {
-        // Note: the dex documentation says that the line should not be less than 1.
-        // This is not actually a strict requirement, so some producers start the
-        // numbering at 0, despite the documentation
+        // Note: the dex documentation requires the line to be at least 1.
+        // The runtime does not check it, and some code generators historically
+        // exploited that: they number lines from 0, which is invalid by the
+        // format but accepted by the runtime
         if (line < 0) {
             throw new IllegalArgumentException(
                     String.format("Invalid line: %d. Must be greater than or equal to zero", line));

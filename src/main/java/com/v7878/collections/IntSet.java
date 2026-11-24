@@ -149,7 +149,8 @@ public final class IntSet implements Iterable<Integer> {
             return false;
         }
         if (to < size) {
-            // Here the meaning of 'to' and 'from' is reversed
+            // The roles are swapped on purpose: 'to' is the source and
+            // 'from' the destination of this copy
             System.arraycopy(array, to, array, from, size - to);
         }
         size -= to - from;
@@ -166,7 +167,8 @@ public final class IntSet implements Iterable<Integer> {
             return false;
         }
         if (to_index < size) {
-            // Here the meaning of 'to' and 'from' is reversed
+            // The roles are swapped on purpose: 'to' is the source and
+            // 'from' the destination of this copy
             System.arraycopy(array, to_index, array, from_index, size - to_index);
         }
         size -= to_index - from_index;
@@ -215,7 +217,8 @@ public final class IntSet implements Iterable<Integer> {
         int added = (int) missed;
         ensureCapacity(size + added);
         if (to < size) {
-            // Here the meaning of 'to' and 'from' is reversed
+            // The roles are swapped on purpose: 'to' is the source and
+            // 'from' the destination of this copy
             System.arraycopy(array, to, array, to + added, size - to);
         }
         // merge the range with the present values, largest first

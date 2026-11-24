@@ -30,7 +30,10 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
     public static FieldId of(Enum<?> e) {
         Objects.requireNonNull(e);
         TypeId declaring_class = TypeId.of(e.getDeclaringClass());
-        // TODO: Is this really true?
+        // TODO: the runtime does not require an enum to keep its constants as
+        //  fields (only values[] is used), and R8 may drop or rename them,
+        //  leaving the values only in the array; the format gives no
+        //  alternative to the field reference
         return new FieldId(declaring_class, e.name(), declaring_class);
     }
 

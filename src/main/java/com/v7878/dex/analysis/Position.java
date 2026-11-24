@@ -113,7 +113,8 @@ public final class Position {
     private final int register_count;
     private final RegisterLine before, after;
 
-    // TODO
+    // TODO?: direct field access is ugly; the field
+    //  is package-private, but avoiding it is preferable
     final NavigableSet<Transition> predecessors;
 
     final NavigableSet<Transition> successors;

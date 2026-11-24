@@ -103,8 +103,8 @@ public class InstructionReader {
         };
     }
 
-    // TODO: find a way to read code with incorrect instructions
-    // (which used to protect dex from reading)
+    // TODO: add a read mode that leaves unreachable instructions unread and
+    //  puts nops in their place; currently incorrect instructions are not read
     public static List<Instruction> readArray(DexReader reader, RandomInput in, int insns_count) {
         var insns = new ArrayList<Instruction>(insns_count);
 

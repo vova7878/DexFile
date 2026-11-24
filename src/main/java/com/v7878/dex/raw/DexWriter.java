@@ -377,8 +377,9 @@ public class DexWriter implements StringIndexer {
         // With each methodhandle referring to a field or a method
         // (both limited to 16 bits), further entries come from duplicates,
         // which the format allows. Duplicates are needed for callsites,
-        // which can have state; the documentation states the same for
-        // methodhandles.
+        // which can have state. The reason for allowing them for
+        // methodhandles is unclear: they have no state, so this is
+        // probably a surplus of the format reserved for the future.
         call_sites = collector.call_sites.toArray(EmptyArrays.CALLSITE_ID_CONTAINER);
         checkSizeLimit(call_sites.length, "callsite");
         method_handles = collector.method_handles.toArray(EmptyArrays.METHOD_HANDLE_ID);

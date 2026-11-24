@@ -26,22 +26,13 @@ import java.util.function.Function;
 
 /**
  * Static field/method resolution and invoke dispatch, ports of the ART
- * mechanics, branch <a href="https://android.googlesource.com/platform/art/+/refs/heads/android17-release">android17-release</a>.
+ * mechanics, branch
+ * <a href="https://android.googlesource.com/platform/art/+/refs/heads/android17-release">android17-release</a>.
  * Sources and deviations are documented per element.
  * <p>
- * Hierarchy linking (vtable/iftable, copied methods) is {@link ClassLinker};
- * results are cached. Classes outside the classpath: an unknown reference-id
- * class or dispatch receiver makes the answer non-determinable
- * ({@link Result#unknown()}); the referrer affects only access checks – for an
- * unknown referrer they are computed from flags and descriptors
- * (public/private/package-private – exact answer/IAE; protected needs
- * referrer hierarchy assignability – fail-open access with
- * {@code exact == false}).
- * <p>
- * Deviations from ART: hiddenapi is treated as allowed; IMT is skipped
- * (dispatch semantics is the itable lookup); dex-cache fast paths
- * (FindMethodFast, the NterpGetMethod cache) are not modeled – resolution
- * always takes the full path; the verifier is out of scope.
+ * Deviations from ART: hiddenapi is treated as allowed; dex-cache fast
+ * paths are not modeled – resolution always takes the full path; the
+ * verifier is out of scope.
  */
 public class ClassPath {
 

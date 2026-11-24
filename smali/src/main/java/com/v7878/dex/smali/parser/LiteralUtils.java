@@ -25,7 +25,7 @@ public class LiteralUtils {
                 default -> throw shouldNotReachHere();
             };
         }
-        // surrogate pair
+        // A surrogate pair must never appear here
         throw new IllegalArgumentException("Invalid char literal: " + value);
     }
 

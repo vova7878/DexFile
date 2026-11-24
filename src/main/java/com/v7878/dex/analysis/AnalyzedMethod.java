@@ -92,6 +92,11 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.ToIntFunction;
 
+/**
+ * The result of the analysis of one method: a {@link Position} for every
+ * instruction, the register state at entry and the constant-origin queries.
+ * Instances are built by {@link #analyze}.
+ */
 public final class AnalyzedMethod {
     private final TypeId declaring_class;
     private final MethodDef method;
@@ -119,30 +124,53 @@ public final class AnalyzedMethod {
         this.firstLine = buildFirstLine();
     }
 
+    /**
+     * The class declaring the method.
+     */
     public TypeId getDeclaringClass() {
         return declaring_class;
     }
 
+    /**
+     * The analyzed method definition.
+     */
     public MethodDef getMethod() {
         return method;
     }
 
+    /**
+     * The positions keyed by instruction address, in code order.
+     */
     public IntMap<Position> getPositions() {
         return positions;
     }
 
+    /**
+     * The code-unit offset just past the last instruction.
+     */
     public int getLastOffset() {
         return last_offset;
     }
 
+    /**
+     * The call prototype: the declared prototype with the declaring class
+     * inserted as the receiver for a non-static method.
+     */
     public ProtoId getCallProto() {
         return call_proto;
     }
 
+    /**
+     * The register count declared by the method.
+     */
     public int getRegisterCount() {
         return register_count;
     }
 
+    /**
+     * A textual dump of every position, prefixed with the method name and
+     * prototype.
+     */
     public String describe() {
         var j = new StringJoiner("\n\n", "\n\n", "");
         var size = positions.size();
@@ -179,18 +207,45 @@ public final class AnalyzedMethod {
     }
 
 
+    /**
+     * Every value that can flow into {@code reg}: the parameters and the
+     * values written by the defining instructions.
+     *
+     * @throws IllegalArgumentException if {@code reg} is {@link Register.Undefined}
+     */
     public Set<Register> value_sources(Register reg) {
         return AnalysisUtils.value_sources(this::position, reg);
     }
 
+    /**
+     * The integral constants that {@code reg} may hold; a defining value
+     * without a literal contributes nothing.
+     *
+     * @throws IllegalArgumentException if {@code reg} is not an integral
+     *                                  constant register
+     */
     public IntSet constant_values(Register reg) {
         return AnalysisUtils.constant_values(this::position, reg);
     }
 
+    /**
+     * The wide constants that {@code reg} may hold; a defining value without
+     * a literal contributes nothing.
+     *
+     * @throws IllegalArgumentException if {@code reg} is not a wide constant
+     *                                  register
+     */
     public LongSet wide_constant_values(Register reg) {
         return AnalysisUtils.wide_constant_values(this::position, reg);
     }
 
+    /**
+     * The values that {@code reg} may refer to: {@code null} for a zero or
+     * null value, otherwise the reference of the defining instruction.
+     *
+     * @throws IllegalArgumentException if {@code reg} is not a reference
+     *                                  constant register
+     */
     public Set<Object> ref_constant_values(Register reg) {
         return AnalysisUtils.ref_constant_values(this::position, reg);
     }
@@ -236,11 +291,20 @@ public final class AnalyzedMethod {
         return AnalysisUtils.is_used_in_branch(this::position, start, slot);
     }
 
+    /**
+     * Analyzes the method with the default type resolver.
+     */
     public static AnalyzedMethod analyze(
             TypeId declaring_class, MethodDef def, AnalysisOptions options) {
         return analyze(TypeResolver.DEFAULT, declaring_class, def, options);
     }
 
+    /**
+     * Analyzes the method with the given resolver and options.
+     *
+     * @throws IllegalArgumentException if the method has no implementation
+     * @throws AnalysisException        if the code is empty
+     */
     public static AnalyzedMethod analyze(
             TypeResolver resolver, TypeId declaring_class,
             MethodDef def, AnalysisOptions options) {
