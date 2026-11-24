@@ -1,10 +1,13 @@
 package com.v7878.dex.immutable;
 
 import static com.v7878.dex.DexConstants.ACC_ABSTRACT;
+import static com.v7878.dex.DexConstants.ACC_BRIDGE;
 import static com.v7878.dex.DexConstants.ACC_CONSTRUCTOR;
 import static com.v7878.dex.DexConstants.ACC_DIRECT_MASK;
+import static com.v7878.dex.DexConstants.ACC_FINAL;
 import static com.v7878.dex.DexConstants.ACC_NATIVE;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
+import static com.v7878.dex.DexConstants.ACC_SYNCHRONIZED;
 
 import com.v7878.dex.AccessFlag;
 import com.v7878.dex.Internal;
@@ -35,7 +38,7 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
             NavigableSet<Annotation> annotations) {
         this.name = Objects.requireNonNull(name);
         this.return_type = Objects.requireNonNull(return_type);
-        // The parameter constructor has already rejected void
+        // The Parameter constructor has already rejected void
         this.parameters = Objects.requireNonNull(parameters);
         this.access_flags = access_flags;
         this.hiddenapi_flags = hiddenapi_flags;
@@ -76,9 +79,9 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                         "Not enough registers for parameters. Required: %d, available: %d", ins, regs));
             }
         }
-        // Android determines that method is a constructor by one of two signs:
-        // either the 'constructor' flag or one of the special names (<init> or <clinit>)
-        // The special name is required, but the flag is optional
+        // Android decides that a method is a constructor by either the 'constructor'
+        // flag or one of the special names (<init> or <clinit>). The special name is
+        // required, but the flag is optional.
         switch (name) {
             case "<init>" -> {
                 if ((access_flags & ACC_STATIC) != 0) {
@@ -88,12 +91,24 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 if (!TypeId.V.equals(return_type)) {
                     throw new IllegalArgumentException("<init> must be void");
                 }
+                // Constructors must always have code
+                if ((access_flags & (ACC_ABSTRACT | ACC_NATIVE)) != 0) {
+                    throw new IllegalArgumentException(
+                            "<init> must not be abstract or native");
+                }
+                // Everything outside the verifier's kInitAllowed whitelist:
+                // private, protected, public, strictfp, varargs, synthetic
+                if ((access_flags & (ACC_FINAL | ACC_SYNCHRONIZED | ACC_BRIDGE)) != 0) {
+                    throw new IllegalArgumentException(String.format(
+                            "<init> may not have flags: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForMethod(access_flags)));
+                }
                 access_flags |= ACC_CONSTRUCTOR;
             }
             case "<clinit>" -> {
-                // Note: <clinit> may not have the 'static' flag for dex035 and
-                // will behave like a regular non-static constructor. This is
-                // very weird behavior, so we reject it, even if Android allows it
+                // Note: without the 'static' flag, dex035 treats <clinit> as a
+                // regular non-static constructor. The model rejects that even
+                // though Android allows it
                 if ((access_flags & ACC_STATIC) == 0) {
                     throw new IllegalArgumentException(
                             "<clinit> must have the 'static' flag");
@@ -101,6 +116,11 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
                 if (!(TypeId.V.equals(return_type) && parameters.isEmpty())) {
                     throw new IllegalArgumentException(
                             "<clinit> must have descriptor ()V");
+                }
+                // Constructors must always have code
+                if ((access_flags & (ACC_ABSTRACT | ACC_NATIVE)) != 0) {
+                    throw new IllegalArgumentException(
+                            "<clinit> must not be abstract or native");
                 }
                 access_flags |= ACC_CONSTRUCTOR;
             }

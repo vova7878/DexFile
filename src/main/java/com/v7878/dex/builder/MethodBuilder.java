@@ -68,6 +68,15 @@ public final class MethodBuilder {
     }
 
     public MethodDef finish() {
+        // Reported here instead of an NPE
+        if (return_type == null) {
+            throw new IllegalStateException(
+                    "Method return type is not set");
+        }
+        if (name == null) {
+            throw new IllegalStateException(
+                    "Method name is not set");
+        }
         return MethodDef.of(name, return_type, parameters, access_flags,
                 hiddenapi_flags, implementation, annotations);
     }
@@ -120,6 +129,11 @@ public final class MethodBuilder {
 
     public MethodBuilder of(String descriptor) {
         Objects.requireNonNull(descriptor);
+        if (descriptor.contains("->")) {
+            throw new IllegalArgumentException(
+                    "Expected a method definition name(proto)ret, got a member reference: "
+                            + descriptor);
+        }
         int bracket = descriptor.lastIndexOf('(');
         if (bracket < 0) {
             throw new IllegalArgumentException(
@@ -147,7 +161,7 @@ public final class MethodBuilder {
         return withName("<clinit>").withReturnType(TypeId.V).withParameters();
     }
 
-    // Note: parameters are set only as a whole, as single collection
+    // Note: parameters are set only as a whole, as a single collection
     private MethodBuilder withParametersInternal(List<Parameter> parameters) {
         this.parameters = parameters;
         return this;
@@ -224,6 +238,11 @@ public final class MethodBuilder {
     }
 
     public MethodBuilder withCode(int locals, Consumer<CodeBuilder> consumer) {
+        // Reported here instead of an NPE
+        if (parameters == null) {
+            throw new IllegalStateException(
+                    "Method parameters are not set");
+        }
         int ins_size = ShortyUtils.getDefInputRegisterCount(parameters);
         return withCode(CodeBuilder.build(ins_size + locals, ins_size,
                 (access_flags & ACC_STATIC) == 0, consumer));

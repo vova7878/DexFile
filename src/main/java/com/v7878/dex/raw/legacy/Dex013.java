@@ -219,8 +219,8 @@ public class Dex013 {
                 int descriptor_idx = in.readULeb128() - 1;
                 String descriptor = descriptor_idx == NO_INDEX ?
                         null : reader.getString(descriptor_idx);
-                // Note: This version had an additional value
-                // for the register type that meant untyped null
+                // Note: this version had an additional register type value
+                // that meant untyped null
                 var type = descriptor == null || "<null>".equals(descriptor) ?
                         null : TypeId.of(descriptor);
                 int signature_idx = opcode == M5_DBG_START_LOCAL ?

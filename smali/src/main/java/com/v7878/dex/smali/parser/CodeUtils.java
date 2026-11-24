@@ -25,6 +25,24 @@ public class CodeUtils {
         };
     }
 
+    public static long checkBits(int width, long value) {
+        if (width < 0 || width > 64) {
+            throw new IllegalArgumentException("Illegal bit width: " + width);
+        }
+        if (width == 64) {
+            return value;
+        }
+        // signed min
+        var min = (1L << 63) >> (64 - width);
+        // unsigned max
+        var max = (1L << width) - 1;
+        if (value < min || value > max) {
+            throw new IllegalArgumentException(String.format(
+                    "%d does not fit into a %d-bit integer", value, width));
+        }
+        return value;
+    }
+
     public static List<Number> parseArrayData(int width, long[] data) {
         long min, max;
         switch (width) {

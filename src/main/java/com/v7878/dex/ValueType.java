@@ -42,13 +42,14 @@ public enum ValueType {
     STRING(VALUE_STRING, TypeId.of(String.class)),
     TYPE(VALUE_TYPE, TypeId.of(Class.class)),
     FIELD(VALUE_FIELD, TypeId.of(Field.class)),
-    // Even though the value type is called a "method", it is a
-    // single entity for methods and constructors, i.e. Executable
+    // Even though the value type is called a "method", the format and the
+    // runtime keep a single entity for methods and constructors, that is,
+    // Executable
     METHOD(VALUE_METHOD, TypeId.of(Executable.class)),
     ENUM(VALUE_ENUM, TypeId.of(Enum.class)),
-    // This is an untyped array; It can contain values of different types,
-    // and Java doesn't have a similar runtime construct.
-    // There isn't even a common supertype for all arrays
+    // This is an untyped array; it can contain values of different types,
+    // and Java does not have a similar runtime construct.
+    // There is not even a common supertype for all arrays.
     ARRAY(VALUE_ARRAY, TypeId.of(Array.class)),
     ANNOTATION(VALUE_ANNOTATION, TypeId.of(Annotation.class)),
     NULL(VALUE_NULL, TypeId.of(Object.class));

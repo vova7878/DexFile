@@ -175,8 +175,8 @@ public class MemberUtils {
      * <p>
      * The source is always traversed element by element: even a
      * {@link NavigableSet} argument is not copied with {@code addAll}, because
-     * it may use a custom comparator and then its contents are not necessarily
-     * the same set as the one built with the natural ordering.
+     * with a custom comparator its contents are not necessarily the same set as
+     * the one built with the natural ordering.
      */
     private static <T extends Comparable<? super T>> NavigableSet<T> toSet(
             Iterable<T> values, BiConsumer<NavigableSet<T>, T> adder) {

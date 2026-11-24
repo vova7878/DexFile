@@ -38,10 +38,9 @@ public enum ReferenceType {
         value = validate(type, value);
         return switch (type) {
             case STRING -> "\"" + value + "\"";
-            case CLASS_DEF -> "def@" + value;
+            case CLASS_DEF, RAW_INDEX -> "@" + value;
             case TYPE, FIELD, METHOD, PROTO, CALLSITE,
                  METHOD_HANDLE -> value.toString();
-            case RAW_INDEX -> "@" + value;
         };
     }
 }

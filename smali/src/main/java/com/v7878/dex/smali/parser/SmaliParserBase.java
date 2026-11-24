@@ -193,6 +193,16 @@ public abstract class SmaliParserBase extends Parser {
         });
     }
 
+    public boolean isVerificationError() {
+        return matchText(token -> switch (token) {
+            case "generic-error", "no-such-class", "no-such-field",
+                 "no-such-method", "illegal-class-access", "illegal-field-access",
+                 "illegal-method-access", "class-change-error",
+                 "instantiation-error" -> true;
+            default -> false;
+        });
+    }
+
     public boolean isInteger() {
         return matchText(INTEGER);
     }

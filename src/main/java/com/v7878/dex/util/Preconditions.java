@@ -1,6 +1,14 @@
 package com.v7878.dex.util;
 
+import static com.v7878.dex.DexConstants.ACC_ABSTRACT;
+import static com.v7878.dex.DexConstants.ACC_FINAL;
+import static com.v7878.dex.DexConstants.ACC_NATIVE;
+import static com.v7878.dex.DexConstants.ACC_PRIVATE;
+import static com.v7878.dex.DexConstants.ACC_STATIC;
+import static com.v7878.dex.DexConstants.ACC_STRICTFP;
+import static com.v7878.dex.DexConstants.ACC_SYNCHRONIZED;
 import static com.v7878.dex.DexConstants.ACC_VISIBILITY_MASK;
+import static com.v7878.dex.DexConstants.ACC_VOLATILE;
 import static com.v7878.dex.util.MathUtils.isPowerOfTwo;
 
 import com.v7878.dex.AccessFlag;
@@ -59,6 +67,12 @@ public class Preconditions {
                             access_flags, AccessFlag.formatAccessFlagsForClass(access_flags))
             );
         }
+        // Note: private, protected and static never pass the class mask
+        // above, so the "one visibility flag at most" rule needs no separate
+        // check here. Abstract+final passes too: the dex verifier rejects
+        // only non-Java bits, and accepting the combination is a deliberate
+        // model choice – it lets us read a dex that the runtime also accepts;
+        // the class then fails to load, a ClassLinker concern.
         return access_flags;
     }
 
@@ -72,6 +86,16 @@ public class Preconditions {
         if (!checkVisibilityFlags(access_flags)) {
             throw new IllegalArgumentException(
                     String.format("Method may have only one of public/protected/private: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForMethod(access_flags))
+            );
+        }
+        // An abstract method may not be private, static, final, native,
+        // synchronized or strictfp (kForbidden in ART verifier)
+        if ((access_flags & ACC_ABSTRACT) != 0
+                && (access_flags & (ACC_PRIVATE | ACC_STATIC | ACC_FINAL
+                | ACC_NATIVE | ACC_SYNCHRONIZED | ACC_STRICTFP)) != 0) {
+            throw new IllegalArgumentException(
+                    String.format("Abstract method may not have flags: 0x%08X(%s)",
                             access_flags, AccessFlag.formatAccessFlagsForMethod(access_flags))
             );
         }
@@ -98,6 +122,13 @@ public class Preconditions {
         if (!checkVisibilityFlags(access_flags)) {
             throw new IllegalArgumentException(
                     String.format("Field may have only one of public/protected/private: 0x%08X(%s)",
+                            access_flags, AccessFlag.formatAccessFlagsForField(access_flags))
+            );
+        }
+        // A field may not be volatile and final at the same time
+        if ((access_flags & (ACC_FINAL | ACC_VOLATILE)) == (ACC_FINAL | ACC_VOLATILE)) {
+            throw new IllegalArgumentException(
+                    String.format("Field may not be final and volatile: 0x%08X(%s)",
                             access_flags, AccessFlag.formatAccessFlagsForField(access_flags))
             );
         }
@@ -144,9 +175,10 @@ public class Preconditions {
     }
 
     public static int checkDebugLine(int line) {
-        // Note: The dex documentation says that the line should not be less than 1.
-        // This is not actually a strict requirement, so some idiots have numbering
-        // starting with 0, despite the requirements
+        // Note: the dex documentation requires the line to be at least 1.
+        // The runtime does not check it, and some code generators historically
+        // exploited that: they number lines from 0, which is invalid by the
+        // format but accepted by the runtime
         if (line < 0) {
             throw new IllegalArgumentException(
                     String.format("Invalid line: %d. Must be greater than or equal to zero", line));

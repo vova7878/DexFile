@@ -32,7 +32,7 @@ import static com.v7878.dex.Format.Format32x;
 import static com.v7878.dex.Format.Format34c;
 import static com.v7878.dex.Format.Format35c;
 import static com.v7878.dex.Format.Format3rc;
-import static com.v7878.dex.Format.Format40cs;
+import static com.v7878.dex.Format.Format40sc;
 import static com.v7878.dex.Format.Format41c;
 import static com.v7878.dex.Format.Format45cc;
 import static com.v7878.dex.Format.Format4rcc;
@@ -54,6 +54,7 @@ import static com.v7878.dex.Opcode.Constants.CAN_THROW;
 import static com.v7878.dex.Opcode.Constants.ENDS_FLOW;
 import static com.v7878.dex.Opcode.Constants.EXPANDED;
 import static com.v7878.dex.Opcode.Constants.HAS_PAYLOAD;
+import static com.v7878.dex.Opcode.Constants.LEGACY;
 import static com.v7878.dex.Opcode.Constants.ODEX_ONLY;
 import static com.v7878.dex.Opcode.Constants.RAW_OP;
 import static com.v7878.dex.Opcode.Constants.SETS_RESULT;
@@ -140,7 +141,7 @@ public enum Opcode {
     IF_GTZ(common(0x41, 0x42, 0x3c), "if-gtz", Format21t, regs(true), TYPE_BRANCH),
     IF_LEZ(common(0x42, 0x43, 0x3d), "if-lez", Format21t, regs(true), TYPE_BRANCH),
 
-    // 3e - 43 unused
+    // 3e – 43 unused
 
     AGET(common(0x43, 0x44, 0x44), "aget", Format23x, regs(true, true, true), CAN_THROW),
     AGET_WIDE(common(0x44, 0x45, 0x45), "aget-wide", Format23x, regs(false, true, true), CAN_THROW),
@@ -201,7 +202,7 @@ public enum Opcode {
     INVOKE_STATIC_RANGE(common(0x75, 0x77, 0x77), "invoke-static/range", Format3rc, regsr(), METHOD, CAN_THROW | TYPE_INVOKE),
     INVOKE_INTERFACE_RANGE(common(0x76, 0x78, 0x78), "invoke-interface/range", Format3rc, regsr(), METHOD, CAN_THROW | TYPE_INVOKE),
 
-    // 79 - 7a unused
+    // 79 – 7a unused
 
     NEG_INT(common(0x7b), "neg-int", Format12x, regs(true, true), 0),
     NOT_INT(common(0x7c), "not-int", Format12x, regs(true, true), 0),
@@ -312,7 +313,7 @@ public enum Opcode {
     SHR_INT_LIT8(common(0xe1), "shr-int/lit8", Format22b, regs(true, true), 0),
     USHR_INT_LIT8(common(0xe2), "ushr-int/lit8", Format22b, regs(true, true), 0),
 
-    // e3 - f9 unused
+    // e3 – f9 unused
 
     INVOKE_POLYMORPHIC(firstApi(0xfa, 26), "invoke-polymorphic", Format45cc, regs5(), METHOD, PROTO, CAN_THROW | TYPE_INVOKE),
     INVOKE_POLYMORPHIC_RANGE(firstApi(0xfb, 26), "invoke-polymorphic/range", Format4rcc, regsr(), METHOD, PROTO, CAN_THROW | TYPE_INVOKE),
@@ -327,41 +328,41 @@ public enum Opcode {
 
     // legacy dex009 / dex013 opcodes
 
-    M_CONST_SPECIAL(legacy(0x1a, 0x1a), "m-const/special", Format11p, regs(true), 0),
-    M_CONST_WIDE_SPECIAL(legacy(0x1b, 0x1b), "m-const-wide/special", Format11p, regs(false), 0),
+    M_CONST_SPECIAL(legacy(0x1a, 0x1a), "m-const/special", Format11p, regs(true), LEGACY),
+    M_CONST_WIDE_SPECIAL(legacy(0x1b, 0x1b), "m-const-wide/special", Format11p, regs(false), LEGACY),
 
     // The semantics of the new-array instruction differ from newer versions of dex.
-    // The instruction takes the type of array component, not the type of the array itself
-    M_NEW_ARRAY(legacy(0x22, 0x22), "m-new-array", Format22c, regs(true, true), TYPE, CAN_THROW),
-    M_NEW_ARRAY_BOOLEAN(legacy(0x23, 0x23), "m-new-array-boolean", Format12x, regs(true, true), CAN_THROW),
-    M_NEW_ARRAY_BYTE(legacy(0x24, 0x24), "m-new-array-byte", Format12x, regs(true, true), CAN_THROW),
-    M_NEW_ARRAY_CHAR(legacy(0x25, 0x25), "m-new-array-char", Format12x, regs(true, true), CAN_THROW),
-    M_NEW_ARRAY_SHORT(legacy(0x26, 0x26), "m-new-array-short", Format12x, regs(true, true), CAN_THROW),
-    M_NEW_ARRAY_INT(legacy(0x27, 0x27), "m-new-array-int", Format12x, regs(true, true), CAN_THROW),
-    M_NEW_ARRAY_LONG(legacy(0x28, 0x28), "m-new-array-long", Format12x, regs(true, true), CAN_THROW),
-    M_NEW_ARRAY_FLOAT(legacy(0x29, 0x29), "m-new-array-float", Format12x, regs(true, true), CAN_THROW),
-    M_NEW_ARRAY_DOUBLE(legacy(0x2a, 0x2a), "m-new-array-double", Format12x, regs(true, true), CAN_THROW),
-    M_FILLED_NEW_ARRAY(legacy(0x2b, 0x2b), "m-filled-new-array", Format34c, regs(true, true), TYPE, CAN_THROW | SETS_RESULT),
+    // The instruction takes the type of the array component, not the type of the array itself.
+    M_NEW_ARRAY(legacy(0x22, 0x22), "m-new-array", Format22c, regs(true, true), TYPE, LEGACY | CAN_THROW),
+    M_NEW_ARRAY_BOOLEAN(legacy(0x23, 0x23), "m-new-array-boolean", Format12x, regs(true, true), LEGACY | CAN_THROW),
+    M_NEW_ARRAY_BYTE(legacy(0x24, 0x24), "m-new-array-byte", Format12x, regs(true, true), LEGACY | CAN_THROW),
+    M_NEW_ARRAY_CHAR(legacy(0x25, 0x25), "m-new-array-char", Format12x, regs(true, true), LEGACY | CAN_THROW),
+    M_NEW_ARRAY_SHORT(legacy(0x26, 0x26), "m-new-array-short", Format12x, regs(true, true), LEGACY | CAN_THROW),
+    M_NEW_ARRAY_INT(legacy(0x27, 0x27), "m-new-array-int", Format12x, regs(true, true), LEGACY | CAN_THROW),
+    M_NEW_ARRAY_LONG(legacy(0x28, 0x28), "m-new-array-long", Format12x, regs(true, true), LEGACY | CAN_THROW),
+    M_NEW_ARRAY_FLOAT(legacy(0x29, 0x29), "m-new-array-float", Format12x, regs(true, true), LEGACY | CAN_THROW),
+    M_NEW_ARRAY_DOUBLE(legacy(0x2a, 0x2a), "m-new-array-double", Format12x, regs(true, true), LEGACY | CAN_THROW),
+    M_FILLED_NEW_ARRAY(legacy(0x2b, 0x2b), "m-filled-new-array", Format34c, regs(true, true), TYPE, LEGACY | CAN_THROW | SETS_RESULT),
 
-    M_GOTO_24(legacy(52, 53), "m-goto/24", Format20t_24, regs(), TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
-    M_PACKED_SWITCH(legacy(0x35, 0x36), "m-packed-switch", Format21t, regs(true), HAS_PAYLOAD | TYPE_SWITCH),
-    M_SPARSE_SWITCH(legacy(0x36, 0x37), "m-sparse-switch", Format21t, regs(true), HAS_PAYLOAD | TYPE_SWITCH),
+    M_GOTO_24(legacy(52, 53), "m-goto/24", Format20t_24, regs(), LEGACY | TYPE_BRANCH | UNCONDITIONAL | ENDS_FLOW),
+    M_PACKED_SWITCH(legacy(0x35, 0x36), "m-packed-switch", Format21t, regs(true), LEGACY | HAS_PAYLOAD | TYPE_SWITCH),
+    M_SPARSE_SWITCH(legacy(0x36, 0x37), "m-sparse-switch", Format21t, regs(true), LEGACY | HAS_PAYLOAD | TYPE_SWITCH),
 
-    M_INVOKE_VIRTUAL(legacy(0x6d, 0x6e), "m-invoke-virtual", Format34c, regs4(), METHOD, CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_SUPER(legacy(0x6e, 0x6f), "m-invoke-super", Format34c, regs4(), METHOD, CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_DIRECT(legacy(0x6f, 0x70), "m-invoke-direct", Format34c, regs4(), METHOD, CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
-    M_INVOKE_STATIC(legacy(0x70, 0x71), "m-invoke-static", Format34c, regs4(), METHOD, CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_INTERFACE(legacy(0x71, 0x72), "m-invoke-interface", Format34c, regs4(), METHOD, CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_VIRTUAL(legacy(0x6d, 0x6e), "m-invoke-virtual", Format34c, regs4(), METHOD, LEGACY | CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_SUPER(legacy(0x6e, 0x6f), "m-invoke-super", Format34c, regs4(), METHOD, LEGACY | CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_DIRECT(legacy(0x6f, 0x70), "m-invoke-direct", Format34c, regs4(), METHOD, LEGACY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    M_INVOKE_STATIC(legacy(0x70, 0x71), "m-invoke-static", Format34c, regs4(), METHOD, LEGACY | CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_INTERFACE(legacy(0x71, 0x72), "m-invoke-interface", Format34c, regs4(), METHOD, LEGACY | CAN_THROW | TYPE_INVOKE),
 
-    M_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "m-packed-switch-payload", MPackedSwitchPayload, regs(), ALIGNED),
-    M_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "m-sparse-switch-payload", MSparseSwitchPayload, regs(), ALIGNED),
+    M_PACKED_SWITCH_PAYLOAD(legacy(0x100, 0x100), "m-packed-switch-payload", MPackedSwitchPayload, regs(), LEGACY | ALIGNED),
+    M_SPARSE_SWITCH_PAYLOAD(legacy(0x200, 0x200), "m-sparse-switch-payload", MSparseSwitchPayload, regs(), LEGACY | ALIGNED),
 
     // legacy dex009 / dex013 odex opcodes
 
-    M_EXECUTE_INLINE(legacy(0xee, 0xee), "m-execute-inline", Format34c, regs4(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_DIRECT_EMPTY(legacy(0xf0, 0xf0), "m-invoke-direct-empty", Format34c, regs4(), METHOD, ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
-    M_INVOKE_VIRTUAL_QUICK(legacy(0xf8, 0xf8), "m-invoke-virtual-quick", Format34c, regs4(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
-    M_INVOKE_SUPER_QUICK(legacy(0xfa, 0xfa), "m-invoke-super-quick", Format34c, regs4(), RAW_INDEX, ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    M_EXECUTE_INLINE(legacy(0xee, 0xee), "m-execute-inline", Format34c, regs4(), RAW_INDEX, LEGACY | ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_DIRECT_EMPTY(legacy(0xf0, 0xf0), "m-invoke-direct-empty", Format34c, regs4(), METHOD, LEGACY | ODEX_ONLY | CAN_THROW | TYPE_INVOKE | CAN_INITIALIZE_REFERENCE),
+    M_INVOKE_VIRTUAL_QUICK(legacy(0xf8, 0xf8), "m-invoke-virtual-quick", Format34c, regs4(), RAW_INDEX, LEGACY | ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
+    M_INVOKE_SUPER_QUICK(legacy(0xfa, 0xfa), "m-invoke-super-quick", Format34c, regs4(), RAW_INDEX, LEGACY | ODEX_ONLY | CAN_THROW | TYPE_INVOKE),
 
     // odex opcodes
 
@@ -389,7 +390,7 @@ public enum Opcode {
 
     THROW_VERIFICATION_ERROR(dalvik(firstApi(0xed, 5)), "throw-verification-error", Format20bc, regs(), ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
-    // Note: breakpoint replaces the original opcode and restores it back when executed (it only exists at runtime)
+    // Note: breakpoint replaces the original opcode and restores it when executed (it only exists at runtime)
     // BREAKPOINT(onlyDalvik(firstApi(0xec, 8)), "breakpoint", Format00x, regs(), RUNTIME_ONLY),
 
     IGET_VOLATILE(dalvik(firstApi(0xe3, 9)), "iget-volatile", Format22c, regs(true, true), FIELD, ODEX_ONLY | CAN_THROW),
@@ -423,12 +424,13 @@ public enum Opcode {
     IGET_CHAR_QUICK(betweenApi(0xf1, 23, 30), "iget-char-quick", Format22c, regs(true, true), RAW_INDEX, ODEX_ONLY | CAN_THROW),
     IGET_SHORT_QUICK(betweenApi(0xf2, 23, 30), "iget-short-quick", Format22c, regs(true, true), RAW_INDEX, ODEX_ONLY | CAN_THROW),
 
-    // legacy android 7.x lambda opcodes
+    // legacy Android 7.x lambda opcodes
 
     // TODO INVOKE_LAMBDA(betweenApi(0xf3, 24, 25), "invoke-lambda", Format25x, EXPERIMENTAL_LAMBDA),
+    // 0xf4 was planned as invoke-lambda/range, but it was never implemented
     // TODO CAPTURE_VARIABLE(betweenApi(0xf5, 24, 25), "capture-variable", Format21c(string), EXPERIMENTAL_LAMBDA),
     // TODO CREATE_LAMBDA(betweenApi(0xf6, 24, 25), "create-lambda", Format21c(method), EXPERIMENTAL_LAMBDA),
-    // TODO LIBERATE_LAMBDA(betweenApi(0xf7, 24, 25), "liberate-lambda", Format22c(string), EXPERIMENTAL_LAMBDA),
+    // TODO LIBERATE_VARIABLE(betweenApi(0xf7, 24, 25), "liberate-variable", Format22c(string), EXPERIMENTAL_LAMBDA),
     // TODO BOX_LAMBDA(betweenApi(0xf8, 24, 25), "box-lambda", Format22x, EXPERIMENTAL_LAMBDA),
     // TODO UNBOX_LAMBDA(betweenApi(0xf9, 24, 25), "unbox-lambda", Format22c(type), EXPERIMENTAL_LAMBDA),
 
@@ -496,7 +498,7 @@ public enum Opcode {
     SPUT_WIDE_VOLATILE_JUMBO(betweenApi(0xfdff, 14, 15), "sput-wide-volatile/jumbo", Format41c, regs(false), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
     SPUT_OBJECT_VOLATILE_JUMBO(betweenApi(0xfeff, 14, 15), "sput-object-volatile/jumbo", Format41c, regs(true), FIELD, EXPANDED | ODEX_ONLY | CAN_THROW),
 
-    THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40cs, regs(), EXPANDED | ODEX_ONLY | CAN_THROW | ENDS_FLOW),
+    THROW_VERIFICATION_ERROR_JUMBO(betweenApi(0xffff, 14, 15), "throw-verification-error/jumbo", Format40sc, regs(), EXPANDED | ODEX_ONLY | CAN_THROW | ENDS_FLOW),
 
     // Special opcodes
     RAW(raw(), "raw", FormatRaw10x, regs(), RAW_OP),
@@ -552,6 +554,8 @@ public enum Opcode {
         static final int ALIGNED = 0x1000;
         static final int RAW_OP = 0x2000;
         static final int WRAPPER = 0x4000;
+        // legacy dex009 / dex013 only instruction
+        static final int LEGACY = 0x8000;
     }
 
     record DexInfo(DexVersion dex, int api, boolean art, boolean odex, boolean expanded) {
@@ -680,6 +684,10 @@ public enum Opcode {
 
     public final boolean odexOnly() {
         return (flags & ODEX_ONLY) != 0;
+    }
+
+    public final boolean isLegacy() {
+        return (flags & LEGACY) != 0;
     }
 
     public final boolean endsFlow() {

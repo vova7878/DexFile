@@ -30,13 +30,16 @@ import java.util.Objects;
  */
 public sealed abstract class Register {
     /**
-     * Where the value came from: the address of the instruction and the
-     * register slot, plus {@code produced}, which is true only when that
-     * instruction produced the value. It is false for a merge point
-     * (the value is joined from several predecessors) and for an
-     * instruction that only refined the value flowing into it (a null
-     * check, a constructor call); such a value belongs to the instruction
-     * that produced it. Parameters use address -1.
+     * Where the value came from.
+     *
+     * @param address  the address of the instruction; {@code -1} for a parameter
+     * @param slot     the register slot
+     * @param produced {@code true} only when that instruction produced the
+     *                 value; {@code false} for a merge point (the value is
+     *                 joined from several predecessors) and for an instruction
+     *                 that only refined the value flowing into it (a null
+     *                 check, a constructor call); such a value belongs to the
+     *                 instruction that produced it
      */
     public record Identifier(int address, int slot, boolean produced) {
         public Identifier {
@@ -61,8 +64,9 @@ public sealed abstract class Register {
 
         @Override
         public String toString() {
-            return (address < 0 ? "parameter" : Integer.toHexString(address)) + "[" + slot + "]"
-                    + (produced ? "" : "<incoming>");
+            return (address < 0 ? "<p>" :
+                    (produced ? "" : "<i>") + Integer.toHexString(address))
+                    + "[" + slot + "]";
         }
     }
 
@@ -159,7 +163,7 @@ public sealed abstract class Register {
     }
 
     /**
-     * A piece of broken wide pair.
+     * A piece of a broken wide pair.
      */
     public static final class WidePiece extends DynamicRegister {
         private WidePiece(Identifier source) {
@@ -190,7 +194,7 @@ public sealed abstract class Register {
 
     /**
      * The kind of a constant: the value range it is known to fit in,
-     * or a non-numeric constant (string, class, ...). The is*()
+     * or a non-numeric constant (string, class, ...). The {@code is*()}
      * queries widen the ranges.
      */
     public enum ConstantKind {
@@ -379,8 +383,8 @@ public sealed abstract class Register {
 
         /**
          * Whether the non-null values of the kind are exactly instances of
-         * the class it denotes: the classes of a string, class and method
-         * type constant are final, while a method handle is abstract and a
+         * the class it denotes: the classes of the string, class and method
+         * type constants are final, while a method handle is abstract and a
          * plain reference is Object.
          */
         public boolean isExactType() {
@@ -418,16 +422,16 @@ public sealed abstract class Register {
                 case INT -> "int";
                 case WIDE_LO -> "<wide";
                 case WIDE_HI -> ">wide";
-                case STRING -> "string";
-                case STRING_OR_NULL -> "string|null";
-                case CLASS -> "class";
-                case CLASS_OR_NULL -> "class|null";
-                case METHOD_TYPE -> "method type";
-                case METHOD_TYPE_OR_NULL -> "method type|null";
-                case METHOD_HANDLE -> "method handle";
-                case METHOD_HANDLE_OR_NULL -> "method handle|null";
-                case REFERENCE -> "reference";
-                case REFERENCE_OR_NULL -> "reference|null";
+                case STRING -> "string!";
+                case STRING_OR_NULL -> "string";
+                case CLASS -> "class!";
+                case CLASS_OR_NULL -> "class";
+                case METHOD_TYPE -> "method type!";
+                case METHOD_TYPE_OR_NULL -> "method type";
+                case METHOD_HANDLE -> "method handle!";
+                case METHOD_HANDLE_OR_NULL -> "method handle";
+                case REFERENCE -> "reference!";
+                case REFERENCE_OR_NULL -> "reference";
                 case NULL -> "null";
             };
         }
@@ -627,13 +631,17 @@ public sealed abstract class Register {
         private final boolean non_null;
         private final boolean exact;
 
-        private Reference(Identifier source, TypeInfo type, boolean non_null, boolean exact) {
+        private Reference(Identifier source, TypeInfo type,
+                          boolean non_null, boolean exact) {
             super(source, type);
             if (type.isPrimitive()) {
                 throw new IllegalArgumentException(
                         type + " must not be primitive");
             }
-            assert !exact || !type.isUnresolved();
+            if (exact && type.isUnresolved()) {
+                throw new IllegalArgumentException(
+                        "Exact value must have a resolved type");
+            }
             this.non_null = non_null;
             this.exact = exact;
         }
@@ -702,14 +710,23 @@ public sealed abstract class Register {
     public static final class UninitializedRef extends Reference {
         private final boolean thiz;
 
-        private UninitializedRef(Identifier source, TypeId type, boolean thiz, boolean exact) {
+        private UninitializedRef(Identifier source, TypeId type,
+                                 boolean thiz, boolean exact) {
             // Uninitialized ref type must always be known and non-null.
             // Exactness is independent of the initialization state: a
             // new-instance value is exactly its class, while the receiver
             // of a constructor may be an instance of a subclass.
-            super(source, TypeInfo.of(Objects.requireNonNull(type)), true, exact);
+            super(source, checkType(type, exact), true, exact);
             assert !type.isArray();
             this.thiz = thiz;
+        }
+
+        private static TypeInfo checkType(TypeId type, boolean exact) {
+            if (exact && type == null) {
+                throw new IllegalArgumentException(
+                        "Exact value must have a resolved type");
+            }
+            return TypeInfo.of(Objects.requireNonNull(type));
         }
 
         public static UninitializedRef of(Identifier source, TypeId type, boolean thiz) {
@@ -814,7 +831,7 @@ public sealed abstract class Register {
         }
         if (a.isUninitializedRef() || b.isUninitializedRef()) {
             // Uninitialized types are special. They may only ever be merged with
-            // themselves (Equality check above). So mark any other merge as conflicting
+            // themselves (Equality check above). So mark any other merge as conflicting.
             return Conflict.of(ident);
         }
         if (a instanceof Constant ac && b instanceof Constant bc) {

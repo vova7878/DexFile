@@ -1,12 +1,6 @@
 package com.v7878.dex.analysis;
 
 import static com.v7878.dex.DexConstants.ACC_STATIC;
-import static com.v7878.dex.Opcode.AGET;
-import static com.v7878.dex.Opcode.AGET_BOOLEAN;
-import static com.v7878.dex.Opcode.AGET_BYTE;
-import static com.v7878.dex.Opcode.AGET_CHAR;
-import static com.v7878.dex.Opcode.AGET_SHORT;
-import static com.v7878.dex.Opcode.AGET_WIDE;
 import static com.v7878.dex.Opcode.APUT_WIDE;
 import static com.v7878.dex.Opcode.ARRAY_PAYLOAD;
 import static com.v7878.dex.Opcode.FILLED_NEW_ARRAY;
@@ -85,25 +79,24 @@ import com.v7878.dex.immutable.bytecode.InstructionNrcc;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
 import com.v7878.dex.immutable.bytecode.SwitchPayload;
-import com.v7878.dex.immutable.bytecode.iface.LiteralInstruction;
 import com.v7878.dex.immutable.bytecode.iface.RegisterRangeInstruction;
 import com.v7878.dex.immutable.bytecode.iface.SingleReferenceInstruction;
 import com.v7878.dex.immutable.bytecode.iface.VariableFiveRegisterInstruction;
-import com.v7878.dex.immutable.bytecode.iface.WideLiteralInstruction;
 import com.v7878.dex.util.Converter;
 import com.v7878.dex.util.Formatter;
 
-import java.util.ArrayDeque;
 import java.util.BitSet;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
-import java.util.function.BiConsumer;
 import java.util.function.ToIntFunction;
 
+/**
+ * The result of the analysis of one method: a {@link Position} for every
+ * instruction, the register state at entry and the constant-origin queries.
+ * Instances are built by {@link #analyze}.
+ */
 public final class AnalyzedMethod {
     private final TypeId declaring_class;
     private final MethodDef method;
@@ -114,6 +107,7 @@ public final class AnalyzedMethod {
     private final int register_count;
 
     private final boolean verify;
+    private final RegisterLine firstLine;
 
     private AnalyzedMethod(TypeId declaring_class, MethodDef method,
                            MethodImplementation implementation,
@@ -127,32 +121,56 @@ public final class AnalyzedMethod {
         this.call_proto = call_proto;
         this.register_count = register_count;
         this.verify = verify;
+        this.firstLine = buildFirstLine();
     }
 
+    /**
+     * The class declaring the method.
+     */
     public TypeId getDeclaringClass() {
         return declaring_class;
     }
 
+    /**
+     * The analyzed method definition.
+     */
     public MethodDef getMethod() {
         return method;
     }
 
+    /**
+     * The positions keyed by instruction address, in code order.
+     */
     public IntMap<Position> getPositions() {
         return positions;
     }
 
+    /**
+     * The code-unit offset just past the last instruction.
+     */
     public int getLastOffset() {
         return last_offset;
     }
 
+    /**
+     * The call prototype: the declared prototype with the declaring class
+     * inserted as the receiver for a non-static method.
+     */
     public ProtoId getCallProto() {
         return call_proto;
     }
 
+    /**
+     * The register count declared by the method.
+     */
     public int getRegisterCount() {
         return register_count;
     }
 
+    /**
+     * A textual dump of every position, prefixed with the method name and
+     * prototype.
+     */
     public String describe() {
         var j = new StringJoiner("\n\n", "\n\n", "");
         var size = positions.size();
@@ -188,146 +206,105 @@ public final class AnalyzedMethod {
         return out;
     }
 
-    private void iterate_sources(Register reg, BiConsumer<Position, Register> action) {
-        Objects.requireNonNull(reg);
-        Objects.requireNonNull(action);
-        if (reg.isUndefined()) {
-            // An undefined value has no origin to walk back to
-            throw new IllegalArgumentException("The register is undefined");
-        }
 
-        var todo = new ArrayDeque<Register>();
-        var done = new HashSet<Register>();
-
-        todo.add(reg);
-        while (!todo.isEmpty()) {
-            var tmp = todo.poll();
-            if (done.contains(tmp)) {
-                continue;
-            }
-            done.add(tmp);
-
-            // Only the value passed in by the caller can be undefined: a
-            // value reachable through register sources always has an origin
-            assert !tmp.isUndefined();
-
-            var ident = tmp.getSource();
-
-            if (ident.isParameter()) {
-                action.accept(null, tmp);
-                continue;
-            }
-
-            var pos = position(ident.address());
-            if (ident.produced() && pos.outputs().contains(ident.slot())) {
-                // The instruction at this address produced the value
-                action.accept(pos, tmp);
-            } else if (pos.isFirst()) {
-                // The entry position has no predecessors: a value that is
-                // not produced there flows in from the parameter line
-                todo.add(pos.before().at(ident.slot()));
-            } else {
-                // The value was joined here or the instruction only refined
-                // the value flowing into it; before() is exactly the merge
-                // of the incoming edges, so those edges are all that is left
-                for (var trans : pos.predecessors()) {
-                    var parent = position(trans.address());
-                    var line = trans.isNormal() ? parent.after() : parent.before();
-                    todo.add(line.at(ident.slot()));
-                }
-            }
-        }
-    }
-
+    /**
+     * Every value that can flow into {@code reg}: the parameters and the
+     * values written by the defining instructions.
+     *
+     * @throws IllegalArgumentException if {@code reg} is {@link Register.Undefined}
+     */
     public Set<Register> value_sources(Register reg) {
-        var values = new LinkedHashSet<Register>();
-        iterate_sources(reg, (pos, target) -> values.add(target));
-        return Collections.unmodifiableSet(values);
+        return AnalysisUtils.value_sources(this::position, reg);
     }
 
+    /**
+     * The integral constants that {@code reg} may hold; a defining value
+     * without a literal contributes nothing.
+     *
+     * @throws IllegalArgumentException if {@code reg} is not an integral
+     *                                  constant register
+     */
     public IntSet constant_values(Register reg) {
-        var kind = reg.getConstantKind();
-        if (kind == null) {
-            throw new IllegalArgumentException("Not a constant register " + reg);
-        }
-        if (!kind.isInt()) {
-            throw new IllegalArgumentException(String.format(
-                    "Unexpected register type %s, expected integral constant", reg));
-        }
-
-        var values = new IntSet();
-        iterate_sources(reg, (pos, target) -> {
-            var insn = pos.instruction();
-            if (insn instanceof LiteralInstruction src) {
-                values.add(src.getLiteral());
-            } else {
-                // The value is unknown here
-                assert insn.getOpcode() == AGET
-                        || insn.getOpcode() == AGET_BOOLEAN
-                        || insn.getOpcode() == AGET_BYTE
-                        || insn.getOpcode() == AGET_CHAR
-                        || insn.getOpcode() == AGET_SHORT;
-            }
-        });
-
-        return values.freeze();
+        return AnalysisUtils.constant_values(this::position, reg);
     }
 
+    /**
+     * The wide constants that {@code reg} may hold; a defining value without
+     * a literal contributes nothing.
+     *
+     * @throws IllegalArgumentException if {@code reg} is not a wide constant
+     *                                  register
+     */
     public LongSet wide_constant_values(Register reg) {
-        var kind = reg.getConstantKind();
-        if (kind == null) {
-            throw new IllegalArgumentException("Not a constant register " + reg);
-        }
-        if (!kind.isWide()) {
-            throw new IllegalArgumentException(String.format(
-                    "Unexpected register type %s, expected wide constant", reg));
-        }
-
-        var values = new LongSet();
-        iterate_sources(reg, (pos, target) -> {
-            Instruction insn = pos.instruction();
-            if (insn instanceof WideLiteralInstruction src) {
-                values.add(src.getWideLiteral());
-            } else if (insn instanceof LiteralInstruction src) {
-                // const-wide/16 and const-wide/32
-                values.add(src.getLiteral());
-            } else {
-                // The value is unknown here
-                assert insn.getOpcode() == AGET_WIDE;
-            }
-        });
-
-        return values.freeze();
+        return AnalysisUtils.wide_constant_values(this::position, reg);
     }
 
+    /**
+     * The values that {@code reg} may refer to: {@code null} for a zero or
+     * null value, otherwise the reference of the defining instruction.
+     *
+     * @throws IllegalArgumentException if {@code reg} is not a reference
+     *                                  constant register
+     */
     public Set<Object> ref_constant_values(Register reg) {
-        var kind = reg.getConstantKind();
-        if (kind == null) {
-            throw new IllegalArgumentException("Not a constant register " + reg);
-        }
-        if (!kind.isRef()) {
-            throw new IllegalArgumentException(String.format(
-                    "Unexpected register type %s, expected reference constant", reg));
-        }
-
-        var values = new LinkedHashSet<>();
-        iterate_sources(reg, (pos, target) -> {
-            if (target.isZeroOrNull()) {
-                values.add(null);
-            } else {
-                InstructionN1c src = pos.instruction();
-                values.add(src.getReference1());
-            }
-        });
-
-        return Collections.unmodifiableSet(values);
+        return AnalysisUtils.ref_constant_values(this::position, reg);
     }
 
+    /**
+     * One usage of a tracked value: the position reading it and the
+     * register read.
+     */
+    public record ValueUsage(Position position, int slot) {
+
+        /**
+         * The value read at this usage.
+         */
+        public Register value() {
+            return position.before().at(slot);
+        }
+    }
+
+    /**
+     * All usages of the value held in register {@code slot} when the
+     * instruction at address {@code start} is reached, sorted by
+     * instruction address, then register. The start instruction
+     * itself counts when it reads the register; moves are followed
+     * to their destination; merges are passed by register; catch
+     * edges carry the state before the instruction.
+     *
+     * @throws AnalysisException              if there is no instruction at {@code start}
+     * @throws ArrayIndexOutOfBoundsException if {@code slot} is not a valid register index
+     */
+    public List<ValueUsage> value_usages(int start, int slot) {
+        return AnalysisUtils.value_usages(this::position, start, slot);
+    }
+
+    /**
+     * Checks whether register {@code slot} is read on some execution
+     * path starting at the instruction at address {@code start}; a
+     * move counts as a use, value copies are not followed.
+     *
+     * @throws AnalysisException              if there is no instruction at {@code start}
+     * @throws ArrayIndexOutOfBoundsException if {@code slot} is not a valid register index
+     */
+    public boolean is_used_in_branch(int start, int slot) {
+        return AnalysisUtils.is_used_in_branch(this::position, start, slot);
+    }
+
+    /**
+     * Analyzes the method with the default type resolver.
+     */
     public static AnalyzedMethod analyze(
             TypeId declaring_class, MethodDef def, AnalysisOptions options) {
         return analyze(TypeResolver.DEFAULT, declaring_class, def, options);
     }
 
+    /**
+     * Analyzes the method with the given resolver and options.
+     *
+     * @throws IllegalArgumentException if the method has no implementation
+     * @throws AnalysisException        if the code is empty
+     */
     public static AnalyzedMethod analyze(
             TypeResolver resolver, TypeId declaring_class,
             MethodDef def, AnalysisOptions options) {
@@ -353,7 +330,9 @@ public final class AnalyzedMethod {
         var method = new AnalyzedMethod(declaring_class,
                 def, implementation, code_map, offset,
                 def.callProto(declaring_class), regs, options.hasVerification());
+        method.scan();
         method.init();
+        method.resolve(resolver);
         method.analyze(resolver);
         method.freeze();
         return method;
@@ -367,7 +346,7 @@ public final class AnalyzedMethod {
         }
     }
 
-    private RegisterLine firstLine() {
+    private RegisterLine buildFirstLine() {
         final int address = -1;
         var line = new RegisterLine(register_count);
         var params = method.getParameterTypes();
@@ -382,7 +361,12 @@ public final class AnalyzedMethod {
                 outputPrim(line, address, pos, type);
             }
         }
-        if ((method.getAccessFlags() & ACC_STATIC) == 0) {
+        if ((method.getAccessFlags() & ACC_STATIC) != 0) {
+            // Static methods do not have "this", but the initialization flag is
+            // still set. Then isThisInitialized() returns false only for
+            // constructors and only when "this" is truly uninitialized.
+            line.markThisInitialized();
+        } else {
             pos -= 1;
             var ident = new Identifier(address, pos);
             Register value;
@@ -395,6 +379,130 @@ public final class AnalyzedMethod {
             line.copy(address, pos, value);
         }
         return line;
+    }
+
+    /**
+     * The register state at method entry – the incoming parameters and
+     * {@code this}, every other slot undefined; the line the analysis seeds
+     * the first position with.
+     */
+    public RegisterLine firstLine() {
+        return firstLine;
+    }
+
+    /**
+     * Validates every instruction against the standard opcode set and
+     * fills the per-instruction payload and call signature caches.
+     */
+    private void scan() {
+        int count = positions.size();
+        for (int i = 0; i < count; i++) {
+            scanPosition(positionAt(i));
+        }
+    }
+
+    private void scanPosition(Position current) {
+        var insn = current.instruction();
+        var opcode = insn.getOpcode();
+        int address = current.address();
+        switch (opcode) {
+            case FILLED_NEW_ARRAY -> {
+                var tmp = (InstructionNv5c) insn;
+                var ref = (TypeId) tmp.getReference1();
+                var reg_count = tmp.getRegisterCount();
+
+                var component = ref.componentType();
+                if (verify) if (component == null || component.isWidePrimitive()) {
+                    throw unexpectedType(current, ref);
+                }
+
+                current.accessProto(ProtoId.raw(ref,
+                        Converter.listOf(reg_count, component)));
+            }
+            case FILLED_NEW_ARRAY_RANGE -> {
+                var tmp = (InstructionNrc) insn;
+                var ref = (TypeId) tmp.getReference1();
+                var reg_count = tmp.getRegisterCount();
+
+                var component = ref.componentType();
+                if (verify) if (component == null || component.isWidePrimitive()) {
+                    throw unexpectedType(current, ref);
+                }
+
+                current.accessProto(ProtoId.raw(ref,
+                        Converter.listOf(reg_count, component)));
+            }
+            case FILL_ARRAY_DATA -> {
+                var tmp = (InstructionN1t) insn;
+                current.payload(instruction(ARRAY_PAYLOAD,
+                        address + tmp.getBranchOffset()));
+            }
+            case PACKED_SWITCH, SPARSE_SWITCH -> {
+                var tmp = (InstructionN1t) insn;
+                var expected = opcode == PACKED_SWITCH ?
+                        PACKED_SWITCH_PAYLOAD : SPARSE_SWITCH_PAYLOAD;
+                current.payload(instruction(expected,
+                        address + tmp.getBranchOffset()));
+            }
+            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_DIRECT,
+                 INVOKE_STATIC, INVOKE_INTERFACE -> {
+                var tmp = (InstructionNv5c) insn;
+                var ref = (MethodId) tmp.getReference1();
+
+                current.accessProto(opcode == INVOKE_STATIC ?
+                        ref.getProto() : ref.instanceProto());
+            }
+            case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
+                 INVOKE_DIRECT_RANGE, INVOKE_STATIC_RANGE,
+                 INVOKE_INTERFACE_RANGE -> {
+                var tmp = (InstructionNrc) insn;
+                var ref = (MethodId) tmp.getReference1();
+
+                current.accessProto(opcode == INVOKE_STATIC_RANGE ?
+                        ref.getProto() : ref.instanceProto());
+            }
+            case INVOKE_POLYMORPHIC -> {
+                var tmp = (InstructionNv5cc) insn;
+                var ref = (ProtoId) tmp.getReference2();
+
+                current.accessProto(ref.insertThis(METHOD_HANDLE));
+            }
+            case INVOKE_POLYMORPHIC_RANGE -> {
+                var tmp = (InstructionNrcc) insn;
+                var ref = (ProtoId) tmp.getReference2();
+
+                current.accessProto(ref.insertThis(METHOD_HANDLE));
+            }
+            case INVOKE_CUSTOM -> {
+                var tmp = (InstructionNv5c) insn;
+                // TODO? verify callsite
+                var ref = (CallSiteId) tmp.getReference1();
+
+                current.accessProto(ref.getMethodProto());
+            }
+            case INVOKE_CUSTOM_RANGE -> {
+                var tmp = (InstructionNrc) insn;
+                // TODO? verify callsite
+                var ref = (CallSiteId) tmp.getReference1();
+
+                current.accessProto(ref.getMethodProto());
+            }
+            default -> {
+                if (opcode.odexOnly()) {
+                    throw unsupportedOpcode(current, "odex");
+                }
+                if (opcode.isLegacy()) {
+                    throw unsupportedOpcode(current, "legacy");
+                }
+                if (opcode.isExpanded()) {
+                    throw unsupportedOpcode(current, "expanded");
+                }
+                if (opcode.isRaw()) {
+                    throw unsupportedOpcode(current, "raw");
+                }
+                // no per-instruction cache
+            }
+        }
     }
 
     private void init() {
@@ -436,8 +544,9 @@ public final class AnalyzedMethod {
         }
     }
 
-    private static void init_35c_45cc_args(
-            Position current, VariableFiveRegisterInstruction tmp, ProtoId proto, boolean verify) {
+    private static void init_35c_45cc_args(Position current, boolean verify) {
+        VariableFiveRegisterInstruction tmp = current.instruction();
+        var proto = current.accessProto();
         var reg_count = tmp.getRegisterCount();
         var sig_count = proto.countInputRegisters();
 
@@ -457,8 +566,9 @@ public final class AnalyzedMethod {
         }
     }
 
-    private static void init_3rc_4rcc_args(
-            Position current, RegisterRangeInstruction tmp, ProtoId proto, boolean verify) {
+    private static void init_3rc_4rcc_args(Position current, boolean verify) {
+        RegisterRangeInstruction tmp = current.instruction();
+        var proto = current.accessProto();
         var reg_count = tmp.getRegisterCount();
         var sig_count = proto.countInputRegisters();
 
@@ -521,6 +631,9 @@ public final class AnalyzedMethod {
                 current.wideOutput(idst);
             }
             case MOVE_EXCEPTION -> {
+                if (address == 0) {
+                    throw new AnalysisException("move-exception at pc 0x0");
+                }
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
@@ -607,6 +720,9 @@ public final class AnalyzedMethod {
                 }
 
                 current.input(ireg);
+                // Fake output register – the instruction replaces the value with a new
+                // one, changing the type, and does not affect any other registers,
+                // even if the content is the same
                 current.output(ireg);
             }
             case INSTANCE_OF -> {
@@ -656,42 +772,11 @@ public final class AnalyzedMethod {
                 current.input(isrc);
                 current.output(idst);
             }
-            case FILLED_NEW_ARRAY -> {
-                var tmp = (InstructionNv5c) insn;
-                var ref = (TypeId) tmp.getReference1();
-                var reg_count = tmp.getRegisterCount();
-
-                var component = ref.componentType();
-                if (verify) if (component == null || component.isWidePrimitive()) {
-                    throw unexpectedType(current, ref);
-                }
-
-                var proto = ProtoId.raw(ref, Converter.listOf(reg_count, component));
-                current.accessProto(proto);
-
-                init_35c_45cc_args(current, tmp, proto, verify);
-            }
-            case FILLED_NEW_ARRAY_RANGE -> {
-                var tmp = (InstructionNrc) insn;
-                var ref = (TypeId) tmp.getReference1();
-                var reg_count = tmp.getRegisterCount();
-
-                var component = ref.componentType();
-                if (verify) if (component == null || component.isWidePrimitive()) {
-                    throw unexpectedType(current, ref);
-                }
-
-                var proto = ProtoId.raw(ref, Converter.listOf(reg_count, component));
-                current.accessProto(proto);
-
-                init_3rc_4rcc_args(current, tmp, proto, verify);
-            }
+            case FILLED_NEW_ARRAY -> init_35c_45cc_args(current, verify);
+            case FILLED_NEW_ARRAY_RANGE -> init_3rc_4rcc_args(current, verify);
             case FILL_ARRAY_DATA -> {
                 var tmp = (InstructionN1t) insn;
                 var ireg = tmp.getRegister1();
-
-                current.payload(instruction(ARRAY_PAYLOAD,
-                        address + tmp.getBranchOffset()));
 
                 current.input(ireg);
             }
@@ -708,11 +793,7 @@ public final class AnalyzedMethod {
                 var unit_count = tmp.getUnitCount();
                 var ireg = tmp.getRegister1();
 
-                var expected = opcode == PACKED_SWITCH ?
-                        PACKED_SWITCH_PAYLOAD : SPARSE_SWITCH_PAYLOAD;
-                SwitchPayload payload = instruction(
-                        expected, address + tmp.getBranchOffset());
-                current.payload(payload);
+                var payload = (SwitchPayload) current.payload();
 
                 boolean nop = true;
                 for (var entry : payload.getSwitchElements()) {
@@ -913,67 +994,16 @@ public final class AnalyzedMethod {
 
                 input(current, ival, shorty);
             }
-            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_DIRECT,
-                 INVOKE_STATIC, INVOKE_INTERFACE -> {
-                var tmp = (InstructionNv5c) insn;
-                var ref = (MethodId) tmp.getReference1();
-
-                var proto = (opcode == INVOKE_STATIC) ?
-                        ref.getProto() : ref.instanceProto();
-                current.accessProto(proto);
-
-                init_35c_45cc_args(current, tmp, proto, verify);
-            }
+            case INVOKE_VIRTUAL, INVOKE_SUPER, INVOKE_DIRECT, INVOKE_STATIC,
+                 INVOKE_INTERFACE, INVOKE_CUSTOM, INVOKE_POLYMORPHIC ->
+                //noinspection DuplicateBranchesInSwitch
+                    init_35c_45cc_args(current, verify);
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE,
                  INVOKE_DIRECT_RANGE, INVOKE_STATIC_RANGE,
-                 INVOKE_INTERFACE_RANGE -> {
-                var tmp = (InstructionNrc) insn;
-                var ref = (MethodId) tmp.getReference1();
-
-                var proto = (opcode == INVOKE_STATIC_RANGE) ?
-                        ref.getProto() : ref.instanceProto();
-                current.accessProto(proto);
-
-                init_3rc_4rcc_args(current, tmp, proto, verify);
-            }
-            case INVOKE_POLYMORPHIC -> {
-                var tmp = (InstructionNv5cc) insn;
-                var ref = (ProtoId) tmp.getReference2();
-
-                var proto = ref.insertThis(METHOD_HANDLE);
-                current.accessProto(proto);
-
-                init_35c_45cc_args(current, tmp, proto, verify);
-            }
-            case INVOKE_POLYMORPHIC_RANGE -> {
-                var tmp = (InstructionNrcc) insn;
-                var ref = (ProtoId) tmp.getReference2();
-
-                var proto = ref.insertThis(METHOD_HANDLE);
-                current.accessProto(proto);
-
-                init_3rc_4rcc_args(current, tmp, proto, verify);
-            }
-            case INVOKE_CUSTOM -> {
-                var tmp = (InstructionNv5c) insn;
-                // TODO? verify callsite
-                var ref = (CallSiteId) tmp.getReference1();
-
-                var proto = ref.getMethodProto();
-                current.accessProto(proto);
-
-                init_35c_45cc_args(current, tmp, proto, verify);
-            }
-            case INVOKE_CUSTOM_RANGE -> {
-                var tmp = (InstructionNrc) insn;
-                // TODO? verify callsite
-                var ref = (CallSiteId) tmp.getReference1();
-
-                var proto = ref.getMethodProto();
-                current.accessProto(proto);
-
-                init_3rc_4rcc_args(current, tmp, proto, verify);
-            }
+                 INVOKE_INTERFACE_RANGE, INVOKE_CUSTOM_RANGE,
+                 INVOKE_POLYMORPHIC_RANGE ->
+                //noinspection DuplicateBranchesInSwitch
+                    init_3rc_4rcc_args(current, verify);
             case NEG_INT, NOT_INT, NEG_FLOAT, INT_TO_FLOAT, FLOAT_TO_INT,
                  INT_TO_BYTE, INT_TO_CHAR, INT_TO_SHORT ->
             //noinspection DuplicateBranchesInSwitch
@@ -1095,14 +1125,10 @@ public final class AnalyzedMethod {
                 current.output(idst);
             }
             default -> {
+                // A payload is data for an instruction that points at it;
+                // the worklist can only reach one by executing it as code
                 if (opcode.isPayload()) {
                     throw new AnalysisException("Encountered data table in instruction stream");
-                }
-                if (opcode.odexOnly()) {
-                    throw new AnalysisException("Encountered odex instruction");
-                }
-                if (opcode.isRaw()) {
-                    throw new AnalysisException("Encountered raw instruction");
                 }
                 throw shouldNotReachHere();
             }
@@ -1127,6 +1153,26 @@ public final class AnalyzedMethod {
                     var target = position(catch_all);
                     transition(todo, current, target, THROWABLE);
                 }
+            }
+        }
+    }
+
+    /**
+     * Resolves, once per instruction, the inputs of
+     * the move-result and move-exception instructions.
+     */
+    private void resolve(TypeResolver resolver) {
+        int count = positions.size();
+        for (int i = 0; i < count; i++) {
+            var current = positionAt(i);
+            if (!current.isStructurallyReachable()) {
+                continue;
+            }
+            switch (current.opcode()) {
+                case MOVE_RESULT, MOVE_RESULT_WIDE, MOVE_RESULT_OBJECT ->
+                        current.resultType(getResultType(current));
+                case MOVE_EXCEPTION -> current.exceptionType(getExceptionType(resolver, current));
+                default -> { /* no resolved type */ }
             }
         }
     }
@@ -1191,6 +1237,11 @@ public final class AnalyzedMethod {
                 "Rejecting invocation, expected %s argument registers, but method signature %s has %s in %s",
                 reg_count, proto, sig_count, describe(current)
         ));
+    }
+
+    private static RuntimeException unsupportedOpcode(Position current, String category) {
+        throw new AnalysisException("Encountered " + category
+                + " instruction " + current.opcode() + " in " + describe(current));
     }
 
     private static RuntimeException invalidBranchTarget(Position current) {
@@ -1279,8 +1330,8 @@ public final class AnalyzedMethod {
     private static boolean isRequireNonNull(MethodId mid) {
         return OBJECTS.equals(mid.getDeclaringClass())
                 && "requireNonNull".equals(mid.getName())
-                // Methods without parameters don't exist,
-                // but no one stops bad code from existing
+                // Methods without parameters do not exist,
+                // but nothing stops bad code from existing
                 && !mid.getParameterTypes().isEmpty();
     }
 
@@ -1304,7 +1355,7 @@ public final class AnalyzedMethod {
             }
         }
         if (common == null) {
-            // How could this even happen?
+            // This is not expected to happen
             throw shouldNotReachHere();
         }
         return common;
@@ -1326,7 +1377,8 @@ public final class AnalyzedMethod {
         var type = type_info.base();
         var ident = introduced(current.address(), ithis_reg);
         // The exactness of the allocated value survives initialization
-        var new_value = Reference.of(ident, type, true, this_reg.isExactRef());
+        var new_value = Reference.of(ident, type,
+                true, this_reg.isExactRef());
         var line = current.after();
         // Every alias of the receiver is initialized by the same call
         for (int i = 0; i < line.registerCount(); i++) {
@@ -1346,7 +1398,8 @@ public final class AnalyzedMethod {
         Register new_value;
         if (reg instanceof Reference ref) {
             var ident = introduced(address, ireg);
-            new_value = Reference.of(ident, ref.typeInfo(), true, ref.isExact());
+            new_value = Reference.of(ident, ref.typeInfo(),
+                    true, ref.isExact());
         } else if (reg instanceof Constant constant) {
             var kind = constant.classify();
             if (!kind.isNullable()) {
@@ -1375,8 +1428,8 @@ public final class AnalyzedMethod {
      * Answers whether a check-cast of a value statically typed {@code source}
      * to {@code target} can never succeed: no runtime class is a subtype of
      * both types.
-     *
-     * <p>A final class has no subclasses, so a value statically typed as it
+     * <p>
+     * A final class has no subclasses, so a value statically typed as it
      * can only be an instance of that very class; the same holds for an
      * exactly typed value. Two classes meet only when one extends the
      * other, and an array fits a shallower type only through Object,
@@ -1409,7 +1462,7 @@ public final class AnalyzedMethod {
             // Arrays are compatible exactly when their components are. The
             // depths are equal here and stripping one dimension from both
             // never changes the answer, so every level collapses into the
-            // bases at once
+            // bases at once.
             source = new TypeInfo(source.base(), 0);
             target = new TypeInfo(target.base(), 0);
         }
@@ -1431,7 +1484,7 @@ public final class AnalyzedMethod {
         }
         // An interface is involved. A subclass of a non-final class may
         // still implement it, so only a final class decides the answer;
-        // an unknown class is treated as an interface (fail-open)
+        // an unknown class is treated as an interface (fail-open).
         if (!source_interface && resolver.isFinal(source.base(), false)) {
             return !resolver.isAssignable(source, target, true, true);
         }
@@ -1680,18 +1733,20 @@ public final class AnalyzedMethod {
         var insn = current.instruction();
         var opcode = insn.getOpcode();
         if (opcode == THROW || opcode.isReturn()) {
-            // Note: We don't call current.passRegs() here because
+            // Note: current.passRegs() is not called here because
             // these instructions never complete execution 'normally'
         } else {
             current.passRegs();
         }
-        boolean next_reachable = true;
+        boolean always_throws = opcode == THROW;
         boolean is_strict_nop = current.isStrictNop();
         boolean is_lossy_nop = current.isLossyNop();
         switch (opcode) {
             case NOP, GOTO, GOTO_16, GOTO_32 -> {
                 // No effect on or use of registers
             }
+            // Move kind checks are unconditional: they keep wide
+            // pairs unbreakable when verification is disabled
             case MOVE, MOVE_FROM16, MOVE_16 -> {
                 var tmp = (InstructionN2x) insn;
                 var idst = tmp.getRegister1();
@@ -1699,7 +1754,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);
 
-                if (verify) if (!src.isIntOrFloat() && !src.isConflict()) {
+                if (!src.isIntOrFloat()) {
                     throw unexpectedReg(current, isrc, src);
                 }
                 is_strict_nop = (isrc == idst) || Objects.equals(src, dst);
@@ -1713,7 +1768,7 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().pairAt(isrc);
 
-                if (verify) if (!src.isWidePair()) {
+                if (!src.isWidePair()) {
                     throw unexpectedRegPair(current, isrc, src);
                 }
                 is_strict_nop = (isrc == idst) || Objects.equals(src, dst);
@@ -1727,19 +1782,18 @@ public final class AnalyzedMethod {
                 var isrc = tmp.getRegister2();
                 var src = current.before().at(isrc);
 
-                if (verify) if (!src.isRef() && !src.isConflict()) {
+                if (!src.isRef()) {
                     throw unexpectedReg(current, isrc, src);
                 }
                 is_strict_nop = (isrc == idst) || Objects.equals(src, dst);
 
                 current.after().copy(address, idst, src);
             }
-            // TODO: separate stage for move_result/exception verification
             case MOVE_RESULT -> {
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
-                var type = getResultType(current);
+                var type = current.resultType();
                 if (verify) if (!type.isThinPrimitive()) {
                     throw unexpectedType(current, type);
                 }
@@ -1750,7 +1804,7 @@ public final class AnalyzedMethod {
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
-                var type = getResultType(current);
+                var type = current.resultType();
                 if (verify) if (!type.isWidePrimitive()) {
                     throw unexpectedType(current, type);
                 }
@@ -1761,25 +1815,23 @@ public final class AnalyzedMethod {
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
-                var predecessor = getResultPredecessor(current);
-                var type = predecessor.accessProto().getReturnType();
+                var type = current.resultType();
                 if (verify) if (!type.isReference()) {
                     throw unexpectedType(current, type);
                 }
 
+                // Validity verified at the resolve stage
+                var predecessor = positionAt(index - 1);
                 var non_null = hasNonNullResult(predecessor);
                 // filled-new-array creates exactly an array of its type
                 var exact = hasExactResult(predecessor);
                 outputRef(current, idst, type, non_null, exact);
             }
             case MOVE_EXCEPTION -> {
-                if (address == 0) {
-                    throw new AnalysisException("move-exception at pc 0x0");
-                }
                 var tmp = (InstructionN1x) insn;
                 var idst = tmp.getRegister1();
 
-                var type = getExceptionType(resolver, current);
+                var type = current.exceptionType();
                 assert type.isReference();
 
                 // Note: move-exception never returns null
@@ -1841,7 +1893,7 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, ireg, reg);
                 }
 
-                if (reg.isZeroOrNull()) next_reachable = false;
+                if (reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ireg, reg);
             }
             case CHECK_CAST -> {
@@ -1864,8 +1916,9 @@ public final class AnalyzedMethod {
                     var type = reg.getTypeInfo();
                     assert type != null;
                     if (Objects.equals(type.exactType(), ref)) {
-                        // We don't use a constant check here because for ref values the
-                        // difference exists only for us, but not for the Android verifier
+                        // A constant check is not used here because for ref values
+                        // the difference matters only to this library, not to the
+                        // Android verifier
                         //
                         // is_lossy_nop = reg.isConstant();
                         // is_strict_nop = !reg.isConstant();
@@ -1876,7 +1929,7 @@ public final class AnalyzedMethod {
                         // No runtime class can be a subtype of both types
                         is_lossy_nop = false;
                         is_strict_nop = false;
-                        next_reachable = false;
+                        always_throws = true;
                     } else if (isWideningCast(resolver, type, TypeInfo.of(ref))) {
                         is_lossy_nop = true;
                         is_strict_nop = false;
@@ -1913,7 +1966,7 @@ public final class AnalyzedMethod {
                     throw unexpectedReg(current, iarr, arr);
                 }
 
-                if (arr.isZeroOrNull()) next_reachable = false;
+                if (arr.isZeroOrNull()) always_throws = true;
 
                 outputPrim(current, idst, I);
 
@@ -1956,7 +2009,7 @@ public final class AnalyzedMethod {
                 var reg = current.before().at(ireg);
                 if (reg.isZeroOrNull()) {
                     // Runtime exception
-                    next_reachable = false;
+                    always_throws = true;
                 } else {
                     var info = reg.getTypeInfo();
                     if (info == null || !info.isComponentPrimitive()) {
@@ -2182,7 +2235,11 @@ public final class AnalyzedMethod {
                 int reg2t = classifier.applyAsInt(reg2);
                 int argt = reg1t | reg2t;
 
-                if (verify) if (argt == 0b11) {
+                // The null constant is comparable with references and zero
+                // only: a non-zero integral, float or wide value mismatches
+                if (verify) if (argt == 0b11
+                        || (reg1.isNull() && !reg2.isRef())
+                        || (reg2.isNull() && !reg1.isRef())) {
                     throw new AnalysisException(
                             "Register v" + ireg1 + " of type " + reg1 + " and register v" +
                                     ireg2 + " of type " + reg2 + " can`t be args to " + describe(current)
@@ -2252,15 +2309,22 @@ public final class AnalyzedMethod {
                 }
 
                 if (arr.isZeroOrNull()) {
+                    // The read fails at runtime; infer a mergeable result
+                    // from the instruction type. The untyped aget cannot use
+                    // the int type (the array may hold floats), so an integer
+                    // constant is used; a non-zero constant distinguishes the
+                    // dead value from null.
                     switch (opcode) {
-                        // Pick a non-zero constant (to distinguish with null) that can fit in any primitive
-                        case AGET, AGET_BOOLEAN, AGET_BYTE, AGET_CHAR,
-                             AGET_SHORT -> constantInt(current, ival, 1);
+                        case AGET -> constant(current, ival, ConstantKind.INT);
+                        case AGET_BOOLEAN -> constant(current, ival, ConstantKind.BOOL);
+                        case AGET_BYTE -> constant(current, ival, ConstantKind.BYTE);
+                        case AGET_CHAR -> constant(current, ival, ConstantKind.CHAR);
+                        case AGET_SHORT -> constant(current, ival, ConstantKind.SHORT);
                         case AGET_WIDE -> wideConstant(current, ival);
                         case AGET_OBJECT -> constant(current, ival, ConstantKind.NULL);
                         default -> throw shouldNotReachHere();
                     }
-                    next_reachable = false;
+                    always_throws = true;
                 } else {
                     var info = arr.getTypeInfo();
                     if (info == null || !info.isArray()) {
@@ -2322,7 +2386,7 @@ public final class AnalyzedMethod {
                             }
                         }
                     }
-                    next_reachable = false;
+                    always_throws = true;
                 } else {
                     var info = arr.getTypeInfo();
                     if (info == null || !info.isArray()) {
@@ -2376,7 +2440,7 @@ public final class AnalyzedMethod {
                     outputPrim(current, ival, type);
                 }
 
-                if (obj.isZeroOrNull()) next_reachable = false;
+                if (obj.isZeroOrNull()) always_throws = true;
                 // The object operand is dereferenced; the field value may be null
                 markNonNull(current, iobj, obj);
             }
@@ -2389,7 +2453,8 @@ public final class AnalyzedMethod {
                 var ref = (FieldId) tmp.getReference1();
 
                 if (verify) {
-                    if (!obj.isAssignable(resolver, ref.getDeclaringClass(), true, true, false)) {
+                    if (!obj.isAssignable(resolver, ref.getDeclaringClass(),
+                            true, true, false)) {
                         throw unexpectedReg(current, iobj, obj);
                     }
 
@@ -2404,7 +2469,7 @@ public final class AnalyzedMethod {
                     verifyReg(resolver, current, ival, ref.getType());
                 }
 
-                if (obj.isZeroOrNull()) next_reachable = false;
+                if (obj.isZeroOrNull()) always_throws = true;
                 // The object operand is dereferenced; the stored value may be null
                 markNonNull(current, iobj, obj);
             }
@@ -2448,7 +2513,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, check_this);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 // A constructor receiver is an UninitializedRef, hence already non-null
                 markNonNull(current, ithis_reg, this_reg);
             }
@@ -2471,7 +2536,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, check_this);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 // A constructor receiver is an UninitializedRef, hence already non-null
                 markNonNull(current, ithis_reg, this_reg);
             }
@@ -2484,7 +2549,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_POLYMORPHIC -> {
@@ -2496,7 +2561,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_35c_45cc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_VIRTUAL_RANGE, INVOKE_SUPER_RANGE, INVOKE_INTERFACE_RANGE -> {
@@ -2508,7 +2573,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_POLYMORPHIC_RANGE -> {
@@ -2520,7 +2585,7 @@ public final class AnalyzedMethod {
 
                 if (verify) verify_3rc_4rcc_args(resolver, current, true, true);
 
-                if (this_reg.isZeroOrNull()) next_reachable = false;
+                if (this_reg.isZeroOrNull()) always_throws = true;
                 markNonNull(current, ithis_reg, this_reg);
             }
             case INVOKE_STATIC, INVOKE_CUSTOM -> {
@@ -2531,7 +2596,7 @@ public final class AnalyzedMethod {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getRegister1();
                         var obj_reg = current.before().at(iobj_reg);
-                        if (obj_reg.isZeroOrNull()) next_reachable = false;
+                        if (obj_reg.isZeroOrNull()) always_throws = true;
                         // requireNonNull rejects a null first argument
                         markNonNull(current, iobj_reg, obj_reg);
                     }
@@ -2545,7 +2610,7 @@ public final class AnalyzedMethod {
                         assert tmp.getRegisterCount() > 0;
                         int iobj_reg = tmp.getStartRegister();
                         var obj_reg = current.before().at(iobj_reg);
-                        if (obj_reg.isZeroOrNull()) next_reachable = false;
+                        if (obj_reg.isZeroOrNull()) always_throws = true;
                         // requireNonNull rejects a null first argument
                         markNonNull(current, iobj_reg, obj_reg);
                     }
@@ -2626,6 +2691,9 @@ public final class AnalyzedMethod {
         }
         current.setStrictNop(is_strict_nop);
         current.setLossyNop(is_lossy_nop);
+        // Recomputed on every visit: a later incoming edge can turn a
+        // definite proof into a "maybe" and restore the fall-through
+        current.setAlwaysThrowing(always_throws);
         if (opcode.isConditionalBranch() || opcode.isSwitch()) {
             // 'if' and 'switch' instructions have special handling because they
             // provide information about the state of the register in different branches
@@ -2633,10 +2701,12 @@ public final class AnalyzedMethod {
         } else {
             for (var transition : current.successors) {
                 var target = position(transition.address());
-                // If this is a transition to catch handler, then registers in the
-                // state before execution of the current instruction are placed there
+                // If this is a transition to a catch handler, then the registers in
+                // the state before execution of the current instruction are placed
+                // there
                 var line = transition.isCatch() ? current.before() : current.after();
-                var reachable = transition.isCatch() || next_reachable;
+                // An always-throwing instruction has no reachable fall-through
+                var reachable = transition.isCatch() || !always_throws;
                 merge(resolver, touched, todo, current, target, line, reachable);
             }
         }

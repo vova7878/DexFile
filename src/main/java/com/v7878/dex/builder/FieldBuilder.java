@@ -106,6 +106,11 @@ public final class FieldBuilder {
 
     public FieldBuilder of(String descriptor) {
         Objects.requireNonNull(descriptor);
+        if (descriptor.contains("->")) {
+            throw new IllegalArgumentException(
+                    "Expected a field definition name:type, got a member reference: "
+                            + descriptor);
+        }
         int colon = descriptor.lastIndexOf(':');
         if (colon < 0) {
             throw new IllegalArgumentException(

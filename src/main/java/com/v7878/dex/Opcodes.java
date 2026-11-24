@@ -33,9 +33,10 @@ public final class Opcodes {
         return new Opcodes(dex, options);
     }
 
-    private static String print(DexOptions<?> options) {
+    private static String print(DexVersion dex, DexOptions<?> options) {
         return "{" +
-                "api=" + options.api +
+                "dex=" + dex +
+                ", api=" + options.api +
                 ", art=" + options.art +
                 ", odex=" + options.odex +
                 ", expanded=" + options.expanded +
@@ -52,8 +53,8 @@ public final class Opcodes {
                 }
             }
             throw new IllegalArgumentException(String.format(
-                    "No opcode found with value %d for dex=%s, options=%b. %s",
-                    value, dex, print(options),
+                    "No opcode found with value %d, options=%s. %s",
+                    value, print(dex, options),
                     candidates.stream()
                             .map(op -> op + " (" + op.getConstraint() + ")")
                             .reduce((a, b) -> a + ", " + b)
@@ -71,8 +72,8 @@ public final class Opcodes {
             var constraint = opcode.getConstraint();
             throw new IllegalArgumentException(String.format(
                     "Constraints for opcode %s (%s) do not allow " +
-                            "obtaining int value with dex=%s, options=%b",
-                    opcode, constraint, dex, print(options)));
+                            "obtaining int value, options=%s",
+                    opcode, constraint, print(dex, options)));
         }
         return out;
     }

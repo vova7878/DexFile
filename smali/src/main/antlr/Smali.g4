@@ -484,6 +484,10 @@ call_site_reference returns[CallSiteId value]
     }
     ;
 
+class_def_reference returns[TypeId value]
+    : AT class_descriptor { $value = $class_descriptor.value; }
+    ;
+
 class_spec returns[TypeId type, int access_flags]
     : CLASS_DIRECTIVE
     access_list { $access_flags = $access_list.access_flags; }
@@ -550,6 +554,8 @@ field returns[FieldDef value]
     member_name { name = $member_name.value; }
     COLON type=nonvoid_type_descriptor { type = $type.value; }
     (ASSIGN literal { initial_value = $literal.value; })?
+    // Annotations before .end field belong to the field;
+    // otherwise they are class annotations
     ((annotation { add(annotations, $annotation.value); })*
     END_FIELD_DIRECTIVE)?
     ;
@@ -652,10 +658,11 @@ parameter_directive[
     @init{ int p; var annotations = new TreeSet<Annotation>(); }
     : PARAMETER_DIRECTIVE register[$ib] { p = $register.value; }
     (COMMA name=string_literal { $parameter_names.append(p, $name.value); })?
+    // Annotations before .end param belong to the parameter;
+    // otherwise they are method annotations
     ((annotation { add(annotations, $annotation.value); })* END_PARAMETER_DIRECTIVE)?
     { $parameter_annotations.append(p, Collections.unmodifiableNavigableSet(annotations)); }
     ;
-
 label returns[String value]
     : COLON simple_name { $value = $simple_name.value; }
     ;
@@ -664,6 +671,8 @@ label_directive[CodeBuilder ib]
     : label { $ib.label($label.value); }
     ;
 
+// A primitive, array or non-throwable reference type is legal here:
+// ART verifies such a handler unless it executes move-exception.
 catch_directive[CodeBuilder ib]
     : CATCH_DIRECTIVE ex=nonvoid_type_descriptor
     LBRACE from=label DOTDOT to=label RBRACE handler=label
@@ -691,6 +700,7 @@ line_directive[CodeBuilder ib]
     { $ib.line($line.value); }
     ;
 
+// The type is required; V denotes a null type
 local_directive[CodeBuilder ib]
     @init{
         int reg; String name = null;
@@ -728,7 +738,6 @@ source_directive[CodeBuilder ib]
     : SOURCE_DIRECTIVE (name=string_literal { name = $name.value; })?
     { $ib.source(name); }
     ;
-
 class_def
     returns[ClassDef value]
     locals[TypeId type, TypeId superclass, String source]
@@ -765,7 +774,7 @@ class_def
     | annotation { add(annotations, $annotation.value); }
     | method { add(methods, $method.value); }
     | field { add(fields, $field.value); }
-    )+
+    )*
     ;
 
 dex_file returns[Dex value]
@@ -787,7 +796,7 @@ instruction[IContext context] locals[Opcode op]
     | {$op.format() == Format11p}? args_format11p[$context, $op]
     | {$op.format() == Format11x}? args_format11x[$context, $op]
     | {$op.format() == Format12x}? args_format12x[$context, $op]
-    // TODO: | {$op.format() == Format20bc}? args_format20bc[$context, $op]
+    | {$op.format() == Format20bc}? args_format20bc[$context, $op]
     | {$op.format() == Format20t}? args_format20t[$context, $op]
     | {$op.format() == Format20t_24}? args_format20t_24[$context, $op]
     | {$op.format() == Format21c}? args_format21c[$context, $op]
@@ -809,40 +818,25 @@ instruction[IContext context] locals[Opcode op]
     | {$op.format() == Format34c}? args_format34c[$context, $op]
     | {$op.format() == Format35c}? args_format35c[$context, $op]
     | {$op.format() == Format3rc}? args_format3rc[$context, $op]
-    // TODO: | {$op.format() == Format40sc}? args_format40sc[$context, $op]
+    | {$op.format() == Format40sc}? args_format40sc[$context, $op]
     | {$op.format() == Format41c}? args_format41c[$context, $op]
     | {$op.format() == Format45cc}? args_format45cc[$context, $op]
     | {$op.format() == Format4rcc}? args_format4rcc[$context, $op]
     | {$op.format() == Format51l}? args_format51l[$context, $op]
     | {$op.format() == Format52c}? args_format52c[$context, $op]
     | {$op.format() == Format5rc}? args_format5rc[$context, $op]
-    // TODO: | {$op.format() == FormatRaw10x}? args_format_raw_10x[$context, $op]
-    // TODO: | {$op.format() == FormatRaw10c}? args_format_raw_10c[$context, $op]
-    // TODO: | {$op.format() == FormatRaw20c}? args_format_raw_20c[$context, $op]
-    // TODO: | {$op.format() == FormatWrapperRaw20x}? args_format_wrapper_raw_20x[$context, $op]
-    // TODO: | {$op.format() == FormatWrapperRaw40ci}? args_format_wrapper_raw_40ci[$context, $op]
+    | {$op.format() == FormatRaw10x}? args_format_raw_0x[$context, $op]
+    | {$op.format() == FormatRaw10c}? args_format_raw_0c[$context, $op]
+    | {$op.format() == FormatRaw20c}? args_format_raw_0c[$context, $op]
+    | {$op.format() == FormatWrapper20x}? args_format_raw_0x[$context, $op]
+    | {$op.format() == FormatWrapper40ci}? args_format_raw_0c[$context, $op]
     )
     | insn_array_data[$context.ib()]
     | insn_packed_switch[$context.ib()]
     | insn_sparse_switch[$context.ib()]
     ;
 
-reference[Opcode op, int index] returns[Object value] locals[ReferenceType type]
-    @init{ $type = $op.referenceType($index); }
-    : {$type == STRING}? string_literal { $value = $string_literal.value; }
-    | {$type == TYPE}? type_descriptor { $value = $type_descriptor.value; }
-    | {$type == FIELD}? field_reference { $value = $field_reference.value; }
-    | {$type == METHOD}? method_reference { $value = $method_reference.value; }
-    | {$type == PROTO}? method_prototype { $value = $method_prototype.value; }
-    | {$type == CLASS_DEF}? /* TODO */ { if(true) throw new UnsupportedOperationException(); }
-    | {$type == CALLSITE}? call_site_reference { $value = $call_site_reference.value; }
-    | {$type == METHOD_HANDLE}? method_handle_reference { $value = $method_handle_reference.value; }
-    | {$type == RAW_INDEX}?
-    ( inline_index { $value = $inline_index.value; }
-    | vtable_index { $value = $vtable_index.value; }
-    | field_offset { $value = $field_offset.value; }
-    )
-    ;
+// raw indexes
 inline_index returns[int value]
     : i=INLINE_INDEX { $value = LiteralUtils.parseInlineIndex($i.text); }
     ;
@@ -853,6 +847,48 @@ vtable_index returns[int value]
 
 field_offset returns[int value]
     : i=FIELD_OFFSET { $value = LiteralUtils.parseFieldOffset($i.text); }
+    ;
+
+reference[Opcode op, int index] returns[Object value] locals[ReferenceType type]
+    @init{ $type = $op.referenceType($index); }
+    : {$type == STRING}? s=string_literal { $value = $s.value; }
+    | {$type == TYPE}? t=type_descriptor { $value = $t.value; }
+    | {$type == FIELD}? f=field_reference { $value = $f.value; }
+    | {$type == METHOD}? m=method_reference { $value = $m.value; }
+    | {$type == PROTO}? mp=method_prototype { $value = $mp.value; }
+    | {$type == CLASS_DEF}? cd=class_def_reference { $value = $cd.value; }
+    | {$type == CALLSITE}? cs=call_site_reference { $value = $cs.value; }
+    | {$type == METHOD_HANDLE}? mh=method_handle_reference { $value = $mh.value; }
+    | {$type == RAW_INDEX}?
+    ( ii=inline_index { $value = $ii.value; }
+    | vi=vtable_index { $value = $vi.value; }
+    | fo=field_offset { $value = $fo.value; }
+    )
+    ;
+
+verification_error returns[VerificationError value]
+    : {isVerificationError()}? val=RAW_SIMPLE_NAME
+    { $value = VerificationError.of($val.text); }
+    ;
+
+verification_error_reference returns[ReferenceType type, Object value]
+    : f=field_reference { $type = FIELD; $value = $f.value; }
+    | m=method_reference { $type = METHOD; $value = $m.value; }
+    | t=type_descriptor { $type = TYPE; $value = $t.value; }
+    ;
+
+raw_reference returns[ReferenceType type, Object value]
+    : s=string_literal { $type = STRING; $value = $s.value; }
+    | f=field_reference { $type = FIELD; $value = $f.value; }
+    | m=method_reference { $type = METHOD; $value = $m.value; }
+    | mp=method_prototype { $type = PROTO; $value = $mp.value; }
+    | cs=call_site_reference { $type = CALLSITE; $value = $cs.value; }
+    | mh=method_handle_reference { $type = METHOD_HANDLE; $value = $mh.value; }
+    | cd=class_def_reference { $type = CLASS_DEF; $value = $cd.value; }
+    | t=type_descriptor { $type = TYPE; $value = $t.value; }
+    | ii=inline_index { $type = RAW_INDEX; $value = $ii.value; }
+    | vi=vtable_index { $type = RAW_INDEX; $value = $vi.value; }
+    | fo=field_offset { $type = RAW_INDEX; $value = $fo.value; }
     ;
 
 register_list[CodeBuilder ib] returns[int[] value]
@@ -918,6 +954,20 @@ args_format12x[IContext context, Opcode op] returns[int reg1, int reg2]
     {
         if(!CodeUtils.instruction($context, $op, $ctx))
             $context.ib().f12x($op, $reg1, $reg2);
+    }
+    ;
+
+args_format20bc[IContext context, Opcode op]
+    returns[VerificationError error, ReferenceType type, Object ref]
+    : err=verification_error { $error = $err.value; }
+    COMMA vref=verification_error_reference
+    {
+        $type = $vref.type;
+        $ref = $vref.value;
+    }
+    {
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f20bc($op, $error, $type, $ref);
     }
     ;
 
@@ -1112,6 +1162,20 @@ args_format3rc[IContext context, Opcode op] returns[int start, int count, Object
     }
     ;
 
+args_format40sc[IContext context, Opcode op]
+    returns[VerificationError error, ReferenceType type, Object ref]
+    : err=verification_error { $error = $err.value; }
+    COMMA vref=verification_error_reference
+    {
+        $type = $vref.type;
+        $ref = $vref.value;
+    }
+    {
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f40sc($op, $error, $type, $ref);
+    }
+    ;
+
 args_format41c[IContext context, Opcode op] returns[int reg, Object ref]
     : register[$context.ib()] { $reg = $register.value; }
     COMMA reference[$op, 0] { $ref = $reference.value; }
@@ -1168,6 +1232,29 @@ args_format5rc[IContext context, Opcode op] returns[int start, int count, Object
             $context.ib().f5rc($op, $ref, $count, $start);
     }
     ;
+
+args_format_raw_0x[IContext context, Opcode op] returns[short value]
+    : lit=integral_literal { $value = (short) CodeUtils.checkBits(16, $lit.value); }
+    {
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().raw($op, $value);
+    }
+    ;
+
+args_format_raw_0c[IContext context, Opcode op]
+    returns[ReferenceType type, Object ref]
+    : rref=raw_reference
+    {
+        $type = $rref.type;
+        $ref = $rref.value;
+    }
+    {
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().raw_ref($op, $type, $ref);
+    }
+    ;
+
+// payloads
 args_array_data returns[int width, List<Number> table]
     : int_literal v+=fixed_64bit_literal*
     {

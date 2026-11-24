@@ -16,6 +16,7 @@ import com.v7878.dex.immutable.ProtoId;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.ArrayPayload;
 import com.v7878.dex.immutable.bytecode.Instruction;
+import com.v7878.dex.immutable.bytecode.InstructionN0ci;
 import com.v7878.dex.immutable.bytecode.InstructionN0t;
 import com.v7878.dex.immutable.bytecode.InstructionN0x;
 import com.v7878.dex.immutable.bytecode.InstructionN1c;
@@ -55,8 +56,7 @@ public class InstructionWriter {
             case Format11p -> write_11p(((InstructionN1p) instruction), out, op);
             case Format11x -> write_11x(((InstructionN1x) instruction), out, op);
             case Format12x -> write_12x(((InstructionN2x) instruction), out, op);
-            // TODO
-            case Format20bc -> throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format20bc -> write_20bc(((InstructionN0ci) instruction), writer, out, op);
             case Format20t -> write_20t_16(((InstructionN0t) instruction), out, op);
             case Format20t_24 -> write_20t_24(((InstructionN0t) instruction), out, op);
             case Format21c -> write_21c(((InstructionN1c) instruction), writer, out, op);
@@ -78,9 +78,7 @@ public class InstructionWriter {
             case Format34c -> write_34c(((InstructionNv4c) instruction), writer, out, op);
             case Format35c -> write_35c(((InstructionNv5c) instruction), writer, out, op);
             case Format3rc -> write_3rc(((InstructionNrc) instruction), writer, out, op);
-            // TODO
-            case Format40cs -> //noinspection DuplicateBranchesInSwitch
-                    throw new UnsupportedOperationException("Unimplemented yet!");
+            case Format40sc -> write_40sc(((InstructionN0ci) instruction), writer, out, op);
             case Format41c -> write_41c(((InstructionN1c) instruction), writer, out, op);
             case Format45cc -> write_45cc(((InstructionNv5cc) instruction), writer, out, op);
             case Format4rcc -> write_4rcc(((InstructionNrcc) instruction), writer, out, op);
@@ -119,6 +117,21 @@ public class InstructionWriter {
             case METHOD_HANDLE -> context.getMethodHandleIndex((MethodHandleId) value);
             case RAW_INDEX -> (Integer) value;
         };
+    }
+
+    private static int verification_error_ref_type_bits(ReferenceType type) {
+        return switch (type) {
+            case TYPE -> 0;
+            case FIELD -> 1;
+            case METHOD -> 2;
+            default -> throw new IllegalArgumentException(
+                    "Illegal verification error reference type: " + type);
+        };
+    }
+
+    private static int verification_error_kind(InstructionN0ci value) {
+        return value.getError().code()
+                | (verification_error_ref_type_bits(value.getReferenceType1()) << 6);
     }
 
     private static int unsigned(int value, int width) {
@@ -247,6 +260,17 @@ public class InstructionWriter {
 
     public static void write_20t_24(InstructionN0t value, RandomOutput out, int opcode) {
         write_20t_24(out, opcode, value.getBranchOffset());
+    }
+
+    public static void write_20bc(RandomOutput out, int opcode, int AA, int BBBB) {
+        write_base(out, opcode, AA);
+        out.writeShort(unsigned(BBBB, 16));
+    }
+
+    public static void write_20bc(InstructionN0ci value, DexWriter indexer,
+                                  RandomOutput out, int opcode) {
+        write_20bc(out, opcode, verification_error_kind(value),
+                refToIndex(value.getReferenceType1(), indexer, value.getReference1()));
     }
 
     public static void write_22x_21c(RandomOutput out, int opcode, int AA, int BBBB) {
@@ -453,6 +477,12 @@ public class InstructionWriter {
     public static void write_3rc(InstructionNrc value, DexWriter indexer, RandomOutput out, int opcode) {
         write_3rc(out, opcode, value.getRegisterCount(), refToIndex(value
                 .getReferenceType1(), indexer, value.getReference1()), value.getStartRegister());
+    }
+
+    public static void write_40sc(InstructionN0ci value, DexWriter indexer,
+                                  RandomOutput out, int opcode) {
+        write_41c_40ci(out, opcode, verification_error_kind(value),
+                refToIndex(value.getReferenceType1(), indexer, value.getReference1()));
     }
 
     public static void write_41c_40ci(RandomOutput out, int opcode, int AAAA, int BBBBBBBB) {

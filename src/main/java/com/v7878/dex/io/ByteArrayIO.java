@@ -28,20 +28,21 @@ class ModifiableArray {
         return data;
     }
 
-    byte[] copyData() {
-        return Arrays.copyOf(data, data_size);
+    byte[] copyData(int start) {
+        return Arrays.copyOfRange(data, start, data_size);
     }
 
     void ensureSize(int new_size) {
         if (new_size < 0) {
-            throw new IllegalArgumentException("negative size");
+            throw new IllegalArgumentException("negative size: " + new_size);
         }
         if (new_size > data.length) {
             // Grow geometrically
             long grown = Math.max((long) data.length * 2, new_size);
             int capacity = (int) Math.min(grown, MAX_ARRAY_SIZE);
             if (capacity < new_size) {
-                throw new OutOfMemoryError("Required array size too large");
+                throw new OutOfMemoryError(
+                        "Required array size too large: " + new_size);
             }
             data = Arrays.copyOf(data, capacity);
         }
@@ -99,11 +100,11 @@ public class ByteArrayIO implements RandomIO {
         return arr.data()[start + index];
     }
 
+    /**
+     * Returns the written data between the marked start and the current size.
+     */
     public byte[] toByteArray() {
-        if (start != 0) {
-            return null;
-        }
-        return arr.copyData();
+        return arr.copyData(start);
     }
 
     @Override

@@ -18,11 +18,13 @@ public class DebugInfoMerger {
     }
 
     public static <T extends MergerDebugItem<T>> List<DebugItem> mergeDebugItems(List<T> debug_items) {
-        Collections.sort(debug_items);
+        // The caller's list is never reordered: sorting happens on a copy
+        var items = new ArrayList<>(debug_items);
+        Collections.sort(items);
 
-        var out = new ArrayList<DebugItem>(debug_items.size());
+        var out = new ArrayList<DebugItem>(items.size());
         int pc = 0;
-        for (var item : debug_items) {
+        for (var item : items) {
             int position = item.position();
             if (pc != position) {
                 out.add(AdvancePC.of(position - pc));

@@ -1,5 +1,7 @@
 package com.v7878.dex.raw;
 
+import static com.v7878.dex.DexConstants.ACC_OPTIMIZED;
+import static com.v7878.dex.DexConstants.ACC_VERIFIED;
 import static com.v7878.dex.DexConstants.DBG_ADVANCE_LINE;
 import static com.v7878.dex.DexConstants.DBG_ADVANCE_PC;
 import static com.v7878.dex.DexConstants.DBG_END_LOCAL;
@@ -83,7 +85,6 @@ import static com.v7878.dex.raw.DexCollector.ClassDefContainer;
 import static com.v7878.dex.raw.DexCollector.StringIndexer;
 import static com.v7878.dex.util.MathUtils.roundUp;
 
-import com.v7878.dex.DexIO;
 import com.v7878.dex.DexVersion;
 import com.v7878.dex.Opcodes;
 import com.v7878.dex.WriteOptions;
@@ -285,7 +286,7 @@ public class DexWriter implements StringIndexer {
 
     /**
      * "The classes must be ordered such that a given class's superclass and
-     * implemented interfaces appear in the list earlier than the referring class"
+     * implemented interfaces appear in the list earlier than the referring class".
      */
     private static ClassDefContainer[] sort(List<ClassDefContainer> class_defs) {
         Map<TypeId, ClassDefContainer> map = new HashMap<>();
@@ -319,7 +320,7 @@ public class DexWriter implements StringIndexer {
         var version = version();
         if (version == DEX013 || version == DEX009) {
             // TODO
-            throw new DexIO.InvalidDexFile("Unsupported dex version: " + version);
+            throw new IllegalArgumentException("Unsupported dex version: " + version);
         }
 
         main_buffer = io.duplicate();
@@ -367,17 +368,18 @@ public class DexWriter implements StringIndexer {
         // Technically, the callsite and methodhandle sections are
         // not limited from above in the number of elements.
         // But unlike the similar case with strings, there are no jumbo
-        // instructions for them that accept a ref larger than 16 bits
+        // instructions for them that accept a reference larger than 16 bits.
         //
-        // Perhaps the only indirect exception is the contents of the callsite itself,
+        // Perhaps the only indirect exception is the content of the callsite itself,
         // which allows methodhandle references to be up to 32 bits
-        // (but const-method-handle/jumbo still doesn't exist)
+        // (but const-method-handle/jumbo still doesn't exist).
         //
-        // If each methodhandle refers to either a field or a method
-        // (and they're limited to 16 bits), how do you create more method handles?
-        // Actually... it's quite simple. Duplicates are allowed. I understand why
-        // this is necessary for callsites - they can have state. But why this is
-        // necessary for methodhandles? I don't know. But that's what the documentation says
+        // With each methodhandle referring to a field or a method
+        // (both limited to 16 bits), further entries come from duplicates,
+        // which the format allows. Duplicates are needed for callsites,
+        // which can have state. The reason for allowing them for
+        // methodhandles is unclear: they have no state, so this is
+        // probably a surplus of the format reserved for the future.
         call_sites = collector.call_sites.toArray(EmptyArrays.CALLSITE_ID_CONTAINER);
         checkSizeLimit(call_sites.length, "callsite");
         method_handles = collector.method_handles.toArray(EmptyArrays.METHOD_HANDLE_ID);
@@ -428,7 +430,7 @@ public class DexWriter implements StringIndexer {
             // Note: for compact dex, offsets are calculated from the data section, not the header
             data_buffer.markAsStart();
             start_pos = 0;
-            // We want offset 0 to be reserved
+            // Offset 0 is reserved
             data_buffer.addPosition(DATA_SECTION_ALIGNMENT);
         }
 
@@ -874,8 +876,8 @@ public class DexWriter implements StringIndexer {
             list.add(new MapItem(TYPE_CODE_ITEM,
                     map.code_items_size, map.code_items_off));
         }
-        // Note: When placing a map, the number of strings is already determined,
-        // but their location is not yet, so we will fix it later
+        // Note: when the map is placed, the number of strings is already known,
+        // but their location is not, so the offset is fixed later
         if (!shared_data.strings.isEmpty()) {
             list.add(new MapItem(TYPE_STRING_DATA_ITEM,
                     shared_data.strings.size(), shared_data.string_data_items_off));
@@ -963,8 +965,7 @@ public class DexWriter implements StringIndexer {
         }
 
         map.compact_debug_info_offsets_pos = start;
-        // Note: Why does this field exist?
-        // If you write the table first, it will be equal to zero
+        // Note: the field is zero when the table is written first
         map.compact_debug_info_offsets_table_offset = 0;
         map.compact_debug_info_base = base;
     }
@@ -1066,9 +1067,18 @@ public class DexWriter implements StringIndexer {
     public void writeMethodHandle(MethodHandleId value) {
         main_buffer.writeShort(value.getHandleType().value());
         main_buffer.writeShort(0);
-        main_buffer.writeShort(value.getHandleType().isMethodAccess()
+        int member_index = value.getHandleType().isMethodAccess()
                 ? getMethodIndex((MethodId) value.getMember())
-                : getFieldIndex((FieldId) value.getMember()));
+                : getFieldIndex((FieldId) value.getMember());
+        // member_idx is a ushort with no jumbo form: under expanded
+        // instructions (dex036) the method or field pool may hold more
+        // than 65535 entries, so the index must fail instead of truncating.
+        // Generally, expanded forms and method handles should not appear in the same dex file.
+        if (member_index > 0xFFFF) {
+            throw new IllegalStateException(
+                    "Unable to write method handle member index " + member_index);
+        }
+        main_buffer.writeShort(member_index);
         main_buffer.writeShort(0);
     }
 
@@ -1154,9 +1164,28 @@ public class DexWriter implements StringIndexer {
         }
     }
 
+    /**
+     * ACC_VERIFIED and ACC_OPTIMIZED are ODEX-only markers: ART rejects
+     * class_def flags outside kAccJavaFlagsMask, so they are written only
+     * for a Dalvik target with odex instructions.
+     */
+    private void checkOdexClassFlags(TypeId type, int access_flags) {
+        int odex_flags = access_flags & (ACC_VERIFIED | ACC_OPTIMIZED);
+        if (odex_flags == 0 || (options.isTargetForDalvik() && options.hasOdexInstructions())) {
+            return;
+        }
+        throw new IllegalStateException(String.format(
+                "Class %s has odex access flags 0x%08X,"
+                        + " expected a Dalvik target with odex instructions",
+                type.getDescriptor(), odex_flags));
+    }
+
     public void writeClassDef(ClassDefContainer def) {
-        main_buffer.writeInt(getTypeIndex(def.value.getType()));
-        main_buffer.writeInt(def.value.getAccessFlags());
+        var type = def.value.getType();
+        int access_flags = def.value.getAccessFlags();
+        checkOdexClassFlags(type, access_flags);
+        main_buffer.writeInt(getTypeIndex(type));
+        main_buffer.writeInt(access_flags);
         var superclass = def.value.getSuperclass();
         main_buffer.writeInt(superclass == null ?
                 NO_INDEX : getTypeIndex(superclass));
@@ -1425,7 +1454,19 @@ public class DexWriter implements StringIndexer {
             throw new IllegalStateException(
                     "Unable to find offset for catch handler");
         }
+        if (offset > 0xFFFF) {
+            throw new IllegalStateException(
+                    "Unable to write catch handler offset " + offset);
+        }
         out.writeShort(offset);
+    }
+
+    private static void checkCodeItemUShort(String field, int value) {
+        if (value < 0 || value > 0xFFFF) {
+            throw new IllegalStateException("Unable to write code item "
+                    + field + " " + value
+                    + ": value does not fit into unsigned short");
+        }
     }
 
     public void writeCodeItem(Map.Entry<CodeContainer, Integer> entry) {
@@ -1438,7 +1479,16 @@ public class DexWriter implements StringIndexer {
         int registers_size = value.value.getRegisterCount();
         int ins_size = value.ins;
         int outs_size = value.outs;
+        // ins_size and outs_size are redundant;
+        // only the u16 limits of the fields are enforced
+        checkCodeItemUShort("registers_size", registers_size);
+        checkCodeItemUShort("ins_size", ins_size);
+        checkCodeItemUShort("outs_size", outs_size);
         int tries_size = value.value.getTryBlocks().size();
+        if (tries_size > 0xFFFF) {
+            throw new IllegalStateException(
+                    "Unable to write tries count " + tries_size);
+        }
         int insns_count = countCodeUnits(insns);
         boolean has_payloads = insns_count < 0;
         insns_count = has_payloads ? ~insns_count : insns_count;

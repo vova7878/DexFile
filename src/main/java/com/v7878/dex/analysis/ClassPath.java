@@ -25,22 +25,14 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * Static field/method resolution and invoke dispatch — ports of the ART
- * mechanics, branch <a href="https://android.googlesource.com/platform/art/+/refs/heads/android17-release">android17-release</a>.
+ * Static field/method resolution and invoke dispatch, ports of the ART
+ * mechanics, branch
+ * <a href="https://android.googlesource.com/platform/art/+/refs/heads/android17-release">android17-release</a>.
  * Sources and deviations are documented per element.
- *
- * <p>Hierarchy linking (vtable/iftable, copied methods) is {@link ClassLinker};
- * results are cached. Classes outside the classpath: an unknown reference-id
- * class or dispatch receiver makes the answer non-determinable
- * (Result.unknown()); the referrer affects only access checks — for an
- * unknown referrer they are computed from flags and descriptors
- * (public/private/package-private — exact answer/IAE; protected needs
- * referrer hierarchy assignability — fail-open access with exact == false).
- *
- * <p>Deviations from ART: hiddenapi is treated as allowed; IMT is skipped
- * (dispatch semantics is the itable lookup); dex-cache fast paths
- * (FindMethodFast, the NterpGetMethod cache) are not modeled — resolution
- * always takes the full path; the verifier is out of scope.
+ * <p>
+ * Deviations from ART: hiddenapi is treated as allowed; dex-cache fast
+ * paths are not modeled – resolution always takes the full path; the
+ * verifier is out of scope.
  */
 public class ClassPath {
 
@@ -63,14 +55,15 @@ public class ClassPath {
     }
 
     /**
-     * The library type-relation resolver — the verifier domain.
+     * The library type-relation resolver – the verifier domain.
      */
     public TypeResolver getTypeResolver() {
         return resolver;
     }
 
     /**
-     * The classpath definition for a type (null — the class is outside the classpath).
+     * The classpath definition for a type ({@code null} – the class is outside
+     * the classpath).
      */
     public ClassDef resolveClass(TypeId type) {
         return mapper.apply(type);
@@ -81,10 +74,10 @@ public class ClassPath {
     // =====================================================================
 
     /**
-     * Resolution-stage error (ResolveMethodWithChecks or the dispatch stage
-     * of FindMethodToCall/FindSuperMethodToCall): the call target is not
-     * found, the method is not returned. Execution-stage errors —
-     * {@link InvocationError}.
+     * Resolution-stage error ({@code ClassLinker::ResolveMethodWithChecks} or the dispatch
+     * stage of {@code art::FindMethodToCall}/{@code art::FindSuperMethodToCall}): the
+     * call target is not found, the method is not returned. Execution-stage
+     * errors are covered by {@link InvocationError}.
      */
     public enum ResolutionError {
         NONE,
@@ -105,9 +98,9 @@ public class ClassPath {
     }
 
     /**
-     * Execution-stage error — a port of ArtMethod::ThrowInvocationTimeError
+     * Execution-stage error – a port of {@code ArtMethod::ThrowInvocationTimeError}
      * (runtime/art_method.cc): the call target is found and returned together
-     * with the error kind — see {@link CallTarget#invocationError()}.
+     * with the error kind – see {@link CallTarget#invocationError()}.
      */
     public enum InvocationError {
         NONE,
@@ -128,9 +121,9 @@ public class ClassPath {
     /**
      * Resolution outcome.
      *
-     * @param exact   false — the hierarchy is not fully known (a class outside
-     *                the classpath): the runtime would answer differently
-     * @param value   the result (null on a resolution error or unknown)
+     * @param exact   {@code false} – the hierarchy is not fully known (a class
+     *                outside the classpath): the runtime would answer differently
+     * @param value   the result ({@code null} on a resolution error or unknown)
      * @param error   the resolution error ART would throw
      * @param message details (classes/methods, link error text)
      */
@@ -149,7 +142,7 @@ public class ClassPath {
         }
 
         /**
-         * The answer is non-determinable — the runtime knows more than the
+         * The answer is non-determinable – the runtime knows more than the
          * model: the reference-id class, the dispatch receiver, or (the class
          * branch of invoke-super) the referrer superclass is unknown.
          */
@@ -195,16 +188,16 @@ public class ClassPath {
     }
 
     /**
-     * Invoke instruction kind — a port of {@code InvokeType}
+     * Invoke instruction kind – a port of {@link InvokeType}
      * (libdexfile/dex/invoke_type.h); kPolymorphic/kCustom are out of scope.
-     * STATIC/DIRECT are served by {@code findNonVirtualMethodToCall},
-     * VIRTUAL/INTERFACE — by {@code findMethodToCall}, SUPER — by
-     * {@code findSuperMethodToCall}.
+     * STATIC/DIRECT are served by {@link #findNonVirtualMethodToCall},
+     * VIRTUAL/INTERFACE – by {@link #findMethodToCall}, SUPER – by
+     * {@link #findSuperMethodToCall}.
      */
     public enum InvokeType {STATIC, DIRECT, VIRTUAL, SUPER, INTERFACE}
 
     /**
-     * Field access kind — the iget/iput/sget/sput instructions (ART: the
+     * Field access kind – the iget/iput/sget/sput instructions (ART: the
      * StaticBit/WriteBit of the FindFieldFromCode type). Serves
      * {@code resolveField(fid, referrer, access)}.
      */
@@ -222,7 +215,7 @@ public class ClassPath {
 
     /**
      * Dispatch outcome: a concrete method or a default-method conflict. The
-     * execution error lives in the target itself — {@link #invocationError()}.
+     * execution error lives in the target itself – {@link #invocationError()}.
      */
     public sealed interface CallTarget {
         InvocationError invocationError();
@@ -282,9 +275,9 @@ public class ClassPath {
     // =====================================================================
 
     /**
-     * Resolves a field by FieldId (cached). An array declaring class is
-     * normalized to j.l.Object — array fields are Object fields. Source and
-     * deviations — {@link #resolveFieldUncached}.
+     * Resolves a field by {@link FieldId} (cached). An array declaring class is
+     * normalized to j.l.Object – array fields are Object fields. Sources and
+     * deviations are documented in {@link #resolveFieldUncached}.
      */
     public Result<ResolvedField> resolveField(FieldId fid) {
         Objects.requireNonNull(fid);
@@ -293,12 +286,12 @@ public class ClassPath {
     }
 
     /**
-     * A port of ClassLinker::ResolveFieldJLS → Class::FindField
-     * (FindFieldImpl, runtime/mirror/class.cc): the JLS order — the class
-     * itself → its direct interfaces (static fields only, recursively) → the
-     * superclass (and its interfaces), up the chain. An iterative deque walk,
-     * cycle-safe. No access or kind checks — for the checking path see
-     * {@link #resolveField(FieldId, TypeId, FieldAccess)}.
+     * A port of {@code ClassLinker::ResolveFieldJLS} → {@code Class::FindField}
+     * ({@code art::FindFieldImpl}, runtime/mirror/class.cc): the JLS order – the
+     * class itself → its direct interfaces (static fields only, recursively) →
+     * the superclass (and its interfaces), up the chain. The walk is iterative
+     * (a deque) and cycle-safe. No access or kind checks – for the checking
+     * path see {@link #resolveField(FieldId, TypeId, FieldAccess)}.
      */
     private Result<ResolvedField> resolveFieldUncached(FieldId fid) {
         var startType = fid.getDeclaringClass();
@@ -306,6 +299,9 @@ public class ClassPath {
         if (startLC.linkError != null) {
             return Result.fail(true, ResolutionError.NO_CLASS_DEF,
                     "class failed to link: " + startLC.linkError);
+        }
+        if (startLC.isUnknown()) {
+            return Result.unknown();
         }
         // exactness is computed by the traversal: a hit before an unknown
         // node is exact (the unknown part lies further in the search order
@@ -348,23 +344,25 @@ public class ClassPath {
     }
 
     /**
-     * A port of ResolveFieldWithAccessChecks
+     * A port of {@code art::ResolveFieldWithAccessChecks}
      * (runtime/entrypoints/entrypoint_utils-inl.h) for iget/sget/iput/sput.
-     * {@code referrer} — the class containing the access; {@code access} —
+     * {@code referrer} – the class containing the access; {@code access} –
      * the instruction kind (read/write × instance/static).
-     *
-     * <p>Order as in ART: ResolveFieldJLS (NoSuchFieldError on miss) → field
-     * kind (IsStatic != isStatic → ICCE, before access checks — the reverse
-     * of the method order) → ResolvedFieldAccessTest (CanAccess(declarer)
-     * with an escape hatch to the FieldId class → IAE; CanAccessMember(flags)
-     * → IAE) → CanBeChangedBy (a write to a final field of another declarer
-     * → IAE).
-     *
-     * <p>An unknown referrer does not make the result unknown: CanBeChangedBy
-     * and the public/private/package-private branches depend only on
-     * descriptors and flags — exact answer/IAE; the indeterminate protected
-     * branch (referrer hierarchy assignability) and CanAccess on an unknown
-     * target class — fail-open access with exact=false.
+     * <p>
+     * Order as in ART: {@code ClassLinker::ResolveFieldJLS} (NoSuchFieldError on miss) →
+     * field kind ({@code IsStatic != isStatic} → ICCE, before access checks –
+     * the reverse of the method order) → {@code Class::ResolvedFieldAccessTest}
+     * ({@code Class::CanAccess} of the declarer with an escape hatch to the
+     * {@link FieldId} class → IAE; {@code Class::CanAccessMember} of the flags → IAE)
+     * → {@code ArtField::CanBeChangedBy} (a write to a final field of another declarer →
+     * IAE).
+     * <p>
+     * An unknown referrer does not make the result unknown:
+     * {@code ArtField::CanBeChangedBy} and the public/private/package-private branches
+     * depend only on descriptors and flags – exact answer/IAE; the
+     * indeterminate protected branch (referrer hierarchy assignability) and
+     * {@code Class::CanAccess} on an unknown target class – fail-open access with
+     * {@code exact == false}.
      */
     public Result<ResolvedField> resolveField(FieldId fid, TypeId referrer, FieldAccess access) {
         Objects.requireNonNull(fid);
@@ -396,7 +394,7 @@ public class ClassPath {
         var declaringLC = linker.link(resolved.declaringClass().getType());
         var klassLC = linker.link(fid.getDeclaringClass());
         // IAE only when both are definitely denied; indeterminate (unknown
-        // target class) — fail-open with exact=false
+        // target class) – fail-open with exact == false
         var accessDeclaring = linker.canAccess(referrer, declaringLC);
         var accessKlass = linker.canAccess(referrer, klassLC);
         if (!Boolean.TRUE.equals(accessDeclaring) && !Boolean.TRUE.equals(accessKlass)) {
@@ -411,7 +409,7 @@ public class ClassPath {
         var memberAccess = linker.canAccessMember(
                 refLC, declaringLC, resolved.field().getAccessFlags());
         if (memberAccess == null) {
-            // protected with an unknown/incomplete referrer hierarchy — fail-open
+            // protected with an unknown/incomplete referrer hierarchy – fail-open
             exact = false;
         } else if (!memberAccess) {
             return Result.fail(exact, ResolutionError.ILLEGAL_ACCESS,
@@ -426,12 +424,12 @@ public class ClassPath {
     }
 
     /**
-     * A port of ArtField::CanBeChangedBy (runtime/art_field-inl.h): a write
+     * A port of {@code ArtField::CanBeChangedBy} (runtime/art_field-inl.h): a write
      * is allowed if the field is not final or the declarer is the accessing
      * class itself (own final fields; package and protected do not apply, no
-     * constructor branches — ART runtime leniency). For an unknown referrer
+     * constructor branches – ART runtime leniency). For an unknown referrer
      * the declarer of a known field is always another class (descriptors
-     * differ) — the answer is deterministic.
+     * differ) – the answer is deterministic.
      */
     private static boolean canBeChangedBy(ResolvedField resolved, TypeId referrer) {
         return (resolved.field().getAccessFlags() & ACC_FINAL) == 0
@@ -443,9 +441,9 @@ public class ClassPath {
     // =====================================================================
 
     /**
-     * A port of ClassLinker::ResolveMethodId → FindResolvedMethod:
+     * A port of {@code ClassLinker::ResolveMethodId} → {@code ClassLinker::FindResolvedMethod}:
      * resolution without access checks (the SkipAccessChecks path of
-     * NterpGetMethod — verified code). An array reference class is normalized
+     * NterpGetMethod – verified code). An array reference class is normalized
      * to j.l.Object.
      */
     public Result<ResolvedMethod> resolveMethod(MethodId mid) {
@@ -477,7 +475,7 @@ public class ClassPath {
             return Result.unknown();
         }
         // exactness is computed by the search: hits in the known part are
-        // exact; degradation — only where the answer depends on the invisible
+        // exact; degradation – only where the answer depends on the invisible
         // hierarchy
         var exact = new boolean[]{true};
         var found = lc.isInterface()
@@ -490,25 +488,26 @@ public class ClassPath {
     }
 
     /**
-     * A port of ClassLinker::ResolveMethodWithChecks
-     * (runtime/class_linker-inl.h) — the full checking path.
-     * {@code referrer} — the class containing the call; {@code type} — the
+     * A port of {@code ClassLinker::ResolveMethodWithChecks}
+     * (runtime/class_linker-inl.h) – the full checking path.
+     * {@code referrer} – the class containing the call; {@code type} – the
      * invoke instruction kind.
-     *
-     * <p>Order: ThrowIfInvokeClassMismatch (ICCE before the search; only
-     * VIRTUAL/INTERFACE are checked — SUPER/STATIC are not, DIRECT is legal
-     * on modern-dex interfaces) → search (FindClassMethod /
-     * FindInterfaceMethodWithSignature) → CanAccess(declarer class) with the
-     * CanAccess(MethodId reference class) escape hatch (IAE) → CanAccessMember
-     * (IAE) → CheckIncompatibleClassChange (ICCE) → FindIncompatibleMethod
-     * (ICCE) → NoSuchMethodError.
-     *
-     * <p>An unknown referrer does not make the result unknown: it affects
-     * only the access checks — the public/private/package-private branches of
-     * CanAccessMember depend only on descriptors and flags — exact
+     * <p>
+     * Order: {@code ClassLinker::ThrowIfInvokeClassMismatch} (ICCE before the search; only
+     * VIRTUAL/INTERFACE are checked – SUPER/STATIC are not, DIRECT is legal
+     * on modern-dex interfaces) → search ({@code Class::FindClassMethod} /
+     * {@code Class::FindInterfaceMethodWithSignature}) → {@code Class::CanAccess} of the
+     * declarer class with the {@code Class::CanAccess} of the MethodId reference
+     * class as an escape hatch (IAE) → {@code Class::CanAccessMember} (IAE) →
+     * {@code ArtMethod::CheckIncompatibleClassChange} (ICCE) →
+     * {@code ClassLinker::FindIncompatibleMethod} (ICCE) → NoSuchMethodError.
+     * <p>
+     * An unknown referrer does not make the result unknown: it affects
+     * only the access checks – the public/private/package-private branches
+     * of {@code Class::CanAccessMember} depend only on descriptors and flags – exact
      * answer/IAE; the indeterminate protected branch (referrer hierarchy
-     * assignability) and CanAccess on an unknown target class — fail-open
-     * access with exact=false.
+     * assignability) and {@code Class::CanAccess} on an unknown target class –
+     * fail-open access with {@code exact == false}.
      */
     public Result<ResolvedMethod> resolveMethod(MethodId mid, TypeId referrer, InvokeType type) {
         Objects.requireNonNull(mid);
@@ -553,7 +552,7 @@ public class ClassPath {
                     "Found interface " + klassType + ", but class was expected");
         }
         // the search computes the klass hierarchy completeness; the referrer
-        // affects only the access checks below — they degrade exactness in place
+        // affects only the access checks below – they degrade exactness in place
         var exact = new boolean[]{true};
         var resolved = lc.isInterface()
                 ? linker.findInterfaceMethodWithSignature(lc, mid.getName(), mid.getProto(), exact)
@@ -574,7 +573,7 @@ public class ClassPath {
         // CanAccess(declarer) with the MethodId class escape hatch (the method
         // may be accessible via a public subclass of the declarer)
         // IAE only when both are definitely denied; indeterminate (unknown
-        // target class) — fail-open with exact=false
+        // target class) – fail-open with exact == false
         var methodsClass = resolved.declaring;
         var accessDeclaring = linker.canAccess(referrer, methodsClass);
         var accessKlass = linker.canAccess(referrer, lc);
@@ -608,21 +607,23 @@ public class ClassPath {
     // =====================================================================
 
     /**
-     * A port of FindMethodToCall&lt;type&gt;
+     * A port of {@code art::FindMethodToCall<type>}
      * (runtime/entrypoints/entrypoint_utils-inl.h) for invoke-virtual /
-     * invoke-interface (resolution — ResolveMethodWithChecks from the
-     * referrer). {@code receiver} — the receiver class (the runtime analog
-     * of this.getClass()); {@code referrer} — the class containing the call.
-     *
-     * <p>Dispatch: VIRTUAL — the receiver vtable at the resolved method's
-     * index; INTERFACE — the itable (FindVirtualMethodForInterface), except a
-     * j.l.Object method — the vtable (kInvokeInterfaceOnObjectMethodFlag in
-     * NterpGetMethod). An array receiver dispatches as j.l.Object (the array
-     * vtable = the Object vtable, Cloneable/Serializable declare no methods).
-     * A missing itable dispatch — ICCE
-     * (ThrowIncompatibleClassChangeErrorClassForInterfaceDispatch). The target
-     * may be non-invokable — see {@link CallTarget#invocationError()}; a
-     * default-method conflict — {@link CallTarget.DefaultConflict}.
+     * invoke-interface (resolution – {@code ClassLinker::ResolveMethodWithChecks} from the
+     * referrer). {@code receiver} – the receiver class (the runtime analog
+     * of {@code this.getClass()}); {@code referrer} – the class containing
+     * the call.
+     * <p>
+     * Dispatch: VIRTUAL – the receiver vtable at the resolved method's
+     * index; INTERFACE – the itable ({@code Class::FindVirtualMethodForInterface}),
+     * except for a j.l.Object method – the vtable
+     * ({@code kInvokeInterfaceOnObjectMethodFlag} in {@code art::NterpGetMethod}). An
+     * array receiver dispatches as j.l.Object (the array vtable is the Object
+     * vtable, Cloneable/Serializable declare no methods). A missing itable
+     * dispatch – ICCE
+     * ({@code art::ThrowIncompatibleClassChangeErrorClassForInterfaceDispatch}). The
+     * target may be non-invokable – see {@link CallTarget#invocationError()};
+     * a default-method conflict – {@link CallTarget.DefaultConflict}.
      */
     public Result<CallTarget> findMethodToCall(MethodId mid, TypeId referrer,
                                                InvokeType type, TypeId receiver) {
@@ -679,25 +680,26 @@ public class ClassPath {
     }
 
     /**
-     * A port of FindSuperMethodToCall&lt;access_check=true&gt;
+     * A port of {@code art::FindSuperMethodToCall<access_check=true>}
      * (runtime/entrypoints/entrypoint_utils-inl.h) for dex invoke-super
-     * (resolution — ResolveMethodWithChecks(kSuper)). {@code referrer} — the
-     * class containing the call; {@code receiver} — the receiver class (this):
-     * it does not affect the dispatch, it is needed only for the execution
-     * error (the miranda walk goes along the receiver chain).
-     *
-     * <p>Class branch: the referrer superclass vtable at the resolved
-     * method's vtable index; interface branch —
-     * FindVirtualMethodForInterfaceSuper. A referrer outside the instruction
-     * class hierarchy, the referrer being j.l.Object itself (no superclass),
-     * or an index outside the superclass vtable —
+     * (resolution – {@code ClassLinker::ResolveMethodWithChecks(kSuper)}). {@code referrer}
+     * – the class containing the call; {@code receiver} – the receiver class
+     * ({@code this}): it does not affect the dispatch, it is needed only for
+     * the execution error (the miranda walk goes along the receiver chain).
+     * <p>
+     * Class branch: the referrer superclass vtable at the resolved method's
+     * vtable index; interface branch –
+     * {@code Class::FindVirtualMethodForInterfaceSuper}. A referrer outside the
+     * instruction class hierarchy, the referrer being j.l.Object itself (no
+     * superclass), or an index outside the superclass vtable –
      * NoSuchMethodError (the class in the message is the resolved method's
      * declarer, as in ART). Unknown referrer: assignability (the inheritance
-     * gate) is non-determinable — fail-open with exact=false; the interface
-     * branch does not depend on the referrer (result with exact=false), the
-     * class branch needs the referrer superclass — Result.unknown() (the only
-     * referrer-caused unknown). An unknown superclass of a known referrer —
-     * an inexact NSME: the real superclass could dispatch the index.
+     * gate) is non-determinable – fail-open with {@code exact == false}; the
+     * interface branch does not depend on the referrer (result with
+     * {@code exact == false}), the class branch needs the referrer superclass
+     * – {@link Result#unknown()} (the only referrer-caused unknown). An
+     * unknown superclass of a known referrer – an inexact NSME: the real
+     * superclass could dispatch the index.
      */
     public Result<CallTarget> findSuperMethodToCall(
             MethodId mid, TypeId referrer, TypeId receiver) {
@@ -758,13 +760,14 @@ public class ClassPath {
     }
 
     /**
-     * invoke-static / invoke-direct (resolution — ResolveMethodWithChecks).
-     * No receiver: absent in a static call, irrelevant in a direct one; no
-     * dispatch — the call target is the resolved method itself (NterpGetMethod
-     * caches it as is). Kind checks — CheckIncompatibleClassChange: kStatic —
-     * !IsStatic; kDirect — !IsDirect || IsStatic. The execution error is
-     * computed with receiver == null (like ThrowInvocationTimeError(nullptr)
-     * in ART: no miranda walk).
+     * invoke-static / invoke-direct (resolution –
+     * {@code ClassLinker::ResolveMethodWithChecks}). No receiver: absent in a static call,
+     * irrelevant in a direct one; no dispatch – the call target is the
+     * resolved method itself ({@code art::NterpGetMethod} caches it as is). Kind
+     * checks – {@code ArtMethod::CheckIncompatibleClassChange}: kStatic –
+     * {@code !IsStatic}; kDirect – {@code !IsDirect || IsStatic}. The
+     * execution error is computed with {@code receiver == null} (like
+     * {@code ThrowInvocationTimeError(nullptr)} in ART: no miranda walk).
      */
     public Result<CallTarget> findNonVirtualMethodToCall(
             MethodId mid, TypeId referrer, InvokeType type) {
@@ -816,8 +819,9 @@ public class ClassPath {
     }
 
     /**
-     * A port of ArtMethod::CheckIncompatibleClassChange (art_method-inl.h)
-     * for every modeled invoke kind (kPolymorphic out of scope).
+     * A port of {@code ArtMethod::CheckIncompatibleClassChange}
+     * (art_method-inl.h) for every modeled invoke kind (kPolymorphic out of
+     * scope).
      */
     private static boolean checkIncompatibleClassChange(LinkedMethod m, InvokeType type) {
         return switch (type) {
@@ -837,11 +841,11 @@ public class ClassPath {
 
     /**
      * Wraps the dispatch result: execution errors live in the target itself
-     * (a port of ArtMethod::ThrowInvocationTimeError — the method is found
-     * and returned together with the error kind). If the receiver class is
-     * unknown, fails to link, or its hierarchy is incomplete (invisible
+     * (a port of {@code ArtMethod::ThrowInvocationTimeError} – the method is
+     * found and returned together with the error kind). If the receiver class
+     * is unknown, fails to link, or its hierarchy is incomplete (invisible
      * declared methods may remain in the chain), the execution error kind is
-     * non-determinable — the result is marked exact=false.
+     * non-determinable – the result is marked {@code exact == false}.
      */
     private Result<CallTarget> wrap(LinkedMethod called, boolean exact, TypeId receiverType) {
         if (called.kind == DEFAULT_CONFLICT) {

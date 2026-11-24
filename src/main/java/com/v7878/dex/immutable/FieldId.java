@@ -30,27 +30,38 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
     public static FieldId of(Enum<?> e) {
         Objects.requireNonNull(e);
         TypeId declaring_class = TypeId.of(e.getDeclaringClass());
-        // TODO: Is this really true?
+        // TODO: the runtime does not require an enum to keep its constants as
+        //  fields (only values[] is used), and R8 may drop or rename them,
+        //  leaving the values only in the array; the format gives no
+        //  alternative to the field reference
         return new FieldId(declaring_class, e.name(), declaring_class);
     }
 
     public static FieldId of(String descriptor) {
         Objects.requireNonNull(descriptor);
-        int point = descriptor.indexOf('.');
+        int arrow = descriptor.indexOf("->");
         int colon = descriptor.lastIndexOf(':');
-        if ((point | colon) < 0 || !(point < colon)) {
+        if ((arrow | colon) < 0 || arrow > colon) {
             throw new IllegalArgumentException(
-                    "Not a field descriptor: " + descriptor);
+                    "Not a field reference: " + descriptor);
+        }
+        if (arrow == 0) {
+            throw new IllegalArgumentException(
+                    "Empty declaring class: " + descriptor);
+        }
+        if (colon == arrow + 2) {
+            throw new IllegalArgumentException(
+                    "Empty field name: " + descriptor);
         }
         return FieldId.of(
-                TypeId.of(descriptor.substring(0, point)),
-                descriptor.substring(point + 1, colon),
+                TypeId.of(descriptor.substring(0, arrow)),
+                descriptor.substring(arrow + 2, colon),
                 TypeId.of(descriptor.substring(colon + 1))
         );
     }
 
     public String getDescriptor() {
-        return getDeclaringClass() + "." + getName() + ":" + getType();
+        return getDeclaringClass() + "->" + getName() + ":" + getType();
     }
 
     @Override

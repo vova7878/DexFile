@@ -29,6 +29,10 @@ public final class RegisterLine {
         this.registers = array;
     }
 
+    /**
+     * An unmodifiable view over the line's registers, stable once the analysis
+     * completes; only indices below {@link #registerCount()} are valid.
+     */
     public List<Register> registers() {
         return Collections.unmodifiableList(Arrays.asList(registers));
     }
@@ -100,6 +104,9 @@ public final class RegisterLine {
     /* package */ void copyWide(int address, int index_lo, Register lo, Register hi) {
         assert lo.isWideLo();
         assert hi.isWideHi();
+        // A wide pair is category-matched by construction;
+        // a constant half matches either category
+        assert (lo.isLong() && hi.isLong()) || (lo.isDouble() && hi.isDouble());
         int index_hi = index_lo + 1;
         var tmp_lo = registers[index_lo];
         var tmp_hi = registers[index_hi];
