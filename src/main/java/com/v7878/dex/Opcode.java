@@ -74,6 +74,8 @@ import static com.v7878.dex.ReferenceType.STRING;
 import static com.v7878.dex.ReferenceType.TYPE;
 import static com.v7878.dex.util.Checks.shouldNotReachHere;
 
+import java.util.EnumSet;
+
 public enum Opcode {
     NOP(common(0x00), "nop", Format10x, regs(), 0),
     MOVE(common(0x01), "move", Format12x, regs(true, true), 0),
@@ -573,6 +575,10 @@ public enum Opcode {
     static abstract class Constraint {
         public abstract boolean contains(int opcode);
 
+        public boolean contains(int opcode, DexVersion dex) {
+            return contains(opcode);
+        }
+
         public abstract Integer opcode(DexInfo info);
 
         @Override
@@ -774,6 +780,33 @@ public enum Opcode {
         return constraint;
     }
 
+    /**
+     * Returns the opcodes whose constraint contains {@code value} on at least one path.
+     */
+    public static EnumSet<Opcode> candidates(int value) {
+        var candidates = EnumSet.noneOf(Opcode.class);
+        for (var op : Opcode.values()) {
+            if (op.getConstraint().contains(value)) {
+                candidates.add(op);
+            }
+        }
+        return candidates;
+    }
+
+    /**
+     * Returns the opcodes whose constraint contains {@code value} on at least one path for
+     * {@code dex}. The version is effectively split into three groups: dex009, dex013 and dex035+.
+     */
+    public static EnumSet<Opcode> candidates(int value, DexVersion dex) {
+        var candidates = EnumSet.noneOf(Opcode.class);
+        for (var op : Opcode.values()) {
+            if (op.getConstraint().contains(value, dex)) {
+                candidates.add(op);
+            }
+        }
+        return candidates;
+    }
+
     private static Constraint legacy(int dex009, int dex013) {
         return combine(
                 onlyDex(DEX013, value(dex013)),
@@ -815,6 +848,8 @@ public enum Opcode {
         };
     }
 
+    // The instruction contains no opcode and cannot be read;
+    // it is used solely for generating composite instructions.
     private static Constraint raw() {
         return new Constraint() {
             @Override
@@ -912,6 +947,10 @@ public enum Opcode {
                 return constraint.contains(opcode);
             }
 
+            public boolean contains(int opcode, DexVersion dex) {
+                return version == dex && constraint.contains(opcode);
+            }
+
             @Override
             public Integer opcode(DexInfo info) {
                 return version != info.dex() ? null : constraint.opcode(info);
@@ -934,6 +973,10 @@ public enum Opcode {
             @Override
             public boolean contains(int opcode) {
                 return constraint.contains(opcode);
+            }
+
+            public boolean contains(int opcode, DexVersion dex) {
+                return checkDexVersion(version, dex) && constraint.contains(opcode);
             }
 
             @Override

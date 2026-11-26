@@ -2,7 +2,6 @@ package com.v7878.dex;
 
 import com.v7878.collections.IntMap;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.Objects;
 
@@ -46,12 +45,7 @@ public final class Opcodes {
     public Opcode getOpcodeByValue(int value) {
         var out = opcodesByValue.get(value);
         if (out == null) {
-            var candidates = new ArrayList<Opcode>();
-            for (var op : Opcode.values()) {
-                if (op.getConstraint().contains(value)) {
-                    candidates.add(op);
-                }
-            }
+            var candidates = Opcode.candidates(value);
             throw new IllegalArgumentException(String.format(
                     "No opcode found with value %d, options=%s. %s",
                     value, print(dex, options),
