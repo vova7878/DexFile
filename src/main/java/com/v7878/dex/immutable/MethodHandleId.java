@@ -2,12 +2,15 @@ package com.v7878.dex.immutable;
 
 import com.v7878.dex.MethodHandleType;
 import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.HashUtils;
 
 import java.util.Objects;
 
 public final class MethodHandleId implements Comparable<MethodHandleId> {
     private final MethodHandleType handle_type;
     private final MemberId member;
+
+    private int hash = HashUtils.NO_HASH; // not part of equals/hashCode/compareTo
 
     private static RuntimeException wrongMemberType(
             MethodHandleType handle_type, String expected, MemberId member) {
@@ -61,7 +64,18 @@ public final class MethodHandleId implements Comparable<MethodHandleId> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getHandleType(), getMember());
+        int h = hash;
+        if (h == HashUtils.NO_HASH) {
+            hash = h = HashUtils.replaceZero(computeHashCode());
+        }
+        return h;
+    }
+
+    private int computeHashCode() {
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getHandleType());
+        h = 31 * h + Objects.hashCode(getMember());
+        return h;
     }
 
     @Override

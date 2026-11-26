@@ -1,6 +1,5 @@
 package com.v7878.dex.util;
 
-import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -50,8 +49,29 @@ public class Converter {
             return Collections.emptyList();
         }
 
-        return Collections.unmodifiableList(
-                mutableList(iterable));
+        if (iterable instanceof Collection<T> collection) {
+            return List.copyOf(collection);
+        }
+        var list = mutableList(iterable);
+        return new ImmutableAbstractList<>(list.size()) {
+            @Override
+            public T get(int i) {
+                return list.get(i);
+            }
+        };
+    }
+
+    /**
+     * An unmodifiable list view of the given array; the array must not
+     * be modified afterwards.
+     */
+    public static <T> List<T> asList(T[] array) {
+        return new ImmutableAbstractList<>(array.length) {
+            @Override
+            public T get(int i) {
+                return array[i];
+            }
+        };
     }
 
     public static <T extends Comparable<? super T>>
@@ -85,12 +105,7 @@ public class Converter {
     }
 
     public static <R, P> List<R> transformList(List<P> list, Function<P, R> transformer) {
-        return new AbstractList<>() {
-            @Override
-            public int size() {
-                return list.size();
-            }
-
+        return new ImmutableAbstractList<>(list.size()) {
             @Override
             public R get(int i) {
                 return transformer.apply(list.get(i));
@@ -99,12 +114,7 @@ public class Converter {
     }
 
     public static <T> List<T> listOf(int size, T value) {
-        return new AbstractList<>() {
-            @Override
-            public int size() {
-                return size;
-            }
-
+        return new ImmutableAbstractList<>(size) {
             @Override
             public T get(int i) {
                 Objects.checkIndex(i, size);

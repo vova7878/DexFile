@@ -158,7 +158,10 @@ public sealed abstract class Register {
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), Conflict.class);
+            int h = 1;
+            h = 31 * h + Integer.hashCode(super.hashCode());
+            h = 31 * h + Objects.hashCode(Conflict.class);
+            return h;
         }
     }
 
@@ -188,7 +191,10 @@ public sealed abstract class Register {
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), WidePiece.class);
+            int h = 1;
+            h = 31 * h + Integer.hashCode(super.hashCode());
+            h = 31 * h + Objects.hashCode(WidePiece.class);
+            return h;
         }
     }
 
@@ -490,7 +496,10 @@ public sealed abstract class Register {
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), type_info);
+            int h = 1;
+            h = 31 * h + Integer.hashCode(super.hashCode());
+            h = 31 * h + Objects.hashCode(type_info);
+            return h;
         }
     }
 
@@ -531,7 +540,10 @@ public sealed abstract class Register {
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), kind);
+            int h = 1;
+            h = 31 * h + Integer.hashCode(super.hashCode());
+            h = 31 * h + Objects.hashCode(kind);
+            return h;
         }
 
         @Override
@@ -572,7 +584,10 @@ public sealed abstract class Register {
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), Primitive.class);
+            int h = 1;
+            h = 31 * h + Integer.hashCode(super.hashCode());
+            h = 31 * h + Objects.hashCode(Primitive.class);
+            return h;
         }
     }
 
@@ -620,7 +635,10 @@ public sealed abstract class Register {
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), lo);
+            int h = 1;
+            h = 31 * h + Integer.hashCode(super.hashCode());
+            h = 31 * h + Boolean.hashCode(lo);
+            return h;
         }
     }
 
@@ -699,7 +717,11 @@ public sealed abstract class Register {
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), non_null, exact);
+            int h = 1;
+            h = 31 * h + Integer.hashCode(super.hashCode());
+            h = 31 * h + Boolean.hashCode(non_null);
+            h = 31 * h + Boolean.hashCode(exact);
+            return h;
         }
     }
 
@@ -761,7 +783,10 @@ public sealed abstract class Register {
 
         @Override
         public int hashCode() {
-            return Objects.hash(super.hashCode(), thiz);
+            int h = 1;
+            h = 31 * h + Integer.hashCode(super.hashCode());
+            h = 31 * h + Boolean.hashCode(thiz);
+            return h;
         }
     }
 

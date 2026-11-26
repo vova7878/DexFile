@@ -23,6 +23,7 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.HashUtils;
 import com.v7878.dex.util.MemberUtils;
 import com.v7878.dex.util.Preconditions;
 
@@ -33,6 +34,8 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
     private final AnnotationVisibility visibility;
     private final TypeId type;
     private final NavigableSet<AnnotationElement> elements;
+
+    private int hash = HashUtils.NO_HASH; // not part of equals/hashCode/compareTo
 
     private Annotation(AnnotationVisibility visibility, TypeId type,
                        NavigableSet<AnnotationElement> elements) {
@@ -183,8 +186,19 @@ public final class Annotation implements CommonAnnotation, Comparable<Annotation
 
     @Override
     public int hashCode() {
-        return Objects.hash(getVisibility(), getType(),
-                CollectionUtils.setHashCode(getElements()));
+        int h = hash;
+        if (h == HashUtils.NO_HASH) {
+            hash = h = HashUtils.replaceZero(computeHashCode());
+        }
+        return h;
+    }
+
+    private int computeHashCode() {
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getVisibility());
+        h = 31 * h + Objects.hashCode(getType());
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getElements()));
+        return h;
     }
 
     @Override

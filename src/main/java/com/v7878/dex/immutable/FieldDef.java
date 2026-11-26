@@ -108,9 +108,14 @@ public final class FieldDef extends MemberDef implements Comparable<FieldDef> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getAccessFlags(), getHiddenApiFlags(),
-                getType(), getInitialValue(),
-                CollectionUtils.setHashCode(getAnnotations()));
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getName());
+        h = 31 * h + Integer.hashCode(getAccessFlags());
+        h = 31 * h + Integer.hashCode(getHiddenApiFlags());
+        h = 31 * h + Objects.hashCode(getType());
+        h = 31 * h + Objects.hashCode(getInitialValue());
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getAnnotations()));
+        return h;
     }
 
     @Override

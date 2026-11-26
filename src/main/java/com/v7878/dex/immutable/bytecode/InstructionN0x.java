@@ -18,7 +18,9 @@ public final class InstructionN0x extends Instruction {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        return h;
     }
 
     @Override

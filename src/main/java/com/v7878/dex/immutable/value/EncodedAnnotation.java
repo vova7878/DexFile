@@ -7,6 +7,7 @@ import com.v7878.dex.immutable.CommonAnnotation;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.HashUtils;
 import com.v7878.dex.util.MemberUtils;
 
 import java.util.NavigableSet;
@@ -15,6 +16,8 @@ import java.util.Objects;
 public final class EncodedAnnotation extends EncodedValue implements CommonAnnotation {
     private final TypeId type;
     private final NavigableSet<AnnotationElement> elements;
+
+    private int hash = HashUtils.NO_HASH; // not part of equals/hashCode/compareTo
 
     private EncodedAnnotation(TypeId type, NavigableSet<AnnotationElement> elements) {
         this.type = Objects.requireNonNull(type);
@@ -67,7 +70,18 @@ public final class EncodedAnnotation extends EncodedValue implements CommonAnnot
 
     @Override
     public int hashCode() {
-        return Objects.hash(getType(), CollectionUtils.setHashCode(getElements()));
+        int h = hash;
+        if (h == HashUtils.NO_HASH) {
+            hash = h = HashUtils.replaceZero(computeHashCode());
+        }
+        return h;
+    }
+
+    private int computeHashCode() {
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getType());
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getElements()));
+        return h;
     }
 
     @Override

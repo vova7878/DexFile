@@ -1,12 +1,14 @@
 package com.v7878.dex.util;
 
-import java.util.AbstractList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.ToIntBiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,6 +26,15 @@ public class CollectionUtils {
 
     public static <T extends Comparable<? super T>> int compareLexicographically(
             Iterable<? extends T> left, Iterable<? extends T> right) {
+        if (left instanceof List<? extends T> first
+                && right instanceof List<? extends T> second) {
+            int min = Math.min(first.size(), second.size());
+            for (int i = 0; i < min; i++) {
+                int out = compareNonNull(first.get(i), second.get(i));
+                if (out != 0) return out;
+            }
+            return Integer.compare(first.size(), second.size());
+        }
         var i1 = left.iterator();
         var i2 = right.iterator();
         while (i1.hasNext() && i2.hasNext()) {
@@ -35,6 +46,15 @@ public class CollectionUtils {
 
     public static <T> int compareLexicographically(
             Comparator<? super T> comparator, Iterable<? extends T> left, Iterable<? extends T> right) {
+        if (left instanceof List<? extends T> first
+                && right instanceof List<? extends T> second) {
+            int min = Math.min(first.size(), second.size());
+            for (int i = 0; i < min; i++) {
+                int out = comparator.compare(first.get(i), second.get(i));
+                if (out != 0) return out;
+            }
+            return Integer.compare(first.size(), second.size());
+        }
         var i1 = left.iterator();
         var i2 = right.iterator();
         while (i1.hasNext() && i2.hasNext()) {
@@ -46,14 +66,10 @@ public class CollectionUtils {
 
     public static <T> List<T> reverseList(List<T> list) {
         if (list == null) return null;
-        return new AbstractList<>() {
-            @Override
-            public int size() {
-                return list.size();
-            }
-
+        return new ImmutableAbstractList<>(list.size()) {
             @Override
             public T get(int index) {
+                Objects.checkIndex(index, size());
                 return list.get(list.size() - index - 1);
             }
         };
@@ -171,6 +187,36 @@ public class CollectionUtils {
             hash = 31 * hash + Objects.hashCode(value);
         }
         return hash;
+    }
+
+    public static <T extends Comparable<? super T>> T[] sortedArray(
+            Collection<T> values, T[] empty) {
+        T[] out = values.toArray(empty);
+        Arrays.sort(out);
+        return out;
+    }
+
+    /**
+     * Copies the values into an array, sorts it with the natural ordering and
+     * maps every value to its position. The returned map iterates in that same
+     * order, so it is both the pool order and the index lookup.
+     */
+    public static <T extends Comparable<? super T>> LinkedHashMap<T, Integer> sortedIndexMap(
+            Collection<T> values, T[] empty) {
+        return sortedIndexMap(values, empty, Function.identity());
+    }
+
+    /**
+     * Same as the two-argument variant, with the map key taken out of the value.
+     */
+    public static <T extends Comparable<? super T>, K> LinkedHashMap<K, Integer> sortedIndexMap(
+            Collection<T> values, T[] empty, Function<? super T, ? extends K> key) {
+        var array = sortedArray(values, empty);
+        var out = new LinkedHashMap<K, Integer>(array.length + (array.length >> 1) + 1);
+        for (int i = 0; i < array.length; i++) {
+            out.put(key.apply(array[i]), IntegerPool.get(i));
+        }
+        return out;
     }
 
     public static <A extends Comparable<? super V>, V> int

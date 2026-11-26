@@ -3,13 +3,14 @@ package com.v7878.dex.immutable;
 import com.v7878.dex.Internal;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.HashUtils;
+import com.v7878.dex.util.ImmutableAbstractList;
 import com.v7878.dex.util.ProtoDescriptor;
 import com.v7878.dex.util.ShortyUtils;
 
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
-import java.util.AbstractList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.UnaryOperator;
@@ -17,6 +18,9 @@ import java.util.function.UnaryOperator;
 public final class ProtoId implements Comparable<ProtoId> {
     private final TypeId return_type;
     private final List<TypeId> parameters;
+
+    private int hash = HashUtils.NO_HASH; // not part of equals/hashCode/compareTo
+    private String shorty; // not part of equals/hashCode/compareTo
 
     private ProtoId(TypeId return_type, List<TypeId> parameters) {
         this.return_type = Objects.requireNonNull(return_type);
@@ -91,7 +95,11 @@ public final class ProtoId implements Comparable<ProtoId> {
     }
 
     public String computeShorty() {
-        return ShortyUtils.getShorty(return_type, parameters);
+        String out = shorty;
+        if (out == null) {
+            shorty = out = ShortyUtils.getShorty(return_type, parameters);
+        }
+        return out;
     }
 
     public int countInputRegisters() {
@@ -100,7 +108,18 @@ public final class ProtoId implements Comparable<ProtoId> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getReturnType(), getParameterTypes());
+        int h = hash;
+        if (h == HashUtils.NO_HASH) {
+            hash = h = HashUtils.replaceZero(computeHashCode());
+        }
+        return h;
+    }
+
+    private int computeHashCode() {
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getReturnType());
+        h = 31 * h + Objects.hashCode(getParameterTypes());
+        return h;
     }
 
     public ProtoId erased() {
@@ -122,14 +141,10 @@ public final class ProtoId implements Comparable<ProtoId> {
     public ProtoId insertThis(TypeId thiz) {
         Objects.requireNonNull(thiz);
         var params = parameters;
-        var vparams = new AbstractList<TypeId>() {
-            @Override
-            public int size() {
-                return params.size() + 1;
-            }
-
+        var vparams = new ImmutableAbstractList<TypeId>(params.size() + 1) {
             @Override
             public TypeId get(int i) {
+                Objects.checkIndex(i, size());
                 if (i == 0) {
                     return thiz;
                 }

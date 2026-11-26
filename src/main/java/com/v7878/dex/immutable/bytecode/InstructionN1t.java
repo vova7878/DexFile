@@ -43,7 +43,11 @@ public final class InstructionN1t extends Instruction
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegister1(), getBranchOffset());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(getRegister1());
+        h = 31 * h + Integer.hashCode(getBranchOffset());
+        return h;
     }
 
     @Override

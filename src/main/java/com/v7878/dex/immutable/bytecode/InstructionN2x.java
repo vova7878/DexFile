@@ -47,7 +47,11 @@ public final class InstructionN2x extends Instruction implements TwoRegisterInst
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegister1(), getRegister2());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(getRegister1());
+        h = 31 * h + Integer.hashCode(getRegister2());
+        return h;
     }
 
     @Override

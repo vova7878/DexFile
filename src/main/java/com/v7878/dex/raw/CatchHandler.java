@@ -16,6 +16,9 @@ public record CatchHandler(List<ExceptionHandler> elements, Integer catch_all_ad
 
     @Override
     public int hashCode() {
-        return Objects.hash(elements, catch_all_addr);
+        int h = 1;
+        h = 31 * h + Objects.hashCode(elements);
+        h = 31 * h + Objects.hashCode(catch_all_addr);
+        return h;
     }
 }

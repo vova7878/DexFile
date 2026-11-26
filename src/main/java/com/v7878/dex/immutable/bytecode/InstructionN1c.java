@@ -46,7 +46,11 @@ public final class InstructionN1c extends Instruction
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegister1(), getReference1());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(getRegister1());
+        h = 31 * h + Objects.hashCode(getReference1());
+        return h;
     }
 
     @Override

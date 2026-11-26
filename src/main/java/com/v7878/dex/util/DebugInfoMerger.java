@@ -22,16 +22,29 @@ public class DebugInfoMerger {
         var items = new ArrayList<>(debug_items);
         Collections.sort(items);
 
-        var out = new ArrayList<DebugItem>(items.size());
         int pc = 0;
-        for (var item : items) {
-            int position = item.position();
+        int count = 0;
+        for (int i = 0, n = items.size(); i < n; i++) {
+            int position = items.get(i).position();
             if (pc != position) {
-                out.add(AdvancePC.of(position - pc));
+                count++;
                 pc = position;
             }
-            out.add(item.item());
+            count++;
         }
-        return Collections.unmodifiableList(out);
+
+        var out = new DebugItem[count];
+        int index = 0;
+        pc = 0;
+        for (int i = 0, n = items.size(); i < n; i++) {
+            var item = items.get(i);
+            int position = item.position();
+            if (pc != position) {
+                out[index++] = AdvancePC.of(position - pc);
+                pc = position;
+            }
+            out[index++] = item.item();
+        }
+        return Converter.asList(out);
     }
 }

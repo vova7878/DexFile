@@ -118,8 +118,12 @@ public final class MethodImplementation {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getRegisterCount(), getInstructions(),
-                CollectionUtils.setHashCode(getTryBlocks()), getDebugItems());
+        int h = 1;
+        h = 31 * h + Integer.hashCode(getRegisterCount());
+        h = 31 * h + Objects.hashCode(getInstructions());
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getTryBlocks()));
+        h = 31 * h + Objects.hashCode(getDebugItems());
+        return h;
     }
 
     @Override

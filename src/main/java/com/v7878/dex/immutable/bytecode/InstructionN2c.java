@@ -57,7 +57,12 @@ public final class InstructionN2c extends Instruction
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegister1(), getRegister2(), getReference1());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(getRegister1());
+        h = 31 * h + Integer.hashCode(getRegister2());
+        h = 31 * h + Objects.hashCode(getReference1());
+        return h;
     }
 
     @Override

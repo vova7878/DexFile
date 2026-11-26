@@ -1,9 +1,15 @@
 package com.v7878.dex.immutable;
 
 import com.v7878.dex.Internal;
+import com.v7878.dex.immutable.value.EncodedArray;
+import com.v7878.dex.immutable.value.EncodedMethodHandle;
+import com.v7878.dex.immutable.value.EncodedMethodType;
+import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.HashUtils;
+import com.v7878.dex.util.ImmutableAbstractList;
 
 import java.util.List;
 import java.util.Objects;
@@ -16,6 +22,29 @@ public final class CallSiteId implements Comparable<CallSiteId> {
     private final String method_name;
     private final ProtoId method_proto;
     private final List<EncodedValue> extra_arguments;
+
+    private EncodedArray array;
+
+    private int hash = HashUtils.NO_HASH; // not part of equals/hashCode/compareTo
+
+    private static EncodedArray buildArray(CallSiteId site) {
+        return EncodedArray.raw(
+                new ImmutableAbstractList<>(site.extra_arguments.size() + 3) {
+                    @Override
+                    public EncodedValue get(int i) {
+                        return switch (i) {
+                            case 0 -> EncodedMethodHandle.of(site.method_handle);
+                            case 1 -> EncodedString.of(site.method_name);
+                            case 2 -> EncodedMethodType.of(site.method_proto);
+                            default -> {
+                                Objects.checkIndex(i, size());
+                                yield site.extra_arguments.get(i - 3);
+                            }
+                        };
+                    }
+                }
+        );
+    }
 
     private CallSiteId(String name, MethodHandleId method_handle, String method_name,
                        ProtoId method_proto, List<EncodedValue> extra_arguments) {
@@ -68,10 +97,37 @@ public final class CallSiteId implements Comparable<CallSiteId> {
         return extra_arguments;
     }
 
+    /**
+     * The call site payload: the method handle, the method name, the method type and then the
+     * extra arguments.
+     * <p>
+     * The instance is not guaranteed to be the same between calls.
+     */
+    public EncodedArray getEncodedArray() {
+        EncodedArray out = array;
+        if (out == null) {
+            array = out = buildArray(this);
+        }
+        return out;
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getMethodName(), getMethodProto(),
-                getMethodHandle(), getExtraArguments());
+        int h = hash;
+        if (h == HashUtils.NO_HASH) {
+            hash = h = HashUtils.replaceZero(computeHashCode());
+        }
+        return h;
+    }
+
+    private int computeHashCode() {
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getName());
+        h = 31 * h + Objects.hashCode(getMethodName());
+        h = 31 * h + Objects.hashCode(getMethodProto());
+        h = 31 * h + Objects.hashCode(getMethodHandle());
+        h = 31 * h + Objects.hashCode(getExtraArguments());
+        return h;
     }
 
     @Override
@@ -112,5 +168,4 @@ public final class CallSiteId implements Comparable<CallSiteId> {
         if (out != 0) return out;
         return CollectionUtils.compareLexicographically(getExtraArguments(), other.getExtraArguments());
     }
-
 }

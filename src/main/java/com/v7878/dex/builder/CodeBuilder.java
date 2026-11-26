@@ -215,8 +215,13 @@ public final class CodeBuilder {
             }
 
             @Override
-            public List<Instruction> generate() {
-                return List.of();
+            public int count() {
+                return 0;
+            }
+
+            @Override
+            public int generate(Instruction[] out, int index) {
+                return index;
             }
         }
 
@@ -244,7 +249,9 @@ public final class CodeBuilder {
 
         int units();
 
-        List<Instruction> generate();
+        int count();
+
+        int generate(Instruction[] out, int index);
     }
 
     // Each position is located between two nodes (semantic content, such as an instruction)
@@ -421,11 +428,18 @@ public final class CodeBuilder {
             }
         } while (changed);
 
-        var out = new ArrayList<Instruction>();
+        int count = 0;
         for (var tmp = root; tmp.node() != null; tmp = tmp.next()) {
-            out.addAll(tmp.node().generate());
+            count += tmp.node().count();
         }
-        return Collections.unmodifiableList(out);
+
+        var out = new Instruction[count];
+        int index = 0;
+        for (var tmp = root; tmp.node() != null; tmp = tmp.next()) {
+            index = tmp.node().generate(out, index);
+        }
+        assert index == count;
+        return Converter.asList(out);
     }
 
     /**
@@ -679,8 +693,14 @@ public final class CodeBuilder {
             }
 
             @Override
-            public List<Instruction> generate() {
-                return List.of(instruction);
+            public int count() {
+                return 1;
+            }
+
+            @Override
+            public int generate(Instruction[] out, int index) {
+                out[index] = instruction;
+                return index + 1;
             }
         });
     }
@@ -704,10 +724,16 @@ public final class CodeBuilder {
             }
 
             @Override
-            public List<Instruction> generate() {
+            public int count() {
+                return 1;
+            }
+
+            @Override
+            public int generate(Instruction[] out, int index) {
                 var instruction = factory.apply(current.position());
                 assert instruction.getOpcode().format() == format;
-                return List.of(instruction);
+                out[index] = instruction;
+                return index + 1;
             }
         });
     }
@@ -720,10 +746,16 @@ public final class CodeBuilder {
             }
 
             @Override
-            public List<Instruction> generate() {
+            public int count() {
+                return 1;
+            }
+
+            @Override
+            public int generate(Instruction[] out, int index) {
                 var value = factory.get();
                 assert value.getOpcode().isPayload();
-                return List.of(value);
+                out[index] = value;
+                return index + 1;
             }
         });
     }
@@ -1773,8 +1805,16 @@ public final class CodeBuilder {
             }
 
             @Override
-            public List<Instruction> generate() {
-                return units() == 0 ? List.of() : List.of(InstructionN0x.of(NOP));
+            public int count() {
+                return units() == 0 ? 0 : 1;
+            }
+
+            @Override
+            public int generate(Instruction[] out, int index) {
+                if (units() != 0) {
+                    out[index++] = InstructionN0x.of(NOP);
+                }
+                return index;
             }
         });
         return this;
@@ -2510,18 +2550,28 @@ public final class CodeBuilder {
             }
 
             @Override
-            public List<Instruction> generate() {
+            public int count() {
                 int diff = diff();
                 if (diff == 0 && isNext(current, target)) {
-                    return List.of();
+                    return 0;
+                }
+                return 1;
+            }
+
+            @Override
+            public int generate(Instruction[] out, int index) {
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return index;
                 }
                 if (diff == 0 || !swidth(diff, 16)) {
-                    return List.of(InstructionN0t.of(GOTO_32, diff));
+                    out[index] = InstructionN0t.of(GOTO_32, diff);
+                } else if (!swidth(diff, 8)) {
+                    out[index] = InstructionN0t.of(GOTO_16, diff);
+                } else {
+                    out[index] = InstructionN0t.of(GOTO, diff);
                 }
-                if (!swidth(diff, 8)) {
-                    return List.of(InstructionN0t.of(GOTO_16, diff));
-                }
-                return List.of(InstructionN0t.of(GOTO, diff));
+                return index + 1;
             }
         });
         return this;
@@ -2800,27 +2850,41 @@ public final class CodeBuilder {
             }
 
             @Override
-            public List<Instruction> generate() {
+            public int count() {
                 int diff = diff();
                 if (diff == 0 && isNext(current, target)) {
-                    return List.of();
+                    return 0;
                 }
                 if (diff == 0) {
-                    return List.of(
-                            InstructionN2t.of(test.inverse().test(), first_reg_to_test,
-                                    second_reg_to_test, Format22t.getUnitCount() + GOTO.getUnitCount()),
-                            InstructionN0t.of(GOTO, -Format22t.getUnitCount())
-                    );
+                    return 2;
                 }
                 if (!swidth(diff, 16)) {
-                    return List.of(
-                            InstructionN2t.of(test.inverse().test(), first_reg_to_test,
-                                    second_reg_to_test, Format22t.getUnitCount() + GOTO_32.getUnitCount()),
-                            InstructionN0t.of(GOTO_32, diff - Format22t.getUnitCount())
-                    );
+                    return 2;
                 }
-                return List.of(InstructionN2t.of(test.test(),
-                        first_reg_to_test, second_reg_to_test, diff));
+                return 1;
+            }
+
+            @Override
+            public int generate(Instruction[] out, int index) {
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return index;
+                }
+                if (diff == 0) {
+                    out[index++] = InstructionN2t.of(test.inverse().test(), first_reg_to_test,
+                            second_reg_to_test, Format22t.getUnitCount() + GOTO.getUnitCount());
+                    out[index++] = InstructionN0t.of(GOTO, -Format22t.getUnitCount());
+                    return index;
+                }
+                if (!swidth(diff, 16)) {
+                    out[index++] = InstructionN2t.of(test.inverse().test(), first_reg_to_test,
+                            second_reg_to_test, Format22t.getUnitCount() + GOTO_32.getUnitCount());
+                    out[index++] = InstructionN0t.of(GOTO_32, diff - Format22t.getUnitCount());
+                    return index;
+                }
+                out[index] = InstructionN2t.of(test.test(),
+                        first_reg_to_test, second_reg_to_test, diff);
+                return index + 1;
             }
         });
         return this;
@@ -2903,26 +2967,40 @@ public final class CodeBuilder {
             }
 
             @Override
-            public List<Instruction> generate() {
+            public int count() {
                 int diff = diff();
                 if (diff == 0 && isNext(current, target)) {
-                    return List.of();
+                    return 0;
                 }
                 if (diff == 0) {
-                    return List.of(
-                            InstructionN1t.of(test.inverse().testz(),
-                                    reg_to_test, Format21t.getUnitCount() + GOTO.getUnitCount()),
-                            InstructionN0t.of(GOTO, -Format21t.getUnitCount())
-                    );
+                    return 2;
                 }
                 if (!swidth(diff, 16)) {
-                    return List.of(
-                            InstructionN1t.of(test.inverse().testz(),
-                                    reg_to_test, Format21t.getUnitCount() + GOTO_32.getUnitCount()),
-                            InstructionN0t.of(GOTO_32, diff - Format21t.getUnitCount())
-                    );
+                    return 2;
                 }
-                return List.of(InstructionN1t.of(test.testz(), reg_to_test, diff));
+                return 1;
+            }
+
+            @Override
+            public int generate(Instruction[] out, int index) {
+                int diff = diff();
+                if (diff == 0 && isNext(current, target)) {
+                    return index;
+                }
+                if (diff == 0) {
+                    out[index++] = InstructionN1t.of(test.inverse().testz(),
+                            reg_to_test, Format21t.getUnitCount() + GOTO.getUnitCount());
+                    out[index++] = InstructionN0t.of(GOTO, -Format21t.getUnitCount());
+                    return index;
+                }
+                if (!swidth(diff, 16)) {
+                    out[index++] = InstructionN1t.of(test.inverse().testz(),
+                            reg_to_test, Format21t.getUnitCount() + GOTO_32.getUnitCount());
+                    out[index++] = InstructionN0t.of(GOTO_32, diff - Format21t.getUnitCount());
+                    return index;
+                }
+                out[index] = InstructionN1t.of(test.testz(), reg_to_test, diff);
+                return index + 1;
             }
         });
         return this;

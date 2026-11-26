@@ -1,6 +1,7 @@
 package com.v7878.dex.immutable;
 
 import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.HashUtils;
 
 import java.lang.reflect.Field;
 import java.util.Objects;
@@ -9,6 +10,8 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
     private final TypeId declaring_class;
     private final String name;
     private final TypeId type;
+
+    private int hash = HashUtils.NO_HASH; // not part of equals/hashCode/compareTo
 
     private FieldId(TypeId declaring_class, String name, TypeId type) {
         this.declaring_class = Objects.requireNonNull(declaring_class);
@@ -80,7 +83,19 @@ public final class FieldId extends MemberId implements Comparable<FieldId> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getDeclaringClass(), getName(), getType());
+        int h = hash;
+        if (h == HashUtils.NO_HASH) {
+            hash = h = HashUtils.replaceZero(computeHashCode());
+        }
+        return h;
+    }
+
+    private int computeHashCode() {
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getDeclaringClass());
+        h = 31 * h + Objects.hashCode(getName());
+        h = 31 * h + Objects.hashCode(getType());
+        return h;
     }
 
     @Override

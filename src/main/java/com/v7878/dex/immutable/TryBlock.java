@@ -76,7 +76,12 @@ public final class TryBlock implements Comparable<TryBlock> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getStartAddress(), getUnitCount(), getCatchAllAddress(), getHandlers());
+        int h = 1;
+        h = 31 * h + Integer.hashCode(getStartAddress());
+        h = 31 * h + Integer.hashCode(getUnitCount());
+        h = 31 * h + Objects.hashCode(getCatchAllAddress());
+        h = 31 * h + Objects.hashCode(getHandlers());
+        return h;
     }
 
     @Override

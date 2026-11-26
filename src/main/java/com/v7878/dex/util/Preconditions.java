@@ -151,15 +151,39 @@ public class Preconditions {
         return registerCount;
     }
 
-    public static Opcode checkFormat(Opcode opcode, String name, Format... expected) {
-        boolean found = false;
-        for (var tmp : expected) {
-            if (opcode.format() == tmp) {
-                found = true;
-                break;
-            }
+    public static Opcode checkFormat(Opcode opcode, String name, Format expected) {
+        if (opcode.format() != expected) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid opcode %s for %s format", opcode, name));
         }
-        if (!found) {
+        return opcode;
+    }
+
+    public static Opcode checkFormat(Opcode opcode, String name,
+                                     Format expected1, Format expected2) {
+        Format format = opcode.format();
+        if (format != expected1 && format != expected2) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid opcode %s for %s format", opcode, name));
+        }
+        return opcode;
+    }
+
+    public static Opcode checkFormat(Opcode opcode, String name, Format expected1,
+                                     Format expected2, Format expected3) {
+        Format format = opcode.format();
+        if (format != expected1 && format != expected2 && format != expected3) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid opcode %s for %s format", opcode, name));
+        }
+        return opcode;
+    }
+
+    public static Opcode checkFormat(Opcode opcode, String name, Format expected1,
+                                     Format expected2, Format expected3, Format expected4) {
+        Format format = opcode.format();
+        if (format != expected1 && format != expected2
+                && format != expected3 && format != expected4) {
             throw new IllegalArgumentException(
                     String.format("Invalid opcode %s for %s format", opcode, name));
         }

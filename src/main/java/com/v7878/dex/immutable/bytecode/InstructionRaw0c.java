@@ -41,7 +41,11 @@ public final class InstructionRaw0c extends Instruction
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), type, reference);
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Objects.hashCode(type);
+        h = 31 * h + Objects.hashCode(reference);
+        return h;
     }
 
     @Override

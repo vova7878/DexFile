@@ -28,7 +28,10 @@ public final class AnnotationElement implements Comparable<AnnotationElement> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getValue());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getName());
+        h = 31 * h + Objects.hashCode(getValue());
+        return h;
     }
 
     @Override

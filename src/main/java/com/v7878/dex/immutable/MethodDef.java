@@ -32,6 +32,8 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     private final MethodImplementation implementation;
     private final NavigableSet<Annotation> annotations;
 
+    private ProtoId proto; // not part of equals/hashCode/compareTo
+
     private MethodDef(
             String name, TypeId return_type, List<Parameter> parameters,
             int access_flags, int hiddenapi_flags, MethodImplementation implementation,
@@ -164,7 +166,11 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     }
 
     public ProtoId getProto() {
-        return ProtoId.raw(return_type, getParameterTypes());
+        ProtoId out = proto;
+        if (out == null) {
+            proto = out = ProtoId.raw(return_type, getParameterTypes());
+        }
+        return out;
     }
 
     public ProtoId callProto(TypeId declaring_class) {
@@ -177,11 +183,13 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
     }
 
     public String computeShorty() {
-        return ShortyUtils.getDefShorty(return_type, parameters);
+        return getProto().computeShorty();
     }
 
     public String computeFullShorty() {
-        return ShortyUtils.getDefShorty(return_type, parameters, access_flags);
+        String shorty = computeShorty();
+        if ((access_flags & ACC_STATIC) != 0) return shorty;
+        return shorty.charAt(0) + "L" + shorty.substring(1);
     }
 
     public int countInputRegisters() {
@@ -235,9 +243,15 @@ public final class MethodDef extends MemberDef implements Comparable<MethodDef> 
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getAccessFlags(), getHiddenApiFlags(),
-                getReturnType(), getParameters(), getImplementation(),
-                CollectionUtils.setHashCode(getAnnotations()));
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getName());
+        h = 31 * h + Integer.hashCode(getAccessFlags());
+        h = 31 * h + Integer.hashCode(getHiddenApiFlags());
+        h = 31 * h + Objects.hashCode(getReturnType());
+        h = 31 * h + Objects.hashCode(getParameters());
+        h = 31 * h + Objects.hashCode(getImplementation());
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getAnnotations()));
+        return h;
     }
 
     @Override

@@ -83,8 +83,11 @@ public final class Parameter implements Annotatable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getName(), getType(),
-                CollectionUtils.setHashCode(getAnnotations()));
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getName());
+        h = 31 * h + Objects.hashCode(getType());
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getAnnotations()));
+        return h;
     }
 
     /**

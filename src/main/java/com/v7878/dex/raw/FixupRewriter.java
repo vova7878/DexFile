@@ -35,7 +35,6 @@ import com.v7878.dex.immutable.debug.SetFile;
 import com.v7878.dex.immutable.debug.SetPrologueEnd;
 import com.v7878.dex.immutable.debug.StartLocal;
 
-import java.util.TreeMap;
 import java.util.function.IntFunction;
 
 public class FixupRewriter {
@@ -44,6 +43,7 @@ public class FixupRewriter {
     }
 
     private static Integer debugLabel(int offset, IntSet positions, int after) {
+        // TODO: Choosing the right location for debug elements within instructions
         int index = positions.indexOf(offset);
         if (index < 0) {
             index = ~index - 1;
@@ -129,7 +129,7 @@ public class FixupRewriter {
             case PACKED_SWITCH, SPARSE_SWITCH -> {
                 var tmp = ((InstructionN1t) insn);
                 var payload = (SwitchPayload) code_map.apply(offset + tmp.getBranchOffset());
-                var branches = new TreeMap<Integer, Integer>();
+                var branches = new IntMap<>();
                 for (var entry : payload.getSwitchElements()) {
                     branches.put(entry.getKey(), label(offset + entry.getOffset()));
                 }

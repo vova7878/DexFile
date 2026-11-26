@@ -44,7 +44,12 @@ public final class InstructionN3x extends Instruction implements ThreeRegisterIn
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegister1(), getRegister2(), getRegister3());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(getRegister1());
+        h = 31 * h + Integer.hashCode(getRegister2());
+        h = 31 * h + Integer.hashCode(getRegister3());
+        return h;
     }
 
     @Override

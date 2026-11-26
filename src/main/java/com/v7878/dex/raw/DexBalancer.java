@@ -36,11 +36,11 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 
 public class DexBalancer {
     private final Set<TypeId> types;
@@ -85,12 +85,12 @@ public class DexBalancer {
     }
 
     private DexBalancer(boolean debug) {
-        this.types = new TreeSet<>();
-        this.protos = new TreeSet<>();
-        this.fields = new TreeSet<>();
-        this.methods = new TreeSet<>();
-        this.method_handles = new TreeSet<>();
-        this.call_sites = new TreeSet<>();
+        this.types = new LinkedHashSet<>();
+        this.protos = new LinkedHashSet<>();
+        this.fields = new LinkedHashSet<>();
+        this.methods = new LinkedHashSet<>();
+        this.method_handles = new LinkedHashSet<>();
+        this.call_sites = new LinkedHashSet<>();
         this.debug = debug;
     }
 

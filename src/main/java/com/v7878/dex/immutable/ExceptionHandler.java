@@ -32,7 +32,10 @@ public final class ExceptionHandler {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getAddress(), getExceptionType());
+        int h = 1;
+        h = 31 * h + Integer.hashCode(getAddress());
+        h = 31 * h + Objects.hashCode(getExceptionType());
+        return h;
     }
 
     @Override

@@ -1,8 +1,7 @@
 package com.v7878.dex.raw;
 
-import java.util.NavigableMap;
+import java.util.LinkedHashMap;
 import java.util.Objects;
-import java.util.TreeMap;
 
 public class SharedData {
     public static class StringPosition implements Comparable<StringPosition> {
@@ -31,13 +30,13 @@ public class SharedData {
         }
     }
 
-    public final NavigableMap<String, StringPosition> strings;
+    public final LinkedHashMap<String, StringPosition> strings;
 
     public int content_off;
     public int string_data_items_off;
 
     public SharedData() {
-        strings = new TreeMap<>();
+        strings = new LinkedHashMap<>();
         content_off = 0;
     }
 

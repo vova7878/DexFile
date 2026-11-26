@@ -53,7 +53,11 @@ public final class ArrayPayload extends Instruction implements ArrayPayloadInstr
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getElementWidth(), getArrayElements());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(getElementWidth());
+        h = 31 * h + Objects.hashCode(getArrayElements());
+        return h;
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.v7878.dex.immutable;
 import static com.v7878.dex.DexConstants.ACC_STATIC;
 
 import com.v7878.dex.util.CollectionUtils;
+import com.v7878.dex.util.HashUtils;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
@@ -13,6 +14,8 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
     private final TypeId declaring_class;
     private final String name;
     private final ProtoId proto;
+
+    private int hash = HashUtils.NO_HASH; // not part of equals/hashCode/compareTo
 
     private MethodId(TypeId declaring_class, String name, ProtoId proto) {
         this.declaring_class = Objects.requireNonNull(declaring_class);
@@ -149,7 +152,20 @@ public final class MethodId extends MemberId implements Comparable<MethodId> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getDeclaringClass(), getName(), getReturnType(), getParameterTypes());
+        int h = hash;
+        if (h == HashUtils.NO_HASH) {
+            hash = h = HashUtils.replaceZero(computeHashCode());
+        }
+        return h;
+    }
+
+    private int computeHashCode() {
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getDeclaringClass());
+        h = 31 * h + Objects.hashCode(getName());
+        h = 31 * h + Objects.hashCode(getReturnType());
+        h = 31 * h + Objects.hashCode(getParameterTypes());
+        return h;
     }
 
     @Override

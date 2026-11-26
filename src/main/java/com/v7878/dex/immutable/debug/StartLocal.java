@@ -40,7 +40,12 @@ public final class StartLocal extends DebugItem {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getRegister(), getName(), getType(), getSignature());
+        int h = 1;
+        h = 31 * h + Integer.hashCode(getRegister());
+        h = 31 * h + Objects.hashCode(getName());
+        h = 31 * h + Objects.hashCode(getType());
+        h = 31 * h + Objects.hashCode(getSignature());
+        return h;
     }
 
     @Override

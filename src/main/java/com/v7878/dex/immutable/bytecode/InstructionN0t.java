@@ -39,7 +39,10 @@ public final class InstructionN0t extends Instruction implements BranchOffsetIns
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getBranchOffset());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(getBranchOffset());
+        return h;
     }
 
     @Override

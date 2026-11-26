@@ -67,8 +67,10 @@ public final class SwitchPayload extends Instruction implements SwitchPayloadIns
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(),
-                CollectionUtils.setHashCode(getSwitchElements()));
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getSwitchElements()));
+        return h;
     }
 
     @Override

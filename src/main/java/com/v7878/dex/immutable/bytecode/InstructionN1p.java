@@ -86,7 +86,11 @@ public final class InstructionN1p extends Instruction implements OneRegisterInst
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegister1(), getIndex());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(getRegister1());
+        h = 31 * h + Integer.hashCode(getIndex());
+        return h;
     }
 
     @Override

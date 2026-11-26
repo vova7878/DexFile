@@ -34,23 +34,21 @@ import com.v7878.dex.immutable.value.EncodedField;
 import com.v7878.dex.immutable.value.EncodedMethod;
 import com.v7878.dex.immutable.value.EncodedMethodHandle;
 import com.v7878.dex.immutable.value.EncodedMethodType;
-import com.v7878.dex.immutable.value.EncodedString;
 import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
-import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.IntegerPool;
 import com.v7878.dex.util.ShortyUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 public class DexCollector {
     private static final Integer NO_OFFSET_I = NO_OFFSET;
@@ -59,41 +57,6 @@ public class DexCollector {
         int getStringCount();
 
         int getStringIndex(String value);
-    }
-
-    public record CallSiteIdContainer(CallSiteId value, EncodedArray array)
-            implements Comparable<CallSiteIdContainer> {
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            return obj instanceof CallSiteIdContainer that
-                    && Objects.equals(value, that.value);
-        }
-
-        @Override
-        public int hashCode() {
-            return value.hashCode();
-        }
-
-        @Override
-        public int compareTo(CallSiteIdContainer other) {
-            return CollectionUtils.compareNonNull(value, other.value);
-        }
-
-        private static List<EncodedValue> toList(CallSiteId value) {
-            Objects.requireNonNull(value);
-            var extra_args = value.getExtraArguments();
-            var list = new ArrayList<EncodedValue>(extra_args.size() + 3);
-            list.add(EncodedMethodHandle.of(value.getMethodHandle()));
-            list.add(EncodedString.of(value.getMethodName()));
-            list.add(EncodedMethodType.of(value.getMethodProto()));
-            list.addAll(extra_args);
-            return list;
-        }
-
-        public static CallSiteIdContainer of(CallSiteId callsite) {
-            return new CallSiteIdContainer(callsite, EncodedArray.raw(toList(callsite)));
-        }
     }
 
     public record FieldDefContainer(FieldDef value, FieldId id) {
@@ -146,12 +109,16 @@ public class DexCollector {
             this.compact = compact;
 
             this.debug_info_offset = -1;
-            this.hash = compact
-                    // For compact dex files, debug info is not compared
-                    ? Objects.hash(ins, /* outs, */ value.getRegisterCount(),
-                    value.getInstructions(), value.getTryBlocks())
-                    : Objects.hash(ins, /* outs, */ value.getRegisterCount(),
-                    value.getInstructions(), value.getTryBlocks(), debug_info);
+            // For compact dex files, debug info is not compared
+            int h = 1;
+            h = 31 * h + Integer.hashCode(ins);
+            h = 31 * h + Integer.hashCode(value.getRegisterCount());
+            h = 31 * h + Objects.hashCode(value.getInstructions());
+            h = 31 * h + Objects.hashCode(value.getTryBlocks());
+            if (!compact) {
+                h = 31 * h + Objects.hashCode(debug_info);
+            }
+            this.hash = h;
         }
 
         @Override
@@ -204,8 +171,8 @@ public class DexCollector {
                     return null;
                 }
                 boolean empty = true;
-                for (var name : names) {
-                    if (name != null) {
+                for (int i = 0, n = names.size(); i < n; i++) {
+                    if (names.get(i) != null) {
                         empty = false;
                         break;
                     }
@@ -348,7 +315,10 @@ public class DexCollector {
 
         @Override
         public int hashCode() {
-            return Objects.hash(declaring_class, class_annotations);
+            int h = 1;
+            h = 31 * h + Objects.hashCode(declaring_class);
+            h = 31 * h + Objects.hashCode(class_annotations);
+            return h;
         }
 
         private static List<NavigableSet<Annotation>> toAnnotationsList(List<Parameter> parameters) {
@@ -357,8 +327,8 @@ public class DexCollector {
                 return anno.isEmpty() ? null : anno;
             });
             boolean empty = true;
-            for (var tmp : list) {
-                if (tmp != null) {
+            for (int i = 0, n = list.size(); i < n; i++) {
+                if (list.get(i) != null) {
                     empty = false;
                     break;
                 }
@@ -419,21 +389,21 @@ public class DexCollector {
         }
     }
 
-    public final NavigableSet<TypeId> types;
-    public final NavigableSet<ProtoId> protos;
-    public final NavigableSet<FieldId> fields;
-    public final NavigableSet<MethodId> methods;
-    public final NavigableSet<MethodHandleId> method_handles;
-    public final NavigableSet<CallSiteIdContainer> call_sites;
+    public final LinkedHashSet<TypeId> types;
+    public final LinkedHashSet<ProtoId> protos;
+    public final LinkedHashSet<FieldId> fields;
+    public final LinkedHashSet<MethodId> methods;
+    public final LinkedHashSet<MethodHandleId> method_handles;
+    public final LinkedHashMap<CallSiteId, Integer> call_sites;
 
-    public final Map<List<TypeId>, Integer> type_lists;
-    public final Map<EncodedArray, Integer> encoded_arrays;
-    public final Map<DebugInfo, Integer> debug_infos;
-    public final Map<CodeContainer, Integer> code_items;
-    public final Map<Annotation, Integer> annotations;
-    public final Map<NavigableSet<Annotation>, Integer> annotation_sets;
-    public final Map<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
-    public final Map<AnnotationDirectory, Integer> annotation_directories;
+    public final LinkedHashMap<List<TypeId>, Integer> type_lists;
+    public final LinkedHashMap<EncodedArray, Integer> encoded_arrays;
+    public final LinkedHashMap<DebugInfo, Integer> debug_infos;
+    public final LinkedHashMap<CodeContainer, Integer> code_items;
+    public final LinkedHashMap<Annotation, Integer> annotations;
+    public final LinkedHashMap<NavigableSet<Annotation>, Integer> annotation_sets;
+    public final LinkedHashMap<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
+    public final LinkedHashMap<AnnotationDirectory, Integer> annotation_directories;
 
     public final List<ClassDefContainer> class_defs;
 
@@ -452,12 +422,12 @@ public class DexCollector {
         this.compact = compact;
         this.debug = debug;
 
-        types = new TreeSet<>();
-        protos = new TreeSet<>();
-        fields = new TreeSet<>();
-        methods = new TreeSet<>();
-        method_handles = new TreeSet<>();
-        call_sites = new TreeSet<>();
+        types = new LinkedHashSet<>();
+        protos = new LinkedHashSet<>();
+        fields = new LinkedHashSet<>();
+        methods = new LinkedHashSet<>();
+        method_handles = new LinkedHashSet<>();
+        call_sites = new LinkedHashMap<>();
 
         type_lists = new LinkedHashMap<>();
         encoded_arrays = new LinkedHashMap<>();
@@ -484,7 +454,6 @@ public class DexCollector {
 
     public void addProto(ProtoId value) {
         if (protos.add(value)) {
-            value.computeShorty();
             addType(value.getReturnType());
             addTypeList(value.getParameterTypes());
         }
@@ -509,9 +478,9 @@ public class DexCollector {
     }
 
     public void addCallSite(CallSiteId value) {
-        var container = CallSiteIdContainer.of(value);
-        if (call_sites.add(container)) {
-            addEncodedArray(container.array());
+        int index = call_sites.size();
+        if (call_sites.putIfAbsent(value, IntegerPool.get(index)) == null) {
+            addEncodedArray(value.getEncodedArray());
         }
     }
 
@@ -557,7 +526,8 @@ public class DexCollector {
 
     public void addAnnotationSetList(List<NavigableSet<Annotation>> value) {
         if (annotation_set_lists.putIfAbsent(value, NO_OFFSET_I) == null) {
-            for (var tmp : value) {
+            for (int i = 0, n = value.size(); i < n; i++) {
+                var tmp = value.get(i);
                 if (tmp != null) addAnnotationSet(tmp);
             }
         }
@@ -581,8 +551,8 @@ public class DexCollector {
 
     public void addTypeList(List<TypeId> value) {
         if (type_lists.putIfAbsent(value, NO_OFFSET_I) == null) {
-            for (var tmp : value) {
-                addType(tmp);
+            for (int i = 0, n = value.size(); i < n; i++) {
+                addType(value.get(i));
             }
         }
     }
@@ -596,16 +566,18 @@ public class DexCollector {
     public void addDebugInfo(DebugInfo value) {
         assert debug;
         if (debug_infos.putIfAbsent(value, NO_OFFSET_I) == null) {
-            for (var tmp : value.items()) {
-                fillDebugItem(tmp);
+            var items = value.items();
+            for (int i = 0, n = items.size(); i < n; i++) {
+                fillDebugItem(items.get(i));
             }
         }
     }
 
     public void addCodeItem(CodeContainer value) {
         if (code_items.putIfAbsent(value, NO_OFFSET_I) == null) {
-            for (var tmp : value.value.getInstructions()) {
-                fillInstruction(tmp);
+            var instructions = value.value.getInstructions();
+            for (int i = 0, n = instructions.size(); i < n; i++) {
+                fillInstruction(instructions.get(i));
             }
             for (var tmp : value.value.getTryBlocks()) {
                 fillTryBlock(tmp);
@@ -619,8 +591,9 @@ public class DexCollector {
     }
 
     public void fillDex(Dex value) {
-        for (var tmp : value.getClasses()) {
-            addClassDef(tmp);
+        var classes = value.getClasses();
+        for (int i = 0, n = classes.size(); i < n; i++) {
+            addClassDef(classes.get(i));
         }
     }
 
@@ -651,8 +624,9 @@ public class DexCollector {
     }
 
     public void fillTryBlock(TryBlock value) {
-        for (var tmp : value.getHandlers()) {
-            fillExceptionHandler(tmp);
+        var handlers = value.getHandlers();
+        for (int i = 0, n = handlers.size(); i < n; i++) {
+            fillExceptionHandler(handlers.get(i));
         }
     }
 
@@ -675,8 +649,9 @@ public class DexCollector {
     }
 
     public void fillEncodedArray(EncodedArray value) {
-        for (var tmp : value.getValue()) {
-            fillEncodedValue(tmp);
+        var values = value.getValue();
+        for (int i = 0, n = values.size(); i < n; i++) {
+            fillEncodedValue(values.get(i));
         }
     }
 

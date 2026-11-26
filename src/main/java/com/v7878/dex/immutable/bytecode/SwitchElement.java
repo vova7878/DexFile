@@ -2,8 +2,6 @@ package com.v7878.dex.immutable.bytecode;
 
 import com.v7878.dex.util.Formatter;
 
-import java.util.Objects;
-
 public final class SwitchElement implements Comparable<SwitchElement> {
     private final int key;
     private final int offset;
@@ -27,7 +25,10 @@ public final class SwitchElement implements Comparable<SwitchElement> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getKey(), getOffset());
+        int h = 1;
+        h = 31 * h + Integer.hashCode(getKey());
+        h = 31 * h + Integer.hashCode(getOffset());
+        return h;
     }
 
     @Override

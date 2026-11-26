@@ -131,7 +131,6 @@ import com.v7878.dex.io.RandomIO;
 import com.v7878.dex.io.RandomOutput;
 import com.v7878.dex.io.ValueCoder;
 import com.v7878.dex.raw.DexCollector.AnnotationDirectory;
-import com.v7878.dex.raw.DexCollector.CallSiteIdContainer;
 import com.v7878.dex.raw.DexCollector.CodeContainer;
 import com.v7878.dex.raw.DexCollector.FieldDefContainer;
 import com.v7878.dex.raw.DexCollector.MethodDefContainer;
@@ -144,7 +143,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -232,22 +230,22 @@ public class DexWriter implements StringIndexer {
 
     private final SharedData shared_data;
 
-    private final StringPosition[] strings;
-    private final TypeId[] types;
-    private final ProtoId[] protos;
-    private final FieldId[] fields;
-    private final MethodId[] methods;
-    private final CallSiteIdContainer[] call_sites;
-    private final MethodHandleId[] method_handles;
+    private final LinkedHashMap<String, Integer> string_index;
+    private final LinkedHashMap<TypeId, Integer> type_index;
+    private final LinkedHashMap<ProtoId, Integer> proto_index;
+    private final LinkedHashMap<FieldId, Integer> field_index;
+    private final LinkedHashMap<MethodId, Integer> method_index;
+    private final LinkedHashMap<CallSiteId, Integer> call_site_index;
+    private final LinkedHashMap<MethodHandleId, Integer> method_handle_index;
 
-    private final Map<List<TypeId>, Integer> type_lists;
-    private final Map<EncodedArray, Integer> encoded_arrays;
-    private final Map<DebugInfo, Integer> debug_infos;
-    private final Map<CodeContainer, Integer> code_items;
-    private final Map<Annotation, Integer> annotations;
-    private final Map<NavigableSet<Annotation>, Integer> annotation_sets;
-    private final Map<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
-    private final Map<AnnotationDirectory, Integer> annotation_directories;
+    private final LinkedHashMap<List<TypeId>, Integer> type_lists;
+    private final LinkedHashMap<EncodedArray, Integer> encoded_arrays;
+    private final LinkedHashMap<DebugInfo, Integer> debug_infos;
+    private final LinkedHashMap<CodeContainer, Integer> code_items;
+    private final LinkedHashMap<Annotation, Integer> annotations;
+    private final LinkedHashMap<NavigableSet<Annotation>, Integer> annotation_sets;
+    private final LinkedHashMap<List<NavigableSet<Annotation>>, Integer> annotation_set_lists;
+    private final LinkedHashMap<AnnotationDirectory, Integer> annotation_directories;
 
     private final ClassDefContainer[] class_defs;
 
@@ -289,7 +287,7 @@ public class DexWriter implements StringIndexer {
      * implemented interfaces appear in the list earlier than the referring class".
      */
     private static ClassDefContainer[] sort(List<ClassDefContainer> class_defs) {
-        Map<TypeId, ClassDefContainer> map = new HashMap<>();
+        Map<TypeId, ClassDefContainer> map = new LinkedHashMap<>();
         for (var container : class_defs) {
             var type = container.value.getType();
             if (map.putIfAbsent(type, container) != null) {
@@ -348,22 +346,23 @@ public class DexWriter implements StringIndexer {
         scollector.fillDex(dexfile);
 
         // The number of strings is limited to 32 bits, so no checks are needed.
-        strings = scollector.strings.toArray(EmptyArrays.STRING);
+        string_index = CollectionUtils.sortedIndexMap(
+                scollector.strings, EmptyArrays.STRING, value -> value.value);
 
         var collector = new DexCollector(this, options.getStringFix(),
                 options.getRawFix(), isCompact(), options.hasDebugInfo());
         collector.fillDex(dexfile);
 
-        types = collector.types.toArray(EmptyArrays.TYPE_ID);
-        checkSizeLimit(types.length, "type");
-        protos = collector.protos.toArray(EmptyArrays.PROTO_ID);
-        checkSizeLimit(protos.length, "proto");
-        fields = collector.fields.toArray(EmptyArrays.FIELD_ID);
-        methods = collector.methods.toArray(EmptyArrays.METHOD_ID);
+        type_index = CollectionUtils.sortedIndexMap(collector.types, EmptyArrays.TYPE_ID);
+        checkSizeLimit(type_index.size(), "type");
+        proto_index = CollectionUtils.sortedIndexMap(collector.protos, EmptyArrays.PROTO_ID);
+        checkSizeLimit(proto_index.size(), "proto");
+        field_index = CollectionUtils.sortedIndexMap(collector.fields, EmptyArrays.FIELD_ID);
+        method_index = CollectionUtils.sortedIndexMap(collector.methods, EmptyArrays.METHOD_ID);
         if (!options.hasExpandedInstructions()) {
             // Only dex036 can have more than 65535 elements in these sections
-            checkSizeLimit(fields.length, "field");
-            checkSizeLimit(methods.length, "method");
+            checkSizeLimit(field_index.size(), "field");
+            checkSizeLimit(method_index.size(), "method");
         }
         // Technically, the callsite and methodhandle sections are
         // not limited from above in the number of elements.
@@ -380,10 +379,11 @@ public class DexWriter implements StringIndexer {
         // which can have state. The reason for allowing them for
         // methodhandles is unclear: they have no state, so this is
         // probably a surplus of the format reserved for the future.
-        call_sites = collector.call_sites.toArray(EmptyArrays.CALLSITE_ID_CONTAINER);
-        checkSizeLimit(call_sites.length, "callsite");
-        method_handles = collector.method_handles.toArray(EmptyArrays.METHOD_HANDLE_ID);
-        checkSizeLimit(method_handles.length, "method handle");
+        call_site_index = collector.call_sites;
+        checkSizeLimit(call_site_index.size(), "callsite");
+        method_handle_index = CollectionUtils.sortedIndexMap(
+                collector.method_handles, EmptyArrays.METHOD_HANDLE_ID);
+        checkSizeLimit(method_handle_index.size(), "method handle");
 
         class_defs = options.isClassSorting() ? sort(collector.class_defs) :
                 collector.class_defs.toArray(EmptyArrays.CLASS_DEF_CONTAINER);
@@ -404,7 +404,7 @@ public class DexWriter implements StringIndexer {
             hiddenapi_flags = null;
         }
 
-        compact_debug_info = isCompact() ? new CompactData(new int[methods.length]) : null;
+        compact_debug_info = isCompact() ? new CompactData(new int[method_index.size()]) : null;
     }
 
     public void writePreContent() {
@@ -484,23 +484,23 @@ public class DexWriter implements StringIndexer {
         offset = roundUp(offset, MAIN_SECTION_ALIGNMENT);
 
         map.string_ids_off = offset;
-        map.string_ids_size = strings.length;
+        map.string_ids_size = string_index.size();
         offset += map.string_ids_size * STRING_ID_SIZE;
 
         map.type_ids_off = offset;
-        map.type_ids_size = types.length;
+        map.type_ids_size = type_index.size();
         offset += map.type_ids_size * TYPE_ID_SIZE;
 
         map.proto_ids_off = offset;
-        map.proto_ids_size = protos.length;
+        map.proto_ids_size = proto_index.size();
         offset += map.proto_ids_size * PROTO_ID_SIZE;
 
         map.field_ids_off = offset;
-        map.field_ids_size = fields.length;
+        map.field_ids_size = field_index.size();
         offset += map.field_ids_size * FIELD_ID_SIZE;
 
         map.method_ids_off = offset;
-        map.method_ids_size = methods.length;
+        map.method_ids_size = method_index.size();
         offset += map.method_ids_size * METHOD_ID_SIZE;
 
         map.class_defs_off = offset;
@@ -508,11 +508,11 @@ public class DexWriter implements StringIndexer {
         offset += map.class_defs_size * CLASS_DEF_SIZE;
 
         map.call_site_ids_off = offset;
-        map.call_site_ids_size = call_sites.length;
+        map.call_site_ids_size = call_site_index.size();
         offset += map.call_site_ids_size * CALL_SITE_ID_SIZE;
 
         map.method_handles_off = offset;
-        map.method_handles_size = method_handles.length;
+        map.method_handles_size = method_handle_index.size();
         offset += map.method_handles_size * METHOD_HANDLE_ID_SIZE;
 
         offset = roundUp(offset, DATA_SECTION_ALIGNMENT);
@@ -547,6 +547,7 @@ public class DexWriter implements StringIndexer {
     }
 
     public void writeChecksums() {
+        var buffer = (ByteArrayIO) main_buffer;
         main_buffer.position(map.header_off + SIGNATURE_OFFSET);
         MessageDigest md;
         try {
@@ -554,30 +555,26 @@ public class DexWriter implements StringIndexer {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("Unable to find SHA-1 MessageDigest", e);
         }
-        byte[] signature = md.digest(main_buffer
-                .duplicateAt(map.header_off + SIGNATURE_DATA_START_OFFSET)
-                .readByteArray(map.file_size - SIGNATURE_DATA_START_OFFSET));
-        main_buffer.writeByteArray(signature);
+        buffer.updateDigest(md, map.header_off + SIGNATURE_DATA_START_OFFSET,
+                map.file_size - SIGNATURE_DATA_START_OFFSET);
+        main_buffer.writeByteArray(md.digest());
 
         main_buffer.position(map.header_off + CHECKSUM_OFFSET);
         Adler32 adler = new Adler32();
         int adler_length = map.file_size - CHECKSUM_DATA_START_OFFSET;
-        adler.update(main_buffer
-                .duplicateAt(map.header_off + CHECKSUM_DATA_START_OFFSET)
-                .readByteArray(adler_length), 0, adler_length);
+        buffer.updateDigest(adler, map.header_off + CHECKSUM_DATA_START_OFFSET, adler_length);
         main_buffer.writeInt((int) adler.getValue());
     }
 
     @Override
     public int getStringCount() {
-        return strings.length;
+        return string_index.size();
     }
 
     @Override
     public int getStringIndex(String value) {
-        int out = CollectionUtils.binarySearch(strings, value,
-                (c, v) -> c.value.compareTo(v));
-        if (out < 0) {
+        Integer out = string_index.get(value);
+        if (out == null) {
             throw new IllegalArgumentException(
                     "Unable to find string \"" + value + "\"");
         }
@@ -585,8 +582,8 @@ public class DexWriter implements StringIndexer {
     }
 
     public int getTypeIndex(TypeId value) {
-        int out = CollectionUtils.binarySearch(types, value);
-        if (out < 0) {
+        Integer out = type_index.get(value);
+        if (out == null) {
             throw new IllegalArgumentException(
                     "Unable to find type \"" + value + "\"");
         }
@@ -594,8 +591,8 @@ public class DexWriter implements StringIndexer {
     }
 
     public int getProtoIndex(ProtoId value) {
-        int out = CollectionUtils.binarySearch(protos, value);
-        if (out < 0) {
+        Integer out = proto_index.get(value);
+        if (out == null) {
             throw new IllegalArgumentException(
                     "Unable to find proto \"" + value + "\"");
         }
@@ -603,8 +600,8 @@ public class DexWriter implements StringIndexer {
     }
 
     public int getFieldIndex(FieldId value) {
-        int out = CollectionUtils.binarySearch(fields, value);
-        if (out < 0) {
+        Integer out = field_index.get(value);
+        if (out == null) {
             throw new IllegalArgumentException(
                     "Unable to find field \"" + value + "\"");
         }
@@ -612,8 +609,8 @@ public class DexWriter implements StringIndexer {
     }
 
     public int getMethodIndex(MethodId value) {
-        int out = CollectionUtils.binarySearch(methods, value);
-        if (out < 0) {
+        Integer out = method_index.get(value);
+        if (out == null) {
             throw new IllegalArgumentException(
                     "Unable to find method \"" + value + "\"");
         }
@@ -634,9 +631,8 @@ public class DexWriter implements StringIndexer {
     }
 
     public int getCallSiteIndex(CallSiteId value) {
-        int out = CollectionUtils.binarySearch(call_sites, value,
-                (c, v) -> c.value().compareTo(v));
-        if (out < 0) {
+        Integer out = call_site_index.get(value);
+        if (out == null) {
             throw new IllegalArgumentException(
                     "Unable to find call site \"" + value + "\"");
         }
@@ -644,8 +640,8 @@ public class DexWriter implements StringIndexer {
     }
 
     public int getMethodHandleIndex(MethodHandleId value) {
-        int out = CollectionUtils.binarySearch(method_handles, value);
-        if (out < 0) {
+        Integer out = method_handle_index.get(value);
+        if (out == null) {
             throw new IllegalArgumentException(
                     "Unable to find method handle \"" + value + "\"");
         }
@@ -981,8 +977,9 @@ public class DexWriter implements StringIndexer {
 
     public void writeStringSection() {
         main_buffer.position(map.string_ids_off);
-        for (var value : strings) {
-            writeString(value);
+        var strings = shared_data.strings;
+        for (var name : string_index.keySet()) {
+            writeString(strings.get(name));
         }
     }
 
@@ -1007,7 +1004,7 @@ public class DexWriter implements StringIndexer {
 
     public void writeTypeSection() {
         main_buffer.position(map.type_ids_off);
-        for (var value : types) {
+        for (var value : type_index.keySet()) {
             writeType(value);
         }
     }
@@ -1020,7 +1017,7 @@ public class DexWriter implements StringIndexer {
 
     public void writeFieldSection() {
         main_buffer.position(map.field_ids_off);
-        for (var value : fields) {
+        for (var value : field_index.keySet()) {
             writeField(value);
         }
     }
@@ -1035,7 +1032,7 @@ public class DexWriter implements StringIndexer {
 
     public void writeProtoSection() {
         main_buffer.position(map.proto_ids_off);
-        for (var value : protos) {
+        for (var value : proto_index.keySet()) {
             writeProto(value);
         }
     }
@@ -1048,18 +1045,18 @@ public class DexWriter implements StringIndexer {
 
     public void writeMethodSection() {
         main_buffer.position(map.method_ids_off);
-        for (var value : methods) {
+        for (var value : method_index.keySet()) {
             writeMethod(value);
         }
     }
 
-    public void writeCallSite(CallSiteIdContainer value) {
-        main_buffer.writeInt(getEncodedArrayOffset(value.array()));
+    public void writeCallSite(CallSiteId value) {
+        main_buffer.writeInt(getEncodedArrayOffset(value.getEncodedArray()));
     }
 
     public void writeCallSiteSection() {
         main_buffer.position(map.call_site_ids_off);
-        for (var value : call_sites) {
+        for (var value : call_site_index.keySet()) {
             writeCallSite(value);
         }
     }
@@ -1084,7 +1081,7 @@ public class DexWriter implements StringIndexer {
 
     public void writeMethodHandleSection() {
         main_buffer.position(map.method_handles_off);
-        for (var value : method_handles) {
+        for (var value : method_handle_index.keySet()) {
             writeMethodHandle(value);
         }
     }
@@ -1327,12 +1324,12 @@ public class DexWriter implements StringIndexer {
         out.writeByte(DBG_END_SEQUENCE);
     }
 
-    public void writeDebugInfo(Map.Entry<DebugInfo, Integer> entry) {
+    public void writeDebugInfo(Map.Entry<DebugInfo, Integer> entry, ByteArrayIO dbg_sequence) {
         var value = entry.getKey();
         int start = data_buffer.position();
 
+        dbg_sequence.reset();
         int[] line_start = {1};
-        ByteArrayIO dbg_sequence = new ByteArrayIO();
         writeDebugItemArray(dbg_sequence, value.items(), line_start);
         dbg_sequence.position(0);
 
@@ -1356,9 +1353,10 @@ public class DexWriter implements StringIndexer {
         if (size != 0) {
             map.debug_info_items_off = data_buffer.position();
             map.debug_info_items_size = size;
-        }
-        for (var tmp : debug_infos.entrySet()) {
-            writeDebugInfo(tmp);
+            var dbg_sequence = new ByteArrayIO();
+            for (var tmp : debug_infos.entrySet()) {
+                writeDebugInfo(tmp, dbg_sequence);
+            }
         }
         if (!isCompact()) {
             fixDebugInfoOffsets();

@@ -1,8 +1,10 @@
 package com.v7878.dex.io;
 
 import java.nio.ByteOrder;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.zip.Adler32;
 
 class ModifiableArray {
     private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
@@ -49,6 +51,14 @@ class ModifiableArray {
         if (new_size > data_size) {
             data_size = new_size;
         }
+    }
+
+    void truncate(int new_size) {
+        if (new_size < 0 || new_size > data_size) {
+            throw new IllegalArgumentException(
+                    "Invalid truncate size: " + new_size);
+        }
+        data_size = new_size;
     }
 }
 
@@ -105,6 +115,31 @@ public class ByteArrayIO implements RandomIO {
      */
     public byte[] toByteArray() {
         return arr.copyData(start);
+    }
+
+    /**
+     * Discards the written data between the marked start and the current
+     * size, keeping the capacity, and moves the position to zero.
+     */
+    public void reset() {
+        arr.truncate(start);
+        offset = 0;
+    }
+
+    /**
+     * Updates the digest with length bytes of the written data starting
+     * at from, without copying.
+     */
+    public void updateDigest(MessageDigest md, int from, int length) {
+        md.update(arr.data(), start + from, length);
+    }
+
+    /**
+     * Updates the checksum with length bytes of the written data starting
+     * at from, without copying.
+     */
+    public void updateDigest(Adler32 adler, int from, int length) {
+        adler.update(arr.data(), start + from, length);
     }
 
     @Override

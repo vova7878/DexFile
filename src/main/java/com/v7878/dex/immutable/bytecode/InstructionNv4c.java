@@ -69,9 +69,15 @@ public final class InstructionNv4c extends Instruction
 
     @Override
     public int hashCode() {
-        return Objects.hash(getOpcode(), getRegisterCount(),
-                getRegister1(), getRegister2(), getRegister3(),
-                getRegister4(), getReference1());
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getOpcode());
+        h = 31 * h + Integer.hashCode(getRegisterCount());
+        h = 31 * h + Integer.hashCode(getRegister1());
+        h = 31 * h + Integer.hashCode(getRegister2());
+        h = 31 * h + Integer.hashCode(getRegister3());
+        h = 31 * h + Integer.hashCode(getRegister4());
+        h = 31 * h + Objects.hashCode(getReference1());
+        return h;
     }
 
     @Override

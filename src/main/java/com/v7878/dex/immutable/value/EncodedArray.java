@@ -4,6 +4,7 @@ import com.v7878.dex.Internal;
 import com.v7878.dex.ValueType;
 import com.v7878.dex.util.CollectionUtils;
 import com.v7878.dex.util.Converter;
+import com.v7878.dex.util.HashUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -13,6 +14,8 @@ public final class EncodedArray extends EncodedValue {
     public static final EncodedArray EMPTY = new EncodedArray(Collections.emptyList());
 
     private final List<EncodedValue> value;
+
+    private int hash = HashUtils.NO_HASH; // not part of equals/hashCode/compareTo
 
     private EncodedArray(List<EncodedValue> value) {
         this.value = Objects.requireNonNull(value);
@@ -58,6 +61,14 @@ public final class EncodedArray extends EncodedValue {
 
     @Override
     public int hashCode() {
+        int h = hash;
+        if (h == HashUtils.NO_HASH) {
+            hash = h = HashUtils.replaceZero(computeHashCode());
+        }
+        return h;
+    }
+
+    private int computeHashCode() {
         return Objects.hashCode(getValue());
     }
 

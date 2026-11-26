@@ -93,7 +93,11 @@ public final class Position {
 
         @Override
         public int hashCode() {
-            return Objects.hash(address, exception, fallthrough);
+            int h = 1;
+            h = 31 * h + Integer.hashCode(address);
+            h = 31 * h + Objects.hashCode(exception);
+            h = 31 * h + Boolean.hashCode(fallthrough);
+            return h;
         }
     }
 

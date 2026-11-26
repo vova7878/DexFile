@@ -35,13 +35,13 @@ import com.v7878.dex.immutable.value.EncodedType;
 import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.raw.SharedData.StringPosition;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Objects;
-import java.util.TreeSet;
 
 public class StringCollector {
-    public final NavigableSet<StringPosition> strings;
+    public final LinkedHashSet<StringPosition> strings;
     private final SharedData shared_data;
     private final boolean debug;
 
@@ -49,7 +49,7 @@ public class StringCollector {
         this.shared_data = shared_data;
         this.debug = debug;
 
-        strings = new TreeSet<>();
+        strings = new LinkedHashSet<>();
     }
 
     public void addString(String value) {
@@ -118,20 +118,21 @@ public class StringCollector {
     }
 
     public void fillTypeList(List<TypeId> value) {
-        for (var tmp : value) {
-            fillType(tmp);
+        for (int i = 0, n = value.size(); i < n; i++) {
+            fillType(value.get(i));
         }
     }
 
     public void fillDebugInfo(List<DebugItem> value) {
-        for (var tmp : value) {
-            fillDebugItem(tmp);
+        for (int i = 0, n = value.size(); i < n; i++) {
+            fillDebugItem(value.get(i));
         }
     }
 
     public void fillMethodImplementation(MethodImplementation value) {
-        for (var tmp : value.getInstructions()) {
-            fillInstruction(tmp);
+        var instructions = value.getInstructions();
+        for (int i = 0, n = instructions.size(); i < n; i++) {
+            fillInstruction(instructions.get(i));
         }
         for (var tmp : value.getTryBlocks()) {
             fillTryBlock(tmp);
@@ -142,8 +143,9 @@ public class StringCollector {
     }
 
     public void fillDex(Dex value) {
-        for (var tmp : value.getClasses()) {
-            fillClassDef(tmp);
+        var classes = value.getClasses();
+        for (int i = 0, n = classes.size(); i < n; i++) {
+            fillClassDef(classes.get(i));
         }
     }
 
@@ -175,8 +177,9 @@ public class StringCollector {
     }
 
     public void fillTryBlock(TryBlock value) {
-        for (var tmp : value.getHandlers()) {
-            fillExceptionHandler(tmp);
+        var handlers = value.getHandlers();
+        for (int i = 0, n = handlers.size(); i < n; i++) {
+            fillExceptionHandler(handlers.get(i));
         }
     }
 
@@ -208,7 +211,9 @@ public class StringCollector {
         fillProto(value.getProto());
         var code = value.getImplementation();
         if (code != null) fillMethodImplementation(code);
-        for (var tmp : value.getParameters()) {
+        var parameters = value.getParameters();
+        for (int i = 0, n = parameters.size(); i < n; i++) {
+            var tmp = parameters.get(i);
             fillAnnotationSet(tmp.getAnnotations());
             if (debug) {
                 var name = tmp.getName();
@@ -219,8 +224,9 @@ public class StringCollector {
     }
 
     public void fillEncodedArray(EncodedArray value) {
-        for (var tmp : value.getValue()) {
-            fillEncodedValue(tmp);
+        var values = value.getValue();
+        for (int i = 0, n = values.size(); i < n; i++) {
+            fillEncodedValue(values.get(i));
         }
     }
 

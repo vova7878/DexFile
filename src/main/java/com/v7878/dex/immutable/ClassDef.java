@@ -288,11 +288,16 @@ public final class ClassDef implements Annotatable, ClassHeader {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getType(), getAccessFlags(), getSuperclass(),
-                getInterfaces(), getSourceFile(),
-                CollectionUtils.setHashCode(getFields()),
-                CollectionUtils.setHashCode(getMethods()),
-                CollectionUtils.setHashCode(getAnnotations()));
+        int h = 1;
+        h = 31 * h + Objects.hashCode(getType());
+        h = 31 * h + Integer.hashCode(getAccessFlags());
+        h = 31 * h + Objects.hashCode(getSuperclass());
+        h = 31 * h + Objects.hashCode(getInterfaces());
+        h = 31 * h + Objects.hashCode(getSourceFile());
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getFields()));
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getMethods()));
+        h = 31 * h + Integer.hashCode(CollectionUtils.setHashCode(getAnnotations()));
+        return h;
     }
 
     @Override

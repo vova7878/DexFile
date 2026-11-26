@@ -1409,7 +1409,7 @@ public final class DexReader implements DexReaderCache {
                     Collections.<Annotation>emptyNavigableSet();
             out.add(Parameter.raw(type, name, annotations));
         }
-        return Collections.unmodifiableList(out);
+        return List.copyOf(out);
     }
 
     // TODO: cache blocks?
