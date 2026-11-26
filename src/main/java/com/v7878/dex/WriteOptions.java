@@ -22,9 +22,9 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
     WriteOptions(DexVersion dex_version, StringFix string_fix,
                  RawFix raw_fix, Integer compact_flags,
                  boolean sort_defs, int api, boolean art,
-                 boolean odex, boolean expanded_opcodes,
+                 boolean odex, boolean expanded_opcodes, boolean experimental_lambda,
                  boolean hiddenapi, boolean debug_info) {
-        super(api, art, odex, expanded_opcodes, hiddenapi, debug_info);
+        super(api, art, odex, expanded_opcodes, experimental_lambda, hiddenapi, debug_info);
         this.dex_version = Objects.requireNonNull(dex_version);
         this.string_fix = Objects.requireNonNull(string_fix);
         this.raw_fix = Objects.requireNonNull(raw_fix);
@@ -52,10 +52,11 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
 
     @Override
     protected WriteOptions dup(int api, boolean art, boolean odex,
-                               boolean expanded_opcodes,
+                               boolean expanded_opcodes, boolean experimental_lambda,
                                boolean hiddenapi, boolean debug_info) {
         return new WriteOptions(dex_version, string_fix, raw_fix, compact_flags,
-                sort_defs, api, art, odex, expanded_opcodes, hiddenapi, debug_info);
+                sort_defs, api, art, odex, expanded_opcodes, experimental_lambda,
+                hiddenapi, debug_info);
     }
 
     public DexVersion getDexVersion() {
@@ -64,7 +65,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
 
     public WriteOptions withDexVersion(DexVersion version) {
         return new WriteOptions(version, string_fix, raw_fix, compact_flags,
-                sort_defs, api, art, odex, expanded, hiddenapi, debug_info);
+                sort_defs, api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public Integer getCDEXFlags() {
@@ -73,7 +74,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
 
     public WriteOptions withCDEXFlags(Integer flags) {
         return new WriteOptions(dex_version, string_fix, raw_fix, flags,
-                sort_defs, api, art, odex, expanded, hiddenapi, debug_info);
+                sort_defs, api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public boolean isClassSorting() {
@@ -82,7 +83,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
 
     public WriteOptions withClassSorting(boolean sort) {
         return new WriteOptions(dex_version, string_fix, raw_fix, compact_flags,
-                sort, api, art, odex, expanded, hiddenapi, debug_info);
+                sort, api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public StringFix getStringFix() {
@@ -91,7 +92,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
 
     public WriteOptions withStringFix(StringFix string_fix) {
         return new WriteOptions(dex_version, string_fix, raw_fix, compact_flags,
-                sort_defs, api, art, odex, expanded, hiddenapi, debug_info);
+                sort_defs, api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public RawFix getRawFix() {
@@ -100,7 +101,7 @@ public final class WriteOptions extends DexOptions<WriteOptions> {
 
     public WriteOptions withRawFix(RawFix raw_fix) {
         return new WriteOptions(dex_version, string_fix, raw_fix, compact_flags,
-                sort_defs, api, art, odex, expanded, hiddenapi, debug_info);
+                sort_defs, api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public static WriteOptions defaultOptions() {

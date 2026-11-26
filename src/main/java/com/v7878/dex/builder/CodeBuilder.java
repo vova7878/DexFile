@@ -52,6 +52,7 @@ import com.v7878.dex.immutable.bytecode.InstructionNrcc;
 import com.v7878.dex.immutable.bytecode.InstructionNv4c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
+import com.v7878.dex.immutable.bytecode.InstructionNv5x;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0c;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0x;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -648,6 +649,25 @@ public final class CodeBuilder {
 
     private int check_reg_or_pair(int reg_or_pair, boolean isPair) {
         return isPair ? check_reg_pair(reg_or_pair) : check_reg(reg_or_pair);
+    }
+
+    // The value register of capture-variable/liberate-variable takes its
+    // width from the first character of the type descriptor: Z B C S I F L
+    // and array descriptors occupy one register, J D and the lambda
+    // descriptor \ a pair.
+    private int check_lambda_value_reg(int reg_or_pair, Object constant) {
+        if (!(constant instanceof String descriptor)) {
+            throw new IllegalArgumentException(
+                    "Lambda type descriptor expected, but got: " + constant);
+        }
+        char first = descriptor.isEmpty() ? 0 : descriptor.charAt(0);
+        int width = switch (first) {
+            case 'Z', 'B', 'C', 'S', 'I', 'F', 'L', '[' -> 1;
+            case 'J', 'D', '\\' -> 2;
+            default -> throw new IllegalArgumentException(
+                    "Invalid lambda type descriptor: " + descriptor);
+        };
+        return width == 1 ? check_reg(reg_or_pair) : check_reg_pair(reg_or_pair);
     }
 
     private int check_reg_empty_range(int first_reg) {
@@ -1478,9 +1498,10 @@ public final class CodeBuilder {
 
     // <AA|op BBBB> op vAA, @BBBB
     public CodeBuilder f21c(Opcode op, int reg_or_pair, Object constant) {
-        add(InstructionN1c.of(op,
-                check_reg_or_pair(reg_or_pair, op.isRegPair(0)),
-                constant));
+        int reg = op == CAPTURE_VARIABLE
+                ? check_lambda_value_reg(reg_or_pair, constant)
+                : check_reg_or_pair(reg_or_pair, op.isRegPair(0));
+        add(InstructionN1c.of(op, reg, constant));
         return this;
     }
 
@@ -1490,6 +1511,22 @@ public final class CodeBuilder {
                 check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
                 check_reg_or_pair(reg_or_pair2, op.isRegPair(1)),
                 check_reg_or_pair(reg_or_pair3, op.isRegPair(2))));
+        return this;
+    }
+
+    // <G|B|op F|E|D|C> op vC, {vD, vE, vF, vG} (B: count)
+    public CodeBuilder f25x(Opcode op, int closure_reg, int... args) {
+        int arg_count = args.length;
+        check_reg_pair(closure_reg);
+        Preconditions.check25xRegisterCount(arg_count);
+        for (int arg : args) {
+            check_reg(arg);
+        }
+        add(InstructionNv5x.of(op, closure_reg, arg_count,
+                arg_count > 0 ? args[0] : 0,
+                arg_count > 1 ? args[1] : 0,
+                arg_count > 2 ? args[2] : 0,
+                arg_count > 3 ? args[3] : 0));
         return this;
     }
 
@@ -1522,8 +1559,10 @@ public final class CodeBuilder {
 
     // <B|A|op CCCC> op vA, vB, @CCCC
     public CodeBuilder f22c(Opcode op, int reg_or_pair1, int reg_or_pair2, Object constant) {
-        add(InstructionN2c.of(op,
-                check_reg_or_pair(reg_or_pair1, op.isRegPair(0)),
+        int reg1 = op == LIBERATE_VARIABLE
+                ? check_lambda_value_reg(reg_or_pair1, constant)
+                : check_reg_or_pair(reg_or_pair1, op.isRegPair(0));
+        add(InstructionN2c.of(op, reg1,
                 check_reg_or_pair(reg_or_pair2, op.isRegPair(1)),
                 constant));
         return this;

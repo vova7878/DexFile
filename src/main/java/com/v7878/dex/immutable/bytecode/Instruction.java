@@ -8,8 +8,8 @@ public abstract sealed class Instruction implements InstructionI permits
         InstructionN1i, InstructionN1p, InstructionN1x, InstructionN2x,
         InstructionN1c, InstructionN1l, InstructionN1t, InstructionN2i,
         InstructionN2c, InstructionN2t, InstructionN3x, InstructionNv4c,
-        InstructionNv5c, InstructionNrc, InstructionNv5cc, InstructionNrcc,
-        InstructionRaw0x, InstructionRaw0c, SwitchPayload {
+        InstructionNv5c, InstructionNv5x, InstructionNrc, InstructionNv5cc,
+        InstructionNrcc, InstructionRaw0x, InstructionRaw0c, SwitchPayload {
     private final Opcode opcode;
 
     public Instruction(Opcode opcode) {

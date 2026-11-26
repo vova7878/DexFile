@@ -24,6 +24,7 @@ import static com.v7878.dex.Format.Format22s;
 import static com.v7878.dex.Format.Format22t;
 import static com.v7878.dex.Format.Format22x;
 import static com.v7878.dex.Format.Format23x;
+import static com.v7878.dex.Format.Format25x;
 import static com.v7878.dex.Format.Format30t;
 import static com.v7878.dex.Format.Format31c;
 import static com.v7878.dex.Format.Format31i;
@@ -53,6 +54,7 @@ import static com.v7878.dex.Opcode.Constants.CAN_INITIALIZE_REFERENCE;
 import static com.v7878.dex.Opcode.Constants.CAN_THROW;
 import static com.v7878.dex.Opcode.Constants.ENDS_FLOW;
 import static com.v7878.dex.Opcode.Constants.EXPANDED;
+import static com.v7878.dex.Opcode.Constants.EXPERIMENTAL_LAMBDA;
 import static com.v7878.dex.Opcode.Constants.HAS_PAYLOAD;
 import static com.v7878.dex.Opcode.Constants.LEGACY;
 import static com.v7878.dex.Opcode.Constants.ODEX_ONLY;
@@ -428,13 +430,33 @@ public enum Opcode {
 
     // legacy Android 7.x lambda opcodes
 
-    // TODO INVOKE_LAMBDA(betweenApi(0xf3, 24, 25), "invoke-lambda", Format25x, EXPERIMENTAL_LAMBDA),
-    // 0xf4 was planned as invoke-lambda/range, but it was never implemented
-    // TODO CAPTURE_VARIABLE(betweenApi(0xf5, 24, 25), "capture-variable", Format21c(string), EXPERIMENTAL_LAMBDA),
-    // TODO CREATE_LAMBDA(betweenApi(0xf6, 24, 25), "create-lambda", Format21c(method), EXPERIMENTAL_LAMBDA),
-    // TODO LIBERATE_VARIABLE(betweenApi(0xf7, 24, 25), "liberate-variable", Format22c(string), EXPERIMENTAL_LAMBDA),
-    // TODO BOX_LAMBDA(betweenApi(0xf8, 24, 25), "box-lambda", Format22x, EXPERIMENTAL_LAMBDA),
-    // TODO UNBOX_LAMBDA(betweenApi(0xf9, 24, 25), "unbox-lambda", Format22c(type), EXPERIMENTAL_LAMBDA),
+    // A closure is a target method together with the variables captured
+    // alongside it, held as a raw address in a register pair.
+    // capture-variable and liberate-variable take a string holding the
+    // field type descriptor of the transferred value; the type operand of
+    // unbox-lambda is reserved and ignored.
+    // The intended final model was a typed closure, its type written
+    // '\' + interface name + ';' where an object descriptor has 'L', in
+    // two forms: innate, made by create-lambda, and learned, made from an
+    // instance of a class implementing the interface.
+    // box-lambda / unbox-lambda were to convert between the closure form
+    // and the object form, with the type naming the functional interface:
+    // boxing an innate closure into an instance of a generated proxy class
+    // implementing exactly one functional interface, boxing a learned
+    // closure back into the original object.
+    // capture-variable and liberate-variable were to take type ids
+    // instead of the descriptor strings. A one-register closure form was
+    // discussed but never settled; the two-register design might have
+    // remained.
+    INVOKE_LAMBDA(betweenApi(0xf3, 24, 25), "invoke-lambda", Format25x, regs25x(), EXPERIMENTAL_LAMBDA | CAN_THROW | TYPE_INVOKE | SETS_RESULT),
+    // 0xf4 carries no instruction; invoke-lambda/range was planned for it,
+    // but a range format would have to encode the closure width, which was
+    // never settled
+    CAPTURE_VARIABLE(betweenApi(0xf5, 24, 25), "capture-variable", Format21c, regs(/* depends */ null), STRING, EXPERIMENTAL_LAMBDA | CAN_THROW),
+    CREATE_LAMBDA(betweenApi(0xf6, 24, 25), "create-lambda", Format21c, regs(false), METHOD, EXPERIMENTAL_LAMBDA | CAN_THROW),
+    LIBERATE_VARIABLE(betweenApi(0xf7, 24, 25), "liberate-variable", Format22c, regs(/* depends */ null, false), STRING, EXPERIMENTAL_LAMBDA | CAN_THROW),
+    BOX_LAMBDA(betweenApi(0xf8, 24, 25), "box-lambda", Format22x, regs(true, false), EXPERIMENTAL_LAMBDA | CAN_THROW),
+    UNBOX_LAMBDA(betweenApi(0xf9, 24, 25), "unbox-lambda", Format22c, regs(false, true), TYPE, EXPERIMENTAL_LAMBDA | CAN_THROW),
 
     // legacy dex036 expanded opcodes
 
@@ -558,9 +580,12 @@ public enum Opcode {
         static final int WRAPPER = 0x4000;
         // legacy dex009 / dex013 only instruction
         static final int LEGACY = 0x8000;
+        // legacy Android 7.x experimental lambda instruction
+        static final int EXPERIMENTAL_LAMBDA = 0x10000;
     }
 
-    record DexInfo(DexVersion dex, int api, boolean art, boolean odex, boolean expanded) {
+    record DexInfo(DexVersion dex, int api, boolean art, boolean odex, boolean expanded,
+                   boolean experimental_lambda) {
     }
 
     private record RegsInfo(
@@ -607,6 +632,7 @@ public enum Opcode {
         this.flags = flags;
         constraint = odexOnly() ? odex(constraint) : constraint;
         constraint = isExpanded() ? expanded(constraint) : constraint;
+        constraint = isExperimentalLambda() ? experimentalLambda(constraint) : constraint;
         this.constraint = constraint;
         this.name = name;
         this.format = format;
@@ -627,6 +653,16 @@ public enum Opcode {
         return new RegsInfo(r0, r1, null, null, null);
     }
 
+    @SuppressWarnings("SameParameterValue")
+    private static RegsInfo regs(Boolean r0) {
+        return new RegsInfo(r0, null, null, null, null);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private static RegsInfo regs(Boolean r0, boolean r1) {
+        return new RegsInfo(r0, r1, null, null, null);
+    }
+
     private static RegsInfo regs(boolean r0, boolean r1, boolean r2) {
         return new RegsInfo(r0, r1, r2, null, null);
     }
@@ -637,6 +673,11 @@ public enum Opcode {
 
     private static RegsInfo regs5() {
         return new RegsInfo(true, true, true, true, true);
+    }
+
+    private static RegsInfo regs25x() {
+        // vC is the implicit closure pair, vD..vG are single registers
+        return new RegsInfo(false, true, true, true, true);
     }
 
     private static RegsInfo regsr() {
@@ -752,11 +793,16 @@ public enum Opcode {
                 || format == Format3rc
                 || format == Format45cc
                 || format == Format4rcc
-                || format == Format5rc;
+                || format == Format5rc
+                || format == Format25x;
     }
 
     public final boolean isExpanded() {
         return (flags & EXPANDED) != 0;
+    }
+
+    public final boolean isExperimentalLambda() {
+        return (flags & EXPERIMENTAL_LAMBDA) != 0;
     }
 
     public final boolean isRaw() {
@@ -773,7 +819,8 @@ public enum Opcode {
 
     Integer getValue(DexVersion dex, DexOptions<?> options) {
         return constraint.opcode(new DexInfo(dex,
-                options.api, options.art, options.odex, options.expanded));
+                options.api, options.art, options.odex,
+                options.expanded, options.experimental_lambda));
     }
 
     Constraint getConstraint() {
@@ -1025,6 +1072,25 @@ public enum Opcode {
             @Override
             public String toString() {
                 return "expanded -> {" + constraint + "}";
+            }
+        };
+    }
+
+    private static Constraint experimentalLambda(Constraint constraint) {
+        return new Constraint() {
+            @Override
+            public boolean contains(int opcode) {
+                return constraint.contains(opcode);
+            }
+
+            @Override
+            public Integer opcode(DexInfo info) {
+                return !info.experimental_lambda() ? null : constraint.opcode(info);
+            }
+
+            @Override
+            public String toString() {
+                return "experimental-lambda -> {" + constraint + "}";
             }
         };
     }

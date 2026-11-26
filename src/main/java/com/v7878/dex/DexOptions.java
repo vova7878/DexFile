@@ -15,11 +15,12 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     protected final boolean art;
     protected final boolean odex;
     protected final boolean expanded;
+    protected final boolean experimental_lambda;
     protected final boolean hiddenapi;
     protected final boolean debug_info;
 
     DexOptions(int api, boolean art, boolean odex, boolean expanded,
-               boolean hiddenapi, boolean debug_info) {
+               boolean experimental_lambda, boolean hiddenapi, boolean debug_info) {
         if (api > MAX_TARGET_API) {
             api = MAX_TARGET_API;
         }
@@ -27,6 +28,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
         this.art = art;
         this.odex = odex;
         this.expanded = expanded;
+        this.experimental_lambda = experimental_lambda;
         this.hiddenapi = hiddenapi;
         this.debug_info = debug_info;
     }
@@ -41,6 +43,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
         this.art = api > LAST_DALVIK_TARGET;
         this.odex = is_android;
         this.expanded = 14 <= api && api <= 15;
+        this.experimental_lambda = false;
         this.hiddenapi = false;
         this.debug_info = true;
     }
@@ -58,10 +61,13 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
         if (expanded && !(14 <= api && api <= 15)) {
             throw new IllegalArgumentException("Unsupported expanded opcodes option for api " + api);
         }
+        if (experimental_lambda && !(24 <= api && api <= 25)) {
+            throw new IllegalArgumentException("Unsupported experimental lambda option for api " + api);
+        }
     }
 
     protected abstract D dup(int api, boolean art, boolean odex,
-                             boolean expanded_opcodes,
+                             boolean expanded_opcodes, boolean experimental_lambda,
                              boolean hiddenapi, boolean debug_info);
 
     public int getTargetApi() {
@@ -69,7 +75,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withTargetApi(int api) {
-        return dup(api, art, odex, expanded, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public boolean isTargetForArt() {
@@ -77,7 +83,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withTargetForArt(boolean art) {
-        return dup(api, art, odex, expanded, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public boolean isTargetForDalvik() {
@@ -89,7 +95,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withOdexInstructions(boolean odex) {
-        return dup(api, art, odex, expanded, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public boolean hasExpandedInstructions() {
@@ -97,7 +103,15 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withExpandedInstructions(boolean expanded) {
-        return dup(api, art, odex, expanded, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
+    }
+
+    public boolean hasLambdaInstructions() {
+        return experimental_lambda;
+    }
+
+    public D withLambdaInstructions(boolean experimental_lambda) {
+        return dup(api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public boolean hasHiddenApiFlags() {
@@ -105,7 +119,7 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withHiddenApiFlags(boolean hiddenapi) {
-        return dup(api, art, odex, expanded, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 
     public boolean hasDebugInfo() {
@@ -113,6 +127,6 @@ public abstract sealed class DexOptions<D extends DexOptions<D>> permits ReadOpt
     }
 
     public D withDebugInfo(boolean debug_info) {
-        return dup(api, art, odex, expanded, hiddenapi, debug_info);
+        return dup(api, art, odex, expanded, experimental_lambda, hiddenapi, debug_info);
     }
 }

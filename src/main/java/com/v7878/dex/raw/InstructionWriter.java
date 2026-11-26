@@ -35,6 +35,7 @@ import com.v7878.dex.immutable.bytecode.InstructionNrcc;
 import com.v7878.dex.immutable.bytecode.InstructionNv4c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
+import com.v7878.dex.immutable.bytecode.InstructionNv5x;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0c;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0x;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -70,6 +71,7 @@ public class InstructionWriter {
             case Format22t -> write_22t(((InstructionN2t) instruction), out, op);
             case Format22x -> write_22x(((InstructionN2x) instruction), out, op);
             case Format23x -> write_23x(((InstructionN3x) instruction), out, op);
+            case Format25x -> write_25x(((InstructionNv5x) instruction), out, op);
             case Format30t -> write_30t(((InstructionN0t) instruction), out, op);
             case Format31c -> write_31c(((InstructionN1c) instruction), writer, out, op);
             case Format31i -> write_31i(((InstructionN1i) instruction), out, op);
@@ -349,6 +351,24 @@ public class InstructionWriter {
 
     public static void write_23x(InstructionN3x value, RandomOutput out, int opcode) {
         write_23x(out, opcode, value.getRegister1(), value.getRegister2(), value.getRegister3());
+    }
+
+    public static void write_25x(RandomOutput out, int opcode, int C, int B,
+                                 int D, int E, int F, int G) {
+        C = unsigned(C, 4);
+        B = unsigned(B, 4);
+        D = unsigned(D, 4);
+        E = unsigned(E, 4);
+        F = unsigned(F, 4);
+        G = unsigned(G, 4);
+        write_base(out, opcode, (B << 4) | G);
+        out.writeShort((F << 12) | (E << 8) | (D << 4) | C);
+    }
+
+    public static void write_25x(InstructionNv5x value, RandomOutput out, int opcode) {
+        write_25x(out, opcode, value.getClosureRegister(), value.getRegisterCount(),
+                value.getRegister1(), value.getRegister2(),
+                value.getRegister3(), value.getRegister4());
     }
 
     public static void write_22b(RandomOutput out, int opcode, int AA, int BB, int sCC) {

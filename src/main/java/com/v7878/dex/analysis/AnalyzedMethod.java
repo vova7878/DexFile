@@ -500,6 +500,9 @@ public final class AnalyzedMethod {
                 if (opcode.isRaw()) {
                     throw unsupportedOpcode(current, "raw");
                 }
+                if (opcode.isExperimentalLambda()) {
+                    throw unsupportedOpcode(current, "experimental lambda");
+                }
                 // no per-instruction cache
             }
         }

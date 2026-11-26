@@ -22,7 +22,7 @@ dependencies {
 | **039**        |      28+      |       ✅        |       ✅        | Standard + ODEX                                       |
 | **038**        |      26+      |       ✅        |       ✅        | Standard + ODEX                                       |
 | **037**        |      26+      |       ✅        |       ✅        | Standard + ODEX                                       |
-| **037**        |    24 - 25    |       ✅        |       ✅        | Standard + ODEX + ⏳lambda opcodes <sup>3</sup>       |
+| **037**        |    24 - 25    |       ✅        |       ✅        | Standard + ODEX + lambda opcodes <sup>3</sup>         |
 | **036**        |    16 - 20    |       ✅        |       ✅        | Standard + ODEX <sup>4</sup>                          |
 | **036**        |    14 - 15    |       ✅        |       ✅        | Standard + ODEX + expanded jumbo opcodes <sup>5</sup> |
 | **035**        |      1+       |       ✅        |       ✅        | Standard + ODEX                                       |
@@ -32,7 +32,7 @@ dependencies {
 
 * <sup>1</sup> Supports reading and writing as a **container** that can combine multiple logical DEX files into a single physical file to save space and share data (e.g., strings).
 * <sup>2</sup> Unlike all other DEX versions, version 041 does not contain any special `odex` instructions. This is because `odex` instructions were completely removed from the Android runtime starting in API 31, while the `dex041` container format was only introduced later in API 35.
-* <sup>3</sup> An early experimental feature for Android 7.x that never made it to a stable release. However, samples exist and the opcodes are present in the ART source code. Support for these instructions is planned for a future release.
+* <sup>3</sup> An early experimental feature for Android 7.x that never made it to a stable release. The opcodes are present in the ART source code and in real samples.
 * <sup>4</sup> This format was rolled back to the `dex035` state in these Android versions, thus it has full read and write support in the library.
 * <sup>5</sup> The format was never officially finalized by Google and was abandoned before a stable release. However, it fully existed, and this library provides complete read and write support for it, including all unusual instruction families (like expanded jumbo opcodes), based on full documentation and real samples.
 * <sup>6</sup> Historical pre-release versions (Milestone 3 and 5). Reading is fully supported, including `odex` instructions. Writing is planned for a future release.

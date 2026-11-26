@@ -5,6 +5,7 @@ import static com.v7878.dex.DexConstants.ACC_STATIC;
 import com.v7878.dex.immutable.Parameter;
 import com.v7878.dex.immutable.TypeId;
 import com.v7878.dex.immutable.bytecode.Instruction;
+import com.v7878.dex.immutable.bytecode.iface.LambdaInstruction;
 import com.v7878.dex.immutable.bytecode.iface.VariableRegisterInstruction;
 
 import java.util.List;
@@ -98,7 +99,12 @@ public class ShortyUtils {
         for (var instruction : insns) {
             if (instruction.getOpcode().isInvoke()) {
                 // Every invoke opcode uses a variable-register format
-                out_regs = Math.max(out_regs, ((VariableRegisterInstruction) instruction).getRegisterCount());
+                int count = ((VariableRegisterInstruction) instruction).getRegisterCount();
+                // A lambda invoke carries its closure pair outside the encoded count
+                if (instruction instanceof LambdaInstruction) {
+                    count += 2;
+                }
+                out_regs = Math.max(out_regs, count);
             }
         }
         return out_regs;

@@ -21,6 +21,7 @@ public enum Format {
     Format22t(2),
     Format22x(2),
     Format23x(2),
+    Format25x(2),
     Format30t(3),
     Format31c(3, true, false),
     Format31i(3),

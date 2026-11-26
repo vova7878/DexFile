@@ -4,9 +4,9 @@ import com.v7878.dex.Opcode;
 import com.v7878.dex.immutable.bytecode.Instruction;
 
 public sealed interface InstructionI permits Instruction, BranchOffsetInstruction,
-        IndexInstruction, LiteralInstruction, OneRegisterInstruction, PayloadInstruction,
-        RawInstruction, SingleReferenceInstruction, VariableRegisterInstruction,
-        VerificationErrorInstruction, WideLiteralInstruction {
+        IndexInstruction, LambdaInstruction, LiteralInstruction, OneRegisterInstruction,
+        PayloadInstruction, RawInstruction, SingleReferenceInstruction,
+        VariableRegisterInstruction, VerificationErrorInstruction, WideLiteralInstruction {
     Opcode getOpcode();
 
     String getName();

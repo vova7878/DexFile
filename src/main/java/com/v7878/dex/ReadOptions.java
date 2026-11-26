@@ -6,9 +6,9 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
     private final boolean method_bodies;
 
     ReadOptions(int api, boolean art, boolean odex, boolean expanded_opcodes,
-                boolean hiddenapi, boolean debug_info,
+                boolean experimental_lambda, boolean hiddenapi, boolean debug_info,
                 boolean annotations, boolean field_values, boolean method_bodies) {
-        super(api, art, odex, expanded_opcodes, hiddenapi, debug_info);
+        super(api, art, odex, expanded_opcodes, experimental_lambda, hiddenapi, debug_info);
         this.annotations = annotations;
         this.field_values = field_values;
         this.method_bodies = method_bodies;
@@ -23,10 +23,10 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
 
     @Override
     protected ReadOptions dup(int api, boolean art, boolean odex,
-                              boolean expanded_opcodes,
+                              boolean expanded_opcodes, boolean experimental_lambda,
                               boolean hiddenapi, boolean debug_info) {
-        return new ReadOptions(api, art, odex, expanded_opcodes, hiddenapi,
-                debug_info, annotations, field_values, method_bodies);
+        return new ReadOptions(api, art, odex, expanded_opcodes, experimental_lambda,
+                hiddenapi, debug_info, annotations, field_values, method_bodies);
     }
 
     public static ReadOptions defaultOptions() {
@@ -38,7 +38,7 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
     }
 
     public ReadOptions withAnnotations(boolean annotations) {
-        return new ReadOptions(api, art, odex, expanded, hiddenapi,
+        return new ReadOptions(api, art, odex, expanded, experimental_lambda, hiddenapi,
                 debug_info, annotations, field_values, method_bodies);
     }
 
@@ -47,7 +47,7 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
     }
 
     public ReadOptions withFieldValues(boolean field_values) {
-        return new ReadOptions(api, art, odex, expanded, hiddenapi,
+        return new ReadOptions(api, art, odex, expanded, experimental_lambda, hiddenapi,
                 debug_info, annotations, field_values, method_bodies);
     }
 
@@ -56,7 +56,7 @@ public final class ReadOptions extends DexOptions<ReadOptions> {
     }
 
     public ReadOptions withMethodBodies(boolean method_bodies) {
-        return new ReadOptions(api, art, odex, expanded, hiddenapi,
+        return new ReadOptions(api, art, odex, expanded, experimental_lambda, hiddenapi,
                 debug_info, annotations, field_values, method_bodies);
     }
 

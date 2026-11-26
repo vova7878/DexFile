@@ -27,6 +27,7 @@ import com.v7878.dex.immutable.bytecode.InstructionNrcc;
 import com.v7878.dex.immutable.bytecode.InstructionNv4c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
+import com.v7878.dex.immutable.bytecode.InstructionNv5x;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0c;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0x;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -77,6 +78,7 @@ public class InstructionReader {
             case Format22t -> read_22t(opcode, in, arg);
             case Format22x -> read_22x(opcode, in, arg);
             case Format23x -> read_23x(opcode, in, arg);
+            case Format25x -> read_25x(opcode, in, arg);
             case Format30t -> read_30t(opcode, in, arg);
             case Format31c -> read_31c(opcode, in, reader, arg);
             case Format31i -> read_31i(opcode, in, arg);
@@ -247,6 +249,17 @@ public class InstructionReader {
     public static InstructionN3x read_23x(Opcode opcode, RandomInput in, int AA) {
         int CCBB = in.readUShort();
         return InstructionN3x.of(opcode, AA, CCBB & 0xff, CCBB >> 8);
+    }
+
+    public static InstructionNv5x read_25x(Opcode opcode, RandomInput in, int BG) {
+        int G = BG & 0xf;
+        int B = BG >> 4;
+        int FEDC = in.readUShort();
+        int F = FEDC >> 12;
+        int E = (FEDC >> 8) & 0xf;
+        int D = (FEDC >> 4) & 0xf;
+        int C = FEDC & 0xf;
+        return InstructionNv5x.of(opcode, C, B, D, E, F, G);
     }
 
     public static InstructionN2i read_22b(Opcode opcode, RandomInput in, int AA) {

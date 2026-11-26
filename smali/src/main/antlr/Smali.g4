@@ -810,6 +810,7 @@ instruction[IContext context] locals[Opcode op]
     | {$op.format() == Format22t}? args_format22t[$context, $op]
     | {$op.format() == Format22x}? args_format22x[$context, $op]
     | {$op.format() == Format23x}? args_format23x[$context, $op]
+    | {$op.format() == Format25x}? args_format25x[$context, $op]
     | {$op.format() == Format30t}? args_format30t[$context, $op]
     | {$op.format() == Format31c}? args_format31c[$context, $op]
     | {$op.format() == Format31i}? args_format31i[$context, $op]
@@ -1088,6 +1089,17 @@ args_format23x[IContext context, Opcode op] returns[int reg1, int reg2, int reg3
     {
         if(!CodeUtils.instruction($context, $op, $ctx))
             $context.ib().f23x($op, $reg1, $reg2, $reg3);
+    }
+    ;
+
+// <G|B|op F|E|D|C> op vC, {vD, vE, vF, vG} (B: count)
+args_format25x[IContext context, Opcode op] returns[int closure, int[] args]
+    : register[$context.ib()] { $closure = $register.value; }
+    COMMA LBRACE register_list[$context.ib()] { $args = $register_list.value; }
+    RBRACE
+    {
+        if(!CodeUtils.instruction($context, $op, $ctx))
+            $context.ib().f25x($op, $closure, $args);
     }
     ;
 

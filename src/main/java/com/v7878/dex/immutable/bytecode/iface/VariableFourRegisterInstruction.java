@@ -1,12 +1,13 @@
 package com.v7878.dex.immutable.bytecode.iface;
 
 import com.v7878.dex.immutable.bytecode.InstructionNv4c;
+import com.v7878.dex.immutable.bytecode.InstructionNv5x;
 
 import java.util.Arrays;
 
-public sealed interface VariableFourRegisterInstruction extends
-        ThreeRegisterInstruction, VariableRegisterInstruction
-        permits InstructionNv4c, VariableFiveRegisterInstruction {
+public sealed interface VariableFourRegisterInstruction
+        extends ThreeRegisterInstruction, VariableRegisterInstruction
+        permits InstructionNv4c, InstructionNv5x, VariableFiveRegisterInstruction {
     int getRegister4();
 
     default int[] getRegisters() {

@@ -63,6 +63,7 @@ import com.v7878.dex.immutable.bytecode.InstructionNrcc;
 import com.v7878.dex.immutable.bytecode.InstructionNv4c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5c;
 import com.v7878.dex.immutable.bytecode.InstructionNv5cc;
+import com.v7878.dex.immutable.bytecode.InstructionNv5x;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0c;
 import com.v7878.dex.immutable.bytecode.InstructionRaw0x;
 import com.v7878.dex.immutable.bytecode.SwitchElement;
@@ -1374,6 +1375,15 @@ public final class SmaliPrinter {
                 printRegister(i.getRegister2(), totalRegs, fullParams);
                 out.append(", ");
                 printRegister(i.getRegister3(), totalRegs, fullParams);
+            }
+            case Format25x -> {
+                var i = (InstructionNv5x) insn;
+                out.append(' ');
+                printRegister(i.getClosureRegister(), totalRegs, fullParams);
+                out.append(", ");
+                int[] regs = {i.getRegister1(), i.getRegister2(),
+                        i.getRegister3(), i.getRegister4()};
+                printRegisters(regs, i.getRegisterCount(), totalRegs, fullParams);
             }
             case Format34c -> {
                 var i = (InstructionNv4c) insn;
