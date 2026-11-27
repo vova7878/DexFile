@@ -194,10 +194,10 @@ import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
 public final class DexReader implements DexReaderCache {
-    private record AnnotationDirectory(NavigableSet<Annotation> class_annotations,
-                                       IntMap<NavigableSet<Annotation>> field_annotations,
-                                       IntMap<NavigableSet<Annotation>> method_annotations,
-                                       IntMap<List<NavigableSet<Annotation>>> parameter_annotations) {
+    public record AnnotationDirectory(NavigableSet<Annotation> class_annotations,
+                                      IntMap<NavigableSet<Annotation>> field_annotations,
+                                      IntMap<NavigableSet<Annotation>> method_annotations,
+                                      IntMap<List<NavigableSet<Annotation>>> parameter_annotations) {
         public static final AnnotationDirectory EMPTY = new AnnotationDirectory(
                 Collections.emptyNavigableSet(), IntMap.empty(), IntMap.empty(), IntMap.empty());
     }
@@ -828,6 +828,9 @@ public final class DexReader implements DexReaderCache {
     }
 
     private Annotation readAnnotation(int offset) {
+        if (version == DEX013) {
+            return Dex013.readAnnotation(this, offset);
+        }
         var in = dataAt(offset);
         var visibility = AnnotationVisibility.of(in.readUByte());
         var encoded_annotation = readEncodedAnnotation(in);
@@ -891,6 +894,9 @@ public final class DexReader implements DexReaderCache {
     }
 
     private AnnotationDirectory readAnnotationDirectory(int offset) {
+        if (version == DEX013) {
+            return Dex013.readAnnotationDirectory(this, offset);
+        }
         var in = dataAt(offset);
         int class_annotations_off = in.readSmallUInt();
         int fields_size = in.readSmallUInt();

@@ -21,7 +21,10 @@ import static com.v7878.dex.util.Ids.CLASS;
 import static com.v7878.dex.util.Ids.STRING;
 import static com.v7878.dex.util.ShortyUtils.invalidShorty;
 
+import com.v7878.collections.IntMap;
+import com.v7878.dex.AnnotationVisibility;
 import com.v7878.dex.immutable.Annotation;
+import com.v7878.dex.immutable.AnnotationElement;
 import com.v7878.dex.immutable.ClassDef;
 import com.v7878.dex.immutable.FieldDef;
 import com.v7878.dex.immutable.FieldId;
@@ -41,10 +44,13 @@ import com.v7878.dex.immutable.debug.SetEpilogueBegin;
 import com.v7878.dex.immutable.debug.SetFile;
 import com.v7878.dex.immutable.debug.SetPrologueEnd;
 import com.v7878.dex.immutable.debug.StartLocal;
+import com.v7878.dex.immutable.value.EncodedAnnotation;
+import com.v7878.dex.immutable.value.EncodedArray;
 import com.v7878.dex.immutable.value.EncodedBoolean;
 import com.v7878.dex.immutable.value.EncodedByte;
 import com.v7878.dex.immutable.value.EncodedChar;
 import com.v7878.dex.immutable.value.EncodedDouble;
+import com.v7878.dex.immutable.value.EncodedEnum;
 import com.v7878.dex.immutable.value.EncodedFloat;
 import com.v7878.dex.immutable.value.EncodedInt;
 import com.v7878.dex.immutable.value.EncodedLong;
@@ -56,6 +62,7 @@ import com.v7878.dex.immutable.value.EncodedValue;
 import com.v7878.dex.io.RandomInput;
 import com.v7878.dex.raw.DebugInfo;
 import com.v7878.dex.raw.DexReader;
+import com.v7878.dex.raw.DexReader.AnnotationDirectory;
 import com.v7878.dex.raw.DexReader.CodeItem;
 import com.v7878.dex.raw.InstructionReader;
 import com.v7878.dex.util.MemberUtils;
@@ -65,6 +72,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.TreeSet;
 
 public class Dex013 {
     public static List<TypeId> readTypeList(DexReader reader, int offset) {
@@ -100,13 +108,15 @@ public class Dex013 {
         return MethodId.of(declaring_class, name, ProtoId.of(descriptor));
     }
 
-    private static List<FieldDef> readFieldDefList(DexReader reader, int offset, boolean _static) {
+    private static List<FieldDef> readFieldDefList(DexReader reader, int offset, boolean _static,
+                                                   IntMap<NavigableSet<Annotation>> annotations) {
         var in = reader.dataAt(offset);
         int count = in.readSmallUInt();
         var list = new ArrayList<FieldDef>(count);
         in.alignPosition(_static ? M5_STATIC_FIELD_DEF_ALIGNMENT : M5_INSTANCE_FIELD_DEF_ALIGNMENT);
         for (int i = 0; i < count; i++) {
-            var fid = reader.getField(in.readSmallUInt());
+            int field_idx = in.readSmallUInt();
+            var fid = reader.getField(field_idx);
             int access_flags = in.readInt();
 
             EncodedValue value = null;
@@ -142,8 +152,8 @@ public class Dex013 {
                 }
             }
 
-            list.add(FieldDef.of(fid.getName(), fid.getType(), access_flags,
-                    0, value, null));
+            list.add(FieldDef.of(fid.getName(), fid.getType(), access_flags, 0, value,
+                    annotations.get(field_idx, Collections.emptyNavigableSet())));
         }
         return list;
     }
@@ -323,29 +333,40 @@ public class Dex013 {
     }
 
     private static List<MethodDef> readMethodDefList(
-            DexReader reader, int offset, @SuppressWarnings("unused") boolean direct) {
+            DexReader reader, int offset, @SuppressWarnings("unused") boolean direct,
+            IntMap<NavigableSet<Annotation>> method_annotations,
+            IntMap<List<NavigableSet<Annotation>>> parameter_annotations) {
         var in = reader.dataAt(offset);
         int count = in.readSmallUInt();
         var list = new ArrayList<MethodDef>(count);
         for (int i = 0; i < count; i++) {
-            var mid = reader.getMethod(in.readSmallUInt());
+            int method_idx = in.readSmallUInt();
+            var mid = reader.getMethod(method_idx);
             int access_flags = in.readInt();
             int throws_list_off = in.readSmallUInt();
             int code_off = in.readSmallUInt();
 
-            List<Annotation> annotations = null;
+            var annotations = new ArrayList<>(method_annotations.get(
+                    method_idx, Collections.emptyNavigableSet()));
             if (reader.options().hasAnnotations() && throws_list_off != NO_OFFSET) {
-                var throws_list = reader.getTypeList(throws_list_off);
-                annotations = List.of(Annotation.Throws(throws_list));
+                annotations.add(Annotation.Throws(reader.getTypeList(throws_list_off)));
+            }
+
+            var parameter_types = mid.getParameterTypes();
+            var parameter_annotation_list = parameter_annotations.get(method_idx, List.of());
+            var parameters = new ArrayList<Parameter>(parameter_types.size());
+            for (int j = 0; j < parameter_types.size(); j++) {
+                var parameter_annotation_set = j < parameter_annotation_list.size() ?
+                        parameter_annotation_list.get(j) : Collections.<Annotation>emptyNavigableSet();
+                parameters.add(Parameter.of(parameter_types.get(j), null, parameter_annotation_set));
             }
 
             var code = code_off == NO_OFFSET ? null :
                     (!reader.options().hasMethodBodies() ?
                             CodeItem.EMPTY : readCodeItem(reader, mid, code_off));
             var debug_info = code == null ? null : code.debug_info();
-            list.add(MethodDef.of(mid.getName(), mid.getReturnType(),
-                    Parameter.listOf(mid.getParameterTypes()), access_flags, 0,
-                    DexReader.toImplementation(code, debug_info), annotations));
+            list.add(MethodDef.of(mid.getName(), mid.getReturnType(), parameters,
+                    access_flags, 0, DexReader.toImplementation(code, debug_info), annotations));
         }
         return list;
     }
@@ -363,13 +384,10 @@ public class Dex013 {
         int direct_methods_off = in.readSmallUInt();
         int virtual_methods_off = in.readSmallUInt();
 
-        // TODO? The actual dex013 format always has this field set to 0.
-        //  This is either a typo or a disabled, unstable option. Because the annotations
-        //  are actually written to the dex file, they're simply not linked to their class.
-        //  We can fix the dx utility from the SDK and try to restore the structure,
-        //  but it's never been correct. Is this necessary?
-        /*  int annotations_off = */
-        in.readSmallUInt();
+        int annotations_off = in.readSmallUInt();
+
+        var annotations = annotations_off == NO_OFFSET || !reader.options().hasAnnotations() ?
+                AnnotationDirectory.EMPTY : reader.getAnnotationDirectory(annotations_off);
 
         TypeId clazz = reader.getType(class_idx);
         TypeId superclass = superclass_idx == NO_INDEX ?
@@ -378,17 +396,142 @@ public class Dex013 {
                 List.of() : reader.getTypeList(interfaces_off);
 
         List<FieldDef> static_fields = static_fields_off == NO_OFFSET ?
-                null : readFieldDefList(reader, static_fields_off, true);
+                null : readFieldDefList(reader, static_fields_off, true,
+                annotations.field_annotations());
         List<FieldDef> instance_fields = instance_fields_off == NO_OFFSET ?
-                null : readFieldDefList(reader, instance_fields_off, false);
+                null : readFieldDefList(reader, instance_fields_off, false,
+                annotations.field_annotations());
         List<MethodDef> direct_methods = direct_methods_off == NO_OFFSET ?
-                null : readMethodDefList(reader, direct_methods_off, true);
+                null : readMethodDefList(reader, direct_methods_off, true,
+                annotations.method_annotations(), annotations.parameter_annotations());
         List<MethodDef> virtual_methods = virtual_methods_off == NO_OFFSET ?
-                null : readMethodDefList(reader, virtual_methods_off, false);
+                null : readMethodDefList(reader, virtual_methods_off, false,
+                annotations.method_annotations(), annotations.parameter_annotations());
 
         return ClassDef.raw(clazz, access_flags, superclass, interfaces, null,
                 MemberUtils.mergeFields(static_fields, instance_fields),
                 MemberUtils.mergeMethods(direct_methods, virtual_methods),
-                Collections.emptyNavigableSet());
+                annotations.class_annotations());
+    }
+
+    /**
+     * The legacy directory holds four offsets - the class set, the field
+     * list, the method list and the parameter list - rather than sizes with
+     * inline entries.
+     */
+    public static AnnotationDirectory readAnnotationDirectory(DexReader reader, int offset) {
+        var in = reader.dataAt(offset);
+        int class_annotations_off = in.readSmallUInt();
+        int field_annotations_off = in.readSmallUInt();
+        int method_annotations_off = in.readSmallUInt();
+        int parameter_annotations_off = in.readSmallUInt();
+
+        var class_annotations = class_annotations_off == NO_OFFSET ?
+                Collections.<Annotation>emptyNavigableSet() :
+                reader.getAnnotationSet(class_annotations_off);
+        var field_annotations = field_annotations_off == NO_OFFSET ?
+                IntMap.<NavigableSet<Annotation>>empty() :
+                readAnnotationSetMap(reader, field_annotations_off);
+        var method_annotations = method_annotations_off == NO_OFFSET ?
+                IntMap.<NavigableSet<Annotation>>empty() :
+                readAnnotationSetMap(reader, method_annotations_off);
+        var parameter_annotations = parameter_annotations_off == NO_OFFSET ?
+                IntMap.<List<NavigableSet<Annotation>>>empty() :
+                readParameterAnnotationMap(reader, parameter_annotations_off);
+        return new AnnotationDirectory(class_annotations, field_annotations,
+                method_annotations, parameter_annotations);
+    }
+
+    private static IntMap<NavigableSet<Annotation>> readAnnotationSetMap(
+            DexReader reader, int offset) {
+        var in = reader.dataAt(offset);
+        int count = in.readSmallUInt();
+        var out = new IntMap<NavigableSet<Annotation>>(count);
+        for (int i = 0; i < count; i++) {
+            int member_idx = in.readSmallUInt();
+            out.put(member_idx, reader.getAnnotationSet(in.readSmallUInt()));
+        }
+        return out;
+    }
+
+    private static IntMap<List<NavigableSet<Annotation>>> readParameterAnnotationMap(
+            DexReader reader, int offset) {
+        var in = reader.dataAt(offset);
+        int count = in.readSmallUInt();
+        var out = new IntMap<List<NavigableSet<Annotation>>>(count);
+        for (int i = 0; i < count; i++) {
+            int method_idx = in.readSmallUInt();
+            int set_list_off = in.readSmallUInt();
+            out.put(method_idx, set_list_off == NO_OFFSET ?
+                    List.of() : reader.getAnnotationSetList(set_list_off));
+        }
+        return out;
+    }
+
+    public static Annotation readAnnotation(DexReader reader, int offset) {
+        var in = reader.dataAt(offset);
+        var visibility = AnnotationVisibility.of(in.readUByte());
+        return Annotation.of(visibility, readEncodedAnnotation(reader, in));
+    }
+
+    private static EncodedAnnotation readEncodedAnnotation(DexReader reader, RandomInput in) {
+        TypeId type = reader.getType(in.readSmallULeb128());
+        int size = in.readSmallULeb128();
+        var elements = new TreeSet<AnnotationElement>();
+        for (int i = 0; i < size; i++) {
+            String name = reader.getString(in.readSmallULeb128());
+            MemberUtils.addAnnotationElement(elements,
+                    AnnotationElement.of(name, readValue(reader, in)));
+        }
+        return EncodedAnnotation.raw(type, Collections.unmodifiableNavigableSet(elements));
+    }
+
+    /**
+     * The legacy value encoding carries no type tags: a literal is reported
+     * as the integer of its encoded width, so float and double elements
+     * surface as their IEEE bit patterns and char and boolean elements as
+     * plain integers.
+     */
+    private static EncodedValue makeLiteralValue(int size, long value) {
+        return switch (size) {
+            case 1 -> EncodedByte.of((byte) value);
+            case 2 -> EncodedShort.of((short) value);
+            case 3, 4 -> EncodedInt.of((int) value);
+            default -> EncodedLong.of(value);
+        };
+    }
+
+    private static EncodedValue readValue(DexReader reader, RandomInput in) {
+        int tag = in.readUByte();
+        if ((tag & 0x80) != 0) {
+            int value = ((tag & 0x7f) << 25) >> 25;
+            return makeLiteralValue(1, value);
+        }
+        if (tag > 0x30 && tag <= 0x38) {
+            int size = tag - 0x30;
+            long value = 0;
+            for (int i = 0; i < size; i++) {
+                value |= (long) in.readUByte() << (i * 8);
+            }
+            int shift = 64 - size * 8;
+            return makeLiteralValue(size, value << shift >> shift);
+        }
+        return switch (tag) {
+            case 's' -> EncodedString.of(reader.getString(in.readSmallULeb128()));
+            case 't' -> EncodedType.of(reader.getType(in.readSmallULeb128()));
+            case 'e' -> EncodedEnum.of(reader.getField(in.readSmallULeb128()));
+            case '[' -> {
+                int size = in.readSmallULeb128();
+                var values = new ArrayList<EncodedValue>(size);
+                for (int i = 0; i < size; i++) {
+                    values.add(readValue(reader, in));
+                }
+                yield EncodedArray.raw(Collections.unmodifiableList(values));
+            }
+            case '@' -> readEncodedAnnotation(reader, in);
+            default -> throw new IllegalStateException(String.format(
+                    "Unknown legacy annotation value tag 0x%02X at position %d",
+                    tag, in.position() - 1));
+        };
     }
 }
